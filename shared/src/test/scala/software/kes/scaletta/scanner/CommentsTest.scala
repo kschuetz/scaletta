@@ -112,7 +112,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
 
         it("unterminated simple") {
           TestReaderFactory.fromString(
-            """/* multi-line  *
+            """/* multi-line *
              block comment $""") { reader =>
             Comments.scanComments(reader) shouldBe Unterminated
             reader.get() shouldBe None
