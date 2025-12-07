@@ -31,7 +31,6 @@ final class ColumnIndex(val value: Int) extends AnyVal {
   def +(rhs: Int): ColumnIndex = new ColumnIndex(value + rhs)
 }
 
-
 object CharIndex {
   def apply(value: Int): CharIndex = new CharIndex(value)
 }
@@ -45,6 +44,8 @@ final class CharIndex(val value: Int) extends AnyVal {
   def -(rhs: Int): CharIndex = new CharIndex(value - rhs)
 
   def <(rhs: CharIndex): Boolean = value < rhs.value
+
+  override def toString: String = value.toString
 }
 
 object Pos {

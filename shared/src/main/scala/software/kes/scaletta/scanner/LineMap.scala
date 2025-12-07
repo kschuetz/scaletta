@@ -3,7 +3,7 @@ package software.kes.scaletta.scanner
 import scala.collection.immutable.TreeMap
 
 object LineMap {
-  def apply(basePosition: Position = Position.zero): LineMap =
+  def create(basePosition: Position = Position.zero): LineMap =
     new LineMap(basePosition.line, basePosition.column, TreeMap(0 -> basePosition.line))
 }
 

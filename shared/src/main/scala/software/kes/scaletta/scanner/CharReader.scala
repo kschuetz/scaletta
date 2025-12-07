@@ -2,6 +2,15 @@ package software.kes.scaletta.scanner
 
 import software.kes.scaletta.util.CharPushback
 
+object CharReader {
+  def create(source: Iterator[Char],
+             lineMap: LineMap,
+             currentIndex: CharIndex = CharIndex(0)): CharReader = {
+    val pushback = CharPushback.create()
+    new CharReader(source, pushback, currentIndex, currentIndex, lineMap)
+  }
+}
+
 final class CharReader private(source: Iterator[Char],
                                pushback: CharPushback,
                                private var _currentIndex: CharIndex,

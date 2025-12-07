@@ -9,7 +9,7 @@ import scala.annotation.{switch, tailrec}
 object Literals {
 
   def charLiteral(reader: CharReader): Pos[Either[ScannerError, Token]] = {
-    val begin = reader.currentIndex
+    val begin = reader.prevIndex
 
     def inChar: Pos[Either[ScannerError, Token]] =
       reader.get() match {
@@ -39,6 +39,7 @@ object Literals {
   def stringLiteral(reader: CharReader,
                     buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
     val begin = reader.prevIndex
+    buffer.reset()
 
     def q1: Pos[Either[ScannerError, Token]] =
       reader.get() match {
