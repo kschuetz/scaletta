@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.scanner.CharacterClass.isDigit
 import software.kes.scaletta.scanner.ScannerError._
 import software.kes.scaletta.scanner.Token.{IntLiteral, LongLiteral, StringLiteral}
 import software.kes.scaletta.util.CharBuffer
@@ -176,7 +177,7 @@ object Literals {
               buffer.write('0')
               beginSuffix(ch)
             case other =>
-              if (other.isDigit) {
+              if (isDigit(other)) {
                 buffer.write(ch)
                 leftOfDecimalPoint
               } else if (other.isLetter) {
@@ -206,7 +207,7 @@ object Literals {
               else Pos(Right(LongLiteral(acc)), begin, reader.prevIndex)
             case other =>
               if (wasSeparator) illegalSeparator
-              else if (ch.isDigit) invalidLiteralNumber
+              else if (isDigit(ch)) invalidLiteralNumber
               else if (size > 32) tooLong
               else {
                 reader.unget(other)
