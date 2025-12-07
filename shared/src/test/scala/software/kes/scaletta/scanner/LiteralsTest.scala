@@ -2,6 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.testsupport.ScannerTestHelpers.success
 import software.kes.scaletta.testsupport.TestReaderFactory
 import software.kes.scaletta.util.CharBuffer
 
@@ -110,6 +111,4 @@ class LiteralsTest extends AnyFunSpec with Matchers {
     }
   }
 
-  private def success[E](token: Token, begin: Int, end: Int): Pos[Either[E, Token]] =
-    Pos(Right(token), CharIndex(begin), CharIndex(end))
 }

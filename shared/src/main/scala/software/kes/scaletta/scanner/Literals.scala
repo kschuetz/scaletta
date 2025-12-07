@@ -253,6 +253,7 @@ object Literals {
     // 9223372036854775807
     // 2147483647
 
+    println((-1).toChar)
     // Long: 19 digits
     // Int: 10 digits
   }

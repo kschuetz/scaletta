@@ -64,7 +64,7 @@ final class CharReader private(source: Iterator[Char],
     }
 
   def skipUntil(p: Char => Boolean): Unit = {
-    var loop = false
+    var loop = true
     while (loop) {
       get() match {
         case Some(ch) =>

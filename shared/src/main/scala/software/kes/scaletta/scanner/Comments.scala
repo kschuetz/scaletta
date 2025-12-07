@@ -7,7 +7,13 @@ sealed trait CommentResult
 object CommentResult {
   case object NoComment extends CommentResult
 
-  case object BlockComment extends CommentResult
+  sealed trait BlockComment extends CommentResult
+
+  object BlockComment {
+    case object SingleLine extends BlockComment
+
+    case object MultiLine extends BlockComment
+  }
 
   case object LineComment extends CommentResult
 
@@ -43,6 +49,7 @@ object Comments {
   private def scanBlockComment(reader: CharReader): CommentResult = {
     var depth = 1
     var loop = true
+    var multiLine = false
     while (loop && depth > 0) {
       reader.get() match {
         case Some(c1) =>
@@ -55,6 +62,8 @@ object Comments {
                 case None =>
                   loop = false
               }
+            case '\n' =>
+              multiLine = true
             case '/' =>
               reader.get() match {
                 case Some(c2) =>
@@ -69,6 +78,7 @@ object Comments {
       }
     }
     if (depth > 0) CommentResult.Unterminated
-    else CommentResult.BlockComment
+    else if (multiLine) CommentResult.BlockComment.MultiLine
+    else CommentResult.BlockComment.SingleLine
   }
 }
