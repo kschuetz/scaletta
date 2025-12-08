@@ -1,8 +1,8 @@
 package software.kes.scaletta.scanner
 
-import software.kes.scaletta.scanner.CharacterClass.isDigit
+import software.kes.scaletta.scanner.CharacterClass.{isDigit, isLetter}
 import software.kes.scaletta.scanner.ScannerError._
-import software.kes.scaletta.scanner.Token.{IntLiteral, LongLiteral, StringLiteral}
+import software.kes.scaletta.scanner.Token.{IntLiteral, LongLiteral, MultiLineString, StringLiteral}
 import software.kes.scaletta.util.CharBuffer
 
 import scala.annotation.{switch, tailrec}
@@ -16,9 +16,9 @@ object Literals {
       reader.get() match {
         case Some(ch) =>
           if (ch == '\\') escapeSequence
-          else if (ch == '\'') Pos(Left(EmptyCharacterLiteral), reader.prevIndex)
+          else if (ch == '\'') Pos(Left(EmptyCharacterLiteral), begin, reader.prevIndex)
           else endQuote(ch)
-        case None => Pos(Left(EmptyCharacterLiteral), reader.prevIndex)
+        case None => Pos(Left(UnclosedCharacterLiteral), begin, reader.prevIndex)
       }
 
     def escapeSequence: Pos[Either[ScannerError, Token]] =
@@ -29,9 +29,13 @@ object Literals {
 
     def endQuote(value: Char): Pos[Either[ScannerError, Token]] =
       reader.get() match {
-        case Some(ch) if ch == '\'' =>
-          Pos(Right(Token.CharLiteral(value)), begin, reader.prevIndex)
-        case _ => Pos(Left(UnclosedCharacterLiteral), reader.prevIndex)
+        case Some(ch) =>
+          if (ch == '\'') Pos(Right(Token.CharLiteral(value)), begin, reader.prevIndex)
+          else {
+            reader.unget(ch)
+            Pos(Left(UnclosedCharacterLiteral), begin, reader.prevIndex + 1)
+          }
+        case _ => Pos(Left(UnclosedCharacterLiteral), begin, reader.prevIndex)
       }
 
     inChar
@@ -120,7 +124,7 @@ object Literals {
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
-            case '"' => Pos(Right(StringLiteral(buffer.slice())), begin, reader.prevIndex)
+            case '"' => Pos(Right(MultiLineString(buffer.slice())), begin, reader.prevIndex)
             case '\\' =>
               buffer.write('"')
               buffer.write('"')
@@ -167,7 +171,7 @@ object Literals {
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
-            case 'x' | 'X' => hex
+            case 'x' | 'X' => hex(0, 0, wasSeparator = false)
             case 'b' | 'B' => binary(0, 0, wasSeparator = false)
             case '.' =>
               rightOfDecimalPoint
@@ -181,11 +185,13 @@ object Literals {
                 buffer.write(ch)
                 leftOfDecimalPoint
               } else if (other.isLetter) {
-                Pos(Left(InvalidLiteralNumber), begin)
+                Pos(Left(InvalidLiteralNumber), begin, reader.prevIndex)
+              } else {
+                reader.unget(ch)
+                Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
               }
-              ???
           }
-        case None => ???
+        case None => Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
       }
 
     def leftOfDecimalPoint: Pos[Either[ScannerError, Token]] = ???
@@ -204,24 +210,51 @@ object Literals {
             case '_' => binary(acc, size, wasSeparator = true)
             case 'l' | 'L' =>
               if (wasSeparator) illegalSeparator
-              else Pos(Right(LongLiteral(acc)), begin, reader.prevIndex)
+              else Pos(Right(LongLiteral(maybeNegate(acc))), begin, reader.prevIndex)
             case other =>
               if (wasSeparator) illegalSeparator
               else if (isDigit(ch)) invalidLiteralNumber
               else if (size > 32) tooLong
               else {
                 reader.unget(other)
-                Pos(Right(IntLiteral(acc.toInt)), begin, reader.prevIndex)
+                Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
               }
           }
         case None =>
           if (size < 1) invalidLiteralNumber
           else if (wasSeparator) illegalSeparator
           else if (size > 32) tooLong
-          else Pos(Right(IntLiteral(acc.toInt)), begin, reader.prevIndex)
+          else Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
       }
 
-    def hex: Pos[Either[ScannerError, Token]] = ???
+    @tailrec
+    def hex(acc: Long, size: Int, wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
+      if (size > 16) tooLong
+      else reader.get() match {
+        case Some(ch) =>
+          val digitValue = HexDigits.digitValue(ch)
+          if (digitValue >= 0) {
+            hex((acc << 4) | (digitValue & 0xf), size + 1, wasSeparator = false)
+          } else (ch: @switch) match {
+            case '_' => hex(acc, size, wasSeparator = true)
+            case 'l' | 'L' =>
+              if (wasSeparator) illegalSeparator
+              else Pos(Right(LongLiteral(maybeNegate(acc))), begin, reader.prevIndex)
+            case other =>
+              if (wasSeparator) illegalSeparator
+              else if (isLetter(ch)) invalidLiteralNumber
+              else if (size > 8) tooLong
+              else {
+                reader.unget(other)
+                Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
+              }
+          }
+        case None =>
+          if (size < 1) invalidLiteralNumber
+          else if (wasSeparator) illegalSeparator
+          else if (size > 8) tooLong
+          else Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
+      }
 
     def beginSuffix(char: Char): Pos[Either[ScannerError, Token]] = ???
 
@@ -232,6 +265,10 @@ object Literals {
 
     def invalidLiteralNumber: Pos[Either[ScannerError, Token]] =
       Pos(Left(InvalidLiteralNumber), begin, reader.prevIndex)
+
+    def maybeNegate[A: Numeric](value: A): A =
+      if (negative) implicitly[Numeric[A]].negate(value)
+      else value
 
     if (leadingDecimalPoint) {
       buffer.write('0')
@@ -246,10 +283,9 @@ object Literals {
     }
   }
 
-
   def main(args: Array[String]): Unit = {
     val z = 123
-    val x = 0b1_1
+    val x = 0xaaaa_a
     println(x)
     // 9223372036854775807
     // 2147483647

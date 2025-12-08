@@ -1,19 +1,28 @@
 package software.kes.scaletta.scanner
 
 object HexDigits {
+
+  /**
+   * Returns value of digit (0..15), or -1 if not a valid hex digit
+   */
+  def digitValue(ch: Char): Byte =
+    if (ch >= '0' && ch <= '9') {
+      (ch - '0').toByte
+    } else if (ch >= 'a' && ch <= 'f') {
+      (10 + (ch - 'a')).toByte
+    } else if (ch >= 'A' && ch <= 'F') {
+      (10 + (ch - 'A')).toByte
+    } else -1.toByte
+
   /**
    * @return the character, and the value of the digit (0..15)
    */
   def scanOne(reader: CharReader): Option[(Char, Byte)] =
     reader.get() match {
       case Some(ch) =>
-        if (ch >= '0' && ch <= '9') {
-          Some((ch, (ch - '0').toByte))
-        } else if (ch >= 'a' && ch <= 'f') {
-          Some((ch, (10 + (ch - 'a')).toByte))
-        } else if (ch >= 'A' && ch <= 'F') {
-          Some((ch, (10 + (ch - 'A')).toByte))
-        } else {
+        val value = digitValue(ch)
+        if (value >= 0) Some((ch, value))
+        else {
           reader.unget(ch)
           None
         }

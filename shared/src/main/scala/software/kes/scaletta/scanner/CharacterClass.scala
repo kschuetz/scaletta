@@ -7,13 +7,16 @@ object CharacterClass {
   def isDigit(ch: Char): Boolean =
     (ch >= '0' && ch <= '9')
 
+  def isLetter(ch: Char): Boolean = {
+    val ct = Character.getType(ch)
+    ct == Character.LOWERCASE_LETTER.toInt || ct == Character.UPPERCASE_LETTER.toInt ||
+      ct == Character.TITLECASE_LETTER.toInt || ct == Character.LETTER_NUMBER.toInt ||
+      ct == Character.MODIFIER_LETTER
+  }
+
+
   def isIdentifierStart(ch: Char): Boolean =
-    ch == '_' || ch == '$' || {
-      val ct = Character.getType(ch)
-      ct == Character.LOWERCASE_LETTER.toInt || ct == Character.UPPERCASE_LETTER.toInt ||
-        ct == Character.TITLECASE_LETTER.toInt || ct == Character.LETTER_NUMBER.toInt ||
-        ct == Character.MODIFIER_LETTER
-    }
+    ch == '_' || ch == '$' || isLetter(ch)
 
   def isIdentifierInner(ch: Char): Boolean =
     isIdentifierStart(ch) || isDigit(ch)
