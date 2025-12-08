@@ -13,6 +13,8 @@ object Token {
     def name: String
 
     def aliases: List[String] = Nil
+
+    def allForms: List[String] = name :: aliases
   }
 
   case object Case extends ReservedWord {
@@ -207,6 +209,13 @@ object Token {
         token.aliases.foldLeft(acc.updated(token.name, token)) {
           case (acc1, alias) => acc1.updated(alias, token)
         }
+    }
+
+  val maxReservedWordLength: Int =
+    reservedWordByName.values.foldLeft(0) {
+      case (acc, word) => word.allForms.foldLeft(acc) {
+        case (acc1, name) => acc1.max(name.length)
+      }
     }
 
   def main(args: Array[String]): Unit = {
