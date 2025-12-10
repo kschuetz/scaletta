@@ -211,7 +211,10 @@ object Literals {
             else if (isDigit(ch)) {
               reader.unget(ch)
               leadingZero(first, wasSeparator = false)
-            } else illegalSeparator
+            } else {
+              reader.unget(ch)
+              illegalSeparator
+            }
           } else (ch: @switch) match {
             case 'x' | 'X' =>
               if (first) hex(0, 0, wasSeparator = false)
@@ -249,7 +252,9 @@ object Literals {
                 Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
               }
           }
-        case None => Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
+        case None =>
+          if (wasSeparator) illegalSeparator
+          else Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
       }
 
     @tailrec
@@ -261,7 +266,10 @@ object Literals {
             else if (isDigit(ch)) {
               reader.unget(ch)
               leftOfDecimalPoint(wasSeparator = false)
-            } else illegalSeparator
+            } else {
+              reader.unget(ch)
+              illegalSeparator
+            }
           } else (ch: @switch) match {
             case '.' =>
               reader.get() match {
@@ -453,7 +461,7 @@ object Literals {
     }
 
   def main(args: Array[String]): Unit = {
-    val z = 0
+    val z = 1
     val x = "9223372036854775807".toLongOption
     println(1.123456789_012345678e-123)
     // 9223372036854775807
