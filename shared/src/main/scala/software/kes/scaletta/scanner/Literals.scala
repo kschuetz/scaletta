@@ -163,28 +163,34 @@ object Literals {
                      firstDigit: Char,
                      reader: CharReader,
                      buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
+    buffer.reset()
     var begin = reader.prevIndex
     if (leadingDecimalPoint) begin -= 1
     if (negative) begin -= 1
 
-    def leadingZero: Pos[Either[ScannerError, Token]] =
+    @tailrec
+    def leadingZero(first: Boolean): Pos[Either[ScannerError, Token]] =
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
-            case 'x' | 'X' => hex(0, 0, wasSeparator = false)
-            case 'b' | 'B' => binary(0, 0, wasSeparator = false)
+            case 'x' | 'X' =>
+              if (first) hex(0, 0, wasSeparator = false)
+              else invalidLiteralNumber
+            case 'b' | 'B' =>
+              if (first) binary(0, 0, wasSeparator = false)
+              else invalidLiteralNumber
             case '.' =>
               rightOfDecimalPoint
-            case '0' | '_' =>
-              leftOfDecimalPoint
-            case 'd' | 'D' | 'l' | 'L' | 'f' | 'F' =>
-              buffer.write('0')
-              beginSuffix(ch)
+            case '0' => leadingZero(first = false)
+            case '_' => leftOfDecimalPoint(wasSeparator = true)
             case other =>
-              if (isDigit(other)) {
+              if (isSuffix(other)) {
+                buffer.write('0')
+                beginSuffix(ch, beforeDecimalPoint = true)
+              } else if (isDigit(other)) {
                 buffer.write(ch)
-                leftOfDecimalPoint
-              } else if (other.isLetter) {
+                leftOfDecimalPoint(wasSeparator = false)
+              } else if (isLetter(other)) {
                 Pos(Left(InvalidLiteralNumber), begin, reader.prevIndex)
               } else {
                 reader.unget(ch)
@@ -194,14 +200,70 @@ object Literals {
         case None => Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
       }
 
-    def leftOfDecimalPoint: Pos[Either[ScannerError, Token]] = ???
-
+    @tailrec
+    def leftOfDecimalPoint(wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
+      reader.get() match {
+        case Some(ch) =>
+          if (wasSeparator) {
+            if (ch == '_') leftOfDecimalPoint(wasSeparator = true)
+            else if (isDigit(ch)) {
+              reader.unget(ch)
+              leftOfDecimalPoint(wasSeparator = false)
+            } else illegalSeparator
+          } else (ch: @switch) match {
+            case '.' =>
+              reader.get() match {
+                case Some(c1) =>
+                  if (isDigit(c1)) {
+                    buffer.write('.')
+                    buffer.write(c1)
+                    rightOfDecimalPoint
+                  } else {
+                    reader.unget(c1)
+                    makeInteger
+                  }
+                case None =>
+                  reader.unget(ch)
+                  makeInteger
+              }
+            case 'e' | 'E' =>
+              reader.get() match {
+                case Some(c1) =>
+                  if (isDigit(c1)) {
+                    buffer.write('E')
+                    buffer.write(c1)
+                    exponent
+                  } else {
+                    invalidLiteralNumber
+                  }
+                case None => invalidLiteralNumber
+              }
+            case '_' => leftOfDecimalPoint(wasSeparator = true)
+            case _ =>
+              if (isSuffix(ch)) {
+                beginSuffix(ch, beforeDecimalPoint = true)
+              } else if (isDigit(ch)) {
+                buffer.write(ch)
+                leftOfDecimalPoint(wasSeparator = false)
+              } else if (isLetter(ch)) {
+                invalidLiteralNumber
+              } else {
+                reader.unget(ch)
+                makeInteger
+              }
+          }
+        case None =>
+          if (wasSeparator) illegalSeparator
+          else makeInteger
+      }
 
     def rightOfDecimalPoint: Pos[Either[ScannerError, Token]] = ???
 
+    def exponent: Pos[Either[ScannerError, Token]] = ???
+
     @tailrec
     def binary(acc: Long, size: Int, wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
-      if (size > 64) tooLong
+      if (size > 64) integerTooLarge
       else reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
@@ -214,7 +276,7 @@ object Literals {
             case other =>
               if (wasSeparator) illegalSeparator
               else if (isDigit(ch)) invalidLiteralNumber
-              else if (size > 32) tooLong
+              else if (size > 32) integerTooLarge
               else {
                 reader.unget(other)
                 Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
@@ -223,13 +285,13 @@ object Literals {
         case None =>
           if (size < 1) invalidLiteralNumber
           else if (wasSeparator) illegalSeparator
-          else if (size > 32) tooLong
+          else if (size > 32) integerTooLarge
           else Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
       }
 
     @tailrec
     def hex(acc: Long, size: Int, wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
-      if (size > 16) tooLong
+      if (size > 16) integerTooLarge
       else reader.get() match {
         case Some(ch) =>
           val digitValue = HexDigits.digitValue(ch)
@@ -243,7 +305,7 @@ object Literals {
             case other =>
               if (wasSeparator) illegalSeparator
               else if (isLetter(ch)) invalidLiteralNumber
-              else if (size > 8) tooLong
+              else if (size > 8) integerTooLarge
               else {
                 reader.unget(other)
                 Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
@@ -252,13 +314,61 @@ object Literals {
         case None =>
           if (size < 1) invalidLiteralNumber
           else if (wasSeparator) illegalSeparator
-          else if (size > 8) tooLong
+          else if (size > 8) integerTooLarge
           else Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
       }
 
-    def beginSuffix(char: Char): Pos[Either[ScannerError, Token]] = ???
+    def beginSuffix(ch: Char,
+                    beforeDecimalPoint: Boolean): Pos[Either[ScannerError, Token]] =
+      if (reader.peek().exists(c => isLetter(c) || isDigit(c))) {
+        invalidLiteralNumber
+      } else (ch: @switch) match {
+        case 'l' | 'L' =>
+          if (beforeDecimalPoint) makeLong
+          else invalidLiteralNumber
+        case 'd' | 'D' =>
+          makeDouble
+        case 'f' | 'F' =>
+          makeFloat
+        case _ => invalidLiteralNumber
+      }
 
-    def tooLong: Pos[Either[ScannerError, Token]] = ???
+    def makeInteger: Pos[Either[ScannerError, Token]] =
+      if (buffer.size > 10) integerTooLarge
+      else buffer.slice().toLongOption match {
+        case Some(value) =>
+          val resultAsLong = maybeNegate(value)
+          if (resultAsLong >= Int.MinValue && resultAsLong <= Int.MaxValue) {
+            Pos(Right(IntLiteral(resultAsLong.toInt)), begin, reader.prevIndex)
+          } else {
+            integerTooLarge
+          }
+        case None => invalidLiteralNumber // shouldn't happen
+      }
+
+    def makeLong: Pos[Either[ScannerError, Token]] = {
+      val size = buffer.size
+      if (size > 19) integerTooLarge
+      else buffer.slice().toLongOption match {
+        case Some(value) =>
+          val resultAsLong = maybeNegate(value)
+          if (resultAsLong >= Int.MinValue && resultAsLong <= Int.MaxValue) {
+            Pos(Right(IntLiteral(resultAsLong.toInt)), begin, reader.prevIndex)
+          } else {
+            integerTooLarge
+          }
+        case None =>
+          if (buffer.size == 19) integerTooLarge
+          else invalidLiteralNumber // shouldn't happen
+      }
+    }
+
+    def makeDouble: Pos[Either[ScannerError, Token]] = ???
+
+    def makeFloat: Pos[Either[ScannerError, Token]] = ???
+
+    def integerTooLarge: Pos[Either[ScannerError, Token]] =
+      Pos(Left(IntegerNumberTooLarge), begin, reader.prevIndex)
 
     def illegalSeparator: Pos[Either[ScannerError, Token]] =
       Pos(Left(IllegalSeparator), reader.prevIndex)
@@ -276,19 +386,28 @@ object Literals {
       buffer.write(firstDigit)
       rightOfDecimalPoint
     } else if (firstDigit == '0') {
-      leadingZero
+      leadingZero(first = true)
     } else {
       buffer.write(firstDigit)
-      leftOfDecimalPoint
+      leftOfDecimalPoint(wasSeparator = false)
     }
   }
 
+  private def isSuffix(ch: Char): Boolean =
+    (ch: @switch) match {
+      case 'd' | 'D' | 'l' | 'L' | 'f' | 'F' => true
+      case _ => false
+    }
+
   def main(args: Array[String]): Unit = {
-    val z = 123
-    val x = 0xaaaa_a
-    println(x)
+    val z = 0
+    val x = "9223372036854775807".toLongOption
+    println(z)
     // 9223372036854775807
     // 2147483647
+
+    println(Long.MinValue)
+    println(Long.MaxValue)
 
     println((-1).toChar)
     // Long: 19 digits
