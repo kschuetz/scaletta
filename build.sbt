@@ -10,14 +10,15 @@ lazy val scalaTestPlusScalaCheckVersion = "3.2.19.0"
 
 lazy val root = project
   .in(file("."))
-  .aggregate(scaletta.js, scaletta.jvm)
+  .aggregate(scaletta.jvm, scaletta.js)
   .settings(
+    name := "scaletta",
     publish := {},
     publishLocal := {},
     crossScalaVersions := Nil,
   )
 
-lazy val scaletta = crossProject(JSPlatform, JVMPlatform)
+lazy val scaletta = crossProject(JVMPlatform, JSPlatform)
   .in(file("."))
   .settings(
     name := "scaletta",
