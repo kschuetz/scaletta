@@ -9,6 +9,9 @@ import scala.annotation.{switch, tailrec}
 
 object Literals {
 
+  /**
+   * Assumes the opening ' has already been consumed
+   */
   def charLiteral(reader: CharReader): Pos[Either[ScannerError, Token]] = {
     val begin = reader.prevIndex
 
@@ -41,6 +44,9 @@ object Literals {
     inChar
   }
 
+  /**
+   * Assumes the opening " has already been consumed
+   */
   def stringLiteral(reader: CharReader,
                     buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
     val begin = reader.prevIndex
@@ -158,21 +164,55 @@ object Literals {
   /**
    * Assumes empty buffer
    */
-  def numericLiteral(negative: Boolean,
-                     leadingDecimalPoint: Boolean,
-                     firstDigit: Char,
-                     reader: CharReader,
-                     buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
+  def tryNumericLiteral(reader: CharReader,
+                        buffer: CharBuffer): Option[Pos[Either[ScannerError, Token]]] = {
+    val negative = reader.tryGet('-')
+    val leadingDecimalPoint = reader.tryGet('.')
+
+    def rollBack(): Unit = {
+      if (leadingDecimalPoint) reader.unget('.')
+      if (negative) reader.unget('-')
+    }
+
+    reader.get() match {
+      case Some(ch) =>
+        if (isDigit(ch)) Some(numericLiteral(negative = negative, leadingDecimalPoint = leadingDecimalPoint,
+          firstDigit = ch, reader, buffer))
+        else {
+          reader.unget(ch)
+          rollBack()
+          None
+        }
+
+      case None =>
+        rollBack()
+        None
+    }
+  }
+
+  private def numericLiteral(negative: Boolean,
+                             leadingDecimalPoint: Boolean,
+                             firstDigit: Char,
+                             reader: CharReader,
+                             buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
     buffer.reset()
     var begin = reader.prevIndex
     if (leadingDecimalPoint) begin -= 1
     if (negative) begin -= 1
 
     @tailrec
-    def leadingZero(first: Boolean): Pos[Either[ScannerError, Token]] =
+    def leadingZero(first: Boolean,
+                    wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
       reader.get() match {
         case Some(ch) =>
-          (ch: @switch) match {
+          if (wasSeparator) {
+            if (ch == '_') leadingZero(first, wasSeparator = true)
+            else if (ch == '0') leadingZero(first, wasSeparator = false)
+            else if (isDigit(ch)) {
+              reader.unget(ch)
+              leadingZero(first, wasSeparator = false)
+            } else illegalSeparator
+          } else (ch: @switch) match {
             case 'x' | 'X' =>
               if (first) hex(0, 0, wasSeparator = false)
               else invalidLiteralNumber
@@ -180,9 +220,21 @@ object Literals {
               if (first) binary(0, 0, wasSeparator = false)
               else invalidLiteralNumber
             case '.' =>
-              rightOfDecimalPoint
-            case '0' => leadingZero(first = false)
-            case '_' => leftOfDecimalPoint(wasSeparator = true)
+              reader.get() match {
+                case Some(c1) =>
+                  if (c1.isDigit) {
+                    rightOfDecimalPoint(1, wasSeparator = false)
+                  } else {
+                    reader.unget(c1)
+                    reader.unget('.')
+                    makeInteger
+                  }
+                case None =>
+                  buffer.write('0')
+                  makeInteger
+              }
+            case '0' => leadingZero(first = false, wasSeparator = false)
+            case '_' => leadingZero(first = false, wasSeparator = true)
             case other =>
               if (isSuffix(other)) {
                 buffer.write('0')
@@ -217,7 +269,7 @@ object Literals {
                   if (isDigit(c1)) {
                     buffer.write('.')
                     buffer.write(c1)
-                    rightOfDecimalPoint
+                    rightOfDecimalPoint(1, wasSeparator = false)
                   } else {
                     reader.unget(c1)
                     makeInteger
@@ -257,7 +309,8 @@ object Literals {
           else makeInteger
       }
 
-    def rightOfDecimalPoint: Pos[Either[ScannerError, Token]] = ???
+    def rightOfDecimalPoint(digitCount: Int,
+                            wasSeparator: Boolean): Pos[Either[ScannerError, Token]] = ???
 
     def exponent: Pos[Either[ScannerError, Token]] = ???
 
@@ -384,9 +437,9 @@ object Literals {
       buffer.write('0')
       buffer.write('.')
       buffer.write(firstDigit)
-      rightOfDecimalPoint
+      rightOfDecimalPoint(1, wasSeparator = false)
     } else if (firstDigit == '0') {
-      leadingZero(first = true)
+      leadingZero(first = true, wasSeparator = false)
     } else {
       buffer.write(firstDigit)
       leftOfDecimalPoint(wasSeparator = false)
@@ -402,10 +455,12 @@ object Literals {
   def main(args: Array[String]): Unit = {
     val z = 0
     val x = "9223372036854775807".toLongOption
-    println(z)
+    println(1.123456789_012345678e-123)
     // 9223372036854775807
     // 2147483647
 
+
+    // 308 left of decimal point
     println(Long.MinValue)
     println(Long.MaxValue)
 
