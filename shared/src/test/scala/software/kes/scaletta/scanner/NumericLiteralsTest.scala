@@ -13,207 +13,112 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
   describe("numericLiteral") {
     describe("int") {
       it("0") {
-        TestReaderFactory.fromString("0 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(0), 0, 0))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        check("0", Some(success(Token.IntLiteral(0), 0, 0)))
       }
 
       it("-0") {
-        TestReaderFactory.fromString("-0 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(0), 0, 1))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        check("-0", Some(success(Token.IntLiteral(0), 0, 1)))
       }
 
       it("000") {
-        TestReaderFactory.fromString("000 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(0), 0, 2))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        check("000", Some(success(Token.IntLiteral(0), 0, 2)))
       }
 
       it("many leading zeroes") {
-        TestReaderFactory.fromString("000000000000000000000000000000000000000000000000000000000000000123 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(123), 0, 65))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("Int.MinValue") {
-        TestReaderFactory.fromString("-2147483648 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(Int.MinValue), 0, 10))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("Int.MinValue with leading zeroes") {
-        TestReaderFactory.fromString("-00002147483648 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(Int.MinValue), 0, 14))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("Int.MinValue-1") {
-        TestReaderFactory.fromString("-2147483649 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(failure(IntegerNumberTooLarge, 0, 10))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("Int.MaxValue") {
-        TestReaderFactory.fromString("2147483647 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(Int.MaxValue), 0, 9))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("Int.MaxValue with leading zeroes") {
-        TestReaderFactory.fromString("00002147483647 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(Int.MaxValue), 0, 13))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("Int.MaxValue+1") {
-        TestReaderFactory.fromString("2147483648 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(failure(IntegerNumberTooLarge, 0, 9))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        check("000000000000000000000000000000000000000000000000000000000000000123",
+          Some(success(Token.IntLiteral(123), 0, 65)))
       }
     }
 
-    describe("binary") {
-
-      it("int (small)") {
-        TestReaderFactory.fromString("0b1010_1010 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(170), 0, 10))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("long (small)") {
-        TestReaderFactory.fromString("0b1010_1010L $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(170), 0, 11))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("large") {
-        TestReaderFactory.fromString("0b1010_1010_1010_1010_1010_1010_1010_1010_1010L $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(45812984490L), 0, 46))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("negative int (small)") {
-        TestReaderFactory.fromString("-0b1010_1010 $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(-170), 0, 11))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("negative long (small)") {
-        TestReaderFactory.fromString("-0b1010_1010L $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(-170), 0, 12))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
-
-      it("negative large") {
-        TestReaderFactory.fromString("-0b1010_1010_1010_1010_1010_1010_1010_1010_1010L $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(-45812984490L), 0, 47))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
+    it("Int.MinValue") {
+      check("-2147483648", Some(success(Token.IntLiteral(Int.MinValue), 0, 10)))
     }
 
-    describe("hex") {
-      it("int (small)") {
-        TestReaderFactory.fromString("0x1234_abcd $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(0x1234abcd), 0, 10))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
+    it("Int.MinValue with leading zeroes") {
+      check("-00002147483648", Some(success(Token.IntLiteral(Int.MinValue), 0, 14)))
+    }
 
-      it("long (small)") {
-        TestReaderFactory.fromString("0x1234_ABCDL $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(0x1234abcd), 0, 11))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
+    it("Int.MinValue-1") {
+      check("-2147483649", Some(failure(IntegerNumberTooLarge, 0, 10)))
+    }
 
-      it("large") {
-        TestReaderFactory.fromString("0x1234_5678_abcd_EF01l $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(0x1234_5678_abcd_ef01L), 0, 21))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
+    it("Int.MaxValue") {
+      check("2147483647", Some(success(Token.IntLiteral(Int.MaxValue), 0, 9)))
+    }
 
-      it("negative int (small)") {
-        TestReaderFactory.fromString("-0x1234_AbCd $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.IntLiteral(-0x1234abcd), 0, 11))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
+    it("Int.MaxValue with leading zeroes") {
+      check("00002147483647", Some(success(Token.IntLiteral(Int.MaxValue), 0, 13)))
+    }
 
-      it("negative long (small)") {
-        TestReaderFactory.fromString("-0x1234_aBcDl $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(-0x1234abcd), 0, 12))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
+    it("Int.MaxValue+1") {
+      check("2147483648", Some(failure(IntegerNumberTooLarge, 0, 9)))
+    }
+  }
 
-      it("negative (large)") {
-        TestReaderFactory.fromString("-0x1234_5678_Abcd_eF01L $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe
-            Some(success(Token.LongLiteral(-0x1234_5678_abcd_ef01L), 0, 22))
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      }
+  describe("binary") {
+
+    it("int (small)") {
+      check("0b1010_1010", Some(success(Token.IntLiteral(170), 0, 10)))
+    }
+
+    it("long (small)") {
+      check("0b1010_1010L", Some(success(Token.LongLiteral(170), 0, 11)))
+    }
+
+    it("large") {
+      check("0b1010_1010_1010_1010_1010_1010_1010_1010_1010L", Some(success(Token.LongLiteral(45812984490L), 0, 46)))
+    }
+
+    it("negative int (small)") {
+      check("-0b1010_1010", Some(success(Token.IntLiteral(-170), 0, 11)))
+    }
+
+    it("negative long (small)") {
+      check("-0b1010_1010L", Some(success(Token.LongLiteral(-170), 0, 12)))
+    }
+
+    it("negative large") {
+      check("-0b1010_1010_1010_1010_1010_1010_1010_1010_1010L",
+        Some(success(Token.LongLiteral(-45812984490L), 0, 47)))
+    }
+  }
+
+  describe("hex") {
+    it("int (small)") {
+      check("0x1234_abcd", Some(success(Token.IntLiteral(0x1234abcd), 0, 10)))
+    }
+
+    it("long (small)") {
+      check("0x1234_ABCDL", Some(success(Token.LongLiteral(0x1234abcd), 0, 11)))
+    }
+
+    it("large") {
+      check("0x1234_5678_abcd_EF01l", Some(success(Token.LongLiteral(0x1234_5678_abcd_ef01L), 0, 21)))
+    }
+
+    it("negative int (small)") {
+      check("-0x1234_AbCd", Some(success(Token.IntLiteral(-0x1234abcd), 0, 11)))
+    }
+
+    it("negative long (small)") {
+      check("-0x1234_aBcDl", Some(success(Token.LongLiteral(-0x1234abcd), 0, 12)))
+    }
+
+    it("negative (large)") {
+      check("-0x1234_5678_Abcd_eF01L",
+        Some(success(Token.LongLiteral(-0x1234_5678_abcd_ef01L), 0, 22)))
+    }
+  }
+
+  private def check(input: String, expected: Option[Pos[Either[ScannerError, Token]]]): Unit = {
+    TestReaderFactory.fromString(input) { reader =>
+      Literals.tryNumericLiteral(reader, buffer) shouldBe expected
+    }
+
+    TestReaderFactory.fromString(input + " $") { reader =>
+      Literals.tryNumericLiteral(reader, buffer) shouldBe expected
+      reader.get() shouldBe Some(' ')
+      reader.get() shouldBe Some('$')
     }
   }
 
