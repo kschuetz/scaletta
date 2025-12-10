@@ -217,8 +217,4 @@ object Token {
         case (acc1, name) => acc1.max(name.length)
       }
     }
-
-  def main(args: Array[String]): Unit = {
-    println(reservedWordByName)
-  }
 }
