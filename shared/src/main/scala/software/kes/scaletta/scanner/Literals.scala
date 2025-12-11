@@ -2,20 +2,31 @@ package software.kes.scaletta.scanner
 
 import software.kes.scaletta.scanner.CharacterClass.{isDigit, isLetter}
 import software.kes.scaletta.scanner.ScannerError._
-import software.kes.scaletta.scanner.Token.{IntLiteral, LongLiteral, MultiLineString, StringLiteral}
+import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer
 
 import scala.annotation.{switch, tailrec}
 
 object Literals {
 
+  // Maximum number of significant digits to the right of the decimal point
+  // Anything beyond that is still parsed, but has no effect on the result.
+  private val MaxFloatDigits = 20
+
+  private val MinDoubleExponent = -324
+  private val MaxDoubleExponent = 308
+  private val MinSingleExponent = -45
+  private val MaxSingleExponent = 38
+
+  type Result = Pos[Either[ScannerError, Token]]
+
   /**
    * Assumes the opening ' has already been consumed
    */
-  def charLiteral(reader: CharReader): Pos[Either[ScannerError, Token]] = {
+  def charLiteral(reader: CharReader): Result = {
     val begin = reader.prevIndex
 
-    def inChar: Pos[Either[ScannerError, Token]] =
+    def inChar: Result =
       reader.get() match {
         case Some(ch) =>
           if (ch == '\\') escapeSequence
@@ -24,13 +35,13 @@ object Literals {
         case None => Pos(Left(UnclosedCharacterLiteral), begin, reader.prevIndex)
       }
 
-    def escapeSequence: Pos[Either[ScannerError, Token]] =
+    def escapeSequence: Result =
       EscapeSequence.scan(reader) match {
         case Some(value) => endQuote(value)
         case None => Pos(Left(InvalidEscapeCharacter), reader.prevIndex)
       }
 
-    def endQuote(value: Char): Pos[Either[ScannerError, Token]] =
+    def endQuote(value: Char): Result =
       reader.get() match {
         case Some(ch) =>
           if (ch == '\'') Pos(Right(Token.CharLiteral(value)), begin, reader.prevIndex)
@@ -48,11 +59,11 @@ object Literals {
    * Assumes the opening " has already been consumed
    */
   def stringLiteral(reader: CharReader,
-                    buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
+                    buffer: CharBuffer): Result = {
     val begin = reader.prevIndex
     buffer.reset()
 
-    def q1: Pos[Either[ScannerError, Token]] =
+    def q1: Result =
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
@@ -69,7 +80,7 @@ object Literals {
       }
 
     @tailrec
-    def inStr: Pos[Either[ScannerError, Token]] =
+    def inStr: Result =
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
@@ -85,7 +96,7 @@ object Literals {
         case None => unclosed
       }
 
-    def q2: Pos[Either[ScannerError, Token]] =
+    def q2: Result =
       reader.get() match {
         case Some(ch) =>
           if (ch == '"') inMultiLineStr
@@ -97,7 +108,7 @@ object Literals {
       }
 
     @tailrec
-    def inMultiLineStr: Pos[Either[ScannerError, Token]] =
+    def inMultiLineStr: Result =
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
@@ -110,7 +121,7 @@ object Literals {
         case None => unclosedMultiLine
       }
 
-    def endQ1: Pos[Either[ScannerError, Token]] =
+    def endQ1: Result =
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
@@ -126,7 +137,7 @@ object Literals {
         case None => unclosedMultiLine
       }
 
-    def endQ2: Pos[Either[ScannerError, Token]] =
+    def endQ2: Result =
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
@@ -144,7 +155,7 @@ object Literals {
         case None => unclosedMultiLine
       }
 
-    def escapeSequence(multiLineMode: Boolean): Pos[Either[ScannerError, Token]] =
+    def escapeSequence(multiLineMode: Boolean): Result =
       EscapeSequence.scan(reader) match {
         case Some(value) =>
           buffer.write(value)
@@ -152,10 +163,10 @@ object Literals {
         case None => Pos(Left(InvalidEscapeCharacter), reader.prevIndex)
       }
 
-    def unclosed: Pos[Either[ScannerError, Token]] =
+    def unclosed: Result =
       Pos(Left(UnclosedStringLiteral), reader.prevIndex)
 
-    def unclosedMultiLine: Pos[Either[ScannerError, Token]] =
+    def unclosedMultiLine: Result =
       Pos(Left(UnclosedMultiLineString), reader.prevIndex)
 
     q1
@@ -165,7 +176,7 @@ object Literals {
    * Assumes empty buffer
    */
   def tryNumericLiteral(reader: CharReader,
-                        buffer: CharBuffer): Option[Pos[Either[ScannerError, Token]]] = {
+                        buffer: CharBuffer): Option[Result] = {
     val negative = reader.tryGet('-')
     val leadingDecimalPoint = reader.tryGet('.')
 
@@ -194,27 +205,35 @@ object Literals {
                              leadingDecimalPoint: Boolean,
                              firstDigit: Char,
                              reader: CharReader,
-                             buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
+                             buffer: CharBuffer): Result = {
     buffer.reset()
     var begin = reader.prevIndex
     if (leadingDecimalPoint) begin -= 1
     if (negative) begin -= 1
 
+    def afterSeparator(ch: Char)
+                      (k: Boolean => Result): Result =
+      if (ch == '_') k(true)
+      else if (ch == '0') k(false)
+      else if (isDigit(ch)) {
+        reader.unget(ch)
+        k(false)
+      } else {
+        reader.unget(ch)
+        illegalSeparator
+      }
+
+    def _leadingZero(first: Boolean)
+                    (wasSeparator: Boolean): Result =
+      leadingZero(first, wasSeparator)
+
     @tailrec
     def leadingZero(first: Boolean,
-                    wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
+                    wasSeparator: Boolean): Result =
       reader.get() match {
         case Some(ch) =>
           if (wasSeparator) {
-            if (ch == '_') leadingZero(first, wasSeparator = true)
-            else if (ch == '0') leadingZero(first, wasSeparator = false)
-            else if (isDigit(ch)) {
-              reader.unget(ch)
-              leadingZero(first, wasSeparator = false)
-            } else {
-              reader.unget(ch)
-              illegalSeparator
-            }
+            afterSeparator(ch)(_leadingZero(first))
           } else (ch: @switch) match {
             case 'x' | 'X' =>
               if (first) hex(0, 0, wasSeparator = false)
@@ -226,6 +245,9 @@ object Literals {
               reader.get() match {
                 case Some(c1) =>
                   if (c1.isDigit) {
+                    buffer.write('0')
+                    buffer.write('.')
+                    buffer.write(ch)
                     rightOfDecimalPoint(1, wasSeparator = false)
                   } else {
                     reader.unget(c1)
@@ -257,19 +279,15 @@ object Literals {
           else Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
       }
 
+    def _leftOfDecimalPoint(wasSeparator: Boolean): Result =
+      leftOfDecimalPoint(wasSeparator)
+
     @tailrec
-    def leftOfDecimalPoint(wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
+    def leftOfDecimalPoint(wasSeparator: Boolean): Result =
       reader.get() match {
         case Some(ch) =>
           if (wasSeparator) {
-            if (ch == '_') leftOfDecimalPoint(wasSeparator = true)
-            else if (isDigit(ch)) {
-              reader.unget(ch)
-              leftOfDecimalPoint(wasSeparator = false)
-            } else {
-              reader.unget(ch)
-              illegalSeparator
-            }
+            afterSeparator(ch)(_leftOfDecimalPoint)
           } else (ch: @switch) match {
             case '.' =>
               reader.get() match {
@@ -286,18 +304,7 @@ object Literals {
                   reader.unget(ch)
                   makeInteger
               }
-            case 'e' | 'E' =>
-              reader.get() match {
-                case Some(c1) =>
-                  if (isDigit(c1)) {
-                    buffer.write('E')
-                    buffer.write(c1)
-                    exponent
-                  } else {
-                    invalidLiteralNumber
-                  }
-                case None => invalidLiteralNumber
-              }
+            case 'e' | 'E' => tryExponent
             case '_' => leftOfDecimalPoint(wasSeparator = true)
             case _ =>
               if (isSuffix(ch)) {
@@ -317,13 +324,116 @@ object Literals {
           else makeInteger
       }
 
-    def rightOfDecimalPoint(digitCount: Int,
-                            wasSeparator: Boolean): Pos[Either[ScannerError, Token]] = ???
-
-    def exponent: Pos[Either[ScannerError, Token]] = ???
+    def _rightOfDecimalPoint(digitCount: Int)
+                            (wasSeparator: Boolean): Result =
+      rightOfDecimalPoint(digitCount, wasSeparator)
 
     @tailrec
-    def binary(acc: Long, size: Int, wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
+    def rightOfDecimalPoint(digitCount: Int,
+                            wasSeparator: Boolean): Result =
+      reader.get() match {
+        case Some(ch) =>
+          if (wasSeparator) {
+            afterSeparator(ch)(_rightOfDecimalPoint(digitCount))
+          } else (ch: @switch) match {
+            case 'e' | 'E' => tryExponent
+            case '_' => rightOfDecimalPoint(digitCount, wasSeparator = true)
+            case _ =>
+              if (isSuffix(ch)) {
+                beginSuffix(ch, beforeDecimalPoint = false)
+              } else if (isDigit(ch)) {
+                if (digitCount <= MaxFloatDigits) {
+                  buffer.write(ch)
+                }
+                rightOfDecimalPoint(digitCount + 1, wasSeparator = false)
+              } else if (isLetter(ch)) {
+                invalidLiteralNumber
+              } else {
+                reader.unget(ch)
+                makeDouble
+              }
+          }
+        case None =>
+          if (wasSeparator) illegalSeparator
+          else makeDouble
+      }
+
+    def tryExponent: Result =
+      reader.get() match {
+        case Some(c1) =>
+          if (isDigit(c1)) {
+            buffer.write('E')
+            buffer.write(c1)
+            exponent(c1 - '0', negative = false, wasSeparator = false)
+          } else if (c1 == '-' || c1 == '+') {
+            reader.get() match {
+              case Some(c2) =>
+                if (isDigit(c2)) {
+                  val negative = c1 == '-'
+                  buffer.write('E')
+                  if (negative) buffer.write(c1)
+                  buffer.write(c2)
+                  exponent(c2 - '0', negative, wasSeparator = false)
+                } else {
+                  invalidLiteralNumber
+                }
+            }
+          } else {
+            invalidLiteralNumber
+          }
+        case None => invalidLiteralNumber
+      }
+
+    def _exponent(acc: Int,
+                  negative: Boolean)
+                 (wasSeparator: Boolean): Result =
+      exponent(acc, negative, wasSeparator)
+
+    // Keeping track of the value in acc so we can report when precision has been exceeded
+    def exponent(acc: Int,
+                 negative: Boolean,
+                 wasSeparator: Boolean): Result = {
+      def checkPrecision(min: Int, max: Int)
+                        (k: => Result): Result =
+        if (negative) {
+          if (-acc < min) floatingPointPrecisionTooSmall
+          else k
+        } else if (acc > max) floatingPointPrecisionTooLarge
+        else k
+
+      checkPrecision(MinDoubleExponent, MaxDoubleExponent) {
+        reader.get() match {
+          case Some(ch) =>
+            if (wasSeparator) {
+              afterSeparator(ch)(_exponent(acc, negative))
+            } else if (isSuffix(ch)) {
+              if (ch == 'f' || ch == 'F') {
+                checkPrecision(MinSingleExponent, MaxSingleExponent) {
+                  beginSuffix(ch, beforeDecimalPoint = false)
+                }
+              } else beginSuffix(ch, beforeDecimalPoint = false)
+            } else if (isDigit(ch)) {
+              if (!(ch == '0' && acc == 0)) {
+                // don't bother to write leading zeroes
+                buffer.write(ch)
+              }
+              val newAcc = (acc * 10) + (ch - '0')
+              exponent(newAcc, negative, wasSeparator = false)
+            } else if (isLetter(ch)) {
+              invalidLiteralNumber
+            } else {
+              reader.unget(ch)
+              makeDouble
+            }
+          case None =>
+            if (wasSeparator) illegalSeparator
+            else makeDouble
+        }
+      }
+    }
+
+    @tailrec
+    def binary(acc: Long, size: Int, wasSeparator: Boolean): Result =
       if (size > 64) integerTooLarge
       else reader.get() match {
         case Some(ch) =>
@@ -351,7 +461,7 @@ object Literals {
       }
 
     @tailrec
-    def hex(acc: Long, size: Int, wasSeparator: Boolean): Pos[Either[ScannerError, Token]] =
+    def hex(acc: Long, size: Int, wasSeparator: Boolean): Result =
       if (size > 16) integerTooLarge
       else reader.get() match {
         case Some(ch) =>
@@ -380,7 +490,7 @@ object Literals {
       }
 
     def beginSuffix(ch: Char,
-                    beforeDecimalPoint: Boolean): Pos[Either[ScannerError, Token]] =
+                    beforeDecimalPoint: Boolean): Result =
       if (reader.peek().exists(c => isLetter(c) || isDigit(c))) {
         invalidLiteralNumber
       } else (ch: @switch) match {
@@ -394,7 +504,7 @@ object Literals {
         case _ => invalidLiteralNumber
       }
 
-    def makeInteger: Pos[Either[ScannerError, Token]] =
+    def makeInteger: Result =
       if (buffer.size > 10) integerTooLarge
       else buffer.slice().toLongOption match {
         case Some(value) =>
@@ -407,7 +517,7 @@ object Literals {
         case None => invalidLiteralNumber // shouldn't happen
       }
 
-    def makeLong: Pos[Either[ScannerError, Token]] = {
+    def makeLong: Result = {
       val size = buffer.size
       if (size > 19) integerTooLarge
       else buffer.slice().toLongOption match {
@@ -424,18 +534,40 @@ object Literals {
       }
     }
 
-    def makeDouble: Pos[Either[ScannerError, Token]] = ???
+    def makeDouble: Result =
+      buffer.slice().toDoubleOption match {
+        case Some(value) =>
+          val result = maybeNegate(value)
+          if (result.isFinite) {
+            Pos(Right(DoubleLiteral(result)), begin, reader.prevIndex)
+          } else invalidLiteralNumber
+        case None => invalidLiteralNumber
+      }
 
-    def makeFloat: Pos[Either[ScannerError, Token]] = ???
+    def makeFloat: Result =
+      buffer.slice().toFloatOption match {
+        case Some(value) =>
+          val result = maybeNegate(value)
+          if (result.isFinite) {
+            Pos(Right(FloatLiteral(result)), begin, reader.prevIndex)
+          } else invalidLiteralNumber
+        case None => invalidLiteralNumber
+      }
 
-    def integerTooLarge: Pos[Either[ScannerError, Token]] =
+    def integerTooLarge: Result =
       Pos(Left(IntegerNumberTooLarge), begin, reader.prevIndex)
 
-    def illegalSeparator: Pos[Either[ScannerError, Token]] =
+    def illegalSeparator: Result =
       Pos(Left(IllegalSeparator), reader.prevIndex)
 
-    def invalidLiteralNumber: Pos[Either[ScannerError, Token]] =
+    def invalidLiteralNumber: Result =
       Pos(Left(InvalidLiteralNumber), begin, reader.prevIndex)
+
+    def floatingPointPrecisionTooSmall: Result =
+      Pos(Left(FloatingPointPrecisionTooSmall), begin, reader.prevIndex)
+
+    def floatingPointPrecisionTooLarge: Result =
+      Pos(Left(FloatingPointPrecisionTooLarge), begin, reader.prevIndex)
 
     def maybeNegate[A: Numeric](value: A): A =
       if (negative) implicitly[Numeric[A]].negate(value)
@@ -463,7 +595,10 @@ object Literals {
   def main(args: Array[String]): Unit = {
     val z = 1
     val x = "9223372036854775807".toLongOption
-    println(1.123456789_012345678e-123)
+    val double = 1e308
+
+
+    println(double)
     // 9223372036854775807
     // 2147483647
 

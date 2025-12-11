@@ -27,5 +27,9 @@ object ScannerError {
 
   case object FloatingPointNumberTooLarge extends ScannerError
 
+  case object FloatingPointPrecisionTooLarge extends ScannerError
+
+  case object FloatingPointPrecisionTooSmall extends ScannerError
+
   case object IdentifierTooLong extends ScannerError
 }
