@@ -13,6 +13,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
    * Can return one of the following:
    *   - Identifier (upper, lower, or operator)
    *   - Reserved word
+   *   - BeginInterpolatedString/BeginMultiLineInterpolatedString
    */
   def plain(reader: CharReader,
             buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
@@ -75,12 +76,32 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
         case None =>
           if (isOperator) {
             construct(Token.Identifier.Operator.apply)(reader, buffer, begin)
-          } else if (CharacterClass.isUppercase(firstChar)) {
-            construct(Token.Identifier.Upper.apply)(reader, buffer, begin)
+          } else if (CharacterClass.isLetter(firstChar)) {
+            doneStartsWithLetter
           } else {
             construct(Token.Identifier.Lower.apply)(reader, buffer, begin)
           }
       }
+    }
+
+    def doneStartsWithLetter: Pos[Either[ScannerError, Token]] = {
+      def normal: Pos[Either[ScannerError, Token]] =
+        if (CharacterClass.isUppercase(firstChar)) {
+          construct(Token.Identifier.Upper.apply)(reader, buffer, begin)
+        } else {
+          construct(Token.Identifier.Lower.apply)(reader, buffer, begin)
+        }
+
+      if (reader.tryGet('"')) {
+        if (reader.tryGet('"')) {
+          if (reader.tryGet('"')) {
+            construct(Token.BeginMultiLineInterpolatedString.apply)(reader, buffer, begin)
+          } else {
+            reader.unget('"')
+            construct(Token.BeginInterpolatedString.apply)(reader, buffer, begin)
+          }
+        } else construct(Token.BeginInterpolatedString.apply)(reader, buffer, begin)
+      } else normal
     }
 
     if (isOperator) {
@@ -89,6 +110,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
       normal(1, buffer.firstChar == '_')
     }
   }
+
 
   /**
    * Assumes empty buffer

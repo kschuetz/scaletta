@@ -63,6 +63,20 @@ final class CharReader private(source: Iterator[Char],
       case None => false
     }
 
+  def matchSequence(cs: Iterable[Char]): Boolean = {
+    val iter = cs.iterator
+    var stack = List.empty[Char]
+    var result = true
+    while (result && iter.hasNext) {
+      val ch = iter.next()
+      if (!tryGet(ch)) {
+        result = false
+      } else stack = ch :: stack
+    }
+    if (!result) stack.foreach(unget)
+    result
+  }
+
   def skipUntil(p: Char => Boolean): Unit = {
     var loop = true
     while (loop) {

@@ -93,7 +93,17 @@ object Token {
 
   case class MultiLineString(value: String) extends Literal
 
-  // TODO: string interpolation
+  case class BeginInterpolatedString(interpolatorName: String) extends Token
+
+  case class BeginMultiLineInterpolatedString(interpolatorName: String) extends Token
+
+  case class InterpolatedPart(value: String) extends Token
+
+  case object BeginInterpolatedEscape extends Token
+
+  case object EndInterpolatedEscape extends Token
+
+  case object EndInterpolatedString extends Token
 
   sealed trait Identifier extends Token {
     override def canTerminateStatement: Boolean = true

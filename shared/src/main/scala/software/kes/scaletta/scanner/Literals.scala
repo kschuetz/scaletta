@@ -377,6 +377,7 @@ object Literals {
                 } else {
                   invalidLiteralNumber
                 }
+              case None => invalidLiteralNumber
             }
           } else {
             invalidLiteralNumber
@@ -597,8 +598,11 @@ object Literals {
     val x = "9223372036854775807".toLongOption
     val double = 1e308
 
+    val _a = 123
+    println(
+      s""" ${_a}
+      b""")
 
-    println(double)
     // 9223372036854775807
     // 2147483647
 
