@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.scanner.CharacterClass._
 import software.kes.scaletta.scanner.ScannerError.{EmptyQuotedIdentifier, IdentifierTooLong, InvalidEscapeCharacter, UnclosedQuotedIdentifier}
 import software.kes.scaletta.util.CharBuffer
 
@@ -8,6 +9,32 @@ import scala.annotation.{switch, tailrec}
 // TODO: Scala reserved word policy?
 final class IdentifierScanner(policy: IdentifierPolicy) {
 
+  type Result = Pos[Either[ScannerError, Token]]
+
+  /**
+   * Can return one of the following:
+   *   - Identifier (upper, lower, operator, or quoted)
+   *   - Reserved word
+   *   - BeginInterpolatedString/BeginMultiLineInterpolatedString
+   */
+  def tryScan(reader: CharReader,
+              buffer: CharBuffer): Option[Result] =
+    reader.get() match {
+      case Some(ch) =>
+        if (ch == '`') Some {
+          buffer.reset()
+          quoted(reader, buffer)
+        } else if (isIdentifierStart(ch) || isOperator(ch)) Some {
+          buffer.reset()
+          buffer.write(ch)
+          plain(reader, buffer)
+        } else {
+          reader.unget(ch)
+          None
+        }
+      case None => None
+    }
+
   /**
    * Assumes first character is already in buffer.
    * Can return one of the following:
@@ -15,22 +42,22 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
    *   - Reserved word
    *   - BeginInterpolatedString/BeginMultiLineInterpolatedString
    */
-  def plain(reader: CharReader,
-            buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
+  private def plain(reader: CharReader,
+                    buffer: CharBuffer): Result = {
     val begin = reader.prevIndex
     val firstChar = buffer.firstChar
-    val isOperator = CharacterClass.isOperator(firstChar)
+    val isOp = isOperator(firstChar)
 
     @tailrec
     def normal(length: Int,
-               wasUnderscore: Boolean): Pos[Either[ScannerError, Token]] =
+               wasUnderscore: Boolean): Result =
       if (checkLength(length)) {
         reader.get() match {
           case Some(ch) =>
-            if (CharacterClass.isIdentifierInner(ch)) {
+            if (isIdentifierInner(ch)) {
               buffer.write(ch)
               normal(length + 1, ch == '_')
-            } else if (wasUnderscore && CharacterClass.isOperator(ch) && buffer.size > 1) {
+            } else if (wasUnderscore && isOperator(ch) && buffer.size > 1) {
               buffer.write(ch)
               operator(length + 1)
             } else {
@@ -43,7 +70,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
       } else Pos(Left(IdentifierTooLong), begin, reader.prevIndex)
 
     @tailrec
-    def operator(length: Int): Pos[Either[ScannerError, Token]] =
+    def operator(length: Int): Result =
       if (checkLength(length)) {
         reader.get() match {
           case Some(ch) =>
@@ -56,7 +83,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
                 buffer.write(ch)
                 operator(length + 1)
               }
-            } else if (CharacterClass.isOperator(ch)) {
+            } else if (isOperator(ch)) {
               buffer.write(ch)
               operator(length + 1)
             } else {
@@ -68,15 +95,15 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
         }
       } else Pos(Left(IdentifierTooLong), begin, reader.prevIndex)
 
-    def done: Pos[Either[ScannerError, Token]] = {
+    def done: Result = {
       val name = buffer.slice()
       val end = reader.prevIndex
       Token.reservedWordByName.get(name) match {
         case Some(reservedWord) => Pos(Right(reservedWord), begin, end)
         case None =>
-          if (isOperator) {
+          if (isOp) {
             construct(Token.Identifier.Operator.apply)(reader, buffer, begin)
-          } else if (CharacterClass.isLetter(firstChar)) {
+          } else if (isLetter(firstChar)) {
             doneStartsWithLetter
           } else {
             construct(Token.Identifier.Lower.apply)(reader, buffer, begin)
@@ -84,9 +111,9 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
       }
     }
 
-    def doneStartsWithLetter: Pos[Either[ScannerError, Token]] = {
-      def normal: Pos[Either[ScannerError, Token]] =
-        if (CharacterClass.isUppercase(firstChar)) {
+    def doneStartsWithLetter: Result = {
+      def normal: Result =
+        if (isUppercase(firstChar)) {
           construct(Token.Identifier.Upper.apply)(reader, buffer, begin)
         } else {
           construct(Token.Identifier.Lower.apply)(reader, buffer, begin)
@@ -104,31 +131,30 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
       } else normal
     }
 
-    if (isOperator) {
+    if (isOp) {
       operator(1)
     } else {
       normal(1, buffer.firstChar == '_')
     }
   }
 
-
   /**
    * Assumes empty buffer
    */
-  def quoted(reader: CharReader,
-             buffer: CharBuffer): Pos[Either[ScannerError, Token]] = {
+  private def quoted(reader: CharReader,
+                     buffer: CharBuffer): Result = {
     val begin = reader.prevIndex
 
     @tailrec
-    def go(length: Int): Pos[Either[ScannerError, Token]] =
+    def go(length: Int): Result =
       if (checkLength(length)) {
         reader.get() match {
           case Some(ch) =>
             (ch: @switch) match {
               case '\\' => escapeSequence(length)
-              case '\n' => Pos(Left(UnclosedQuotedIdentifier), reader.prevIndex)
+              case '\n' => Pos(Left(UnclosedQuotedIdentifier), begin, reader.prevIndex)
               case '`' =>
-                if (buffer.isEmpty) Pos(Left(EmptyQuotedIdentifier), reader.prevIndex)
+                if (buffer.isEmpty) Pos(Left(EmptyQuotedIdentifier), begin, reader.prevIndex)
                 else {
                   construct(Token.Identifier.Quoted.apply)(reader, buffer, begin)
                 }
@@ -136,11 +162,11 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
                 buffer.write(ch)
                 go(length + 1)
             }
-          case None => Pos(Left(UnclosedQuotedIdentifier), reader.prevIndex)
+          case None => Pos(Left(UnclosedQuotedIdentifier), begin, reader.prevIndex)
         }
       } else Pos(Left(IdentifierTooLong), begin, reader.prevIndex)
 
-    def escapeSequence(length: Int): Pos[Either[ScannerError, Token]] =
+    def escapeSequence(length: Int): Result =
       EscapeSequence.scan(reader) match {
         case Some(value) =>
           buffer.write(value)
@@ -154,7 +180,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
   private def construct(fn: String => Token)
                        (reader: CharReader,
                         buffer: CharBuffer,
-                        begin: CharIndex): Pos[Either[ScannerError, Token]] = {
+                        begin: CharIndex): Result = {
     val length = buffer.size
     if (policy.maxIdentifierLength.exists(max => length > max)) {
       Pos(Left(IdentifierTooLong), begin, reader.prevIndex)

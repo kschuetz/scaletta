@@ -14,7 +14,6 @@ object CharacterClass {
       ct == Character.MODIFIER_LETTER
   }
 
-
   def isIdentifierStart(ch: Char): Boolean =
     ch == '_' || ch == '$' || isLetter(ch)
 
@@ -48,7 +47,7 @@ object CharacterClass {
       val ch = n.toChar
       val chtp = Character.getType(ch)
 
-      if (isUppercase(ch)) println(s"${n.toChar}  ${n.toHexString}")
+      if (isOperator(ch)) println(s"${n.toChar}  ${n.toHexString}")
     }
 
   }
