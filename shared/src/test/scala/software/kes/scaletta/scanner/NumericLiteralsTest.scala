@@ -2,7 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.scanner.ScannerError.{IllegalSeparator, IntegerNumberTooLarge}
+import software.kes.scaletta.scanner.ScannerError._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.TestReaderFactory
 import software.kes.scaletta.util.CharBuffer
@@ -300,9 +300,74 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
           Some(success(Token.LongLiteral(-0x1234_5678_abcd_ef01L), 0, 22)))
       }
     }
+
+    describe("double") {
+      it("basic") {
+        check("123.456", Some(success(Token.DoubleLiteral(123.456), 0, 6)))
+        check("123_456.789_012", Some(success(Token.DoubleLiteral(123456.789012), 0, 14)))
+      }
+
+      it("leading dot") {
+        check(".123456", Some(success(Token.DoubleLiteral(0.123456), 0, 6)))
+        check(".123_456", Some(success(Token.DoubleLiteral(0.123456), 0, 7)))
+      }
+
+      it("negative") {
+        check("-123.456", Some(success(Token.DoubleLiteral(-123.456), 0, 7)))
+        check("-.123456", Some(success(Token.DoubleLiteral(-0.123456), 0, 7)))
+      }
+
+      it("scientific notation") {
+        check("1e10", Some(success(Token.DoubleLiteral(1e10), 0, 3)))
+        check("1.2E-5", Some(success(Token.DoubleLiteral(1.2e-5), 0, 5)))
+        check("-1.2e+5", Some(success(Token.DoubleLiteral(-1.2e5), 0, 6)))
+        check(".1e2", Some(success(Token.DoubleLiteral(10.0), 0, 3)))
+      }
+
+      it("suffix") {
+        check("123d", Some(success(Token.DoubleLiteral(123.0), 0, 3)))
+        check("123.456D", Some(success(Token.DoubleLiteral(123.456), 0, 7)))
+        check("1e10d", Some(success(Token.DoubleLiteral(1e10), 0, 4)))
+      }
+
+      it("invalid") {
+        check("1.2.3", Some(success(Token.DoubleLiteral(1.2), 0, 2)), checkRemainder = false)
+        check("1e", Some(failure(InvalidLiteralNumber, 0, 1)))
+        check("1e+", Some(failure(InvalidLiteralNumber, 0, 2)))
+        // TODO: fix check("1.e2", Some(success(Token.IntLiteral(1), 0, 0))) // This is interesting, let's see how it behaves
+      }
+
+      it("precision") {
+        check("1e308", Some(success(Token.DoubleLiteral(1e308), 0, 4)))
+        check("1e309", Some(failure(FloatingPointPrecisionTooLarge, 0, 4)))
+        check("1e-308", Some(success(Token.DoubleLiteral(1e-308), 0, 5)))
+        check("1e-325", Some(failure(FloatingPointPrecisionTooSmall, 0, 5)))
+      }
+    }
+
+    describe("float") {
+      it("basic") {
+        check("123.456f", Some(success(Token.FloatLiteral(123.456f), 0, 7)))
+        check(".123456F", Some(success(Token.FloatLiteral(0.123456f), 0, 7)))
+      }
+
+      it("scientific notation") {
+        check("1e10f", Some(success(Token.FloatLiteral(1e10f), 0, 4)))
+        check("1.2E-5F", Some(success(Token.FloatLiteral(1.2e-5f), 0, 6)))
+      }
+
+      it("precision") {
+        check("1e38f", Some(success(Token.FloatLiteral(1e38f), 0, 4)))
+        check("1e39f", Some(failure(FloatingPointPrecisionTooLarge, 0, 4)))
+        check("1e-38f", Some(success(Token.FloatLiteral(1e-38f), 0, 5)))
+        check("1e-46f", Some(failure(FloatingPointPrecisionTooSmall, 0, 5)))
+      }
+    }
   }
 
-  private def check(input: String, expected: Option[Pos[Either[ScannerError, Token]]]): Unit = {
+  private def check(input: String,
+                    expected: Option[Pos[Either[ScannerError, Token]]],
+                    checkRemainder: Boolean = true): Unit = {
     TestReaderFactory.fromString(input) { reader =>
       val result = Literals.tryNumericLiteral(reader, buffer)
       withClue(input) {
@@ -310,14 +375,16 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
       }
     }
 
-    expected match {
-      case Some(Pos(Right(_), _, _)) =>
-        TestReaderFactory.fromString(input + " $") { reader =>
-          Literals.tryNumericLiteral(reader, buffer) shouldBe expected
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
-      case _ => ()
+    if (checkRemainder) {
+      expected match {
+        case Some(Pos(Right(_), _, _)) =>
+          TestReaderFactory.fromString(input + " $") { reader =>
+            Literals.tryNumericLiteral(reader, buffer) shouldBe expected
+            reader.get() shouldBe Some(' ')
+            reader.get() shouldBe Some('$')
+          }
+        case _ => ()
+      }
     }
   }
 
