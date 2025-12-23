@@ -4,18 +4,19 @@ import software.kes.scaletta.util.CharPushback
 
 object CharReader {
   def create(source: Iterator[Char],
-             lineMap: LineMap,
+             lineMapBuilder: LineMapBuilder,
              currentIndex: CharIndex = CharIndex(0)): CharReader = {
     val pushback = CharPushback.create()
-    new CharReader(source, pushback, currentIndex, currentIndex, lineMap)
+    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder)
   }
 }
 
+// TODO: add preserveNewLines flag
 final class CharReader private(source: Iterator[Char],
                                pushback: CharPushback,
                                private var _currentIndex: CharIndex,
                                private var highWater: CharIndex,
-                               private var lineMap: LineMap) {
+                               private val lineMapBuilder: LineMapBuilder) {
   def get(): Option[Char] =
     if (pushback.nonEmpty) {
       _currentIndex += 1
@@ -33,14 +34,14 @@ final class CharReader private(source: Iterator[Char],
           }
         }
         if (highWater < _currentIndex) {
-          lineMap = lineMap.addLineBegin(_currentIndex)
+          lineMapBuilder.addLineBegin(_currentIndex)
           highWater = _currentIndex
         }
         result = '\n'
       } else if (result == '\n') {
         _currentIndex += 1
         if (highWater < _currentIndex) {
-          lineMap = lineMap.addLineBegin(_currentIndex)
+          lineMapBuilder.addLineBegin(_currentIndex)
           highWater = _currentIndex
         }
       } else {

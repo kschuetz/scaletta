@@ -24,4 +24,6 @@ final class LineMap private(currentLine: LineIndex,
       case None => Position(LineIndex(0), ColumnIndex(index.value))
     }
   }
+
+  def builder: LineMapBuilder = LineMapBuilder.create(this)
 }
