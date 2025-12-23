@@ -214,7 +214,7 @@ object Literals {
     def afterSeparator(ch: Char)
                       (k: Boolean => Result): Result =
       if (ch == '_') k(true)
-      else if (ch == '0') k(false)
+      //      else if (ch == '0') k(false)
       else if (isDigit(ch)) {
         reader.unget(ch)
         k(false)
@@ -521,17 +521,19 @@ object Literals {
     def makeLong: Result = {
       val size = buffer.size
       if (size > 19) integerTooLarge
-      else buffer.slice().toLongOption match {
-        case Some(value) =>
-          val resultAsLong = maybeNegate(value)
-          if (resultAsLong >= Int.MinValue && resultAsLong <= Int.MaxValue) {
-            Pos(Right(IntLiteral(resultAsLong.toInt)), begin, reader.prevIndex)
-          } else {
-            integerTooLarge
-          }
-        case None =>
-          if (buffer.size == 19) integerTooLarge
-          else invalidLiteralNumber // shouldn't happen
+      else {
+        val s = if (negative && size >= 18) {
+          buffer.insert(0, '-')
+          buffer.slice()
+        } else buffer.slice()
+        s.toLongOption match {
+          case Some(value) =>
+            val result = if (size >= 18) value else maybeNegate(value)
+            Pos(Right(LongLiteral(result)), begin, reader.prevIndex)
+          case None =>
+            if (size == 19) integerTooLarge
+            else invalidLiteralNumber // shouldn't happen
+        }
       }
     }
 
@@ -595,7 +597,7 @@ object Literals {
 
   def main(args: Array[String]): Unit = {
     val z = 1
-    val x = "9223372036854775807".toLongOption
+    println("-9223372036854775808".toLongOption)
     val double = 1e308
 
     val _a = 123

@@ -89,6 +89,10 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
         check("0_0__1_23__4_56_78____9", Some(success(Token.IntLiteral(123456789), 0, 22)))
       }
 
+      it("zeroes in middle") {
+        check("1_000_000_1", Some(success(Token.IntLiteral(1_000_000_1), 0, 10)))
+      }
+
       it("many leading zeroes") {
         check("000000000000000000000000000000000000000000000000000000000000000123",
           Some(success(Token.IntLiteral(123), 0, 65)))
@@ -132,6 +136,100 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
         check("1_0_", Some(failure(IllegalSeparator, 3, 3)))
         check("1_0_a", Some(failure(IllegalSeparator, 3, 3)))
         check("1_0_L", Some(failure(IllegalSeparator, 3, 3)))
+      }
+    }
+
+    describe("long") {
+      it("0") {
+        check("0L", Some(success(Token.LongLiteral(0), 0, 1)))
+        check("00l", Some(success(Token.LongLiteral(0), 0, 2)))
+        check("0_0L", Some(success(Token.LongLiteral(0), 0, 3)))
+        check("0__0l", Some(success(Token.LongLiteral(0), 0, 4)))
+        check("000L", Some(success(Token.LongLiteral(0), 0, 3)))
+      }
+
+      it("-0") {
+        check("-0l", Some(success(Token.LongLiteral(0), 0, 2)))
+        check("-00L", Some(success(Token.LongLiteral(0), 0, 3)))
+        check("-0_0l", Some(success(Token.LongLiteral(0), 0, 4)))
+        check("-0__0L", Some(success(Token.LongLiteral(0), 0, 5)))
+      }
+
+      it("123456789") {
+        check("123456789l", Some(success(Token.LongLiteral(123456789), 0, 9)))
+        check("0123456789L", Some(success(Token.LongLiteral(123456789), 0, 10)))
+        check("123_456_789l", Some(success(Token.LongLiteral(123456789), 0, 11)))
+        check("0_123_456_789L", Some(success(Token.LongLiteral(123456789), 0, 13)))
+        check("0_0__1_23__4_56_78____9l", Some(success(Token.LongLiteral(123456789), 0, 23)))
+      }
+
+      it("zeroes in middle") {
+        check("1_000_000_1L", Some(success(Token.LongLiteral(1_000_000_1), 0, 11)))
+      }
+
+      it("many leading zeroes") {
+        check("000000000000000000000000000000000000000000000000000000000000000123L",
+          Some(success(Token.LongLiteral(123), 0, 66)))
+      }
+
+      it("Int.MinValue") {
+        check("-2147483648L", Some(success(Token.LongLiteral(Int.MinValue), 0, 11)))
+        check("-2_147_483_648l", Some(success(Token.LongLiteral(Int.MinValue), 0, 14)))
+      }
+
+      it("Int.MinValue with leading zeroes") {
+        check("-00002147483648l", Some(success(Token.LongLiteral(Int.MinValue), 0, 15)))
+        check("-00_002_147_483_648L", Some(success(Token.LongLiteral(Int.MinValue), 0, 19)))
+      }
+
+      it("Int.MinValue-1") {
+        check("-2147483649L", Some(success(Token.LongLiteral(Int.MinValue.toLong - 1), 0, 11)))
+        check("-2_147_483_649l", Some(success(Token.LongLiteral(Int.MinValue.toLong - 1), 0, 14)))
+      }
+
+      it("Long.MinValue") {
+        check("-9223372036854775808L", Some(success(Token.LongLiteral(Long.MinValue), 0, 20)))
+        check("-9_223_372_036_854_775_808l", Some(success(Token.LongLiteral(Long.MinValue), 0, 26)))
+      }
+
+      it("Long.MinValue with leading zeroes") {
+        check("-00009223372036854775808L", Some(success(Token.LongLiteral(Long.MinValue), 0, 24)))
+        check("-00_009_223_372_036_854_775_808l", Some(success(Token.LongLiteral(Long.MinValue), 0, 31)))
+      }
+
+      it("Long.MinValue-1") {
+        check("-9223372036854775809l", Some(failure(IntegerNumberTooLarge, 0, 20)))
+        check("-9_223_372_036_854_775_809L", Some(failure(IntegerNumberTooLarge, 0, 26)))
+      }
+
+      it("Int.MaxValue") {
+        check("2147483647L", Some(success(Token.LongLiteral(Int.MaxValue), 0, 10)))
+        check("2_147_483_647l", Some(success(Token.LongLiteral(Int.MaxValue), 0, 13)))
+      }
+
+      it("Int.MaxValue with leading zeroes") {
+        check("00002147483647l", Some(success(Token.LongLiteral(Int.MaxValue), 0, 14)))
+        check("00_002_147_483_647L", Some(success(Token.LongLiteral(Int.MaxValue), 0, 18)))
+      }
+
+      it("Int.MaxValue+1") {
+        check("2147483648L", Some(success(Token.LongLiteral(Int.MaxValue.toLong + 1), 0, 10)))
+        check("2_147_483_648l", Some(success(Token.LongLiteral(Int.MaxValue.toLong + 1), 0, 13)))
+      }
+
+      it("Long.MaxValue") {
+        check("9223372036854775807L", Some(success(Token.LongLiteral(Long.MaxValue), 0, 19)))
+        check("9_223_372_036_854_775_807l", Some(success(Token.LongLiteral(Long.MaxValue), 0, 25)))
+      }
+
+      it("Long.MaxValue with leading zeroes") {
+        check("00009223372036854775807l", Some(success(Token.LongLiteral(Long.MaxValue), 0, 23)))
+        check("00_009_223_372_036_854_775_807L", Some(success(Token.LongLiteral(Long.MaxValue), 0, 30)))
+      }
+
+      it("Long.MaxValue+1") {
+        check("9223372036854775808L", Some(failure(IntegerNumberTooLarge, 0, 19)))
+        check("9_223_372_036_854_775_808l", Some(failure(IntegerNumberTooLarge, 0, 25)))
       }
     }
 

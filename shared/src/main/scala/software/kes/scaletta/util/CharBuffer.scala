@@ -61,6 +61,13 @@ final class CharBuffer private(private var buffer: Array[Char]) {
   def slice(): String =
     slice(ptr)
 
+  def insert(idx: Int, ch: Char): Unit = {
+    grow(ptr + 1)
+    System.arraycopy(buffer, idx, buffer, idx + 1, ptr - idx)
+    buffer(idx) = ch
+    ptr += 1
+  }
+
   private def grow(capacity: Int): Unit =
     if (capacity > buffer.length) {
       val newBuffer = new Array[Char](capacity * 2)
