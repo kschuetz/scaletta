@@ -43,5 +43,9 @@ build/
 ### Scala ###
 .bsp/
 
-### local ***
+### local ###
 .local/
+
+### AI ###
+.junie/
+
