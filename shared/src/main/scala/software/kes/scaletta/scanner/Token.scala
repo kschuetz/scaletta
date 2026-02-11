@@ -17,6 +17,8 @@ object Token {
     def allForms: List[String] = name :: aliases
   }
 
+  sealed trait ScalaReservedWord extends ReservedWord
+
   case object Case extends ReservedWord {
     def name: String = "case"
   }
@@ -31,16 +33,8 @@ object Token {
     override def canBeginStatement: Boolean = false
   }
 
-  case object For extends ReservedWord {
-    def name: String = "for"
-  }
-
   case object If extends ReservedWord {
     def name: String = "if"
-  }
-
-  case object Lazy extends ReservedWord {
-    def name: String = "lazy"
   }
 
   case object Match extends ReservedWord {
@@ -53,8 +47,11 @@ object Token {
     def name: String = "val"
   }
 
-  case object Var extends ReservedWord {
-    def name: String = "var"
+  // Scala 3 keywords
+  case object Then extends ReservedWord {
+    def name: String = "then"
+
+    override def canBeginStatement: Boolean = false
   }
 
   case object Yield extends ReservedWord {
@@ -199,19 +196,180 @@ object Token {
     override def canBeginStatement: Boolean = false
   }
 
-  case object Hash extends ReservedWord {
+  case object At extends ReservedWord {
+    def name: String = "@"
+  }
+
+  case object Abstract extends ScalaReservedWord {
+    def name: String = "abstract"
+  }
+
+  case object Catch extends ScalaReservedWord {
+    def name: String = "catch"
+
+    override def canBeginStatement: Boolean = false
+  }
+
+  case object Class extends ScalaReservedWord {
+    def name: String = "class"
+  }
+
+  case object Do extends ScalaReservedWord {
+    def name: String = "do"
+  }
+
+  case object Enum extends ScalaReservedWord {
+    def name: String = "enum"
+  }
+
+  case object Export extends ScalaReservedWord {
+    def name: String = "export"
+  }
+
+  case object Extends extends ScalaReservedWord {
+    def name: String = "extends"
+
+    override def canBeginStatement: Boolean = false
+  }
+
+  case object Final extends ScalaReservedWord {
+    def name: String = "final"
+  }
+
+  case object Finally extends ScalaReservedWord {
+    def name: String = "finally"
+
+    override def canBeginStatement: Boolean = false
+  }
+
+  case object For extends ScalaReservedWord {
+    def name: String = "for"
+  }
+
+  case object Given extends ScalaReservedWord {
+    def name: String = "given"
+  }
+
+  case object Hash extends ScalaReservedWord {
     def name: String = "#"
 
     override def canBeginStatement: Boolean = false
   }
 
-  case object At extends ReservedWord {
-    def name: String = "@"
+  case object Implicit extends ScalaReservedWord {
+    def name: String = "implicit"
+  }
+
+  case object Import extends ScalaReservedWord {
+    def name: String = "import"
+  }
+
+  case object Lazy extends ScalaReservedWord {
+    def name: String = "lazy"
+  }
+
+  case object LowerBound extends ScalaReservedWord {
+    def name: String = ">:"
+
+    override def canBeginStatement: Boolean = false
+  }
+
+  case object New extends ScalaReservedWord {
+    def name: String = "new"
+  }
+
+  case object Object extends ScalaReservedWord {
+    def name: String = "object"
+  }
+
+  case object Override extends ScalaReservedWord {
+    def name: String = "override"
+  }
+
+  case object Package extends ScalaReservedWord {
+    def name: String = "package"
+  }
+
+  case object Private extends ScalaReservedWord {
+    def name: String = "private"
+  }
+
+  case object Protected extends ScalaReservedWord {
+    def name: String = "protected"
+  }
+
+  case object Return extends ScalaReservedWord {
+    def name: String = "return"
+  }
+
+  case object Sealed extends ScalaReservedWord {
+    def name: String = "sealed"
+  }
+
+  case object Super extends ScalaReservedWord {
+    def name: String = "super"
+  }
+
+  case object This extends ScalaReservedWord {
+    def name: String = "this"
+  }
+
+  case object Throw extends ScalaReservedWord {
+    def name: String = "throw"
+  }
+
+  case object Trait extends ScalaReservedWord {
+    def name: String = "trait"
+  }
+
+  case object Try extends ScalaReservedWord {
+    def name: String = "try"
+  }
+
+  case object Type extends ScalaReservedWord {
+    def name: String = "type"
+  }
+
+  case object UpperBound extends ScalaReservedWord {
+    def name: String = "<:"
+
+    override def canBeginStatement: Boolean = false
+  }
+
+  case object Using extends ScalaReservedWord {
+    def name: String = "using"
+
+    override def canBeginStatement: Boolean = false
+  }
+
+  case object Var extends ScalaReservedWord {
+    def name: String = "var"
+  }
+
+  case object ViewBound extends ScalaReservedWord {
+    def name: String = "<%"
+
+    override def canBeginStatement: Boolean = false
+  }
+
+  case object While extends ScalaReservedWord {
+    def name: String = "while"
+  }
+
+  case object With extends ScalaReservedWord {
+    def name: String = "with"
+
+    override def canBeginStatement: Boolean = false
   }
 
   val allReservedWords: Vector[ReservedWord] =
-    Vector(At, Case, Colon, Def, Else, Eq, False, For, Hash, If, LArrow, Lazy, Match, Null, RDoubleArrow,
-      True, Underscore, Val, Var, Yield)
+    Vector(
+      Abstract, At, Case, Catch, Class, Colon, Def, Do, Else, Enum, Eq, Export, Extends,
+      False, Final, Finally, For, Given, Hash, If, Implicit, Import, LArrow, Lazy,
+      LowerBound, Match, New, Null, Object, Override, Package, Private, Protected,
+      RDoubleArrow, Return, Sealed, Super, Then, This, Throw, Trait, True, Try, Type,
+      UpperBound, Using, Underscore, Val, Var, ViewBound, While, With, Yield
+    )
 
   val reservedWordByName: Map[String, ReservedWord] =
     allReservedWords.foldLeft(Map.empty[String, ReservedWord]) {
