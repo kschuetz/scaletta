@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.scanner.ScannerError._
@@ -317,11 +318,21 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
         check("-.123456", Some(success(Token.DoubleLiteral(-0.123456), 0, 7)))
       }
 
+      it("zeroes") {
+        check("0.0", Some(success(Token.DoubleLiteral(0.0), 0, 2)))
+        check("-0.0", Some(success(Token.DoubleLiteral(-0.0), 0, 3)))
+        check(".0", Some(success(Token.DoubleLiteral(0.0), 0, 1)))
+        check("-.0", Some(success(Token.DoubleLiteral(-0.0), 0, 2)))
+      }
+
       it("scientific notation") {
         check("1e10", Some(success(Token.DoubleLiteral(1e10), 0, 3)))
         check("1.2E-5", Some(success(Token.DoubleLiteral(1.2e-5), 0, 5)))
         check("-1.2e+5", Some(success(Token.DoubleLiteral(-1.2e5), 0, 6)))
         check(".1e2", Some(success(Token.DoubleLiteral(10.0), 0, 3)))
+        check("1.0e1_0", Some(success(Token.DoubleLiteral(1.0e10), 0, 6)))
+        check("1.0e+1_0", Some(success(Token.DoubleLiteral(1.0e10), 0, 7)))
+        check("1.0e-1_0", Some(success(Token.DoubleLiteral(1.0e-10), 0, 7)))
       }
 
       it("suffix") {
@@ -334,14 +345,36 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
         check("1.2.3", Some(success(Token.DoubleLiteral(1.2), 0, 2)), checkRemainder = false)
         check("1e", Some(failure(InvalidLiteralNumber, 0, 1)))
         check("1e+", Some(failure(InvalidLiteralNumber, 0, 2)))
+        check("1e-", Some(failure(InvalidLiteralNumber, 0, 2)))
+        check("1.2dF", Some(failure(InvalidLiteralNumber, 0, 4)))
+        check("1.2fD", Some(failure(InvalidLiteralNumber, 0, 4)))
         // TODO: fix check("1.e2", Some(success(Token.IntLiteral(1), 0, 0))) // This is interesting, let's see how it behaves
+      }
+
+      it("underscores") {
+        check("1_2.3_4", Some(success(Token.DoubleLiteral(12.34), 0, 6)))
+        check("1_2.3_4e1_0", Some(success(Token.DoubleLiteral(12.34e10), 0, 10)))
+        check("1_.2", Some(failure(IllegalSeparator, 1, 1)))
+        check("1.2_", Some(failure(IllegalSeparator, 3, 3)))
+        check("1.2_e10", Some(failure(IllegalSeparator, 3, 3)))
+        check("1e_10", Some(failure(IllegalSeparator, 2, 2)))
+        check("1e10_", Some(failure(IllegalSeparator, 4, 4)))
+        check("1e+1_0", Some(success(Token.DoubleLiteral(1e10), 0, 5)))
+        check("1e+_10", Some(failure(IllegalSeparator, 3, 3)))
       }
 
       it("precision") {
         check("1e308", Some(success(Token.DoubleLiteral(1e308), 0, 4)))
+        check("1.7976931348623157e308", Some(success(Token.DoubleLiteral(1.7976931348623157e308), 0, 21)))
         check("1e309", Some(failure(FloatingPointPrecisionTooLarge, 0, 4)))
         check("1e-308", Some(success(Token.DoubleLiteral(1e-308), 0, 5)))
+        check("4.9e-324", Some(success(Token.DoubleLiteral(4.9e-324), 0, 7)))
         check("1e-325", Some(failure(FloatingPointPrecisionTooSmall, 0, 5)))
+      }
+
+      it("deceptive decimal points") {
+        check("0.", Some(success(Token.IntLiteral(0), 0, 0)), checkRemainder = false)
+        check("1._2", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
       }
     }
 
@@ -367,7 +400,8 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
 
   private def check(input: String,
                     expected: Option[Pos[Either[ScannerError, Token]]],
-                    checkRemainder: Boolean = true): Unit = {
+                    checkRemainder: Boolean = true)
+                   (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
       val result = Literals.tryNumericLiteral(reader, buffer)
       withClue(input) {

@@ -244,10 +244,10 @@ object Literals {
             case '.' =>
               reader.get() match {
                 case Some(c1) =>
-                  if (c1.isDigit) {
+                  if (isDigit(c1)) {
                     buffer.write('0')
                     buffer.write('.')
-                    buffer.write(ch)
+                    buffer.write(c1)
                     rightOfDecimalPoint(1, wasSeparator = false)
                   } else {
                     reader.unget(c1)
@@ -255,6 +255,7 @@ object Literals {
                     makeInteger
                   }
                 case None =>
+                  reader.unget('.')
                   buffer.write('0')
                   makeInteger
               }
@@ -298,6 +299,7 @@ object Literals {
                     rightOfDecimalPoint(1, wasSeparator = false)
                   } else {
                     reader.unget(c1)
+                    reader.unget('.')
                     makeInteger
                   }
                 case None =>
@@ -374,11 +376,15 @@ object Literals {
                   if (negative) buffer.write(c1)
                   buffer.write(c2)
                   exponent(c2 - '0', negative, wasSeparator = false)
+                } else if (c2 == '_') {
+                  illegalSeparator
                 } else {
                   invalidLiteralNumber
                 }
               case None => invalidLiteralNumber
             }
+          } else if (c1 == '_') {
+            illegalSeparator
           } else {
             invalidLiteralNumber
           }
@@ -413,6 +419,8 @@ object Literals {
                   beginSuffix(ch, beforeDecimalPoint = false)
                 }
               } else beginSuffix(ch, beforeDecimalPoint = false)
+            } else if (ch == '_') {
+              exponent(acc, negative, wasSeparator = true)
             } else if (isDigit(ch)) {
               if (!(ch == '0' && acc == 0)) {
                 // don't bother to write leading zeroes
@@ -493,6 +501,7 @@ object Literals {
     def beginSuffix(ch: Char,
                     beforeDecimalPoint: Boolean): Result =
       if (reader.peek().exists(c => isLetter(c) || isDigit(c))) {
+        reader.skipUntil(c => !(isLetter(c) || isDigit(c)))
         invalidLiteralNumber
       } else (ch: @switch) match {
         case 'l' | 'L' =>
