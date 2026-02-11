@@ -374,6 +374,7 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
 
       it("deceptive decimal points") {
         check("0.", Some(success(Token.IntLiteral(0), 0, 0)), checkRemainder = false)
+        check("1.d", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
         check("1._2", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
       }
     }
@@ -382,19 +383,48 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
       it("basic") {
         check("123.456f", Some(success(Token.FloatLiteral(123.456f), 0, 7)))
         check(".123456F", Some(success(Token.FloatLiteral(0.123456f), 0, 7)))
+        check("123_456.789_012f", Some(success(Token.FloatLiteral(123456.789012f), 0, 15)))
+      }
+
+      it("zeroes") {
+        check("0.0f", Some(success(Token.FloatLiteral(0.0f), 0, 3)))
+        check("-0.0F", Some(success(Token.FloatLiteral(-0.0f), 0, 4)))
+        check(".0f", Some(success(Token.FloatLiteral(0.0f), 0, 2)))
+        check("-.0F", Some(success(Token.FloatLiteral(-0.0f), 0, 3)))
       }
 
       it("scientific notation") {
         check("1e10f", Some(success(Token.FloatLiteral(1e10f), 0, 4)))
         check("1.2E-5F", Some(success(Token.FloatLiteral(1.2e-5f), 0, 6)))
+        check("1.0e1_0f", Some(success(Token.FloatLiteral(1e10f), 0, 7)))
+        check("1.0e+1_0F", Some(success(Token.FloatLiteral(1e10f), 0, 8)))
+        check("1.0e-1_0f", Some(success(Token.FloatLiteral(1e-10f), 0, 8)))
+      }
+
+      it("underscores") {
+        check("1_2.3_4f", Some(success(Token.FloatLiteral(12.34f), 0, 7)))
+        check("1_2.3_4e1_0F", Some(success(Token.FloatLiteral(12.34e10f), 0, 11)))
+        check("1_.2f", Some(failure(IllegalSeparator, 1, 1)))
+        check("1.2_f", Some(failure(IllegalSeparator, 3, 3)))
+        check("1.2_e10F", Some(failure(IllegalSeparator, 3, 3)))
+        check("1e_10f", Some(failure(IllegalSeparator, 2, 2)))
+        check("1e10_F", Some(failure(IllegalSeparator, 4, 4)))
       }
 
       it("precision") {
         check("1e38f", Some(success(Token.FloatLiteral(1e38f), 0, 4)))
+        check("3.4028235e38f", Some(success(Token.FloatLiteral(3.4028235e38f), 0, 12)))
         check("1e39f", Some(failure(FloatingPointPrecisionTooLarge, 0, 4)))
         check("1e-38f", Some(success(Token.FloatLiteral(1e-38f), 0, 5)))
+        check("1.4e-45f", Some(success(Token.FloatLiteral(1.4e-45f), 0, 7)))
         check("1e-46f", Some(failure(FloatingPointPrecisionTooSmall, 0, 5)))
       }
+
+      it("deceptive decimal points") {
+        check("1.f", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
+        check("1._2f", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
+      }
+
     }
   }
 
