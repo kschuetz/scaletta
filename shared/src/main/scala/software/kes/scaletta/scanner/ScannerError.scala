@@ -32,4 +32,6 @@ object ScannerError {
   case object FloatingPointPrecisionTooSmall extends ScannerError
 
   case object IdentifierTooLong extends ScannerError
+
+  case object InvalidCharacter extends ScannerError
 }

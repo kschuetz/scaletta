@@ -164,10 +164,10 @@ object Literals {
       }
 
     def unclosed: Result =
-      Pos(Left(UnclosedStringLiteral), reader.prevIndex)
+      Pos(Left(UnclosedStringLiteral), begin, reader.currentIndex)
 
     def unclosedMultiLine: Result =
-      Pos(Left(UnclosedMultiLineString), reader.prevIndex)
+      Pos(Left(UnclosedMultiLineString), begin, reader.currentIndex)
 
     q1
   }

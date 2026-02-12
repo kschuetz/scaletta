@@ -119,15 +119,10 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
           construct(Token.Identifier.Lower.apply)(reader, buffer, begin)
         }
 
-      if (reader.tryGet('"')) {
-        if (reader.tryGet('"')) {
-          if (reader.tryGet('"')) {
-            construct(Token.BeginMultiLineInterpolatedString.apply)(reader, buffer, begin)
-          } else {
-            reader.unget('"')
-            construct(Token.BeginInterpolatedString.apply)(reader, buffer, begin)
-          }
-        } else construct(Token.BeginInterpolatedString.apply)(reader, buffer, begin)
+      if (reader.matchSequence(ScannerConstants.TripleQuote)) {
+        construct(Token.BeginMultiLineInterpolatedString.apply)(reader, buffer, begin)
+      } else if (reader.tryGet('"')) {
+        construct(Token.BeginInterpolatedString.apply)(reader, buffer, begin)
       } else normal
     }
 

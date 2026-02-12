@@ -20,4 +20,13 @@ object RegionType {
   case object Case extends RegionType {
     def newlinesEnabled: Boolean = false
   }
+
+  case class InterpolatedString(multiLine: Boolean,
+                                isRaw: Boolean) extends RegionType {
+    def newlinesEnabled: Boolean = multiLine
+  }
+
+  case object InterpolatedEscape extends RegionType {
+    def newlinesEnabled: Boolean = true
+  }
 }
