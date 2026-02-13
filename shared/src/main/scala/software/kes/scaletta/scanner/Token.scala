@@ -162,6 +162,8 @@ object Token {
 
   case object Semicolon extends Token {
     override def canBeginStatement: Boolean = false
+
+    override def canTerminateStatement: Boolean = true
   }
 
   case object Comma extends Token {

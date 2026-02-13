@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
@@ -175,10 +176,259 @@ class ScannerTest extends AnyFunSpec with Matchers {
         )
       }
     }
+
+    describe("semicolon inference") {
+      it("should NOT infer semicolon between tokens on the same line") {
+        check("val x = 1 val y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Val, 10, 12)),
+          Some(success(Token.Identifier.Lower("y"), 14, 14)),
+          Some(success(Token.Eq, 16, 16)),
+          Some(success(Token.IntLiteral(2), 18, 18))
+        )
+      }
+
+      it("should infer semicolon between statements on different lines") {
+        check("val x = 1\nval y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 10, 10)),
+          Some(success(Token.Val, 10, 12)),
+          Some(success(Token.Identifier.Lower("y"), 14, 14)),
+          Some(success(Token.Eq, 16, 16)),
+          Some(success(Token.IntLiteral(2), 18, 18))
+        )
+      }
+
+      it("should NOT infer semicolon when the previous token cannot terminate a statement") {
+        check("val x =\n1",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8))
+        )
+      }
+
+      it("should NOT infer semicolon when the next token cannot begin a statement") {
+        check("x match\n{ case _ => 0 }",
+          Some(success(Token.Identifier.Lower("x"), 0, 0)),
+          Some(success(Token.Match, 2, 6)),
+          Some(success(Token.LBrace, 8, 8)),
+          Some(success(Token.Case, 10, 13)),
+          Some(success(Token.Underscore, 15, 15)),
+          Some(success(Token.RDoubleArrow, 17, 18)),
+          Some(success(Token.IntLiteral(0), 20, 20)),
+          Some(success(Token.RBrace, 22, 22))
+        )
+      }
+
+      it("should NOT infer semicolon inside parentheses") {
+        check("(1 +\n2)",
+          Some(success(Token.LParen, 0, 0)),
+          Some(success(Token.IntLiteral(1), 1, 1)),
+          Some(success(Token.Identifier.Operator("+"), 3, 3)),
+          Some(success(Token.IntLiteral(2), 5, 5)),
+          Some(success(Token.RParen, 6, 6))
+        )
+      }
+
+      it("should NOT infer semicolon inside brackets") {
+        check("[A,\nB]",
+          Some(success(Token.LBracket, 0, 0)),
+          Some(success(Token.Identifier.Upper("A"), 1, 1)),
+          Some(success(Token.Comma, 2, 2)),
+          Some(success(Token.Identifier.Upper("B"), 4, 4)),
+          Some(success(Token.RBracket, 5, 5))
+        )
+      }
+
+      it("should infer semicolon inside braces") {
+        check("{ val x = 1\nval y = 2 }",
+          Some(success(Token.LBrace, 0, 0)),
+          Some(success(Token.Val, 2, 4)),
+          Some(success(Token.Identifier.Lower("x"), 6, 6)),
+          Some(success(Token.Eq, 8, 8)),
+          Some(success(Token.IntLiteral(1), 10, 10)),
+          Some(success(Token.Semicolon, 12, 12)),
+          Some(success(Token.Val, 12, 14)),
+          Some(success(Token.Identifier.Lower("y"), 16, 16)),
+          Some(success(Token.Eq, 18, 18)),
+          Some(success(Token.IntLiteral(2), 20, 20)),
+          Some(success(Token.RBrace, 22, 22))
+        )
+      }
+
+      it("should NOT infer semicolon before 'else'") {
+        check("if (true) 1\nelse 2",
+          Some(success(Token.If, 0, 1)),
+          Some(success(Token.LParen, 3, 3)),
+          Some(success(Token.True, 4, 7)),
+          Some(success(Token.RParen, 8, 8)),
+          Some(success(Token.IntLiteral(1), 10, 10)),
+          Some(success(Token.Else, 12, 15)),
+          Some(success(Token.IntLiteral(2), 17, 17))
+        )
+      }
+
+      it("should NOT infer semicolon before 'match'") {
+        check("x\nmatch { case _ => 0 }",
+          Some(success(Token.Identifier.Lower("x"), 0, 0)),
+          Some(success(Token.Match, 2, 6)),
+          Some(success(Token.LBrace, 8, 8)),
+          Some(success(Token.Case, 10, 13)),
+          Some(success(Token.Underscore, 15, 15)),
+          Some(success(Token.RDoubleArrow, 17, 18)),
+          Some(success(Token.IntLiteral(0), 20, 20)),
+          Some(success(Token.RBrace, 22, 22))
+        )
+      }
+
+      it("should infer semicolon after block comment with newline") {
+        check("1 /* comment */\n2",
+          Some(success(Token.IntLiteral(1), 0, 0)),
+          Some(success(Token.Semicolon, 16, 16)),
+          Some(success(Token.IntLiteral(2), 16, 16))
+        )
+      }
+
+      it("should infer semicolon after line comment") {
+        check("1 // comment\n2",
+          Some(success(Token.IntLiteral(1), 0, 0)),
+          Some(success(Token.Semicolon, 13, 13)),
+          Some(success(Token.IntLiteral(2), 13, 13))
+        )
+      }
+
+      it("should NOT infer semicolon when an explicit semicolon is present on the same line") {
+        check("val x = 1; val y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 9, 9)),
+          Some(success(Token.Val, 11, 13)),
+          Some(success(Token.Identifier.Lower("y"), 15, 15)),
+          Some(success(Token.Eq, 17, 17)),
+          Some(success(Token.IntLiteral(2), 19, 19))
+        )
+      }
+
+      it("should NOT infer an additional semicolon when an explicit one is followed by a newline") {
+        check("val x = 1;\nval y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 9, 9)),
+          Some(success(Token.Val, 11, 13)),
+          Some(success(Token.Identifier.Lower("y"), 15, 15)),
+          Some(success(Token.Eq, 17, 17)),
+          Some(success(Token.IntLiteral(2), 19, 19))
+        )
+      }
+
+      it("should handle mixed explicit and inferred semicolons") {
+        check("val x = 1; val y = 2\nval z = 3",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 9, 9)),
+          Some(success(Token.Val, 11, 13)),
+          Some(success(Token.Identifier.Lower("y"), 15, 15)),
+          Some(success(Token.Eq, 17, 17)),
+          Some(success(Token.IntLiteral(2), 19, 19)),
+          Some(success(Token.Semicolon, 21, 21)),
+          Some(success(Token.Val, 21, 23)),
+          Some(success(Token.Identifier.Lower("z"), 25, 25)),
+          Some(success(Token.Eq, 27, 27)),
+          Some(success(Token.IntLiteral(3), 29, 29))
+        )
+      }
+
+      it("should handle explicit semicolon before a comment and newline") {
+        check("val x = 1; // comment\nval y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 9, 9)),
+          Some(success(Token.Val, 22, 24)),
+          Some(success(Token.Identifier.Lower("y"), 26, 26)),
+          Some(success(Token.Eq, 28, 28)),
+          Some(success(Token.IntLiteral(2), 30, 30))
+        )
+      }
+
+      it("should handle multiple explicit semicolons on the same line") {
+        check("val x = 1;; val y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 9, 9)),
+          Some(success(Token.Semicolon, 10, 10)),
+          Some(success(Token.Val, 12, 14)),
+          Some(success(Token.Identifier.Lower("y"), 16, 16)),
+          Some(success(Token.Eq, 18, 18)),
+          Some(success(Token.IntLiteral(2), 20, 20))
+        )
+      }
+
+      it("should handle multiple explicit semicolons split by a newline") {
+        check("val x = 1;\n;val y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 9, 9)),
+          Some(success(Token.Semicolon, 11, 11)),
+          Some(success(Token.Val, 12, 14)),
+          Some(success(Token.Identifier.Lower("y"), 16, 16)),
+          Some(success(Token.Eq, 18, 18)),
+          Some(success(Token.IntLiteral(2), 20, 20))
+        )
+      }
+
+      it("should handle inferred semicolon followed by an explicit one") {
+        check("val x = 1\n; val y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 10, 10)),
+          Some(success(Token.Val, 12, 14)),
+          Some(success(Token.Identifier.Lower("y"), 16, 16)),
+          Some(success(Token.Eq, 18, 18)),
+          Some(success(Token.IntLiteral(2), 20, 20))
+        )
+      }
+
+      it("should handle multiple explicit semicolons separated by newlines") {
+        check("val x = 1;\n;\nval y = 2",
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.IntLiteral(1), 8, 8)),
+          Some(success(Token.Semicolon, 9, 9)),
+          Some(success(Token.Semicolon, 11, 11)),
+          Some(success(Token.Val, 13, 15)),
+          Some(success(Token.Identifier.Lower("y"), 17, 17)),
+          Some(success(Token.Eq, 19, 19)),
+          Some(success(Token.IntLiteral(2), 21, 21))
+        )
+      }
+    }
   }
 
   private def check(input: String,
-                    expectedTokens: Option[Pos[Either[ScannerError, Token]]]*): Unit = {
+                    expectedTokens: Option[Pos[Either[ScannerError, Token]]]*)
+                   (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
       expectedTokens.foreach { expected =>

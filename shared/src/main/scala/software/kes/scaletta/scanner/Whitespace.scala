@@ -1,15 +1,25 @@
 package software.kes.scaletta.scanner
 
-sealed trait WhitespaceResult
+sealed trait WhitespaceResult {
+  def encounteredNewlines: Boolean
+}
 
 object WhitespaceResult {
-  case object NoWhitespace extends WhitespaceResult
+  case object NoWhitespace extends WhitespaceResult {
+    override def encounteredNewlines: Boolean = false
+  }
 
-  case object NoNewlines extends WhitespaceResult
+  case object NoNewlines extends WhitespaceResult {
+    override def encounteredNewlines: Boolean = false
+  }
 
-  case object OneNewline extends WhitespaceResult
+  case object OneNewline extends WhitespaceResult {
+    override def encounteredNewlines: Boolean = true
+  }
 
-  case object TwoNewlines extends WhitespaceResult
+  case object TwoNewlines extends WhitespaceResult {
+    override def encounteredNewlines: Boolean = true
+  }
 }
 
 object Whitespace {
