@@ -15,6 +15,12 @@ object Token {
     def aliases: List[String] = Nil
 
     def allForms: List[String] = name :: aliases
+
+    /**
+     * A context-sensitive reserved word is one that is only reserved in certain contexts.
+     * It can be considered an identifier in other contexts.
+     */
+    def contextSensitive: Boolean = false
   }
 
   sealed trait ScalaReservedWord extends ReservedWord
@@ -52,6 +58,8 @@ object Token {
     def name: String = "then"
 
     override def canBeginStatement: Boolean = false
+
+    override def contextSensitive: Boolean = true
   }
 
   case object Yield extends ReservedWord {

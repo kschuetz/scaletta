@@ -1,6 +1,6 @@
 package software.kes.scaletta.scanner
 
-import software.kes.scaletta.scanner.ScannerConstants.TripleQuote
+import software.kes.scaletta.scanner.ScannerConstants.{Raw, TripleQuote}
 import software.kes.scaletta.scanner.ScannerResult._
 import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer
@@ -21,7 +21,7 @@ final class Scanner private(reader: CharReader,
                             identifierScanner: IdentifierScanner,
                             private var prevToken: Token,
                             private var queue: List[Pos[Token]],
-                            private var regions: List[RegionType]) {
+                            private var regions: List[RegionAttributes]) {
   def get(): ScannerResult = {
     @tailrec
     def go(): ScannerResult =
@@ -45,27 +45,42 @@ final class Scanner private(reader: CharReader,
     prevToken = token.value
     val oldQueue = queue
     queue = Nil
-    updateRegions(token)
+    val suppressed = updateRegions(token)
     queue = queue ++ oldQueue
-    Success(token)
+    if (suppressed) {
+      get()
+    } else {
+      Success(token)
+    }
   }
 
   private def readNext(): ScannerResult = {
-    regions.headOption match {
-      case Some(RegionType.InterpolatedString(multiLine, isRaw)) =>
+    regions match {
+      case RegionAttributes.InterpolatedString(multiLine, isRaw) :: _ =>
         return scanInterpolatedStringPart(multiLine, isRaw)
       case _ => ()
     }
 
     buffer.reset()
     var begin = reader.currentIndex
-    // TODO scan all comments and whitespace
-    // TODO check for newlines in block comments
-    if (Comments.scanComments(reader) == CommentResult.Unterminated) {
+
+    // skipCommentsAndWhitespace returns true on success, false on unterminated comment.
+    @tailrec
+    def skipCommentsAndWhitespace(): Boolean = {
+      Whitespace.scanWhitespace(reader)
+      val commentResult = Comments.scanComments(reader)
+      commentResult match {
+        case CommentResult.NoComment => true
+        case CommentResult.Unterminated => false
+        case _ => skipCommentsAndWhitespace()
+      }
+    }
+
+    if (!skipCommentsAndWhitespace()) {
       val end = reader.currentIndex
       return Error(Pos(ScannerError.UnclosedComment, begin, end))
     }
-    val whitespaceResult = Whitespace.scanWhitespace(reader)
+
     begin = reader.currentIndex
 
     // For tokens containing only one char
@@ -87,11 +102,56 @@ final class Scanner private(reader: CharReader,
           case ']' => success1(Token.RBracket)
           case '{' => success1(Token.LBrace)
           case '}' => success1(Token.RBrace)
-          case '.' => success1(Token.Dot)
           case ',' => success1(Token.Comma)
           case ';' => success1(Token.Semicolon)
           case '\'' => fromEither(Literals.charLiteral(reader))
           case '"' => fromEither(Literals.stringLiteral(reader, buffer))
+          case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
+            reader.unget(ch)
+            fromEither(Literals.tryNumericLiteral(reader, buffer).getOrElse {
+              // Should not happen as we just peeked a digit
+              Pos(Left(ScannerError.InvalidLiteralNumber), begin, begin)
+            })
+          case '.' =>
+            reader.get() match {
+              case Some(c) if CharacterClass.isDigit(c) =>
+                reader.unget(c)
+                reader.unget('.')
+                fromEither(Literals.tryNumericLiteral(reader, buffer).getOrElse {
+                  Pos(Left(ScannerError.InvalidLiteralNumber), begin, begin)
+                })
+              case Some(c) =>
+                reader.unget(c)
+                success1(Token.Dot)
+              case None =>
+                success1(Token.Dot)
+            }
+          case '-' =>
+            reader.get() match {
+              case Some(c) if CharacterClass.isDigit(c) || c == '.' =>
+                reader.unget(c)
+                reader.unget('-')
+                fromEither(Literals.tryNumericLiteral(reader, buffer).getOrElse {
+                  Pos(Left(ScannerError.InvalidLiteralNumber), begin, begin)
+                })
+              case Some(c) =>
+                reader.unget(c)
+                reader.unget('-')
+                identifierScanner.tryScan(reader, buffer) match {
+                  case Some(result) => fromEither(result)
+                  case None =>
+                    reader.get() // consume the '-'
+                    success1(Token.Identifier.Operator("-"))
+                }
+              case None =>
+                reader.unget('-')
+                identifierScanner.tryScan(reader, buffer) match {
+                  case Some(result) => fromEither(result)
+                  case None =>
+                    reader.get() // consume the '-'
+                    success1(Token.Identifier.Operator("-"))
+                }
+            }
           case _ =>
             reader.unget(ch)
             identifierScanner.tryScan(reader, buffer) match {
@@ -122,8 +182,6 @@ final class Scanner private(reader: CharReader,
     if (isEnd) {
       val end = reader.prevIndex
       yieldSuccess(Pos(Token.EndInterpolatedString, begin, end))
-    } else if (reader.matchSequence("${")) {
-      yieldSuccess(Pos(Token.BeginInterpolatedEscape, begin, reader.prevIndex))
     } else if (reader.tryGet('$')) {
       if (reader.tryGet('$')) {
         // Escaped $ - let scanPart handle it
@@ -135,34 +193,44 @@ final class Scanner private(reader: CharReader,
           case Left(error) => Error(partResult.withNewValue(error))
         }
       } else {
-        // $identifier
-        reader.get() match {
-          case Some(ch) if CharacterClass.isIdentifierStart(ch) && ch != '$' =>
-            buffer.reset()
-            buffer.write(ch)
+        // $identifier or ${
+        if (reader.tryGet('{')) {
+          yieldSuccess(Pos(Token.BeginInterpolatedEscape, begin, reader.prevIndex))
+        } else {
+          reader.get() match {
+            case Some(ch) =>
+              if (CharacterClass.isOperator(ch)) {
+                yieldSuccess(Pos(Token.Identifier.Operator(ch.toString), begin + 1, reader.prevIndex))
+              } else if (CharacterClass.isIdentifierStart(ch)) {
+                buffer.reset()
+                buffer.write(ch)
 
-            @tailrec
-            def scanId(): ScannerResult = {
-              reader.get() match {
-                case Some(c) if CharacterClass.isIdentifierInner(c) && c != '$' =>
-                  buffer.write(c)
-                  scanId()
-                case Some(c) =>
-                  reader.unget(c)
-                  val name = buffer.slice()
-                  yieldSuccess(Pos(Token.Identifier.Lower(name), begin + 1, reader.prevIndex))
-                case None =>
-                  val name = buffer.slice()
-                  yieldSuccess(Pos(Token.Identifier.Lower(name), begin + 1, reader.prevIndex))
+                @tailrec
+                def scanIdentifier(): ScannerResult = {
+                  reader.get() match {
+                    case Some(c) if CharacterClass.isIdentifierInner(c) && c != '$' =>
+                      buffer.write(c)
+                      scanIdentifier()
+                    case Some(c) =>
+                      reader.unget(c)
+                      val name = buffer.slice()
+                      val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
+                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex))
+                    case None =>
+                      val name = buffer.slice()
+                      val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
+                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex))
+                  }
+                }
+
+                scanIdentifier()
+              } else {
+                reader.unget(ch)
+                Error(Pos(ScannerError.InvalidCharacter, begin, begin))
               }
-            }
-
-            scanId()
-          case Some(ch) =>
-            reader.unget(ch)
-            Error(Pos(ScannerError.InvalidCharacter, begin, begin))
-          case None =>
-            Error(Pos(ScannerError.InvalidCharacter, begin, begin))
+            case None =>
+              Error(Pos(ScannerError.InvalidCharacter, begin, begin))
+          }
         }
       }
     } else {
@@ -176,58 +244,74 @@ final class Scanner private(reader: CharReader,
     }
   }
 
-  private def updateRegions(token: Pos[Token]): Unit =
+  /**
+   * Updates the current tracking regions based on the provided token.
+   *
+   * @param token the token that was just scanned
+   * @return true if the token should be suppressed (not emitted to the token stream),
+   *         false otherwise.
+   */
+  private def updateRegions(token: Pos[Token]): Boolean =
     token.value match {
-      case LParen => enterRegion(RegionType.Parens)
-      case LBracket => enterRegion(RegionType.Brackets)
+      case LParen =>
+        enterRegion(RegionAttributes.Parens)
+        false
+      case LBracket =>
+        enterRegion(RegionAttributes.Brackets)
+        false
       case LBrace =>
-        regions.headOption match {
-          case Some(RegionType.InterpolatedEscape) =>
+        regions match {
+          case RegionAttributes.InterpolatedEscape :: _ =>
             // Already in escape, but we might have a brace in an expression
-            enterRegion(RegionType.Braces)
+            enterRegion(RegionAttributes.Braces)
           case _ =>
-            enterRegion(RegionType.Braces)
+            enterRegion(RegionAttributes.Braces)
         }
-      case Case => enterRegion(RegionType.Case)
+        false
+      case Case =>
+        enterRegion(RegionAttributes.Case)
+        false
       case BeginInterpolatedString(name) =>
-        enterRegion(RegionType.InterpolatedString(multiLine = false, isRaw = name == "raw"))
+        enterRegion(RegionAttributes.InterpolatedString(multiLine = false, isRaw = name == Raw))
+        false
       case BeginMultiLineInterpolatedString(name) =>
-        enterRegion(RegionType.InterpolatedString(multiLine = true, isRaw = name == "raw"))
+        enterRegion(RegionAttributes.InterpolatedString(multiLine = true, isRaw = name == Raw))
+        false
       case BeginInterpolatedEscape =>
-        enterRegion(RegionType.InterpolatedEscape)
+        enterRegion(RegionAttributes.InterpolatedEscape)
+        false
       case EndInterpolatedString =>
-        exitRegionByClass(classOf[RegionType.InterpolatedString])
-      case RParen => exitRegion(RegionType.Parens)
-      case RBracket => exitRegion(RegionType.Brackets)
+        exitRegion(RegionType.InterpolatedString)
+        false
+      case RParen =>
+        exitRegion(RegionType.Parens)
+        false
+      case RBracket =>
+        exitRegion(RegionType.Brackets)
+        false
       case RBrace =>
-        regions.headOption match {
-          case Some(RegionType.InterpolatedEscape) =>
+        regions match {
+          case RegionAttributes.InterpolatedEscape :: _ =>
             exitRegion(RegionType.InterpolatedEscape)
             queue = queue :+ Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
+            true
           case _ =>
             exitRegion(RegionType.Braces)
+            false
         }
-      case RDoubleArrow => exitRegion(RegionType.Case)
-      case _ => ()
+      case RDoubleArrow =>
+        exitRegion(RegionType.Case)
+        false
+      case _ => false
     }
 
-  private def exitRegionByClass(cls: Class[_]): Unit =
-    regions match {
-      case x :: xs =>
-        if (cls.isInstance(x)) regions = xs
-      case Nil => ()
-    }
-
-  private def enterRegion(regionType: RegionType): Unit =
-    regions = regionType :: regions
+  private def enterRegion(regionAttributes: RegionAttributes): Unit =
+    regions = regionAttributes :: regions
 
   private def exitRegion(regionType: RegionType): Unit =
     regions match {
       case x :: xs =>
-        if (x == regionType) regions = xs
+        if (x.regionType == regionType) regions = xs
       case Nil => ()
     }
 }
-
-
-
