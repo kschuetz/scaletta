@@ -108,7 +108,9 @@ object Token {
 
   case object EndInterpolatedEscape extends Token
 
-  case object EndInterpolatedString extends Token
+  case object EndInterpolatedString extends Token {
+    override def canTerminateStatement: Boolean = true
+  }
 
   sealed trait Identifier extends Token {
     override def canTerminateStatement: Boolean = true

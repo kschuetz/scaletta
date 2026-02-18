@@ -463,7 +463,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
     }
 
     describe("complex expressions") {
-      ignore("should handle a complex block with val definitions, interpolation, and method calls") {
+      it("case 1") {
         val input =
           """{
             |  val name = "world"
@@ -473,48 +473,47 @@ class ScannerTest extends AnyFunSpec with Matchers {
             |}""".stripMargin
         check(input,
           Some(success(Token.LBrace, 0, 0)),
-          Some(success(Token.Val, 5, 7)),
-          Some(success(Token.Identifier.Lower("name"), 9, 12)),
-          Some(success(Token.Eq, 14, 14)),
-          Some(success(Token.StringLiteral("world"), 16, 22)),
-          Some(success(Token.Semicolon, 23, 23)),
-          Some(success(Token.Val, 27, 29)),
-          Some(success(Token.Identifier.Lower("msg"), 31, 33)),
-          Some(success(Token.Eq, 35, 35)),
-          Some(success(Token.BeginInterpolatedString("s"), 37, 38)),
-          Some(success(Token.InterpolatedPart("Hello, "), 39, 45)),
-          Some(success(Token.BeginInterpolatedEscape, 46, 47)),
-          Some(success(Token.Identifier.Lower("name"), 48, 51)),
-          Some(success(Token.Dot, 52, 52)),
-          Some(success(Token.Identifier.Lower("toUpperCase"), 53, 63)),
-          Some(success(Token.EndInterpolatedEscape, 64, 64)),
-          Some(success(Token.InterpolatedPart("!"), 65, 65)),
-          Some(success(Token.EndInterpolatedString, 66, 66)),
-          Some(success(Token.Semicolon, 67, 67)),
-          Some(success(Token.Val, 71, 73)),
-          Some(success(Token.Identifier.Lower("result"), 75, 80)),
-          Some(success(Token.Eq, 82, 82)),
-          Some(success(Token.LParen, 84, 84)),
-          Some(success(Token.IntLiteral(1), 85, 85)),
-          Some(success(Token.Identifier.Operator("+"), 87, 87)),
-          Some(success(Token.IntLiteral(2), 89, 89)),
-          Some(success(Token.RParen, 90, 90)),
-          Some(success(Token.Identifier.Operator("*"), 92, 92)),
-          Some(success(Token.IntLiteral(3), 94, 95)),
-          Some(success(Token.Semicolon, 95, 95)),
-          Some(success(Token.Identifier.Lower("msg"), 99, 101)),
-          Some(success(Token.Identifier.Operator("+"), 103, 103)),
-          Some(success(Token.StringLiteral(" "), 105, 107)),
-          Some(success(Token.Identifier.Operator("+"), 109, 109)),
-          Some(success(Token.Identifier.Lower("result"), 111, 116)),
-          Some(success(Token.Dot, 117, 117)),
-          Some(success(Token.Identifier.Lower("toString"), 118, 125)),
-          Some(success(Token.Semicolon, 126, 126)),
-          Some(success(Token.RBrace, 127, 127))
+          Some(success(Token.Val, 4, 6)),
+          Some(success(Token.Identifier.Lower("name"), 8, 11)),
+          Some(success(Token.Eq, 13, 13)),
+          Some(success(Token.StringLiteral("world"), 15, 21)),
+          Some(success(Token.Semicolon, 22, 22)),
+          Some(success(Token.Val, 25, 27)),
+          Some(success(Token.Identifier.Lower("msg"), 29, 31)),
+          Some(success(Token.Eq, 33, 33)),
+          Some(success(Token.BeginInterpolatedString("s"), 35, 36)),
+          Some(success(Token.InterpolatedPart("Hello, "), 37, 43)),
+          Some(success(Token.BeginInterpolatedEscape, 44, 45)),
+          Some(success(Token.Identifier.Lower("name"), 46, 49)),
+          Some(success(Token.Dot, 50, 50)),
+          Some(success(Token.Identifier.Lower("toUpperCase"), 51, 61)),
+          Some(success(Token.EndInterpolatedEscape, 62, 62)),
+          Some(success(Token.InterpolatedPart("!"), 63, 63)),
+          Some(success(Token.EndInterpolatedString, 64, 64)),
+          Some(success(Token.Semicolon, 65, 65)),
+          Some(success(Token.Val, 68, 70)),
+          Some(success(Token.Identifier.Lower("result"), 72, 77)),
+          Some(success(Token.Eq, 79, 79)),
+          Some(success(Token.LParen, 81, 81)),
+          Some(success(Token.IntLiteral(1), 82, 82)),
+          Some(success(Token.Identifier.Operator("+"), 84, 84)),
+          Some(success(Token.IntLiteral(2), 86, 86)),
+          Some(success(Token.RParen, 87, 87)),
+          Some(success(Token.Identifier.Operator("*"), 89, 89)),
+          Some(success(Token.IntLiteral(3), 91, 91)),
+          Some(success(Token.Semicolon, 92, 92)),
+          Some(success(Token.Identifier.Lower("msg"), 95, 97)),
+          Some(success(Token.Identifier.Operator("+"), 99, 99)),
+          Some(success(Token.StringLiteral(" "), 101, 103)),
+          Some(success(Token.Identifier.Operator("+"), 105, 105)),
+          Some(success(Token.Identifier.Lower("result"), 107, 112)),
+          Some(success(Token.Dot, 113, 113)),
+          Some(success(Token.Identifier.Lower("toString"), 114, 121)),
+          Some(success(Token.RBrace, 123, 123))
         )
       }
 
-      ignore("should handle nested if-then-else with interpolation") {
+      it("case 2") {
         val input =
           """if (x > 0) {
             |  s"Positive: $x"
@@ -531,35 +530,32 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.IntLiteral(0), 8, 8)),
           Some(success(Token.RParen, 9, 9)),
           Some(success(Token.LBrace, 11, 11)),
-          Some(success(Token.BeginInterpolatedString("s"), 17, 18)),
-          Some(success(Token.InterpolatedPart("Positive: "), 19, 28)),
-          Some(success(Token.Identifier.Lower("x"), 30, 30)),
-          Some(success(Token.EndInterpolatedString, 31, 31)),
-          Some(success(Token.Semicolon, 32, 32)),
-          Some(success(Token.RBrace, 33, 33)),
-          Some(success(Token.Else, 35, 38)),
-          Some(success(Token.If, 40, 41)),
-          Some(success(Token.LParen, 43, 43)),
-          Some(success(Token.Identifier.Lower("x"), 44, 44)),
-          Some(success(Token.Identifier.Operator("<"), 46, 46)),
-          Some(success(Token.IntLiteral(0), 48, 48)),
-          Some(success(Token.RParen, 49, 49)),
-          Some(success(Token.LBrace, 51, 51)),
-          Some(success(Token.BeginInterpolatedString("s"), 57, 58)),
-          Some(success(Token.InterpolatedPart("Negative: "), 59, 68)),
-          Some(success(Token.Identifier.Lower("x"), 70, 70)),
-          Some(success(Token.EndInterpolatedString, 71, 71)),
-          Some(success(Token.Semicolon, 72, 72)),
-          Some(success(Token.RBrace, 73, 73)),
-          Some(success(Token.Else, 75, 78)),
-          Some(success(Token.LBrace, 80, 80)),
-          Some(success(Token.StringLiteral("Zero"), 86, 91)),
-          Some(success(Token.Semicolon, 92, 92)),
-          Some(success(Token.RBrace, 93, 93))
+          Some(success(Token.BeginInterpolatedString("s"), 15, 16)),
+          Some(success(Token.InterpolatedPart("Positive: "), 17, 26)),
+          Some(success(Token.Identifier.Lower("x"), 28, 28)),
+          Some(success(Token.EndInterpolatedString, 29, 29)),
+          Some(success(Token.RBrace, 31, 31)),
+          Some(success(Token.Else, 33, 36)),
+          Some(success(Token.If, 38, 39)),
+          Some(success(Token.LParen, 41, 41)),
+          Some(success(Token.Identifier.Lower("x"), 42, 42)),
+          Some(success(Token.Identifier.Operator("<"), 44, 44)),
+          Some(success(Token.IntLiteral(0), 46, 46)),
+          Some(success(Token.RParen, 47, 47)),
+          Some(success(Token.LBrace, 49, 49)),
+          Some(success(Token.BeginInterpolatedString("s"), 53, 54)),
+          Some(success(Token.InterpolatedPart("Negative: "), 55, 64)),
+          Some(success(Token.Identifier.Lower("x"), 66, 66)),
+          Some(success(Token.EndInterpolatedString, 67, 67)),
+          Some(success(Token.RBrace, 69, 69)),
+          Some(success(Token.Else, 71, 74)),
+          Some(success(Token.LBrace, 76, 76)),
+          Some(success(Token.StringLiteral("Zero"), 80, 85)),
+          Some(success(Token.RBrace, 87, 87))
         )
       }
 
-      ignore("should handle pattern matching with interpolation and multiline strings") {
+      it("case 3") {
         val input =
           """res match {
             |  case s"foo$x" => s"Matched foo with $x"
@@ -571,28 +567,27 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.Identifier.Lower("res"), 0, 2)),
           Some(success(Token.Match, 4, 8)),
           Some(success(Token.LBrace, 10, 10)),
-          Some(success(Token.Case, 16, 19)),
-          Some(success(Token.BeginInterpolatedString("s"), 21, 22)),
-          Some(success(Token.InterpolatedPart("foo"), 23, 25)),
-          Some(success(Token.Identifier.Lower("x"), 27, 27)),
-          Some(success(Token.EndInterpolatedString, 28, 28)),
-          Some(success(Token.RDoubleArrow, 30, 31)),
-          Some(success(Token.BeginInterpolatedString("s"), 33, 34)),
-          Some(success(Token.InterpolatedPart("Matched foo with "), 35, 51)),
-          Some(success(Token.Identifier.Lower("x"), 53, 53)),
-          Some(success(Token.EndInterpolatedString, 54, 54)),
-          Some(success(Token.Semicolon, 55, 55)),
-          Some(success(Token.Case, 60, 63)),
-          Some(success(Token.Underscore, 65, 65)),
-          Some(success(Token.RDoubleArrow, 67, 68)),
-          Some(success(Token.Val, 77, 79)),
-          Some(success(Token.Identifier.Lower("fallback"), 81, 88)),
-          Some(success(Token.Eq, 90, 90)),
-          Some(success(Token.StringLiteral("none"), 92, 97)),
-          Some(success(Token.Semicolon, 98, 98)),
-          Some(success(Token.Identifier.Lower("fallback"), 105, 112)),
-          Some(success(Token.Semicolon, 113, 113)),
-          Some(success(Token.RBrace, 114, 114))
+          Some(success(Token.Case, 14, 17)),
+          Some(success(Token.BeginInterpolatedString("s"), 19, 20)),
+          Some(success(Token.InterpolatedPart("foo"), 21, 23)),
+          Some(success(Token.Identifier.Lower("x"), 25, 25)),
+          Some(success(Token.EndInterpolatedString, 26, 26)),
+          Some(success(Token.RDoubleArrow, 28, 29)),
+          Some(success(Token.BeginInterpolatedString("s"), 31, 32)),
+          Some(success(Token.InterpolatedPart("Matched foo with "), 33, 49)),
+          Some(success(Token.Identifier.Lower("x"), 51, 51)),
+          Some(success(Token.EndInterpolatedString, 52, 52)),
+          Some(success(Token.Semicolon, 53, 53)),
+          Some(success(Token.Case, 56, 59)),
+          Some(success(Token.Underscore, 61, 61)),
+          Some(success(Token.RDoubleArrow, 63, 64)),
+          Some(success(Token.Val, 70, 72)),
+          Some(success(Token.Identifier.Lower("fallback"), 74, 81)),
+          Some(success(Token.Eq, 83, 83)),
+          Some(success(Token.StringLiteral("none"), 85, 90)),
+          Some(success(Token.Semicolon, 91, 91)),
+          Some(success(Token.Identifier.Lower("fallback"), 96, 103)),
+          Some(success(Token.RBrace, 105, 105))
         )
       }
     }
@@ -605,6 +600,10 @@ class ScannerTest extends AnyFunSpec with Matchers {
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
       expectedTokens.foreach { expected =>
         val actual = scanner.get()
+        //        println(s"Actual:   $actual")
+        //        println(s"Expected: $expected")
+        //        println("-------")
+
         expected match {
           case Some(expectedPos) =>
             actual match {
