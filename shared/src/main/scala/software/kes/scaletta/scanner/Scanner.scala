@@ -26,20 +26,21 @@ final class Scanner private(reader: CharReader,
     queue match {
       case h :: t =>
         queue = t
-        yieldSuccess(h, newlineEncounteredBefore = false)
+        Success(h)
       case Nil =>
         readNext()
     }
 
   private def yieldSuccess(token: Pos[Token],
-                           newlineEncounteredBefore: Boolean): ScannerResult = {
-    if (newlineEncounteredBefore &&
+                           newlineEncounteredBefore: Option[CharIndex]): ScannerResult = {
+    if (newlineEncounteredBefore.isDefined &&
       prevToken.canTerminateStatement &&
       token.value.canBeginStatement &&
       newlinesEnabledInRegion() &&
       token.value != (Token.Semicolon: Token) &&
       prevToken != (Token.Semicolon: Token)) {
-      val semicolonPos = Pos(Token.Semicolon: Token, token.begin, token.begin)
+      val index = newlineEncounteredBefore.get
+      val semicolonPos = Pos(Token.Semicolon: Token, index, index)
       queue = token :: queue
       prevToken = Token.Semicolon
       Success(semicolonPos)
@@ -71,11 +72,11 @@ final class Scanner private(reader: CharReader,
     buffer.reset()
     var begin = reader.currentIndex
 
-    val newlineEncountered = skipCommentsAndWhitespace(encounteredNewline = false) match {
+    val newlineEncountered = skipCommentsAndWhitespace(None) match {
       case SkipCommentsResult.Unterminated =>
         return Error(Pos(ScannerError.UnclosedComment, begin, reader.currentIndex))
-      case SkipCommentsResult.NewLinesEncountered => true
-      case SkipCommentsResult.NoNewLinesEncountered => false
+      case SkipCommentsResult.NewLinesEncountered(value) => Some(value)
+      case SkipCommentsResult.NoNewLinesEncountered => None
     }
 
     begin = reader.currentIndex
@@ -178,7 +179,7 @@ final class Scanner private(reader: CharReader,
 
     if (isEnd) {
       val end = reader.prevIndex
-      yieldSuccess(Pos(Token.EndInterpolatedString, begin, end), newlineEncounteredBefore = false)
+      yieldSuccess(Pos(Token.EndInterpolatedString, begin, end), newlineEncounteredBefore = None)
     } else if (reader.tryGet('$')) {
       if (reader.tryGet('$')) {
         // Escaped $ - let scanPart handle it
@@ -186,18 +187,18 @@ final class Scanner private(reader: CharReader,
         reader.unget('$')
         val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
         partResult.value match {
-          case Right(token) => yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = false)
+          case Right(token) => yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
           case Left(error) => Error(partResult.withNewValue(error))
         }
       } else {
         // $identifier or ${
         if (reader.tryGet('{')) {
-          yieldSuccess(Pos(Token.BeginInterpolatedEscape, begin, reader.prevIndex), newlineEncounteredBefore = false)
+          yieldSuccess(Pos(Token.BeginInterpolatedEscape, begin, reader.prevIndex), newlineEncounteredBefore = None)
         } else {
           reader.get() match {
             case Some(ch) =>
               if (CharacterClass.isOperator(ch)) {
-                yieldSuccess(Pos(Token.Identifier.Operator(ch.toString), begin + 1, reader.prevIndex), newlineEncounteredBefore = false)
+                yieldSuccess(Pos(Token.Identifier.Operator(ch.toString), begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
               } else if (CharacterClass.isIdentifierStart(ch)) {
                 buffer.reset()
                 buffer.write(ch)
@@ -212,11 +213,11 @@ final class Scanner private(reader: CharReader,
                       reader.unget(c)
                       val name = buffer.slice()
                       val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
-                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = false)
+                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
                     case None =>
                       val name = buffer.slice()
                       val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
-                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = false)
+                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
                   }
                 }
 
@@ -234,7 +235,7 @@ final class Scanner private(reader: CharReader,
       val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
       partResult.value match {
         case Right(token) =>
-          yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = false)
+          yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
         case Left(error) =>
           Error(partResult.withNewValue(error))
       }
@@ -242,18 +243,20 @@ final class Scanner private(reader: CharReader,
   }
 
   @tailrec
-  private def skipCommentsAndWhitespace(encounteredNewline: Boolean): SkipCommentsResult = {
+  private def skipCommentsAndWhitespace(mostRecentNewline: Option[CharIndex] = None): SkipCommentsResult = {
     val wsResult = Whitespace.scanWhitespace(reader)
-    val newlineEncountered = encounteredNewline || wsResult.encounteredNewlines
+    val newlineEncountered = mostRecentNewline.orElse(wsResult.indexOfLastNewline)
     Comments.scanComments(reader) match {
       case CommentResult.NoComment =>
-        if (newlineEncountered) SkipCommentsResult.NewLinesEncountered
-        else SkipCommentsResult.NoNewLinesEncountered
+        newlineEncountered match {
+          case Some(value) => SkipCommentsResult.NewLinesEncountered(value)
+          case None => SkipCommentsResult.NoNewLinesEncountered
+        }
       case CommentResult.Unterminated => SkipCommentsResult.Unterminated
       case CommentResult.BlockComment.MultiLine =>
-        skipCommentsAndWhitespace(encounteredNewline = true)
-      case CommentResult.LineComment =>
-        skipCommentsAndWhitespace(encounteredNewline = true)
+        skipCommentsAndWhitespace(Some(reader.prevIndex)) // TODO: reevaluate if this is correct
+      case CommentResult.LineComment(indexOfNewLine) =>
+        skipCommentsAndWhitespace(Some(indexOfNewLine)) // TODO: reevaluate if this is correct
       case _ =>
         skipCommentsAndWhitespace(newlineEncountered)
     }
@@ -308,7 +311,8 @@ final class Scanner private(reader: CharReader,
         regions match {
           case RegionAttributes.InterpolatedEscape :: _ =>
             exitRegion(RegionType.InterpolatedEscape)
-            queue = queue :+ Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
+            val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
+            queue = endPos :: queue
             true
           case _ =>
             exitRegion(RegionType.Braces)
@@ -330,13 +334,22 @@ final class Scanner private(reader: CharReader,
       case Nil => ()
     }
 
-  private sealed trait SkipCommentsResult
+  // TODO: revisit how we model this
+  private sealed trait SkipCommentsResult {
+    def encounteredNewline: Option[CharIndex]
+  }
 
   private object SkipCommentsResult {
-    case object NoNewLinesEncountered extends SkipCommentsResult
+    case object NoNewLinesEncountered extends SkipCommentsResult {
+      def encounteredNewline: Option[CharIndex] = None
+    }
 
-    case object NewLinesEncountered extends SkipCommentsResult
+    case class NewLinesEncountered(indexOfMostRecent: CharIndex) extends SkipCommentsResult {
+      def encounteredNewline: Option[CharIndex] = Some(indexOfMostRecent)
+    }
 
-    case object Unterminated extends SkipCommentsResult
+    case object Unterminated extends SkipCommentsResult {
+      def encounteredNewline: Option[CharIndex] = None
+    }
   }
 }

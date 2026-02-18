@@ -121,7 +121,9 @@ object Token {
 
     case class Quoted(name: String) extends Token with Identifier
 
-    case class Operator(name: String) extends Token with Identifier
+    case class Operator(name: String) extends Token with Identifier {
+      override def canBeginStatement: Boolean = false
+    }
   }
 
   case object LParen extends Token

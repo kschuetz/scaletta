@@ -10,8 +10,12 @@ class ScannerTest extends AnyFunSpec with Matchers {
   describe("Scanner") {
     describe("whitespace and comments") {
       it("should skip whitespace") {
+        check("  \t\n  123",
+          Some(success(Token.IntLiteral(123), 6, 8))
+        )
+        // The \r preceding the \n will be ignored and will not have its own char index:
         check("  \t\r\n  123",
-          Some(success(Token.IntLiteral(123), 7, 9))
+          Some(success(Token.IntLiteral(123), 6, 8))
         )
       }
 
@@ -197,7 +201,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.Identifier.Lower("x"), 4, 4)),
           Some(success(Token.Eq, 6, 6)),
           Some(success(Token.IntLiteral(1), 8, 8)),
-          Some(success(Token.Semicolon, 10, 10)),
+          Some(success(Token.Semicolon, 9, 9)),
           Some(success(Token.Val, 10, 12)),
           Some(success(Token.Identifier.Lower("y"), 14, 14)),
           Some(success(Token.Eq, 16, 16)),
@@ -254,7 +258,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.Identifier.Lower("x"), 6, 6)),
           Some(success(Token.Eq, 8, 8)),
           Some(success(Token.IntLiteral(1), 10, 10)),
-          Some(success(Token.Semicolon, 12, 12)),
+          Some(success(Token.Semicolon, 11, 11)),
           Some(success(Token.Val, 12, 14)),
           Some(success(Token.Identifier.Lower("y"), 16, 16)),
           Some(success(Token.Eq, 18, 18)),
@@ -291,7 +295,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
       it("should infer semicolon after block comment with newline") {
         check("1 /* comment */\n2",
           Some(success(Token.IntLiteral(1), 0, 0)),
-          Some(success(Token.Semicolon, 16, 16)),
+          Some(success(Token.Semicolon, 15, 15)),
           Some(success(Token.IntLiteral(2), 16, 16))
         )
       }
@@ -299,7 +303,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
       it("should infer semicolon after line comment") {
         check("1 // comment\n2",
           Some(success(Token.IntLiteral(1), 0, 0)),
-          Some(success(Token.Semicolon, 13, 13)),
+          Some(success(Token.Semicolon, 12, 12)),
           Some(success(Token.IntLiteral(2), 13, 13))
         )
       }
@@ -343,7 +347,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.Identifier.Lower("y"), 15, 15)),
           Some(success(Token.Eq, 17, 17)),
           Some(success(Token.IntLiteral(2), 19, 19)),
-          Some(success(Token.Semicolon, 21, 21)),
+          Some(success(Token.Semicolon, 20, 20)),
           Some(success(Token.Val, 21, 23)),
           Some(success(Token.Identifier.Lower("z"), 25, 25)),
           Some(success(Token.Eq, 27, 27)),
@@ -423,6 +427,174 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.IntLiteral(2), 21, 21))
         )
       }
+
+      it("should NOT infer semicolon when line starts with an operator (infix notation)") {
+        check("1\n+ 2",
+          Some(success(Token.IntLiteral(1), 0, 0)),
+          Some(success(Token.Identifier.Operator("+"), 2, 2)),
+          Some(success(Token.IntLiteral(2), 4, 4))
+        )
+      }
+
+      it("should NOT infer semicolon when line starts with a dot") {
+        check("foo\n.bar",
+          Some(success(Token.Identifier.Lower("foo"), 0, 2)),
+          Some(success(Token.Dot, 4, 4)),
+          Some(success(Token.Identifier.Lower("bar"), 5, 7))
+        )
+      }
+
+      it("should emit the semicolon at the same position in the source code the newline was encountered") {
+        check(
+          """val foo = 1
+            |val bar = 2
+            |""".stripMargin,
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("foo"), 4, 6)),
+          Some(success(Token.Eq, 8, 8)),
+          Some(success(Token.IntLiteral(1), 10, 10)),
+          Some(success(Token.Semicolon, 11, 11)),
+          Some(success(Token.Val, 12, 14)),
+          Some(success(Token.Identifier.Lower("bar"), 16, 18)),
+          Some(success(Token.Eq, 20, 20)),
+          Some(success(Token.IntLiteral(2), 22, 22)),
+        )
+      }
+    }
+
+    describe("complex expressions") {
+      ignore("should handle a complex block with val definitions, interpolation, and method calls") {
+        val input =
+          """{
+            |  val name = "world"
+            |  val msg = s"Hello, ${name.toUpperCase}!"
+            |  val result = (1 + 2) * 3
+            |  msg + " " + result.toString
+            |}""".stripMargin
+        check(input,
+          Some(success(Token.LBrace, 0, 0)),
+          Some(success(Token.Val, 5, 7)),
+          Some(success(Token.Identifier.Lower("name"), 9, 12)),
+          Some(success(Token.Eq, 14, 14)),
+          Some(success(Token.StringLiteral("world"), 16, 22)),
+          Some(success(Token.Semicolon, 23, 23)),
+          Some(success(Token.Val, 27, 29)),
+          Some(success(Token.Identifier.Lower("msg"), 31, 33)),
+          Some(success(Token.Eq, 35, 35)),
+          Some(success(Token.BeginInterpolatedString("s"), 37, 38)),
+          Some(success(Token.InterpolatedPart("Hello, "), 39, 45)),
+          Some(success(Token.BeginInterpolatedEscape, 46, 47)),
+          Some(success(Token.Identifier.Lower("name"), 48, 51)),
+          Some(success(Token.Dot, 52, 52)),
+          Some(success(Token.Identifier.Lower("toUpperCase"), 53, 63)),
+          Some(success(Token.EndInterpolatedEscape, 64, 64)),
+          Some(success(Token.InterpolatedPart("!"), 65, 65)),
+          Some(success(Token.EndInterpolatedString, 66, 66)),
+          Some(success(Token.Semicolon, 67, 67)),
+          Some(success(Token.Val, 71, 73)),
+          Some(success(Token.Identifier.Lower("result"), 75, 80)),
+          Some(success(Token.Eq, 82, 82)),
+          Some(success(Token.LParen, 84, 84)),
+          Some(success(Token.IntLiteral(1), 85, 85)),
+          Some(success(Token.Identifier.Operator("+"), 87, 87)),
+          Some(success(Token.IntLiteral(2), 89, 89)),
+          Some(success(Token.RParen, 90, 90)),
+          Some(success(Token.Identifier.Operator("*"), 92, 92)),
+          Some(success(Token.IntLiteral(3), 94, 95)),
+          Some(success(Token.Semicolon, 95, 95)),
+          Some(success(Token.Identifier.Lower("msg"), 99, 101)),
+          Some(success(Token.Identifier.Operator("+"), 103, 103)),
+          Some(success(Token.StringLiteral(" "), 105, 107)),
+          Some(success(Token.Identifier.Operator("+"), 109, 109)),
+          Some(success(Token.Identifier.Lower("result"), 111, 116)),
+          Some(success(Token.Dot, 117, 117)),
+          Some(success(Token.Identifier.Lower("toString"), 118, 125)),
+          Some(success(Token.Semicolon, 126, 126)),
+          Some(success(Token.RBrace, 127, 127))
+        )
+      }
+
+      ignore("should handle nested if-then-else with interpolation") {
+        val input =
+          """if (x > 0) {
+            |  s"Positive: $x"
+            |} else if (x < 0) {
+            |  s"Negative: $x"
+            |} else {
+            |  "Zero"
+            |}""".stripMargin
+        check(input,
+          Some(success(Token.If, 0, 1)),
+          Some(success(Token.LParen, 3, 3)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Identifier.Operator(">"), 6, 6)),
+          Some(success(Token.IntLiteral(0), 8, 8)),
+          Some(success(Token.RParen, 9, 9)),
+          Some(success(Token.LBrace, 11, 11)),
+          Some(success(Token.BeginInterpolatedString("s"), 17, 18)),
+          Some(success(Token.InterpolatedPart("Positive: "), 19, 28)),
+          Some(success(Token.Identifier.Lower("x"), 30, 30)),
+          Some(success(Token.EndInterpolatedString, 31, 31)),
+          Some(success(Token.Semicolon, 32, 32)),
+          Some(success(Token.RBrace, 33, 33)),
+          Some(success(Token.Else, 35, 38)),
+          Some(success(Token.If, 40, 41)),
+          Some(success(Token.LParen, 43, 43)),
+          Some(success(Token.Identifier.Lower("x"), 44, 44)),
+          Some(success(Token.Identifier.Operator("<"), 46, 46)),
+          Some(success(Token.IntLiteral(0), 48, 48)),
+          Some(success(Token.RParen, 49, 49)),
+          Some(success(Token.LBrace, 51, 51)),
+          Some(success(Token.BeginInterpolatedString("s"), 57, 58)),
+          Some(success(Token.InterpolatedPart("Negative: "), 59, 68)),
+          Some(success(Token.Identifier.Lower("x"), 70, 70)),
+          Some(success(Token.EndInterpolatedString, 71, 71)),
+          Some(success(Token.Semicolon, 72, 72)),
+          Some(success(Token.RBrace, 73, 73)),
+          Some(success(Token.Else, 75, 78)),
+          Some(success(Token.LBrace, 80, 80)),
+          Some(success(Token.StringLiteral("Zero"), 86, 91)),
+          Some(success(Token.Semicolon, 92, 92)),
+          Some(success(Token.RBrace, 93, 93))
+        )
+      }
+
+      ignore("should handle pattern matching with interpolation and multiline strings") {
+        val input =
+          """res match {
+            |  case s"foo$x" => s"Matched foo with $x"
+            |  case _ =>
+            |    val fallback = "none"
+            |    fallback
+            |}""".stripMargin
+        check(input,
+          Some(success(Token.Identifier.Lower("res"), 0, 2)),
+          Some(success(Token.Match, 4, 8)),
+          Some(success(Token.LBrace, 10, 10)),
+          Some(success(Token.Case, 16, 19)),
+          Some(success(Token.BeginInterpolatedString("s"), 21, 22)),
+          Some(success(Token.InterpolatedPart("foo"), 23, 25)),
+          Some(success(Token.Identifier.Lower("x"), 27, 27)),
+          Some(success(Token.EndInterpolatedString, 28, 28)),
+          Some(success(Token.RDoubleArrow, 30, 31)),
+          Some(success(Token.BeginInterpolatedString("s"), 33, 34)),
+          Some(success(Token.InterpolatedPart("Matched foo with "), 35, 51)),
+          Some(success(Token.Identifier.Lower("x"), 53, 53)),
+          Some(success(Token.EndInterpolatedString, 54, 54)),
+          Some(success(Token.Semicolon, 55, 55)),
+          Some(success(Token.Case, 60, 63)),
+          Some(success(Token.Underscore, 65, 65)),
+          Some(success(Token.RDoubleArrow, 67, 68)),
+          Some(success(Token.Val, 77, 79)),
+          Some(success(Token.Identifier.Lower("fallback"), 81, 88)),
+          Some(success(Token.Eq, 90, 90)),
+          Some(success(Token.StringLiteral("none"), 92, 97)),
+          Some(success(Token.Semicolon, 98, 98)),
+          Some(success(Token.Identifier.Lower("fallback"), 105, 112)),
+          Some(success(Token.Semicolon, 113, 113)),
+          Some(success(Token.RBrace, 114, 114))
+        )
+      }
     }
   }
 
@@ -439,33 +611,37 @@ class ScannerTest extends AnyFunSpec with Matchers {
               case ScannerResult.Success(actualPos) =>
                 expectedPos.value match {
                   case Right(expectedToken) =>
-                    withClue(s"Token at ${actualPos.begin}") {
+                    withClue(s"Token $expectedToken at ${actualPos.begin}") {
                       actualPos.value shouldBe expectedToken
-                      actualPos.begin shouldBe expectedPos.begin
-                      actualPos.end shouldBe expectedPos.end
+                      if (actualPos.positionTuple != expectedPos.positionTuple) {
+                        fail(s"Expected begin:end ${expectedPos.positionTuple} but got ${actualPos.positionTuple}")
+                      }
                     }
                   case Left(expectedError) =>
-                    fail(s"Expected error $expectedError, but got success with ${actualPos.value}")
+                    fail(s"Expected error $expectedError, but got success with ${actualPos.value} at ${actualPos.begin}")
                 }
               case ScannerResult.Error(actualPos) =>
                 expectedPos.value match {
                   case Left(expectedError) =>
-                    withClue(s"Error at ${actualPos.begin}") {
+                    withClue(s"Error $expectedError at ${actualPos.begin}") {
                       actualPos.value shouldBe expectedError
                       actualPos.begin shouldBe expectedPos.begin
                       actualPos.end shouldBe expectedPos.end
                     }
                   case Right(expectedToken) =>
-                    fail(s"Expected success with $expectedToken, but got error ${actualPos.value}")
+                    fail(s"Expected success with $expectedToken, but got error ${actualPos.value} at ${actualPos.begin}")
                 }
               case ScannerResult.EndOfInput =>
-                fail(s"Expected more tokens, but got EndOfInput (expected $expectedPos)")
+                fail(s"Expected more tokens, but got EndOfInput (expected ${expectedPos.value} at ${expectedPos.begin})")
             }
           case None =>
             actual shouldBe ScannerResult.EndOfInput
         }
       }
-      scanner.get() shouldBe ScannerResult.EndOfInput
+      val extra = scanner.get()
+      if (extra != ScannerResult.EndOfInput) {
+        fail(s"Expected EndOfInput, but got extra token: $extra")
+      }
     }
   }
 }

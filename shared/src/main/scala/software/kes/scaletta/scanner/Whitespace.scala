@@ -1,24 +1,21 @@
 package software.kes.scaletta.scanner
 
 sealed trait WhitespaceResult {
-  def encounteredNewlines: Boolean
+  def indexOfLastNewline: Option[CharIndex]
 }
 
 object WhitespaceResult {
   case object NoWhitespace extends WhitespaceResult {
-    override def encounteredNewlines: Boolean = false
+    def indexOfLastNewline: Option[CharIndex] = None
   }
 
   case object NoNewlines extends WhitespaceResult {
-    override def encounteredNewlines: Boolean = false
+    def indexOfLastNewline: Option[CharIndex] = None
   }
 
-  case object OneNewline extends WhitespaceResult {
-    override def encounteredNewlines: Boolean = true
-  }
-
-  case object TwoNewlines extends WhitespaceResult {
-    override def encounteredNewlines: Boolean = true
+  case class Newlines(lastIndex: CharIndex,
+                      moreThanOne: Boolean) extends WhitespaceResult {
+    def indexOfLastNewline: Option[CharIndex] = Some(lastIndex)
   }
 }
 
@@ -36,9 +33,9 @@ object Whitespace {
           if (ch == '\n') {
             result match {
               case NoWhitespace | NoNewlines =>
-                result = OneNewline
-              case OneNewline =>
-                if (prev == '\n') result = TwoNewlines
+                result = Newlines(reader.prevIndex, moreThanOne = false)
+              case _: Newlines =>
+                if (prev == '\n') result = Newlines(reader.prevIndex, moreThanOne = true)
               case _ => ()
             }
             prev = ch
@@ -46,7 +43,6 @@ object Whitespace {
             if (result == NoWhitespace) {
               result = NoNewlines
             }
-            prev = ch
           } else {
             reader.unget(ch)
             loop = false

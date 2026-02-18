@@ -61,4 +61,6 @@ case class Pos[A](value: A,
 
   def withNewValue[B](value: B): Pos[B] =
     Pos(value, begin, end)
+
+  def positionTuple: (Int, Int) = (begin.value, end.value)
 }

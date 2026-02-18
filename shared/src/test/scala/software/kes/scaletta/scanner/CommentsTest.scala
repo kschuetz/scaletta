@@ -32,28 +32,28 @@ class CommentsTest extends AnyFunSpec with Matchers {
     describe("line comments") {
       it("case 1") {
         TestReaderFactory.fromString("//\n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment
+          Comments.scanComments(reader) shouldBe LineComment(CharIndex(2))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 2") {
         TestReaderFactory.fromString("// line comment\n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment
+          Comments.scanComments(reader) shouldBe LineComment(CharIndex(15))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 3") {
         TestReaderFactory.fromString("/// line comment\n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment
+          Comments.scanComments(reader) shouldBe LineComment(CharIndex(16))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 4") {
         TestReaderFactory.fromString("/// /*line comment*/ \n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment
+          Comments.scanComments(reader) shouldBe LineComment(CharIndex(21))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }

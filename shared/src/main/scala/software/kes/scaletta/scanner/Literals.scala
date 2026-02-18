@@ -269,7 +269,7 @@ object Literals {
                 buffer.write(ch)
                 leftOfDecimalPoint(wasSeparator = false)
               } else if (isLetter(other)) {
-                Pos(Left(InvalidLiteralNumber), begin, reader.prevIndex)
+                invalidLiteralNumber
               } else {
                 reader.unget(ch)
                 Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
@@ -284,7 +284,8 @@ object Literals {
       leftOfDecimalPoint(wasSeparator)
 
     @tailrec
-    def leftOfDecimalPoint(wasSeparator: Boolean): Result =
+    def leftOfDecimalPoint(wasSeparator: Boolean): Result = {
+      val temp1 = reader.prevIndex
       reader.get() match {
         case Some(ch) =>
           if (wasSeparator) {
@@ -325,6 +326,7 @@ object Literals {
           if (wasSeparator) illegalSeparator
           else makeInteger
       }
+    }
 
     def _rightOfDecimalPoint(digitCount: Int)
                             (wasSeparator: Boolean): Result =

@@ -26,12 +26,16 @@ final class CharReader private(source: Iterator[Char],
       if (result == '\r') {
         if (source.hasNext) {
           val next = source.next()
-          if (next == '\n') {
-            _currentIndex += 2
-          } else {
-            _currentIndex += 1
+          _currentIndex += 1
+          if (next != '\n') {
             pushback.push(next)
           }
+          //          if (next == '\n') {
+          //            _currentIndex += 2
+          //          } else {
+          //            _currentIndex += 1
+          //            pushback.push(next)
+          //          }
         }
         if (highWater < _currentIndex) {
           lineMapBuilder.addLineBegin(_currentIndex)
@@ -76,6 +80,20 @@ final class CharReader private(source: Iterator[Char],
     }
     if (!result) stack.foreach(unget)
     result
+  }
+
+  def skipWhile(p: Char => Boolean): Unit = {
+    var loop = true
+    while (loop) {
+      get() match {
+        case Some(ch) =>
+          if (!p(ch)) {
+            unget(ch)
+            loop = false
+          }
+        case None => loop = false
+      }
+    }
   }
 
   def skipUntil(p: Char => Boolean): Unit = {

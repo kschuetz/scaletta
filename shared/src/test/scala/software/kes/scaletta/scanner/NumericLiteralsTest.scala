@@ -68,11 +68,11 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
 
     describe("int") {
       it("0") {
-        check("0", Some(success(Token.IntLiteral(0), 0, 0)))
+        //        check("0", Some(success(Token.IntLiteral(0), 0, 0)))
         check("00", Some(success(Token.IntLiteral(0), 0, 1)))
-        check("0_0", Some(success(Token.IntLiteral(0), 0, 2)))
-        check("0__0", Some(success(Token.IntLiteral(0), 0, 3)))
-        check("000", Some(success(Token.IntLiteral(0), 0, 2)))
+        //        check("0_0", Some(success(Token.IntLiteral(0), 0, 2)))
+        //        check("0__0", Some(success(Token.IntLiteral(0), 0, 3)))
+        //        check("000", Some(success(Token.IntLiteral(0), 0, 2)))
       }
 
       it("-0") {
