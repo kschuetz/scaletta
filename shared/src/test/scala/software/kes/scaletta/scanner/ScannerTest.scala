@@ -474,6 +474,30 @@ class ScannerTest extends AnyFunSpec with Matchers {
       )
     }
 
+    it("handles unclosed string literal and resumes on next line") {
+      val input =
+        """val x = "hello world
+          |val y = 2""".stripMargin
+
+      // Position breakdown:
+      // "val x = " is 0-7
+      // "\"hello world" starts at index 8. It hits newline at index 20.
+      // Literals.stringLiteral ungets the newline and returns error.
+      // Resume skipCommentsAndWhitespace will find the newline at index 20.
+      // It will then see "val y = 2" starting at index 21.
+
+      check(input,
+        Some(success(Token.Val, 0, 2)),
+        Some(success(Token.Identifier.Lower("x"), 4, 4)),
+        Some(success(Token.Eq, 6, 6)),
+        Some(failure(ScannerError.UnclosedStringLiteral, 8, 20)),
+        Some(success(Token.Val, 21, 23)),
+        Some(success(Token.Identifier.Lower("y"), 25, 25)),
+        Some(success(Token.Eq, 27, 27)),
+        Some(success(Token.IntLiteral(2), 29, 29))
+      )
+    }
+
     it("saturates EndOfInput for empty input") {
       val input = ""
       TestReaderFactory.fromString(input) { reader =>
