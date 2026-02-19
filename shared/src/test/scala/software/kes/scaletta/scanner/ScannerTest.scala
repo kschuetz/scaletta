@@ -462,6 +462,58 @@ class ScannerTest extends AnyFunSpec with Matchers {
       }
     }
 
+    it("collects multiple errors in a single pass") {
+      val input = "val \u0001 123 . . 5"
+      check(input,
+        Some(success(Token.Val, 0, 2)),
+        Some(failure(ScannerError.InvalidCharacter, 4, 4)),
+        Some(success(Token.IntLiteral(123), 6, 8)),
+        Some(success(Token.Dot, 10, 10)),
+        Some(success(Token.Dot, 12, 12)),
+        Some(success(Token.IntLiteral(5), 14, 14))
+      )
+    }
+
+    it("saturates EndOfInput for empty input") {
+      val input = ""
+      TestReaderFactory.fromString(input) { reader =>
+        val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+        val first = scanner.get()
+        first.value shouldBe Token.EndOfInput
+        first.begin.value shouldBe 0
+        first.end.value shouldBe 0
+
+        val second = scanner.get()
+        second.value shouldBe Token.EndOfInput
+        second.begin.value shouldBe 0
+        second.end.value shouldBe 0
+
+        val third = scanner.get()
+        third.value shouldBe Token.EndOfInput
+        third.begin.value shouldBe 0
+        third.end.value shouldBe 0
+      }
+    }
+
+    it("saturates EndOfInput for non-empty input") {
+      val input = "abc"
+      TestReaderFactory.fromString(input) { reader =>
+        val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+        val first = scanner.get()
+        first.value shouldBe Token.Identifier.Lower("abc")
+
+        val second = scanner.get()
+        second.value shouldBe Token.EndOfInput
+        second.begin.value shouldBe 3
+        second.end.value shouldBe 3
+
+        val third = scanner.get()
+        third.value shouldBe Token.EndOfInput
+        third.begin.value shouldBe 3
+        third.end.value shouldBe 3
+      }
+    }
+
     describe("complex expressions") {
       it("case 1") {
         val input =
@@ -588,18 +640,6 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.Semicolon, 91, 91)),
           Some(success(Token.Identifier.Lower("fallback"), 96, 103)),
           Some(success(Token.RBrace, 105, 105))
-        )
-      }
-
-      it("collects multiple errors in a single pass") {
-        val input = "val \u0001 123 . . 5"
-        check(input,
-          Some(success(Token.Val, 0, 2)),
-          Some(failure(ScannerError.InvalidCharacter, 4, 4)),
-          Some(success(Token.IntLiteral(123), 6, 8)),
-          Some(success(Token.Dot, 10, 10)),
-          Some(success(Token.Dot, 12, 12)),
-          Some(success(Token.IntLiteral(5), 14, 14))
         )
       }
     }
