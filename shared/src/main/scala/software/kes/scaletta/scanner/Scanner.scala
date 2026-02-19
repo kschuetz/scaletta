@@ -62,24 +62,25 @@ final class Scanner private(reader: CharReader,
       case x :: _ => x.newlinesEnabled
     }
 
-  private def readNext(): ScannerResult = {
+  private def readNext(): ScannerResult =
     regions match {
       case RegionAttributes.InterpolatedString(multiLine, isRaw) :: _ =>
-        return scanInterpolatedStringPart(multiLine, isRaw)
-      case _ => ()
+        scanInterpolatedStringPart(multiLine, isRaw)
+      case _ =>
+        buffer.reset()
+        val begin = reader.currentIndex
+        skipCommentsAndWhitespace(None) match {
+          case SkipCommentsResult.Unterminated =>
+            Error(Pos(ScannerError.UnclosedComment, begin, reader.currentIndex))
+          case SkipCommentsResult.NewLinesEncountered(value) =>
+            readToken(Some(value))
+          case SkipCommentsResult.NoNewLinesEncountered =>
+            readToken(None)
+        }
     }
 
-    buffer.reset()
-    var begin = reader.currentIndex
-
-    val newlineEncountered = skipCommentsAndWhitespace(None) match {
-      case SkipCommentsResult.Unterminated =>
-        return Error(Pos(ScannerError.UnclosedComment, begin, reader.currentIndex))
-      case SkipCommentsResult.NewLinesEncountered(value) => Some(value)
-      case SkipCommentsResult.NoNewLinesEncountered => None
-    }
-
-    begin = reader.currentIndex
+  private def readToken(newlineEncountered: Option[CharIndex]): ScannerResult = {
+    val begin = reader.currentIndex
 
     // For tokens containing only one char
     def success1(token: Token): ScannerResult =
@@ -91,7 +92,7 @@ final class Scanner private(reader: CharReader,
         case Right(value) => yieldSuccess(either.withNewValue(value), newlineEncountered)
       }
 
-    val next = reader.get() match {
+    reader.get() match {
       case Some(ch) =>
         (ch: @switch) match {
           case '(' => success1(Token.LParen)
@@ -163,8 +164,6 @@ final class Scanner private(reader: CharReader,
 
       case None => ScannerResult.EndOfInput
     }
-
-    next
   }
 
   private def scanInterpolatedStringPart(multiLine: Boolean, isRaw: Boolean): ScannerResult = {
