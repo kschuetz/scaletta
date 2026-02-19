@@ -18,7 +18,7 @@ object Literals {
   private val MinSingleExponent = -45
   private val MaxSingleExponent = 38
 
-  type Result = Pos[Either[ScannerError, Token]]
+  type Result = Pos[Token]
 
   /**
    * Assumes the opening ' has already been consumed
@@ -30,26 +30,26 @@ object Literals {
       reader.get() match {
         case Some(ch) =>
           if (ch == '\\') escapeSequence
-          else if (ch == '\'') Pos(Left(EmptyCharacterLiteral), begin, reader.prevIndex)
+          else if (ch == '\'') Pos(Error(EmptyCharacterLiteral), begin, reader.prevIndex)
           else endQuote(ch)
-        case None => Pos(Left(UnclosedCharacterLiteral), begin, reader.prevIndex)
+        case None => Pos(Error(UnclosedCharacterLiteral), begin, reader.prevIndex)
       }
 
     def escapeSequence: Result =
       EscapeSequence.scan(reader) match {
         case Some(value) => endQuote(value)
-        case None => Pos(Left(InvalidEscapeCharacter), reader.prevIndex)
+        case None => Pos(Error(InvalidEscapeCharacter), reader.prevIndex)
       }
 
     def endQuote(value: Char): Result =
       reader.get() match {
         case Some(ch) =>
-          if (ch == '\'') Pos(Right(Token.CharLiteral(value)), begin, reader.prevIndex)
+          if (ch == '\'') Pos(Token.CharLiteral(value), begin, reader.prevIndex)
           else {
             reader.unget(ch)
-            Pos(Left(UnclosedCharacterLiteral), begin, reader.prevIndex + 1)
+            Pos(Error(UnclosedCharacterLiteral), begin, reader.prevIndex + 1)
           }
-        case _ => Pos(Left(UnclosedCharacterLiteral), begin, reader.prevIndex)
+        case _ => Pos(Error(UnclosedCharacterLiteral), begin, reader.prevIndex)
       }
 
     inChar
@@ -84,7 +84,7 @@ object Literals {
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
-            case '"' => Pos(Right(StringLiteral(buffer.slice())), begin, reader.prevIndex)
+            case '"' => Pos(StringLiteral(buffer.slice()), begin, reader.prevIndex)
             case '\n' =>
               reader.unget(ch)
               unclosed
@@ -102,9 +102,9 @@ object Literals {
           if (ch == '"') inMultiLineStr
           else {
             reader.unget(ch)
-            Pos(Right(StringLiteral(buffer.slice())), begin, reader.prevIndex)
+            Pos(StringLiteral(buffer.slice()), begin, reader.prevIndex)
           }
-        case None => Pos(Right(StringLiteral(buffer.slice())), begin, reader.prevIndex)
+        case None => Pos(StringLiteral(buffer.slice()), begin, reader.prevIndex)
       }
 
     @tailrec
@@ -141,7 +141,7 @@ object Literals {
       reader.get() match {
         case Some(ch) =>
           (ch: @switch) match {
-            case '"' => Pos(Right(MultiLineString(buffer.slice())), begin, reader.prevIndex)
+            case '"' => Pos(MultiLineString(buffer.slice()), begin, reader.prevIndex)
             case '\\' =>
               buffer.write('"')
               buffer.write('"')
@@ -160,14 +160,14 @@ object Literals {
         case Some(value) =>
           buffer.write(value)
           if (multiLineMode) inMultiLineStr else inStr
-        case None => Pos(Left(InvalidEscapeCharacter), reader.prevIndex)
+        case None => Pos(Error(InvalidEscapeCharacter), reader.prevIndex)
       }
 
     def unclosed: Result =
-      Pos(Left(UnclosedStringLiteral), begin, reader.currentIndex)
+      Pos(Error(UnclosedStringLiteral), begin, reader.currentIndex)
 
     def unclosedMultiLine: Result =
-      Pos(Left(UnclosedMultiLineString), begin, reader.currentIndex)
+      Pos(Error(UnclosedMultiLineString), begin, reader.currentIndex)
 
     q1
   }
@@ -272,12 +272,12 @@ object Literals {
                 invalidLiteralNumber
               } else {
                 reader.unget(ch)
-                Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
+                Pos(IntLiteral(0), begin, reader.prevIndex)
               }
           }
         case None =>
           if (wasSeparator) illegalSeparator
-          else Pos(Right(IntLiteral(0)), begin, reader.prevIndex)
+          else Pos(IntLiteral(0), begin, reader.prevIndex)
       }
 
     def _leftOfDecimalPoint(wasSeparator: Boolean): Result =
@@ -454,21 +454,21 @@ object Literals {
             case '_' => binary(acc, size, wasSeparator = true)
             case 'l' | 'L' =>
               if (wasSeparator) illegalSeparator
-              else Pos(Right(LongLiteral(maybeNegate(acc))), begin, reader.prevIndex)
+              else Pos(LongLiteral(maybeNegate(acc)), begin, reader.prevIndex)
             case other =>
               if (wasSeparator) illegalSeparator
               else if (isDigit(ch)) invalidLiteralNumber
               else if (size > 32) integerTooLarge
               else {
                 reader.unget(other)
-                Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
+                Pos(IntLiteral(maybeNegate(acc.toInt)), begin, reader.prevIndex)
               }
           }
         case None =>
           if (size < 1) invalidLiteralNumber
           else if (wasSeparator) illegalSeparator
           else if (size > 32) integerTooLarge
-          else Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
+          else Pos(IntLiteral(maybeNegate(acc.toInt)), begin, reader.prevIndex)
       }
 
     @tailrec
@@ -483,21 +483,21 @@ object Literals {
             case '_' => hex(acc, size, wasSeparator = true)
             case 'l' | 'L' =>
               if (wasSeparator) illegalSeparator
-              else Pos(Right(LongLiteral(maybeNegate(acc))), begin, reader.prevIndex)
+              else Pos(LongLiteral(maybeNegate(acc)), begin, reader.prevIndex)
             case other =>
               if (wasSeparator) illegalSeparator
               else if (isLetter(ch)) invalidLiteralNumber
               else if (size > 8) integerTooLarge
               else {
                 reader.unget(other)
-                Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
+                Pos(IntLiteral(maybeNegate(acc.toInt)), begin, reader.prevIndex)
               }
           }
         case None =>
           if (size < 1) invalidLiteralNumber
           else if (wasSeparator) illegalSeparator
           else if (size > 8) integerTooLarge
-          else Pos(Right(IntLiteral(maybeNegate(acc.toInt))), begin, reader.prevIndex)
+          else Pos(IntLiteral(maybeNegate(acc.toInt)), begin, reader.prevIndex)
       }
 
     def beginSuffix(ch: Char,
@@ -522,7 +522,7 @@ object Literals {
         case Some(value) =>
           val resultAsLong = maybeNegate(value)
           if (resultAsLong >= Int.MinValue && resultAsLong <= Int.MaxValue) {
-            Pos(Right(IntLiteral(resultAsLong.toInt)), begin, reader.prevIndex)
+            Pos(IntLiteral(resultAsLong.toInt), begin, reader.prevIndex)
           } else {
             integerTooLarge
           }
@@ -540,7 +540,7 @@ object Literals {
         s.toLongOption match {
           case Some(value) =>
             val result = if (size >= 18) value else maybeNegate(value)
-            Pos(Right(LongLiteral(result)), begin, reader.prevIndex)
+            Pos(LongLiteral(result), begin, reader.prevIndex)
           case None =>
             if (size == 19) integerTooLarge
             else invalidLiteralNumber // shouldn't happen
@@ -553,7 +553,7 @@ object Literals {
         case Some(value) =>
           val result = maybeNegate(value)
           if (result.isFinite) {
-            Pos(Right(DoubleLiteral(result)), begin, reader.prevIndex)
+            Pos(DoubleLiteral(result), begin, reader.prevIndex)
           } else invalidLiteralNumber
         case None => invalidLiteralNumber
       }
@@ -563,25 +563,25 @@ object Literals {
         case Some(value) =>
           val result = maybeNegate(value)
           if (result.isFinite) {
-            Pos(Right(FloatLiteral(result)), begin, reader.prevIndex)
+            Pos(FloatLiteral(result), begin, reader.prevIndex)
           } else invalidLiteralNumber
         case None => invalidLiteralNumber
       }
 
     def integerTooLarge: Result =
-      Pos(Left(IntegerNumberTooLarge), begin, reader.prevIndex)
+      Pos(Error(IntegerNumberTooLarge), begin, reader.prevIndex)
 
     def illegalSeparator: Result =
-      Pos(Left(IllegalSeparator), reader.prevIndex)
+      Pos(Error(IllegalSeparator), reader.prevIndex)
 
     def invalidLiteralNumber: Result =
-      Pos(Left(InvalidLiteralNumber), begin, reader.prevIndex)
+      Pos(Error(InvalidLiteralNumber), begin, reader.prevIndex)
 
     def floatingPointPrecisionTooSmall: Result =
-      Pos(Left(FloatingPointPrecisionTooSmall), begin, reader.prevIndex)
+      Pos(Error(FloatingPointPrecisionTooSmall), begin, reader.prevIndex)
 
     def floatingPointPrecisionTooLarge: Result =
-      Pos(Left(FloatingPointPrecisionTooLarge), begin, reader.prevIndex)
+      Pos(Error(FloatingPointPrecisionTooLarge), begin, reader.prevIndex)
 
     def maybeNegate[A: Numeric](value: A): A =
       if (negative) implicitly[Numeric[A]].negate(value)

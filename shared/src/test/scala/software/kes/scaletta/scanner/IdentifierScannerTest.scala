@@ -213,7 +213,7 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
     }
   }
 
-  private def check(input: String, expected: Option[Pos[Either[ScannerError, Token]]],
+  private def check(input: String, expected: Option[Pos[Token]],
                     checkRemainder: Boolean = true): Unit = {
     val scanner = new IdentifierScanner(policy)
     TestReaderFactory.fromString(input) { reader =>
@@ -225,9 +225,11 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
 
     if (checkRemainder) {
       expected match {
-        case Some(Pos(Right(_), _, _)) =>
+        case Some(Pos(Token.Error(_), _, _)) => ()
+        case Some(_) =>
           TestReaderFactory.fromString(input + " $") { reader =>
-            scanner.tryScan(reader, buffer) shouldBe expected
+            val result = scanner.tryScan(reader, buffer)
+            result shouldBe expected
             reader.get() shouldBe Some(' ')
             reader.get() shouldBe Some('$')
           }

@@ -590,55 +590,46 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.RBrace, 105, 105))
         )
       }
+
+      it("collects multiple errors in a single pass") {
+        val input = "val \u0001 123 . . 5"
+        check(input,
+          Some(success(Token.Val, 0, 2)),
+          Some(failure(ScannerError.InvalidCharacter, 4, 4)),
+          Some(success(Token.IntLiteral(123), 6, 8)),
+          Some(success(Token.Dot, 10, 10)),
+          Some(success(Token.Dot, 12, 12)),
+          Some(success(Token.IntLiteral(5), 14, 14))
+        )
+      }
     }
   }
 
   private def check(input: String,
-                    expectedTokens: Option[Pos[Either[ScannerError, Token]]]*)
+                    expectedTokens: Option[Pos[Token]]*)
                    (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
       expectedTokens.foreach { expected =>
         val actual = scanner.get()
-        //        println(s"Actual:   $actual")
-        //        println(s"Expected: $expected")
-        //        println("-------")
 
         expected match {
           case Some(expectedPos) =>
-            actual match {
-              case ScannerResult.Success(actualPos) =>
-                expectedPos.value match {
-                  case Right(expectedToken) =>
-                    withClue(s"Token $expectedToken at ${actualPos.begin}") {
-                      actualPos.value shouldBe expectedToken
-                      if (actualPos.positionTuple != expectedPos.positionTuple) {
-                        fail(s"Expected begin:end ${expectedPos.positionTuple} but got ${actualPos.positionTuple}")
-                      }
-                    }
-                  case Left(expectedError) =>
-                    fail(s"Expected error $expectedError, but got success with ${actualPos.value} at ${actualPos.begin}")
-                }
-              case ScannerResult.Error(actualPos) =>
-                expectedPos.value match {
-                  case Left(expectedError) =>
-                    withClue(s"Error $expectedError at ${actualPos.begin}") {
-                      actualPos.value shouldBe expectedError
-                      actualPos.begin shouldBe expectedPos.begin
-                      actualPos.end shouldBe expectedPos.end
-                    }
-                  case Right(expectedToken) =>
-                    fail(s"Expected success with $expectedToken, but got error ${actualPos.value} at ${actualPos.begin}")
-                }
-              case ScannerResult.EndOfInput =>
+            actual.value match {
+              case Token.EndOfInput =>
                 fail(s"Expected more tokens, but got EndOfInput (expected ${expectedPos.value} at ${expectedPos.begin})")
+              case _ =>
+                actual.value shouldBe expectedPos.value
+                if (actual.positionTuple != expectedPos.positionTuple) {
+                  fail(s"Expected begin:end ${expectedPos.positionTuple} but got ${actual.positionTuple}")
+                }
             }
           case None =>
-            actual shouldBe ScannerResult.EndOfInput
+            actual.value shouldBe Token.EndOfInput
         }
       }
       val extra = scanner.get()
-      if (extra != ScannerResult.EndOfInput) {
+      if (extra.value != Token.EndOfInput) {
         fail(s"Expected EndOfInput, but got extra token: $extra")
       }
     }

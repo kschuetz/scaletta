@@ -9,6 +9,10 @@ sealed trait Token {
 object Token {
   case object BeginOfInput extends Token
 
+  case object EndOfInput extends Token
+
+  case class Error(error: ScannerError) extends Token
+
   sealed trait ReservedWord extends Token {
     def name: String
 

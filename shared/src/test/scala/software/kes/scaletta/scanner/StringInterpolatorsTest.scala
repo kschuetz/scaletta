@@ -97,7 +97,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers {
   // Note: This helper is simplified. In the actual implementation, we might need a 
   // more complex loop to handle the stateful scanning of interpolators.
   private def check(input: String,
-                    expectedTokens: Option[Pos[Either[ScannerError, Token]]]*)
+                    expectedTokens: Option[Pos[Token]]*)
                    (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
@@ -105,30 +105,16 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers {
         val actual = scanner.get()
         expected match {
           case Some(expectedPos) =>
-            actual match {
-              case ScannerResult.Success(actualPos) =>
-                expectedPos.value match {
-                  case Right(expectedToken) =>
-                    actualPos.value shouldBe expectedToken
-                    actualPos.begin shouldBe expectedPos.begin
-                    actualPos.end shouldBe expectedPos.end
-                  case Left(expectedError) =>
-                    fail(s"Expected error $expectedError, but got success with ${actualPos.value}")
-                }
-              case ScannerResult.Error(actualPos) =>
-                expectedPos.value match {
-                  case Left(expectedError) =>
-                    actualPos.value shouldBe expectedError
-                    actualPos.begin shouldBe expectedPos.begin
-                    actualPos.end shouldBe expectedPos.end
-                  case Right(expectedToken) =>
-                    fail(s"Expected success with $expectedToken, but got error ${actualPos.value}")
-                }
-              case ScannerResult.EndOfInput =>
+            actual.value match {
+              case Token.EndOfInput =>
                 fail("Expected more tokens, but got EndOfInput")
+              case _ =>
+                actual.value shouldBe expectedPos.value
+                actual.begin shouldBe expectedPos.begin
+                actual.end shouldBe expectedPos.end
             }
           case None =>
-            actual shouldBe ScannerResult.EndOfInput
+            actual.value shouldBe Token.EndOfInput
         }
       }
     }

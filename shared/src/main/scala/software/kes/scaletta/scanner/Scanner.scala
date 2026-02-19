@@ -1,7 +1,6 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.scanner.ScannerConstants.{Raw, TripleQuote}
-import software.kes.scaletta.scanner.ScannerResult._
 import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer
 
@@ -12,7 +11,8 @@ object Scanner {
              identifierPolicy: IdentifierPolicy): Scanner = {
     val buffer = CharBuffer.create()
     val identifierScanner = new IdentifierScanner(identifierPolicy)
-    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, Nil, Nil)
+    val initialPos = Pos(Token.BeginOfInput: Token, reader.currentIndex, reader.currentIndex)
+    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, Nil, Nil, initialPos)
   }
 }
 
@@ -21,18 +21,22 @@ final class Scanner private(reader: CharReader,
                             identifierScanner: IdentifierScanner,
                             private var prevToken: Token,
                             private var queue: List[Pos[Token]],
-                            private var regions: List[RegionAttributes]) {
-  def get(): ScannerResult =
+                            private var regions: List[RegionAttributes],
+                            private var lastPos: Pos[Token]) {
+  def get(): Pos[Token] =
     queue match {
       case h :: t =>
         queue = t
-        Success(h)
+        lastPos = h
+        h
       case Nil =>
-        readNext()
+        val result = readNext()
+        lastPos = result
+        result
     }
 
   private def yieldSuccess(token: Pos[Token],
-                           newlineEncounteredBefore: Option[CharIndex]): ScannerResult = {
+                           newlineEncounteredBefore: Option[CharIndex]): Pos[Token] = {
     if (newlineEncounteredBefore.isDefined &&
       prevToken.canTerminateStatement &&
       token.value.canBeginStatement &&
@@ -43,7 +47,7 @@ final class Scanner private(reader: CharReader,
       val semicolonPos = Pos(Token.Semicolon: Token, index, index)
       queue = token :: queue
       prevToken = Token.Semicolon
-      Success(semicolonPos)
+      semicolonPos
     } else {
       val suppressed = updateRegions(token)
       if (suppressed) {
@@ -51,7 +55,7 @@ final class Scanner private(reader: CharReader,
         get()
       } else {
         prevToken = token.value
-        Success(token)
+        token
       }
     }
   }
@@ -62,7 +66,7 @@ final class Scanner private(reader: CharReader,
       case x :: _ => x.newlinesEnabled
     }
 
-  private def readNext(): ScannerResult =
+  private def readNext(): Pos[Token] =
     regions match {
       case RegionAttributes.InterpolatedString(multiLine, isRaw) :: _ =>
         scanInterpolatedStringPart(multiLine, isRaw)
@@ -71,7 +75,7 @@ final class Scanner private(reader: CharReader,
         val begin = reader.currentIndex
         skipCommentsAndWhitespace(None) match {
           case SkipCommentsResult.Unterminated =>
-            Error(Pos(ScannerError.UnclosedComment, begin, reader.currentIndex))
+            Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex)
           case SkipCommentsResult.NewLinesEncountered(value) =>
             readToken(Some(value))
           case SkipCommentsResult.NoNewLinesEncountered =>
@@ -79,18 +83,15 @@ final class Scanner private(reader: CharReader,
         }
     }
 
-  private def readToken(newlineEncountered: Option[CharIndex]): ScannerResult = {
+  private def readToken(newlineEncountered: Option[CharIndex]): Pos[Token] = {
     val begin = reader.currentIndex
 
     // For tokens containing only one char
-    def success1(token: Token): ScannerResult =
+    def success1(token: Token): Pos[Token] =
       yieldSuccess(Pos(token, begin, begin), newlineEncountered)
 
-    def fromEither(either: Pos[Either[ScannerError, Token]]): ScannerResult =
-      either.value match {
-        case Left(error) => Error(either.withNewValue(error))
-        case Right(value) => yieldSuccess(either.withNewValue(value), newlineEncountered)
-      }
+    def success(p: Pos[Token]): Pos[Token] =
+      yieldSuccess(p, newlineEncountered)
 
     reader.get() match {
       case Some(ch) =>
@@ -103,21 +104,21 @@ final class Scanner private(reader: CharReader,
           case '}' => success1(Token.RBrace)
           case ',' => success1(Token.Comma)
           case ';' => success1(Token.Semicolon)
-          case '\'' => fromEither(Literals.charLiteral(reader))
-          case '"' => fromEither(Literals.stringLiteral(reader, buffer))
+          case '\'' => success(Literals.charLiteral(reader))
+          case '"' => success(Literals.stringLiteral(reader, buffer))
           case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
             reader.unget(ch)
-            fromEither(Literals.tryNumericLiteral(reader, buffer).getOrElse {
+            success(Literals.tryNumericLiteral(reader, buffer).getOrElse {
               // Should not happen as we just peeked a digit
-              Pos(Left(ScannerError.InvalidLiteralNumber), begin, begin)
+              Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
             })
           case '.' =>
             reader.get() match {
               case Some(c) if CharacterClass.isDigit(c) =>
                 reader.unget(c)
                 reader.unget('.')
-                fromEither(Literals.tryNumericLiteral(reader, buffer).getOrElse {
-                  Pos(Left(ScannerError.InvalidLiteralNumber), begin, begin)
+                success(Literals.tryNumericLiteral(reader, buffer).getOrElse {
+                  Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
                 })
               case Some(c) =>
                 reader.unget(c)
@@ -130,14 +131,14 @@ final class Scanner private(reader: CharReader,
               case Some(c) if CharacterClass.isDigit(c) || c == '.' =>
                 reader.unget(c)
                 reader.unget('-')
-                fromEither(Literals.tryNumericLiteral(reader, buffer).getOrElse {
-                  Pos(Left(ScannerError.InvalidLiteralNumber), begin, begin)
+                success(Literals.tryNumericLiteral(reader, buffer).getOrElse {
+                  Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
                 })
               case Some(c) =>
                 reader.unget(c)
                 reader.unget('-')
                 identifierScanner.tryScan(reader, buffer) match {
-                  case Some(result) => fromEither(result)
+                  case Some(result) => success(result)
                   case None =>
                     reader.get() // consume the '-'
                     success1(Token.Identifier.Operator("-"))
@@ -145,7 +146,7 @@ final class Scanner private(reader: CharReader,
               case None =>
                 reader.unget('-')
                 identifierScanner.tryScan(reader, buffer) match {
-                  case Some(result) => fromEither(result)
+                  case Some(result) => success(result)
                   case None =>
                     reader.get() // consume the '-'
                     success1(Token.Identifier.Operator("-"))
@@ -154,19 +155,23 @@ final class Scanner private(reader: CharReader,
           case _ =>
             reader.unget(ch)
             identifierScanner.tryScan(reader, buffer) match {
-              case Some(result) => fromEither(result)
+              case Some(result) => success(result)
               case None =>
                 // Handle numbers or other things not yet implemented
                 reader.get() // consume the char we ungetted
-                Error(Pos(ScannerError.InvalidCharacter, begin, begin))
+                Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin)
             }
         }
 
-      case None => ScannerResult.EndOfInput
+      case None =>
+        lastPos match {
+          case Pos(Token.EndOfInput, _, _) => lastPos
+          case _ => Pos(Token.EndOfInput, begin, begin)
+        }
     }
   }
 
-  private def scanInterpolatedStringPart(multiLine: Boolean, isRaw: Boolean): ScannerResult = {
+  private def scanInterpolatedStringPart(multiLine: Boolean, isRaw: Boolean): Pos[Token] = {
     val begin = reader.currentIndex
 
     // Check for end of string first
@@ -187,7 +192,7 @@ final class Scanner private(reader: CharReader,
         val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
         partResult.value match {
           case Right(token) => yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
-          case Left(error) => Error(partResult.withNewValue(error))
+          case Left(error) => partResult.withNewValue(Token.Error(error))
         }
       } else {
         // $identifier or ${
@@ -195,38 +200,36 @@ final class Scanner private(reader: CharReader,
           yieldSuccess(Pos(Token.BeginInterpolatedEscape, begin, reader.prevIndex), newlineEncounteredBefore = None)
         } else {
           reader.get() match {
-            case Some(ch) =>
-              if (CharacterClass.isOperator(ch)) {
-                yieldSuccess(Pos(Token.Identifier.Operator(ch.toString), begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
-              } else if (CharacterClass.isIdentifierStart(ch)) {
-                buffer.reset()
-                buffer.write(ch)
+            case Some(ch) if CharacterClass.isOperator(ch) =>
+              yieldSuccess(Pos(Token.Identifier.Operator(ch.toString), begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
+            case Some(ch) if CharacterClass.isIdentifierStart(ch) =>
+              buffer.reset()
+              buffer.write(ch)
 
-                @tailrec
-                def scanIdentifier(): ScannerResult = {
-                  reader.get() match {
-                    case Some(c) if CharacterClass.isIdentifierInner(c) && c != '$' =>
-                      buffer.write(c)
-                      scanIdentifier()
-                    case Some(c) =>
-                      reader.unget(c)
-                      val name = buffer.slice()
-                      val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
-                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
-                    case None =>
-                      val name = buffer.slice()
-                      val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
-                      yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
-                  }
+              @tailrec
+              def scanIdentifier(): Pos[Token] = {
+                reader.get() match {
+                  case Some(c) if CharacterClass.isIdentifierInner(c) && c != '$' =>
+                    buffer.write(c)
+                    scanIdentifier()
+                  case Some(c) =>
+                    reader.unget(c)
+                    val name = buffer.slice()
+                    val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
+                    yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
+                  case None =>
+                    val name = buffer.slice()
+                    val token = if (CharacterClass.isUppercase(ch)) Token.Identifier.Upper(name) else Token.Identifier.Lower(name)
+                    yieldSuccess(Pos(token, begin + 1, reader.prevIndex), newlineEncounteredBefore = None)
                 }
-
-                scanIdentifier()
-              } else {
-                reader.unget(ch)
-                Error(Pos(ScannerError.InvalidCharacter, begin, begin))
               }
+
+              scanIdentifier()
+            case Some(ch) =>
+              reader.unget(ch)
+              Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin)
             case None =>
-              Error(Pos(ScannerError.InvalidCharacter, begin, begin))
+              Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin)
           }
         }
       }
@@ -236,7 +239,7 @@ final class Scanner private(reader: CharReader,
         case Right(token) =>
           yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
         case Left(error) =>
-          Error(partResult.withNewValue(error))
+          partResult.withNewValue(Token.Error(error))
       }
     }
   }

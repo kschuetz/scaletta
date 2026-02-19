@@ -68,11 +68,11 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
 
     describe("int") {
       it("0") {
-        //        check("0", Some(success(Token.IntLiteral(0), 0, 0)))
+        check("0", Some(success(Token.IntLiteral(0), 0, 0)))
         check("00", Some(success(Token.IntLiteral(0), 0, 1)))
-        //        check("0_0", Some(success(Token.IntLiteral(0), 0, 2)))
-        //        check("0__0", Some(success(Token.IntLiteral(0), 0, 3)))
-        //        check("000", Some(success(Token.IntLiteral(0), 0, 2)))
+        check("0_0", Some(success(Token.IntLiteral(0), 0, 2)))
+        check("0__0", Some(success(Token.IntLiteral(0), 0, 3)))
+        check("000", Some(success(Token.IntLiteral(0), 0, 2)))
       }
 
       it("-0") {
@@ -429,7 +429,7 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
   }
 
   private def check(input: String,
-                    expected: Option[Pos[Either[ScannerError, Token]]],
+                    expected: Option[Pos[Token]],
                     checkRemainder: Boolean = true)
                    (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
@@ -441,9 +441,11 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
 
     if (checkRemainder) {
       expected match {
-        case Some(Pos(Right(_), _, _)) =>
+        case Some(Pos(Token.Error(_), _, _)) => ()
+        case Some(_) =>
           TestReaderFactory.fromString(input + " $") { reader =>
-            Literals.tryNumericLiteral(reader, buffer) shouldBe expected
+            val result = Literals.tryNumericLiteral(reader, buffer)
+            result shouldBe expected
             reader.get() shouldBe Some(' ')
             reader.get() shouldBe Some('$')
           }
