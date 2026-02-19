@@ -11,7 +11,9 @@ object Token {
 
   case object EndOfInput extends Token
 
-  case class Error(error: ScannerError) extends Token
+  case class Error(error: ScannerError) extends Token {
+    override def canTerminateStatement: Boolean = true
+  }
 
   sealed trait ReservedWord extends Token {
     def name: String

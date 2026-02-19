@@ -490,11 +490,61 @@ class ScannerTest extends AnyFunSpec with Matchers {
         Some(success(Token.Val, 0, 2)),
         Some(success(Token.Identifier.Lower("x"), 4, 4)),
         Some(success(Token.Eq, 6, 6)),
-        Some(failure(ScannerError.UnclosedStringLiteral, 8, 20)),
+        Some(failure(ScannerError.UnclosedStringLiteral, 8, 19)),
+        Some(success(Token.Semicolon, 20, 20)),
         Some(success(Token.Val, 21, 23)),
         Some(success(Token.Identifier.Lower("y"), 25, 25)),
         Some(success(Token.Eq, 27, 27)),
         Some(success(Token.IntLiteral(2), 29, 29))
+      )
+    }
+
+    it("handles unclosed multi-line string literal") {
+      val input =
+        """val x = """ + "\"\"\"" +
+          """hello
+            |val y = 2""".stripMargin
+
+      // Multi-line strings in Literals.scala currently scan until the end of input
+      // if not closed. It should return a single error for the whole thing.
+
+      check(input,
+        Some(success(Token.Val, 0, 2)),
+        Some(success(Token.Identifier.Lower("x"), 4, 4)),
+        Some(success(Token.Eq, 6, 6)),
+        Some(failure(ScannerError.UnclosedMultiLineString, 8, 26))
+      )
+    }
+
+    it("handles unclosed quoted identifier and resumes on next line") {
+      val input =
+        """val `unclosed = 1
+          |val y = 2""".stripMargin
+
+      // In Scaletta, quoted identifiers currently stop at a newline.
+      // Index 4: `
+      // Index 5-12: unclosed
+      // Index 13: space
+      // Index 14: =
+      // Index 15: space
+      // Index 16: 1
+      // Index 17: newline
+      // IdentifierScanner.quoted returns Error(UnclosedQuotedIdentifier) at line 153
+      // It ungets the \n, so reader.prevIndex is 16.
+
+      check(input,
+        Some(success(Token.Val, 0, 2)),
+        // "val `unclosed = 1"
+        // 01234567890123456
+        Some(failure(ScannerError.UnclosedQuotedIdentifier, 4, 16)),
+        // After Error, Scanner.get calls readNext -> skipCommentsAndWhitespace.
+        // It skips the \n at 17.
+        // readToken(Some(17)) sees "val y = 2" starting at 18.
+        Some(success(Token.Semicolon, 17, 17)),
+        Some(success(Token.Val, 18, 20)),
+        Some(success(Token.Identifier.Lower("y"), 22, 22)),
+        Some(success(Token.Eq, 24, 24)),
+        Some(success(Token.IntLiteral(2), 26, 26))
       )
     }
 

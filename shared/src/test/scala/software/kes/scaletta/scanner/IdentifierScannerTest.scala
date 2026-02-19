@@ -119,7 +119,7 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
       it("invalid") {
         check("``", Some(failure(EmptyQuotedIdentifier, 0, 1)))
         check("`unclosed", Some(failure(UnclosedQuotedIdentifier, 0, 8)))
-        check("`newline:\n`", Some(failure(UnclosedQuotedIdentifier, 0, 9)))
+        check("`newline:\n`", Some(failure(UnclosedQuotedIdentifier, 0, 8)))
       }
     }
 

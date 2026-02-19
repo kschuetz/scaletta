@@ -148,7 +148,9 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
           case Some(ch) =>
             (ch: @switch) match {
               case '\\' => escapeSequence(length)
-              case '\n' => Pos(Error(UnclosedQuotedIdentifier), begin, reader.prevIndex)
+              case '\n' =>
+                reader.unget('\n')
+                Pos(Error(UnclosedQuotedIdentifier), begin, reader.prevIndex)
               case '`' =>
                 if (buffer.isEmpty) Pos(Error(EmptyQuotedIdentifier), begin, reader.prevIndex)
                 else {
