@@ -567,43 +567,182 @@ class ScannerTest extends AnyFunSpec with Matchers {
       )
     }
 
-    it("saturates EndOfInput for empty input") {
-      val input = ""
-      TestReaderFactory.fromString(input) { reader =>
-        val scanner = Scanner.create(reader, IdentifierPolicy.Default)
-        val first = scanner.get()
-        first.value shouldBe Token.EndOfInput
-        first.begin.value shouldBe 0
-        first.end.value shouldBe 0
+    describe("garbage clustering") {
+      it("groups invalid character clusters into a single error") {
+        val input = "\u0001\u0002\u0003 val"
+        // Goal: One error for the cluster, then resume at 'val'
+        check(input,
+          Some(failure(ScannerError.InvalidCharacter, 0, 2)),
+          Some(success(Token.Val, 4, 6))
+        )
+      }
 
-        val second = scanner.get()
-        second.value shouldBe Token.EndOfInput
-        second.begin.value shouldBe 0
-        second.end.value shouldBe 0
+      it("groups invalid character clusters even without trailing whitespace") {
+        val input = "\u0001\u0002\u0003val"
+        // Goal: Group garbage, then resume immediately at identifier 'val'
+        check(input,
+          Some(failure(ScannerError.InvalidCharacter, 0, 2)),
+          Some(success(Token.Val, 3, 5))
+        )
+      }
 
-        val third = scanner.get()
-        third.value shouldBe Token.EndOfInput
-        third.begin.value shouldBe 0
-        third.end.value shouldBe 0
+      it("garbage cluster grouping stops at newlines") {
+        val input = "\u0001\u0002\n\u0003\u0004"
+        // Garbage should be grouped per-line to preserve newline synchronization
+        check(input,
+          Some(failure(ScannerError.InvalidCharacter, 0, 1)),
+          Some(failure(ScannerError.InvalidCharacter, 3, 4))
+        )
+      }
+
+      it("garbage cluster grouping stops at delimiters") {
+        val input = "\u0001\u0002(123)"
+        // Garbage should not 'eat' the opening parenthesis
+        check(input,
+          Some(failure(ScannerError.InvalidCharacter, 0, 1)),
+          Some(success(Token.LParen, 2, 2)),
+          Some(success(Token.IntLiteral(123), 3, 5)),
+          Some(success(Token.RParen, 6, 6))
+        )
+      }
+
+      it("groups invalid character clusters inside interpolation escapes") {
+        val input = "s\"${\u0001\u0002}\""
+        // Garbage inside ${ } should be grouped without breaking the interpolation state
+        check(input,
+          Some(success(Token.BeginInterpolatedString("s"), 0, 1)),
+          Some(success(Token.BeginInterpolatedEscape, 2, 3)),
+          Some(failure(ScannerError.InvalidCharacter, 4, 5)),
+          Some(success(Token.EndInterpolatedEscape, 6, 6)),
+          Some(success(Token.EndInterpolatedString, 7, 7))
+        )
+      }
+
+      it("garbage cluster grouping interacts correctly with comments") {
+        // Example A: Garbage followed by a comment
+        // The grouping must stop at the '/' so the comment scanner can see it.
+        val inputA = "\u0001\u0002// comment\nval x = 1"
+        check(inputA,
+          Some(failure(ScannerError.InvalidCharacter, 0, 1)),
+          Some(success(Token.Val, 13, 15)),
+          Some(success(Token.Identifier.Lower("x"), 17, 17)),
+          Some(success(Token.Eq, 19, 19)),
+          Some(success(Token.IntLiteral(1), 21, 21))
+        )
+
+        // Example B: Garbage following a block comment
+        val inputB = "/* comment */\u0003\u0004 val"
+        check(inputB,
+          Some(failure(ScannerError.InvalidCharacter, 13, 14)),
+          Some(success(Token.Val, 16, 18))
+        )
+      }
+
+      it("garbage cluster grouping stops at dots (number or field access)") {
+        // Case A: Followed by number
+        check("\u0001.123",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.DoubleLiteral(0.123), 1, 4))
+        )
+
+        // Case B: Followed by field access
+        check("\u0001.foo",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.Dot, 1, 1)),
+          Some(success(Token.Identifier.Lower("foo"), 2, 4))
+        )
+      }
+
+      it("treats unrecognized Unicode symbols as operators (Scala-style)") {
+        // Snowman (\u2603) and Comet (\u2604) are valid operators in Scala/Scaletta
+        val input = "\u2603\u2604 val"
+        check(input,
+          Some(success(Token.Identifier.Operator("\u2603\u2604"), 0, 1)),
+          Some(success(Token.Val, 3, 5))
+        )
+      }
+
+      it("groups truly invalid characters (e.g. control chars) as garbage clusters") {
+        // Using non-whitespace control characters that aren't operators or identifiers
+        val input = "\u0001\u0002\u0003 val"
+        check(input,
+          Some(failure(ScannerError.InvalidCharacter, 0, 2)),
+          Some(success(Token.Val, 4, 6))
+        )
+      }
+
+      it("garbage cluster grouping stops at literal delimiters") {
+        // Case A: Followed by string
+        check("\u0001\"hello\"",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.StringLiteral("hello"), 1, 7))
+        )
+
+        // Case B: Followed by character
+        check("\u0001'a'",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.CharLiteral('a'), 1, 3))
+        )
+      }
+
+      it("garbage cluster grouping interacts correctly with interpolation starts: single line") {
+        check("\u0001s\"hello\"",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.BeginInterpolatedString("s"), 1, 2)),
+          Some(success(Token.InterpolatedPart("hello"), 3, 7)),
+          Some(success(Token.EndInterpolatedString, 8, 8))
+        )
+      }
+
+      ignore("garbage cluster grouping interacts correctly with interpolation starts: multi-line") {
+        check("\u0001raw\"\"\"hello\"\"\"",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.BeginMultiLineInterpolatedString("raw"), 1, 6)),
+          Some(success(Token.InterpolatedPart("hello"), 7, 11)),
+          Some(success(Token.EndInterpolatedString, 12, 14))
+        )
       }
     }
 
-    it("saturates EndOfInput for non-empty input") {
-      val input = "abc"
-      TestReaderFactory.fromString(input) { reader =>
-        val scanner = Scanner.create(reader, IdentifierPolicy.Default)
-        val first = scanner.get()
-        first.value shouldBe Token.Identifier.Lower("abc")
+    describe("EndOfInput") {
+      it("saturates EndOfInput for empty input") {
+        val input = ""
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          val first = scanner.get()
+          first.value shouldBe Token.EndOfInput
+          first.begin.value shouldBe 0
+          first.end.value shouldBe 0
 
-        val second = scanner.get()
-        second.value shouldBe Token.EndOfInput
-        second.begin.value shouldBe 3
-        second.end.value shouldBe 3
+          val second = scanner.get()
+          second.value shouldBe Token.EndOfInput
+          second.begin.value shouldBe 0
+          second.end.value shouldBe 0
 
-        val third = scanner.get()
-        third.value shouldBe Token.EndOfInput
-        third.begin.value shouldBe 3
-        third.end.value shouldBe 3
+          val third = scanner.get()
+          third.value shouldBe Token.EndOfInput
+          third.begin.value shouldBe 0
+          third.end.value shouldBe 0
+        }
+      }
+
+      it("saturates EndOfInput for non-empty input") {
+        val input = "abc"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          val first = scanner.get()
+          first.value shouldBe Token.Identifier.Lower("abc")
+
+          val second = scanner.get()
+          second.value shouldBe Token.EndOfInput
+          second.begin.value shouldBe 3
+          second.end.value shouldBe 3
+
+          val third = scanner.get()
+          third.value shouldBe Token.EndOfInput
+          third.begin.value shouldBe 3
+          third.end.value shouldBe 3
+        }
       }
     }
 

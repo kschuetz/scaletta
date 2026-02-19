@@ -86,6 +86,13 @@ final class Scanner private(reader: CharReader,
   private def readToken(newlineEncountered: Option[CharIndex]): Pos[Token] = {
     val begin = reader.currentIndex
 
+    def canStartToken(ch: Char): Boolean =
+      (ch: @switch) match {
+        case '(' | ')' | '[' | ']' | '{' | '}' | ',' | ';' | '.' | '\'' | '"' |
+             '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '-' | '/' | '*' | '$' => true
+        case _ => CharacterClass.isIdentifierStart(ch) || CharacterClass.isOperator(ch)
+      }
+
     // For tokens containing only one char
     def success1(token: Token): Pos[Token] =
       yieldSuccess(Pos(token, begin, begin), newlineEncountered)
@@ -157,9 +164,22 @@ final class Scanner private(reader: CharReader,
             identifierScanner.tryScan(reader, buffer) match {
               case Some(result) => success(result)
               case None =>
-                // Handle numbers or other things not yet implemented
-                reader.get() // consume the char we ungetted
-                Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin)
+                @tailrec
+                def skipGarbage(): Pos[Token] = {
+                  reader.get() match {
+                    case Some(c) =>
+                      if (CharacterClass.isWhitespace(c) || canStartToken(c)) {
+                        reader.unget(c)
+                        Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex)
+                      } else {
+                        skipGarbage()
+                      }
+                    case None =>
+                      Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex)
+                  }
+                }
+
+                skipGarbage()
             }
         }
 
