@@ -548,6 +548,25 @@ class ScannerTest extends AnyFunSpec with Matchers {
       )
     }
 
+    it("handles malformed hex literal and observes resume point") {
+      // 0xG should be one error, then resume
+      val input = "0xG val"
+      check(input,
+        Some(failure(ScannerError.InvalidLiteralNumber, 0, 2)), // Consumes 'G'
+        Some(success(Token.Val, 4, 6))
+      )
+    }
+
+    it("handles malformed decimal literal and observes resume point") {
+      // 1.2.3 should be 1.2, then .3 (current behavior)
+      val input = "1.2.3 val"
+      check(input,
+        Some(success(Token.DoubleLiteral(1.2), 0, 2)),
+        Some(success(Token.DoubleLiteral(0.3), 3, 4)),
+        Some(success(Token.Val, 6, 8))
+      )
+    }
+
     it("saturates EndOfInput for empty input") {
       val input = ""
       TestReaderFactory.fromString(input) { reader =>
