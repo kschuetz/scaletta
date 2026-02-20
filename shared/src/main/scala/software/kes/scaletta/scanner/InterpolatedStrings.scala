@@ -26,11 +26,17 @@ object InterpolatedStrings {
           (ch: @switch) match {
             case '"' =>
               if (multiLine) {
-                if (reader.matchSequence(ScannerConstants.TripleQuote)) {
-                  reader.unget('"')
-                  reader.unget('"')
-                  reader.unget('"')
-                  done
+                if (reader.tryGet('"')) {
+                  if (reader.tryGet('"')) {
+                    reader.unget('"')
+                    reader.unget('"')
+                    reader.unget('"')
+                    done
+                  } else {
+                    buffer.write('"')
+                    buffer.write('"')
+                    go()
+                  }
                 } else {
                   buffer.write('"')
                   go()

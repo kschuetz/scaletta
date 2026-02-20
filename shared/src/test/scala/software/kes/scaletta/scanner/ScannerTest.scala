@@ -694,7 +694,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
         )
       }
 
-      ignore("garbage cluster grouping interacts correctly with interpolation starts: multi-line") {
+      it("garbage cluster grouping interacts correctly with interpolation starts: multi-line") {
         check("\u0001raw\"\"\"hello\"\"\"",
           Some(failure(ScannerError.InvalidCharacter, 0, 0)),
           Some(success(Token.BeginMultiLineInterpolatedString("raw"), 1, 6)),

@@ -49,13 +49,40 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers {
       )
     }
 
-    it("multi-line interpolators") {
-      check("s\"\"\"line 1\n$name\"\"\"",
-        Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)),
-        Some(success(Token.InterpolatedPart("line 1\n"), 4, 10)),
-        Some(success(Token.Identifier.Lower("name"), 12, 15)),
-        Some(success(Token.EndInterpolatedString, 16, 18))
-      )
+    describe("multi-line interpolators") {
+      it("containing multiple lines and an identifier") {
+        check("s\"\"\"line 1\n$name\"\"\"",
+          Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)),
+          Some(success(Token.InterpolatedPart("line 1\n"), 4, 10)),
+          Some(success(Token.Identifier.Lower("name"), 12, 15)),
+          Some(success(Token.EndInterpolatedString, 16, 18))
+        )
+      }
+
+      it("containing multiple lines and no identifier") {
+        check("s\"\"\"line 1\nline 2\"\"\"",
+          Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)),
+          Some(success(Token.InterpolatedPart("line 1\nline 2"), 4, 16)),
+          Some(success(Token.EndInterpolatedString, 17, 19))
+        )
+      }
+
+      it("containing one line and an identifier") {
+        check("s\"\"\"line 1 $name\"\"\"",
+          Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)),
+          Some(success(Token.InterpolatedPart("line 1 "), 4, 10)),
+          Some(success(Token.Identifier.Lower("name"), 12, 15)),
+          Some(success(Token.EndInterpolatedString, 16, 18))
+        )
+      }
+
+      it("containing one line and no identifier") {
+        check("s\"\"\"line 1\"\"\"",
+          Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)),
+          Some(success(Token.InterpolatedPart("line 1"), 4, 9)),
+          Some(success(Token.EndInterpolatedString, 10, 12))
+        )
+      }
     }
 
     it("raw interpolator") {
