@@ -512,7 +512,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
         Some(success(Token.Val, 0, 2)),
         Some(success(Token.Identifier.Lower("x"), 4, 4)),
         Some(success(Token.Eq, 6, 6)),
-        Some(failure(ScannerError.UnclosedMultiLineString, 8, 26))
+        Some(failure(ScannerError.UnclosedMultiLineString, 8, 25))
       )
     }
 
@@ -581,6 +581,27 @@ class ScannerTest extends AnyFunSpec with Matchers {
         Some(success(Token.Identifier.Lower("y"), 20, 20)),
         Some(success(Token.Eq, 22, 22)),
         Some(success(Token.IntLiteral(2), 24, 24))
+      )
+    }
+
+    it("handles unclosed expression escape in multi-line interpolator") {
+      val input = "s\"\"\"hello ${ world\nval y = 2\n\"\"\"\nval z = 3"
+
+      check(input,
+        Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)),
+        Some(success(Token.InterpolatedPart("hello "), 4, 9)),
+        Some(success(Token.BeginInterpolatedEscape, 10, 11)),
+        Some(success(Token.Identifier.Lower("world"), 13, 17)),
+        Some(success(Token.Semicolon, 18, 18)),
+        Some(success(Token.Val, 19, 21)),
+        Some(success(Token.Identifier.Lower("y"), 23, 23)),
+        Some(success(Token.Eq, 25, 25)),
+        Some(success(Token.IntLiteral(2), 27, 27)),
+        Some(success(Token.Semicolon, 28, 28)),
+        // The closing """ is at index 29-31.
+        // In the current implementation, since we are inside a multi-line string,
+        // it scans all the way to the end of the file when it hits unclosed literal.
+        Some(failure(ScannerError.UnclosedMultiLineString, 29, 41))
       )
     }
 

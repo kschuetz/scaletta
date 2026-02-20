@@ -167,7 +167,7 @@ object Literals {
       Pos(Error(UnclosedStringLiteral), begin, reader.prevIndex)
 
     def unclosedMultiLine: Result =
-      Pos(Error(UnclosedMultiLineString), begin, reader.currentIndex)
+      Pos(Error(UnclosedMultiLineString), begin, reader.prevIndex)
 
     q1
   }

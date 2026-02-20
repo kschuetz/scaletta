@@ -66,22 +66,44 @@ final class Scanner private(reader: CharReader,
       case x :: _ => x.newlinesEnabled
     }
 
-  private def readNext(): Pos[Token] =
+  private def readNext(): Pos[Token] = {
     regions match {
       case RegionAttributes.InterpolatedString(multiLine, isRaw) :: _ =>
         scanInterpolatedStringPart(multiLine, isRaw)
-      case _ =>
-        buffer.reset()
-        val begin = reader.currentIndex
-        skipCommentsAndWhitespace(None) match {
-          case SkipCommentsResult.Unterminated =>
-            Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex)
-          case SkipCommentsResult.NewLinesEncountered(value) =>
-            readToken(Some(value))
-          case SkipCommentsResult.NoNewLinesEncountered =>
-            readToken(None)
+      case RegionAttributes.InterpolatedEscape :: _ =>
+        val parentStringRegion = regions.tail.find(_.regionType == RegionType.InterpolatedString)
+        parentStringRegion match {
+          case Some(RegionAttributes.InterpolatedString(multiLine, _)) =>
+            val begin = reader.currentIndex
+            val isEnd = if (multiLine) reader.matchSequence(ScannerConstants.DoubleQuotes3) else reader.tryGet('"')
+            if (isEnd) {
+              val end = reader.prevIndex
+              // Forced exit: pop the escape and the string regions
+              regions = regions.dropWhile(_.regionType != RegionType.InterpolatedString).tail
+              val error = if (multiLine) ScannerError.UnclosedMultiLineString else ScannerError.UnclosedStringLiteral
+              Pos(Token.Error(error), begin, end)
+            } else {
+              readNormalToken()
+            }
+          case _ => readNormalToken()
         }
+      case _ =>
+        readNormalToken()
     }
+  }
+
+  private def readNormalToken(): Pos[Token] = {
+    buffer.reset()
+    val begin = reader.currentIndex
+    skipCommentsAndWhitespace(None) match {
+      case SkipCommentsResult.Unterminated =>
+        Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex)
+      case SkipCommentsResult.NewLinesEncountered(value) =>
+        readToken(Some(value))
+      case SkipCommentsResult.NoNewLinesEncountered =>
+        readToken(None)
+    }
+  }
 
   private def readToken(newlineEncountered: Option[CharIndex]): Pos[Token] = {
     val begin = reader.currentIndex
