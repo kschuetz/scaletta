@@ -702,6 +702,50 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.EndInterpolatedString, 12, 14))
         )
       }
+
+      it("garbage cluster grouping hand-off to complex identifiers") {
+        // This test specifically targets the hand-off between garbage and multi-character identifiers
+        // that are NOT interpolators.
+        check("\u0001abc",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.Identifier.Lower("abc"), 1, 3))
+        )
+      }
+
+      it("garbage followed by '+'") {
+        // If we have redundant unget, this will fail or return shifted tokens
+        check("\u0001+",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.Identifier.Operator("+"), 1, 1))
+        )
+      }
+
+      it("handles garbage followed by '-' and then a digit") {
+        // This tests the case where '-' is ambiguous until we see the digit
+        check("\u0001-123",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.IntLiteral(-123), 1, 4))
+        )
+      }
+
+      it("handles garbage followed by a failed interpolator lookahead") {
+        // 'raw' followed by a space is NOT an interpolator.
+        // It should be scanned as an identifier after the garbage error.
+        check("\u0001raw ",
+          Some(failure(ScannerError.InvalidCharacter, 0, 0)),
+          Some(success(Token.Identifier.Lower("raw"), 1, 3))
+        )
+      }
+
+      it("handles garbage in the middle of a partial numeric lookahead") {
+        // '1.' followed by garbage should not eat the garbage.
+        // In Scaletta, '1.' currently scans as an IntLiteral(1) followed by a Dot.
+        check("1.\u0001",
+          Some(success(Token.IntLiteral(1), 0, 0)),
+          Some(success(Token.Dot, 1, 1)),
+          Some(failure(ScannerError.InvalidCharacter, 2, 2))
+        )
+      }
     }
 
     describe("EndOfInput") {
