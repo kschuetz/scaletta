@@ -548,6 +548,42 @@ class ScannerTest extends AnyFunSpec with Matchers {
       )
     }
 
+    it("unclosed string with trailing backslash does not leak to next line") {
+      val input =
+        """val x = "unclosed \
+          |val y = 2""".stripMargin
+
+      check(input,
+        Some(success(Token.Val, 0, 2)),
+        Some(success(Token.Identifier.Lower("x"), 4, 4)),
+        Some(success(Token.Eq, 6, 6)),
+        Some(failure(ScannerError.InvalidEscapeCharacter, 18, 18)),
+        Some(success(Token.Semicolon, 19, 19)),
+        Some(success(Token.Val, 20, 22)),
+        Some(success(Token.Identifier.Lower("y"), 24, 24)),
+        Some(success(Token.Eq, 26, 26)),
+        Some(success(Token.IntLiteral(2), 28, 28))
+      )
+    }
+
+    it("unclosed quoted identifier with trailing backslash does not leak to next line") {
+      val input =
+        """val `unclosed \
+          |val y = 2""".stripMargin
+
+      check(input,
+        Some(success(Token.Val, 0, 2)),
+        // `unclosed \
+        // Similar to string above.
+        Some(failure(ScannerError.InvalidEscapeCharacter, 14, 14)),
+        Some(success(Token.Semicolon, 15, 15)),
+        Some(success(Token.Val, 16, 18)),
+        Some(success(Token.Identifier.Lower("y"), 20, 20)),
+        Some(success(Token.Eq, 22, 22)),
+        Some(success(Token.IntLiteral(2), 24, 24))
+      )
+    }
+
     it("handles malformed hex literal and observes resume point") {
       // 0xG should be one error, then resume
       val input = "0xG val"

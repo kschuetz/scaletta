@@ -16,6 +16,9 @@ object EscapeSequence {
           case '\'' => Some('\'')
           case '\\' => Some('\\')
           case 'u' => scanUnicodeSequence(reader)
+          case '\n' | '\r' =>
+            reader.unget(ch)
+            None
           case _ => None
         }
       case None => None
