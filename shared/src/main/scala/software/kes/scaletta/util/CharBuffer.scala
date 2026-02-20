@@ -15,6 +15,9 @@ final class CharBuffer private(private var buffer: Array[Char]) {
     ptr += 1
   }
 
+  def write(s: Iterable[Char]): Unit =
+    s.foreach(write)
+
   def mark(): Int = ptr
 
   def chop(): Char = {

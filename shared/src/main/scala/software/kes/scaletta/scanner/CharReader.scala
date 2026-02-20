@@ -124,6 +124,9 @@ final class CharReader private(source: Iterator[Char],
     _currentIndex -= 1
   }
 
+  def ungetString(s: String): Unit =
+    s.reverseIterator.foreach(unget)
+
   def currentIndex: CharIndex = _currentIndex
 
   def prevIndex: CharIndex = _currentIndex - 1

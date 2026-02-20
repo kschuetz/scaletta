@@ -1,6 +1,6 @@
 package software.kes.scaletta.scanner
 
-import software.kes.scaletta.scanner.ScannerConstants.{Raw, TripleQuote}
+import software.kes.scaletta.scanner.ScannerConstants.{DoubleQuotes3, Raw}
 import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer
 
@@ -196,7 +196,7 @@ final class Scanner private(reader: CharReader,
 
     // Check for end of string first
     val isEnd = if (multiLine) {
-      reader.matchSequence(TripleQuote)
+      reader.matchSequence(DoubleQuotes3)
     } else {
       reader.tryGet('"')
     }

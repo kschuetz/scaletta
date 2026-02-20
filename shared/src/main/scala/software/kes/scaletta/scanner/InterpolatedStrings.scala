@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.scanner.ScannerConstants.{DoubleQuotes2, DoubleQuotes3}
 import software.kes.scaletta.scanner.ScannerError._
 import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer
@@ -28,13 +29,10 @@ object InterpolatedStrings {
               if (multiLine) {
                 if (reader.tryGet('"')) {
                   if (reader.tryGet('"')) {
-                    reader.unget('"')
-                    reader.unget('"')
-                    reader.unget('"')
+                    reader.ungetString(DoubleQuotes3)
                     done
                   } else {
-                    buffer.write('"')
-                    buffer.write('"')
+                    buffer.write(DoubleQuotes2)
                     go()
                   }
                 } else {
