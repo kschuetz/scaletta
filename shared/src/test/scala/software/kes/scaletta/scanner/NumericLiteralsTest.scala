@@ -344,8 +344,8 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
       it("invalid") {
         check("1.2.3", Some(success(Token.DoubleLiteral(1.2), 0, 2)), checkRemainder = false)
         check("1e", Some(failure(InvalidLiteralNumber, 0, 1)))
-        check("1e+", Some(failure(InvalidLiteralNumber, 0, 2)))
-        check("1e-", Some(failure(InvalidLiteralNumber, 0, 2)))
+        check("1e+", Some(failure(InvalidLiteralNumber, 0, 1)))
+        check("1e-", Some(failure(InvalidLiteralNumber, 0, 1)))
         check("1.2dF", Some(failure(InvalidLiteralNumber, 0, 4)))
         check("1.2fD", Some(failure(InvalidLiteralNumber, 0, 4)))
         // TODO: fix check("1.e2", Some(success(Token.IntLiteral(1), 0, 0))) // This is interesting, let's see how it behaves

@@ -381,13 +381,18 @@ object Literals {
                 } else if (c2 == '_') {
                   illegalSeparator
                 } else {
+                  reader.unget(c2)
+                  reader.unget(c1)
                   invalidLiteralNumber
                 }
-              case None => invalidLiteralNumber
+              case None =>
+                reader.unget(c1)
+                invalidLiteralNumber
             }
           } else if (c1 == '_') {
             illegalSeparator
           } else {
+            reader.unget(c1)
             invalidLiteralNumber
           }
         case None => invalidLiteralNumber

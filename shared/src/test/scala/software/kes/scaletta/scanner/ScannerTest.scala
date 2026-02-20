@@ -624,6 +624,27 @@ class ScannerTest extends AnyFunSpec with Matchers {
       )
     }
 
+    it("handles illegal separator in numeric literal and observes resume point") {
+      // 123_ followed by space and val.
+      // Strict behavior: The whole 123_ is a failed number literal.
+      val input = "123_ val"
+      check(input,
+        Some(failure(ScannerError.IllegalSeparator, 3, 3)),
+        Some(success(Token.Val, 5, 7))
+      )
+    }
+
+    it("handles malformed exponent and observes resume point") {
+      // 1e+ followed by space and val.
+      // Strict behavior: 1e is a failed number literal. The + should be preserved.
+      val input = "1e+ val"
+      check(input,
+        Some(failure(ScannerError.InvalidLiteralNumber, 0, 1)),
+        Some(success(Token.Identifier.Operator("+"), 2, 2)),
+        Some(success(Token.Val, 4, 6))
+      )
+    }
+
     describe("garbage clustering") {
       it("groups invalid character clusters into a single error") {
         val input = "\u0001\u0002\u0003 val"
