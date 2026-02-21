@@ -12,7 +12,7 @@ object Scanner {
     val buffer = CharBuffer.create()
     val identifierScanner = new IdentifierScanner(identifierPolicy)
     val initialPos = Pos(Token.BeginOfInput: Token, reader.currentIndex, reader.currentIndex)
-    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, Nil, Nil, initialPos)
+    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, Nil, RegionStack.empty, initialPos)
   }
 }
 
@@ -21,7 +21,7 @@ final class Scanner private(reader: CharReader,
                             identifierScanner: IdentifierScanner,
                             private var prevToken: Token,
                             private var queue: List[Pos[Token]],
-                            private var regions: List[RegionAttributes],
+                            private var regionStack: RegionStack,
                             private var lastPos: Pos[Token]) {
   def get(): Pos[Token] =
     queue match {
@@ -62,14 +62,14 @@ final class Scanner private(reader: CharReader,
   }
 
   private def newlinesEnabledInRegion(): Boolean =
-    regions match {
-      case Nil => true
-      case x :: _ => x.newlinesEnabled
+    regionStack.peek match {
+      case Some(x) => x.newlinesEnabled
+      case None => true
     }
 
   private def readNext(): Pos[Token] =
-    regions match {
-      case RegionAttributes.InterpolatedString(multiLine, isRaw) :: _ =>
+    regionStack.peek match {
+      case Some(RegionAttributes.InterpolatedString(multiLine, isRaw)) =>
         scanInterpolatedStringPart(multiLine, isRaw)
       case _ =>
         val begin = reader.currentIndex
@@ -90,12 +90,13 @@ final class Scanner private(reader: CharReader,
     }
 
   private def checkForForcedExit(newlineEncountered: Option[CharIndex]): Option[Pos[Token]] = {
-    regions.find(_.regionType == RegionType.InterpolatedString).flatMap {
+    regionStack.findFirstInterpolatedString.flatMap {
       case parentStringRegion: RegionAttributes.InterpolatedString if parentStringRegion.multiLine =>
         val begin = reader.currentIndex
         if (reader.matchSequence(ScannerConstants.DoubleQuotes3)) {
           val end = reader.prevIndex
-          regions = regions.dropWhile(_.regionType != RegionType.InterpolatedString).tail
+          //          regionStack = regionStack.dropUntilAndIncluding(RegionType.InterpolatedString)
+          regionStack = regionStack.dropUntilInterpolatedString
           val error = ScannerError.UnclosedMultiLineString
           Some(yieldSuccess(Pos(Token.Error(error), begin, end), newlineEncountered))
         } else None
@@ -333,13 +334,7 @@ final class Scanner private(reader: CharReader,
         enterRegion(RegionAttributes.Brackets)
         false
       case LBrace =>
-        regions match {
-          case RegionAttributes.InterpolatedEscape :: _ =>
-            // Already in escape, but we might have a brace in an expression
-            enterRegion(RegionAttributes.Braces)
-          case _ =>
-            enterRegion(RegionAttributes.Braces)
-        }
+        enterRegion(RegionAttributes.Braces)
         false
       case Case =>
         enterRegion(RegionAttributes.Case)
@@ -363,8 +358,8 @@ final class Scanner private(reader: CharReader,
         exitRegion(RegionType.Brackets)
         false
       case RBrace =>
-        regions match {
-          case RegionAttributes.InterpolatedEscape :: _ =>
+        regionStack.peek match {
+          case Some(RegionAttributes.InterpolatedEscape) =>
             exitRegion(RegionType.InterpolatedEscape)
             val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
             queue = endPos :: queue
@@ -380,14 +375,10 @@ final class Scanner private(reader: CharReader,
     }
 
   private def enterRegion(regionAttributes: RegionAttributes): Unit =
-    regions = regionAttributes :: regions
+    regionStack = regionStack.enter(regionAttributes)
 
   private def exitRegion(regionType: RegionType): Unit =
-    regions match {
-      case x :: xs =>
-        if (x.regionType == regionType) regions = xs
-      case Nil => ()
-    }
+    regionStack = regionStack.exit(regionType)
 
   // TODO: revisit how we model this
   private sealed trait SkipCommentsResult {
