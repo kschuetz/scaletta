@@ -149,18 +149,22 @@ final class Scanner private(reader: CharReader,
           case '"' => success(Literals.stringLiteral(reader, buffer))
           case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
             reader.unget(ch)
-            success(Literals.tryNumericLiteral(reader, buffer).getOrElse {
-              // Should not happen as we just peeked a digit
-              Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
-            })
+            Literals.tryNumericLiteral(reader, buffer) match {
+              case Some(result) => success(result)
+              case None =>
+                // Should not happen as we just peeked a digit
+                Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
+            }
           case '.' =>
             reader.get() match {
               case Some(c) if CharacterClass.isDigit(c) =>
                 reader.unget(c)
                 reader.unget('.')
-                success(Literals.tryNumericLiteral(reader, buffer).getOrElse {
-                  Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
-                })
+                Literals.tryNumericLiteral(reader, buffer) match {
+                  case Some(result) => success(result)
+                  case None =>
+                    Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
+                }
               case Some(c) =>
                 reader.unget(c)
                 success1(Token.Dot)
@@ -172,9 +176,11 @@ final class Scanner private(reader: CharReader,
               case Some(c) if CharacterClass.isDigit(c) || c == '.' =>
                 reader.unget(c)
                 reader.unget('-')
-                success(Literals.tryNumericLiteral(reader, buffer).getOrElse {
-                  Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
-                })
+                Literals.tryNumericLiteral(reader, buffer) match {
+                  case Some(result) => success(result)
+                  case None =>
+                    Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
+                }
               case Some(c) =>
                 reader.unget(c)
                 reader.unget('-')

@@ -672,6 +672,24 @@ class ScannerTest extends AnyFunSpec with Matchers {
       )
     }
 
+    it("handles illegal separators in scientific notation and observes resume point") {
+      // Case A: 1_e+10. Underscore before 'e' is illegal in Scala.
+      // Scala reports illegal separator and doesn't yield the '1'.
+      check("1_e+10",
+        Some(failure(ScannerError.IllegalSeparator, 1, 1)),
+        Some(success(Token.Identifier.Lower("e"), 2, 2)),
+        Some(success(Token.Identifier.Operator("+"), 3, 3)),
+        Some(success(Token.IntLiteral(10), 4, 5))
+      )
+
+      // Case B: 1e+_10. Underscore after '+' is illegal.
+      // 1e+ is an invalid literal number.
+      check("1e+_10",
+        Some(failure(ScannerError.IllegalSeparator, 3, 3)),
+        Some(success(Token.IntLiteral(10), 4, 5))
+      )
+    }
+
     describe("garbage clustering") {
       it("groups invalid character clusters into a single error") {
         val input = "\u0001\u0002\u0003 val"
