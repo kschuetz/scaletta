@@ -1011,27 +1011,52 @@ class ScannerTest extends AnyFunSpec with Matchers {
                    (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
-      expectedTokens.foreach { expected =>
-        val actual = scanner.get()
+      val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
+      val expectedPosList = expectedTokens.collect { case Some(p) => p }.toVector
 
-        expected match {
-          case Some(expectedPos) =>
-            actual.value match {
-              case Token.EndOfInput =>
-                fail(s"Expected more tokens, but got EndOfInput (expected ${expectedPos.value} at ${expectedPos.begin})")
-              case _ =>
-                actual.value shouldBe expectedPos.value
-                if (actual.positionTuple != expectedPos.positionTuple) {
-                  fail(s"Expected begin:end ${expectedPos.positionTuple} but got ${actual.positionTuple}")
-                }
-            }
-          case None =>
-            actual.value shouldBe Token.EndOfInput
+      def formatToken(p: Pos[Token]): String = s"${p.value} at ${p.begin}:${p.end}"
+
+      def renderUnderline(input: String, index: Int, label: String): String = {
+        val lines = input.split("\n")
+        var currentIdx = 0
+        val result = new StringBuilder()
+        var found = false
+        lines.foreach { line =>
+          if (!found && index >= currentIdx && index <= currentIdx + line.length) {
+            result.append(line).append("\n")
+            val padding = " " * (index - currentIdx)
+            result.append(padding).append("^--- ").append(label).append("\n")
+            found = true
+          }
+          currentIdx += line.length + 1 // +1 for newline
         }
+        result.toString()
       }
-      val extra = scanner.get()
-      if (extra.value != Token.EndOfInput) {
-        fail(s"Expected EndOfInput, but got extra token: $extra")
+
+      val maxLength = Math.max(actualTokens.length, expectedPosList.length)
+      for (i <- 0 until maxLength) {
+        if (i >= expectedPosList.length) {
+          val actual = actualTokens(i)
+          fail(s"Unexpected extra token at index $i: ${formatToken(actual)}\n${renderUnderline(input, actual.begin.value, "extra token")}")
+        } else if (i >= actualTokens.length) {
+          val expected = expectedPosList(i)
+          fail(s"Expected more tokens, but stream ended. Missing: ${formatToken(expected)}\n${renderUnderline(input, expected.begin.value, "missing expected token")}")
+        } else {
+          val actual = actualTokens(i)
+          val expected = expectedPosList(i)
+
+          if (actual.value != expected.value) {
+            fail(s"Token mismatch at index $i:\nExpected: ${formatToken(expected)}\nActual:   ${formatToken(actual)}\n" +
+              s"Context:\n${renderUnderline(input, expected.begin.value, "expected " + expected.value)}\n" +
+              s"${renderUnderline(input, actual.begin.value, "actual " + actual.value)}")
+          }
+
+          if (actual.positionTuple != expected.positionTuple) {
+            fail(s"Position mismatch for token '${actual.value}' at index $i:\nExpected: ${expected.begin}:${expected.end}\nActual:   ${actual.begin}:${actual.end}\n" +
+              s"Context:\n${renderUnderline(input, expected.begin.value, "expected start")}\n" +
+              s"${renderUnderline(input, actual.begin.value, "actual start")}")
+          }
+        }
       }
     }
   }
