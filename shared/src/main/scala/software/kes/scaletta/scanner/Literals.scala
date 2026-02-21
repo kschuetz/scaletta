@@ -37,8 +37,9 @@ object Literals {
 
     def escapeSequence: Result =
       EscapeSequence.scan(reader) match {
-        case Some(value) => endQuote(value)
-        case None => Pos(Error(InvalidEscapeCharacter), reader.prevIndex)
+        case EscapeResult.Success(value) => endQuote(value)
+        case EscapeResult.Error(error) => Pos(Error(error), reader.prevIndex)
+        case EscapeResult.Boundary => Pos(Error(UnclosedCharacterLiteral), begin, reader.prevIndex)
       }
 
     def endQuote(value: Char): Result =
@@ -157,14 +158,24 @@ object Literals {
 
     def escapeSequence(multiLineMode: Boolean): Result =
       EscapeSequence.scan(reader) match {
-        case Some(value) =>
+        case EscapeResult.Success(value) =>
           buffer.write(value)
           if (multiLineMode) inMultiLineStr else inStr
-        case None => Pos(Error(InvalidEscapeCharacter), reader.prevIndex)
+        case EscapeResult.Error(error) => Pos(Error(error), reader.prevIndex)
+        case EscapeResult.Boundary => unclosed
       }
 
-    def unclosed: Result =
-      Pos(Error(UnclosedStringLiteral), begin, reader.prevIndex)
+    def unclosed: Result = {
+      reader.skipUntil(ch => ch == '\n' || ch == '\r')
+      val res = reader.get()
+      val end = res match {
+        case Some(ch) =>
+          reader.unget(ch)
+          reader.prevIndex
+        case None => reader.prevIndex
+      }
+      Pos(Error(UnclosedStringLiteral), begin, end)
+    }
 
     def unclosedMultiLine: Result =
       Pos(Error(UnclosedMultiLineString), begin, reader.prevIndex)

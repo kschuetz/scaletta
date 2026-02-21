@@ -3,27 +3,33 @@ package software.kes.scaletta.scanner
 import scala.annotation.switch
 
 object EscapeSequence {
-  def scan(reader: CharReader): Option[Char] =
+  def scan(reader: CharReader): EscapeResult =
     reader.get() match {
       case Some(ch) =>
         (ch: @switch) match {
-          case 'b' => Some('\b')
-          case 't' => Some('\t')
-          case 'n' => Some('\n')
-          case 'f' => Some('\f')
-          case 'r' => Some('\r')
-          case '"' => Some('"')
-          case '\'' => Some('\'')
-          case '\\' => Some('\\')
+          case 'b' => EscapeResult.Success('\b')
+          case 't' => EscapeResult.Success('\t')
+          case 'n' => EscapeResult.Success('\n')
+          case 'f' => EscapeResult.Success('\f')
+          case 'r' => EscapeResult.Success('\r')
+          case '"' => EscapeResult.Success('"')
+          case '\'' => EscapeResult.Success('\'')
+          case '\\' => EscapeResult.Success('\\')
           case 'u' => scanUnicodeSequence(reader)
           case '\n' | '\r' =>
             reader.unget(ch)
-            None
-          case _ => None
+            EscapeResult.Boundary
+          case _ => EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
         }
-      case None => None
+      case None => EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
     }
 
-  private def scanUnicodeSequence(reader: CharReader): Option[Char] =
-    HexDigits.scanN(4, reader).map(_.toChar)
+  private def scanUnicodeSequence(reader: CharReader): EscapeResult = {
+    HexDigits.scanN(4, reader) match {
+      case Right(value) => EscapeResult.Success(value.toChar)
+      case Left(Some(ch)) if ch == '\n' || ch == '\r' =>
+        EscapeResult.Boundary
+      case _ => EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+    }
+  }
 }

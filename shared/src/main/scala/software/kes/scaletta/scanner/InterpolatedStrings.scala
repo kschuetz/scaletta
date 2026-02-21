@@ -62,11 +62,13 @@ object InterpolatedStrings {
                 go()
               } else {
                 EscapeSequence.scan(reader) match {
-                  case Some(escaped) =>
+                  case EscapeResult.Success(escaped) =>
                     buffer.write(escaped)
                     go()
-                  case None =>
-                    Pos(Left(InvalidEscapeCharacter), reader.prevIndex)
+                  case EscapeResult.Error(error) =>
+                    Pos(Left(error), reader.prevIndex)
+                  case EscapeResult.Boundary =>
+                    Pos(Left(UnclosedStringLiteral), begin, reader.currentIndex)
                 }
               }
             case '\n' =>

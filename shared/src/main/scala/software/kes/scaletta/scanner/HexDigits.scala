@@ -29,23 +29,41 @@ object HexDigits {
       case None => None
     }
 
-  def scanN(n: Int, reader: CharReader): Option[Int] = {
+  /**
+   * Scans exactly N hex digits from the reader.
+   *
+   * @return Right(value) on success.
+   *         Left(Some(ch)) if an invalid hex character was encountered.
+   *         Left(None) if end-of-input was reached.
+   *         In all failure cases, the reader is backtracked to its original state.
+   */
+  def scanN(n: Int, reader: CharReader): Either[Option[Char], Int] = {
     var result = 0
     var digits = List.empty[Char]
     var need = n
     var done = false
-    while (need > 0) {
-      scanOne(reader) match {
-        case Some((ch, value)) =>
-          need -= 1
-          if (need > 0) digits = ch :: digits
-          else done = true
-          result = (result << 4) | (value & 0xf)
+    var offending: Option[Option[Char]] = None
+    while (need > 0 && offending.isEmpty) {
+      reader.get() match {
+        case Some(ch) =>
+          val value = digitValue(ch)
+          if (value >= 0) {
+            need -= 1
+            digits = ch :: digits
+            result = (result << 4) | (value & 0xf)
+            if (need == 0) done = true
+          } else {
+            reader.unget(ch)
+            offending = Some(Some(ch))
+          }
         case None =>
-          digits.foreach(reader.unget)
-          need = 0
+          offending = Some(None)
       }
     }
-    if (done) Some(result) else None
+    if (done) Right(result)
+    else {
+      digits.foreach(reader.unget)
+      Left(offending.flatten)
+    }
   }
 }

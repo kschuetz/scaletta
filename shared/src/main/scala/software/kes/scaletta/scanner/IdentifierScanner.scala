@@ -1,7 +1,7 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.scanner.CharacterClass._
-import software.kes.scaletta.scanner.ScannerError.{EmptyQuotedIdentifier, IdentifierTooLong, InvalidEscapeCharacter, UnclosedQuotedIdentifier}
+import software.kes.scaletta.scanner.ScannerError.{EmptyQuotedIdentifier, IdentifierTooLong, UnclosedQuotedIdentifier}
 import software.kes.scaletta.scanner.Token.Error
 import software.kes.scaletta.util.CharBuffer
 
@@ -166,10 +166,11 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
 
     def escapeSequence(length: Int): Result =
       EscapeSequence.scan(reader) match {
-        case Some(value) =>
+        case EscapeResult.Success(value) =>
           buffer.write(value)
           go(length + 1)
-        case None => Pos(Error(InvalidEscapeCharacter), reader.prevIndex)
+        case EscapeResult.Error(error) => Pos(Error(error), reader.prevIndex)
+        case EscapeResult.Boundary => Pos(Error(UnclosedQuotedIdentifier), begin, reader.prevIndex)
       }
 
     go(0)
