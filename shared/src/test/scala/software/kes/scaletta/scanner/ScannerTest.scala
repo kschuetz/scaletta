@@ -4,9 +4,9 @@ import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
-import software.kes.scaletta.testsupport.TestReaderFactory
+import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
 
-class ScannerTest extends AnyFunSpec with Matchers {
+class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
   describe("Scanner") {
     describe("whitespace and comments") {
       it("should skip whitespace") {
@@ -1052,50 +1052,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
       val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
       val expectedPosList = expectedTokens.collect { case Some(p) => p }.toVector
 
-      def formatToken(p: Pos[Token]): String = s"${p.value} at ${p.begin}:${p.end}"
-
-      def renderUnderline(input: String, index: Int, label: String): String = {
-        val lines = input.split("\n")
-        var currentIdx = 0
-        val result = new StringBuilder()
-        var found = false
-        lines.foreach { line =>
-          if (!found && index >= currentIdx && index <= currentIdx + line.length) {
-            result.append(line).append("\n")
-            val padding = " " * (index - currentIdx)
-            result.append(padding).append("^--- ").append(label).append("\n")
-            found = true
-          }
-          currentIdx += line.length + 1 // +1 for newline
-        }
-        result.toString()
-      }
-
-      val maxLength = Math.max(actualTokens.length, expectedPosList.length)
-      for (i <- 0 until maxLength) {
-        if (i >= expectedPosList.length) {
-          val actual = actualTokens(i)
-          fail(s"Unexpected extra token at index $i: ${formatToken(actual)}\n${renderUnderline(input, actual.begin.value, "extra token")}")
-        } else if (i >= actualTokens.length) {
-          val expected = expectedPosList(i)
-          fail(s"Expected more tokens, but stream ended. Missing: ${formatToken(expected)}\n${renderUnderline(input, expected.begin.value, "missing expected token")}")
-        } else {
-          val actual = actualTokens(i)
-          val expected = expectedPosList(i)
-
-          if (actual.value != expected.value) {
-            fail(s"Token mismatch at index $i:\nExpected: ${formatToken(expected)}\nActual:   ${formatToken(actual)}\n" +
-              s"Context:\n${renderUnderline(input, expected.begin.value, "expected " + expected.value)}\n" +
-              s"${renderUnderline(input, actual.begin.value, "actual " + actual.value)}")
-          }
-
-          if (actual.positionTuple != expected.positionTuple) {
-            fail(s"Position mismatch for token '${actual.value}' at index $i:\nExpected: ${expected.begin}:${expected.end}\nActual:   ${actual.begin}:${actual.end}\n" +
-              s"Context:\n${renderUnderline(input, expected.begin.value, "expected start")}\n" +
-              s"${renderUnderline(input, actual.begin.value, "actual start")}")
-          }
-        }
-      }
+      assertExpectedTokens(input, actualTokens, expectedPosList)
     }
   }
 }
