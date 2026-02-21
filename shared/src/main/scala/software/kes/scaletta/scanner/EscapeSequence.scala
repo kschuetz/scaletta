@@ -19,7 +19,9 @@ object EscapeSequence {
           case '\n' | '\r' =>
             reader.unget(ch)
             EscapeResult.Boundary
-          case _ => EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+          case other =>
+            reader.unget(other)
+            EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
         }
       case None => EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
     }
@@ -28,8 +30,14 @@ object EscapeSequence {
     HexDigits.scanN(4, reader) match {
       case Right(value) => EscapeResult.Success(value.toChar)
       case Left(Some(ch)) if ch == '\n' || ch == '\r' =>
+        reader.unget('u')
         EscapeResult.Boundary
-      case _ => EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+      case Left(Some(_)) =>
+        reader.unget('u')
+        EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+      case Left(None) =>
+        reader.unget('u')
+        EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
     }
   }
 }

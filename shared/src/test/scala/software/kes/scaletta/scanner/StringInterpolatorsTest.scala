@@ -113,10 +113,10 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers {
     }
 
     it("invalid escape character in part") {
-      // Assuming interpolator parts follow standard string escape rules unless 'raw'
+      // Similar to Scala's behavior: Discard the prefix and return only the fatal error.
       check("s\"hello \\z\"",
         Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1)),
-        Some(failure(InvalidEscapeCharacter, 9, 9))
+        Some(failure(InvalidEscapeCharacter, 8, 8))
       )
     }
 
