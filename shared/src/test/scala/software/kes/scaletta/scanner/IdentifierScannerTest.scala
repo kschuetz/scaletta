@@ -183,13 +183,13 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
 
     describe("begin interpolated string") {
       it("single line") {
-        check("s\"", Some(success(Token.BeginInterpolatedString("s"), 0, 1)))
-        check("Abc_123_$_xyz\"", Some(success(Token.BeginInterpolatedString("Abc_123_$_xyz"), 0, 13)))
+        check("s\"", Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1)))
+        check("Abc_123_$_xyz\"", Some(success(Token.BeginInterpolatedString(Interpolator.fromName("Abc_123_$_xyz")), 0, 13)))
       }
 
       it("multi-line") {
-        check("s\"\"\"", Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)))
-        check("Abc_123_$_xyz\"\"\"", Some(success(Token.BeginMultiLineInterpolatedString("Abc_123_$_xyz"), 0, 15)))
+        check("s\"\"\"", Some(success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3)))
+        check("Abc_123_$_xyz\"\"\"", Some(success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("Abc_123_$_xyz")), 0, 15)))
       }
 
       it("not valid identifier") {

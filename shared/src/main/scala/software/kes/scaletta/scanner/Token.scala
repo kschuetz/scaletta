@@ -104,9 +104,9 @@ object Token {
 
   case class MultiLineString(value: String) extends Literal
 
-  case class BeginInterpolatedString(interpolatorName: String) extends Token
+  case class BeginInterpolatedString(interpolator: Interpolator) extends Token
 
-  case class BeginMultiLineInterpolatedString(interpolatorName: String) extends Token
+  case class BeginMultiLineInterpolatedString(interpolator: Interpolator) extends Token
 
   case class InterpolatedPart(value: String) extends Token
 

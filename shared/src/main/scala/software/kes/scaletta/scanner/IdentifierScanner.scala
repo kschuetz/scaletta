@@ -121,9 +121,13 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
         }
 
       if (reader.matchSequence(ScannerConstants.DoubleQuotes3)) {
-        construct(Token.BeginMultiLineInterpolatedString.apply)(reader, buffer, begin)
+        construct { name =>
+          Token.BeginMultiLineInterpolatedString(Interpolator.fromName(name))
+        }(reader, buffer, begin)
       } else if (reader.tryGet('"')) {
-        construct(Token.BeginInterpolatedString.apply)(reader, buffer, begin)
+        construct { name =>
+          Token.BeginInterpolatedString(Interpolator.fromName(name))
+        }(reader, buffer, begin)
       } else normal
     }
 

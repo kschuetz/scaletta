@@ -134,7 +134,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
     describe("interpolated strings") {
       it("simple variable interpolation") {
         check("s\"hello $name\"",
-          Some(success(Token.BeginInterpolatedString("s"), 0, 1)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1)),
           Some(success(Token.InterpolatedPart("hello "), 2, 7)),
           Some(success(Token.Identifier.Lower("name"), 9, 12)),
           Some(success(Token.EndInterpolatedString, 13, 13))
@@ -143,10 +143,10 @@ class ScannerTest extends AnyFunSpec with Matchers {
 
       it("nested interpolations") {
         check("s\"outer ${s\"inner $name\"}\"",
-          Some(success(Token.BeginInterpolatedString("s"), 0, 1)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1)),
           Some(success(Token.InterpolatedPart("outer "), 2, 7)),
           Some(success(Token.BeginInterpolatedEscape, 8, 9)),
-          Some(success(Token.BeginInterpolatedString("s"), 10, 11)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 10, 11)),
           Some(success(Token.InterpolatedPart("inner "), 12, 17)),
           Some(success(Token.Identifier.Lower("name"), 19, 22)),
           Some(success(Token.EndInterpolatedString, 23, 23)),
@@ -170,7 +170,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
 
       it("interpolated expression with multiple tokens") {
         check("s\"${1 + 2}\"",
-          Some(success(Token.BeginInterpolatedString("s"), 0, 1)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1)),
           Some(success(Token.BeginInterpolatedEscape, 2, 3)),
           Some(success(Token.IntLiteral(1), 4, 4)),
           Some(success(Token.Identifier.Operator("+"), 6, 6)),
@@ -611,7 +611,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
         Some(success(Token.Val, 0, 2)),
         Some(success(Token.Identifier.Lower("x"), 4, 4)),
         Some(success(Token.Eq, 6, 6)),
-        Some(success(Token.BeginMultiLineInterpolatedString("s"), 8, 11)),
+        Some(success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 8, 11)),
         Some(success(Token.InterpolatedPart("hello "), 12, 17)),
         Some(success(Token.BeginInterpolatedEscape, 18, 19)),
         Some(success(Token.Identifier.Lower("world"), 21, 25)),
@@ -733,7 +733,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
         val input = "s\"${\u0001\u0002}\""
         // Garbage inside ${ } should be grouped without breaking the interpolation state
         check(input,
-          Some(success(Token.BeginInterpolatedString("s"), 0, 1)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1)),
           Some(success(Token.BeginInterpolatedEscape, 2, 3)),
           Some(failure(ScannerError.InvalidCharacter, 4, 5)),
           Some(success(Token.EndInterpolatedEscape, 6, 6)),
@@ -811,7 +811,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
       it("garbage cluster grouping interacts correctly with interpolation starts: single line") {
         check("\u0001s\"hello\"",
           Some(failure(ScannerError.InvalidCharacter, 0, 0)),
-          Some(success(Token.BeginInterpolatedString("s"), 1, 2)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 1, 2)),
           Some(success(Token.InterpolatedPart("hello"), 3, 7)),
           Some(success(Token.EndInterpolatedString, 8, 8))
         )
@@ -820,7 +820,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
       it("garbage cluster grouping interacts correctly with interpolation starts: multi-line") {
         check("\u0001raw\"\"\"hello\"\"\"",
           Some(failure(ScannerError.InvalidCharacter, 0, 0)),
-          Some(success(Token.BeginMultiLineInterpolatedString("raw"), 1, 6)),
+          Some(success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("raw")), 1, 6)),
           Some(success(Token.InterpolatedPart("hello"), 7, 11)),
           Some(success(Token.EndInterpolatedString, 12, 14))
         )
@@ -932,7 +932,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.Val, 25, 27)),
           Some(success(Token.Identifier.Lower("msg"), 29, 31)),
           Some(success(Token.Eq, 33, 33)),
-          Some(success(Token.BeginInterpolatedString("s"), 35, 36)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 35, 36)),
           Some(success(Token.InterpolatedPart("Hello, "), 37, 43)),
           Some(success(Token.BeginInterpolatedEscape, 44, 45)),
           Some(success(Token.Identifier.Lower("name"), 46, 49)),
@@ -981,7 +981,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.IntLiteral(0), 8, 8)),
           Some(success(Token.RParen, 9, 9)),
           Some(success(Token.LBrace, 11, 11)),
-          Some(success(Token.BeginInterpolatedString("s"), 15, 16)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 15, 16)),
           Some(success(Token.InterpolatedPart("Positive: "), 17, 26)),
           Some(success(Token.Identifier.Lower("x"), 28, 28)),
           Some(success(Token.EndInterpolatedString, 29, 29)),
@@ -994,7 +994,7 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.IntLiteral(0), 46, 46)),
           Some(success(Token.RParen, 47, 47)),
           Some(success(Token.LBrace, 49, 49)),
-          Some(success(Token.BeginInterpolatedString("s"), 53, 54)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 53, 54)),
           Some(success(Token.InterpolatedPart("Negative: "), 55, 64)),
           Some(success(Token.Identifier.Lower("x"), 66, 66)),
           Some(success(Token.EndInterpolatedString, 67, 67)),
@@ -1019,12 +1019,12 @@ class ScannerTest extends AnyFunSpec with Matchers {
           Some(success(Token.Match, 4, 8)),
           Some(success(Token.LBrace, 10, 10)),
           Some(success(Token.Case, 14, 17)),
-          Some(success(Token.BeginInterpolatedString("s"), 19, 20)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 19, 20)),
           Some(success(Token.InterpolatedPart("foo"), 21, 23)),
           Some(success(Token.Identifier.Lower("x"), 25, 25)),
           Some(success(Token.EndInterpolatedString, 26, 26)),
           Some(success(Token.RDoubleArrow, 28, 29)),
-          Some(success(Token.BeginInterpolatedString("s"), 31, 32)),
+          Some(success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 31, 32)),
           Some(success(Token.InterpolatedPart("Matched foo with "), 33, 49)),
           Some(success(Token.Identifier.Lower("x"), 51, 51)),
           Some(success(Token.EndInterpolatedString, 52, 52)),

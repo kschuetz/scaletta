@@ -1,6 +1,6 @@
 package software.kes.scaletta.scanner
 
-import software.kes.scaletta.scanner.ScannerConstants.{DoubleQuotes3, Raw}
+import software.kes.scaletta.scanner.ScannerConstants.DoubleQuotes3
 import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer
 
@@ -345,11 +345,11 @@ final class Scanner private(reader: CharReader,
       case Case =>
         enterRegion(RegionAttributes.Case)
         false
-      case BeginInterpolatedString(name) =>
-        enterRegion(RegionAttributes.InterpolatedString(multiLine = false, isRaw = name == Raw))
+      case BeginInterpolatedString(interpolator) =>
+        enterRegion(RegionAttributes.InterpolatedString(multiLine = false, isRaw = interpolator == Interpolator.Raw))
         false
-      case BeginMultiLineInterpolatedString(name) =>
-        enterRegion(RegionAttributes.InterpolatedString(multiLine = true, isRaw = name == Raw))
+      case BeginMultiLineInterpolatedString(interpolator) =>
+        enterRegion(RegionAttributes.InterpolatedString(multiLine = true, isRaw = interpolator == Interpolator.Raw))
         false
       case BeginInterpolatedEscape =>
         enterRegion(RegionAttributes.InterpolatedEscape)
