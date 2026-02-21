@@ -211,6 +211,20 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
         check("abcdef", Some(failure(IdentifierTooLong, 0, 5)))
       }
     }
+
+    describe("Unicode combining marks") {
+      it("should include combining marks in identifiers (NFD support)") {
+        // 'é' as 'e' (\u0065) followed by combining acute accent (\u0301)
+        val input = "cafe\u0301"
+        check(input, Some(success(Token.Identifier.Lower("cafe\u0301"), 0, 4)))
+      }
+
+      it("should not allow a combining mark to start an identifier") {
+        // A combining mark by itself or at the start is not a valid identifier start.
+        val input = "\u0301abc"
+        check(input, None)
+      }
+    }
   }
 
   private def check(input: String, expected: Option[Pos[Token]],

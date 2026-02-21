@@ -18,7 +18,14 @@ object CharacterClass {
     ch == '_' || ch == '$' || isLetter(ch)
 
   def isIdentifierInner(ch: Char): Boolean =
-    isIdentifierStart(ch) || isDigit(ch)
+    isIdentifierStart(ch) || isDigit(ch) || isCombiningMark(ch)
+
+  def isCombiningMark(ch: Char): Boolean = {
+    val ct = Character.getType(ch)
+    ct == Character.NON_SPACING_MARK.toInt ||
+      ct == Character.COMBINING_SPACING_MARK.toInt ||
+      ct == Character.ENCLOSING_MARK.toInt
+  }
 
   def isOperator(ch: Char): Boolean =
     operators.contains(ch) || {
