@@ -585,23 +585,30 @@ class ScannerTest extends AnyFunSpec with Matchers {
     }
 
     it("handles unclosed expression escape in multi-line interpolator") {
-      val input = "s\"\"\"hello ${ world\nval y = 2\n\"\"\"\nval z = 3"
+      val input = "val x = s\"\"\"hello ${ world\nval y = 2\n\"\"\"\nval z = 3"
 
       check(input,
-        Some(success(Token.BeginMultiLineInterpolatedString("s"), 0, 3)),
-        Some(success(Token.InterpolatedPart("hello "), 4, 9)),
-        Some(success(Token.BeginInterpolatedEscape, 10, 11)),
-        Some(success(Token.Identifier.Lower("world"), 13, 17)),
-        Some(success(Token.Semicolon, 18, 18)),
-        Some(success(Token.Val, 19, 21)),
-        Some(success(Token.Identifier.Lower("y"), 23, 23)),
-        Some(success(Token.Eq, 25, 25)),
-        Some(success(Token.IntLiteral(2), 27, 27)),
-        Some(success(Token.Semicolon, 28, 28)),
-        // The closing """ is at index 29-31.
-        // In the current implementation, since we are inside a multi-line string,
-        // it scans all the way to the end of the file when it hits unclosed literal.
-        Some(failure(ScannerError.UnclosedMultiLineString, 29, 41))
+        Some(success(Token.Val, 0, 2)),
+        Some(success(Token.Identifier.Lower("x"), 4, 4)),
+        Some(success(Token.Eq, 6, 6)),
+        Some(success(Token.BeginMultiLineInterpolatedString("s"), 8, 11)),
+        Some(success(Token.InterpolatedPart("hello "), 12, 17)),
+        Some(success(Token.BeginInterpolatedEscape, 18, 19)),
+        Some(success(Token.Identifier.Lower("world"), 21, 25)),
+        Some(success(Token.Semicolon, 26, 26)),
+        Some(success(Token.Val, 27, 29)),
+        Some(success(Token.Identifier.Lower("y"), 31, 31)),
+        Some(success(Token.Eq, 33, 33)),
+        Some(success(Token.IntLiteral(2), 35, 35)),
+        Some(success(Token.Semicolon, 36, 36)),
+        // The closing """ is at index 37-39.
+        // Robust behavior: forced exit and report error.
+        Some(failure(ScannerError.UnclosedMultiLineString, 37, 39)),
+        Some(success(Token.Semicolon, 40, 40)),
+        Some(success(Token.Val, 41, 43)),
+        Some(success(Token.Identifier.Lower("z"), 45, 45)),
+        Some(success(Token.Eq, 47, 47)),
+        Some(success(Token.IntLiteral(3), 49, 49))
       )
     }
 

@@ -28,6 +28,7 @@ final class Scanner private(reader: CharReader,
       case h :: t =>
         queue = t
         lastPos = h
+        prevToken = h.value
         h
       case Nil =>
         val result = readNext()
@@ -66,29 +67,39 @@ final class Scanner private(reader: CharReader,
       case x :: _ => x.newlinesEnabled
     }
 
-  private def readNext(): Pos[Token] = {
+  private def readNext(): Pos[Token] =
     regions match {
       case RegionAttributes.InterpolatedString(multiLine, isRaw) :: _ =>
         scanInterpolatedStringPart(multiLine, isRaw)
-      case RegionAttributes.InterpolatedEscape :: _ =>
-        val parentStringRegion = regions.tail.find(_.regionType == RegionType.InterpolatedString)
-        parentStringRegion match {
-          case Some(RegionAttributes.InterpolatedString(multiLine, _)) =>
-            val begin = reader.currentIndex
-            val isEnd = if (multiLine) reader.matchSequence(ScannerConstants.DoubleQuotes3) else reader.tryGet('"')
-            if (isEnd) {
-              val end = reader.prevIndex
-              // Forced exit: pop the escape and the string regions
-              regions = regions.dropWhile(_.regionType != RegionType.InterpolatedString).tail
-              val error = if (multiLine) ScannerError.UnclosedMultiLineString else ScannerError.UnclosedStringLiteral
-              Pos(Token.Error(error), begin, end)
-            } else {
-              readNormalToken()
-            }
-          case _ => readNormalToken()
-        }
       case _ =>
-        readNormalToken()
+        val begin = reader.currentIndex
+        skipCommentsAndWhitespace(None) match {
+          case SkipCommentsResult.Unterminated =>
+            Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex)
+          case SkipCommentsResult.NewLinesEncountered(value) =>
+            checkForForcedExit(Some(value)) match {
+              case Some(p) => p
+              case None => readToken(Some(value))
+            }
+          case SkipCommentsResult.NoNewLinesEncountered =>
+            checkForForcedExit(None) match {
+              case Some(p) => p
+              case None => readToken(None)
+            }
+        }
+    }
+
+  private def checkForForcedExit(newlineEncountered: Option[CharIndex]): Option[Pos[Token]] = {
+    regions.find(_.regionType == RegionType.InterpolatedString).flatMap {
+      case parentStringRegion: RegionAttributes.InterpolatedString if parentStringRegion.multiLine =>
+        val begin = reader.currentIndex
+        if (reader.matchSequence(ScannerConstants.DoubleQuotes3)) {
+          val end = reader.prevIndex
+          regions = regions.dropWhile(_.regionType != RegionType.InterpolatedString).tail
+          val error = ScannerError.UnclosedMultiLineString
+          Some(yieldSuccess(Pos(Token.Error(error), begin, end), newlineEncountered))
+        } else None
+      case _ => None
     }
   }
 
