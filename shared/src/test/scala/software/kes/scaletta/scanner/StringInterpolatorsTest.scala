@@ -119,6 +119,30 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers {
         Some(failure(InvalidEscapeCharacter, 9, 9))
       )
     }
+
+    describe("saturation") {
+      ignore("saturates on EndOfInput after an unclosed interpolated string literal error") {
+        val input = "s\""
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+
+          // First call: BeginInterpolatedString
+          val first = scanner.get()
+          first.value shouldBe Token.BeginInterpolatedString(Interpolator.fromName("s"))
+
+          // Second call: Error
+          val second = scanner.get()
+          second.value shouldBe Token.Error(ScannerError.UnclosedStringLiteral)
+
+          // Third call: Should be EndOfInput, NOT the same error again
+          val third = scanner.get()
+          if (third.value == Token.Error(ScannerError.UnclosedStringLiteral)) {
+            fail("Scanner saturated on the Error token instead of transitioning to EndOfInput")
+          }
+          third.value shouldBe Token.EndOfInput
+        }
+      }
+    }
   }
 
   // Note: This helper is simplified. In the actual implementation, we might need a 
