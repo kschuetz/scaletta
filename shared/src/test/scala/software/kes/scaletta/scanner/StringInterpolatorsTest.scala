@@ -121,7 +121,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers {
     }
 
     describe("saturation") {
-      ignore("saturates on EndOfInput after an unclosed interpolated string literal error") {
+      it("saturates on EndOfInput after an unclosed interpolated string literal error") {
         val input = "s\""
         TestReaderFactory.fromString(input) { reader =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
