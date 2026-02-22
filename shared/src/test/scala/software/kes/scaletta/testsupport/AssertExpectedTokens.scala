@@ -9,20 +9,20 @@ trait AssertExpectedTokens {
   assertions: Assertions =>
 
   final protected def assertExpectedTokens(input: String,
-                                           expectedPosList: Vector[Pos[Token]],
+                                           expectedTokens: Vector[Pos[Token]],
                                            actualTokens: Vector[Pos[Token]])
                                           (implicit pos: Position): Unit = {
-    val maxLength = Math.max(actualTokens.length, expectedPosList.length)
+    val maxLength = Math.max(actualTokens.length, expectedTokens.length)
     for (i <- 0 until maxLength) {
-      if (i >= expectedPosList.length) {
+      if (i >= expectedTokens.length) {
         val actual = actualTokens(i)
         fail(s"Unexpected extra token at index $i: ${formatToken(actual)}\n${renderUnderline(input, actual.begin.value, "extra token")}")
       } else if (i >= actualTokens.length) {
-        val expected = expectedPosList(i)
+        val expected = expectedTokens(i)
         fail(s"Expected more tokens, but stream ended. Missing: ${formatToken(expected)}\n${renderUnderline(input, expected.begin.value, "missing expected token")}")
       } else {
         val actual = actualTokens(i)
-        val expected = expectedPosList(i)
+        val expected = expectedTokens(i)
 
         if (actual.value != expected.value) {
           fail(s"Token mismatch at index $i:\nExpected: ${formatToken(expected)}\nActual:   ${formatToken(actual)}\n" +
