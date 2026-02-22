@@ -1,183 +1,125 @@
 package software.kes.scaletta.scanner
 
+import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
-import software.kes.scaletta.testsupport.TestReaderFactory
+import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
 import software.kes.scaletta.util.CharBuffer
 
-class CharLiteralsTest extends AnyFunSpec with Matchers {
+class CharLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
   private val buffer = CharBuffer.create()
 
   describe("charLiteral") {
     it("'a'") {
-      TestReaderFactory.fromString("a' $") { reader =>
-        Literals.charLiteral(reader) shouldBe success(Token.CharLiteral('a'), -1, 1)
-        reader.get() shouldBe Some(' ')
-        reader.get() shouldBe Some('$')
-      }
+      check("'a'", Some(success(Token.CharLiteral('a'), 0, 2)))
     }
 
     it("space") {
-      TestReaderFactory.fromString(" ' $") { reader =>
-        Literals.charLiteral(reader) shouldBe success(Token.CharLiteral(' '), -1, 1)
-        reader.get() shouldBe Some(' ')
-        reader.get() shouldBe Some('$')
-      }
+      check("' '", Some(success(Token.CharLiteral(' '), 0, 2)))
     }
 
     it("\\n") {
-      TestReaderFactory.fromString("\\n' $") { reader =>
-        Literals.charLiteral(reader) shouldBe success(Token.CharLiteral('\n'), -1, 2)
-        reader.get() shouldBe Some(' ')
-        reader.get() shouldBe Some('$')
-      }
+      check("'\\n'", Some(success(Token.CharLiteral('\n'), 0, 3)))
     }
 
     it("\\u0041") {
-      TestReaderFactory.fromString("\\u0041' $") { reader =>
-        Literals.charLiteral(reader) shouldBe success(Token.CharLiteral('A'), -1, 6)
-        reader.get() shouldBe Some(' ')
-        reader.get() shouldBe Some('$')
-      }
+      check("'\\u0041'", Some(success(Token.CharLiteral('A'), 0, 7)))
     }
 
     it("\\u21d2") {
-      TestReaderFactory.fromString("\\u21d2' $") { reader =>
-        Literals.charLiteral(reader) shouldBe success(Token.CharLiteral('⇒'), -1, 6)
-        reader.get() shouldBe Some(' ')
-        reader.get() shouldBe Some('$')
-      }
+      check("'\\u21d2'", Some(success(Token.CharLiteral('⇒'), 0, 7)))
     }
 
     it("⇒") {
-      TestReaderFactory.fromString("⇒' $") { reader =>
-        Literals.charLiteral(reader) shouldBe success(Token.CharLiteral('⇒'), -1, 1)
-        reader.get() shouldBe Some(' ')
-        reader.get() shouldBe Some('$')
-      }
+      check("'⇒'", Some(success(Token.CharLiteral('⇒'), 0, 2)))
     }
 
     it("unclosed 1") {
-      TestReaderFactory.fromString("a") { reader =>
-        Literals.charLiteral(reader) shouldBe failure(ScannerError.UnclosedCharacterLiteral, -1, 0)
-        reader.get() shouldBe None
-      }
-    }
-
-    it("unclosed 2") {
-      TestReaderFactory.fromString("a $") { reader =>
-        Literals.charLiteral(reader) shouldBe failure(ScannerError.UnclosedCharacterLiteral, -1, 1)
-        reader.get() shouldBe Some(' ')
-      }
+      check("'a", Some(failure(ScannerError.UnclosedCharacterLiteral, 0, 1)))
     }
 
     it("empty") {
-      TestReaderFactory.fromString("' $") { reader =>
-        Literals.charLiteral(reader) shouldBe failure(ScannerError.EmptyCharacterLiteral, -1, 0)
-        reader.get() shouldBe Some(' ')
-      }
+      check("''", Some(failure(ScannerError.EmptyCharacterLiteral, 0, 1)))
     }
   }
 
   describe("stringLiteral") {
     describe("single-line") {
       it("empty string") {
-        TestReaderFactory.fromString("\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(Token.StringLiteral(""), -1, 0)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        check("\"\"", Some(success(Token.StringLiteral(""), 0, 1)))
       }
 
       it("simple string, no escapes") {
-        TestReaderFactory.fromString("this is a simple string\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(Token.StringLiteral("this is a simple string"), -1, 23)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"this is a simple string\""
+        check(input, Some(success(Token.StringLiteral("this is a simple string"), 0, 24)))
       }
 
       it("string with escapes") {
-        TestReaderFactory.fromString(raw"this \n string \t has \f escapes \\ " + "\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(
-            Token.StringLiteral("this \n string \t has \f escapes \\ "), -1, 36)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"this \\n string \\t has \\f escapes \\\\ \""
+        check(input, Some(success(Token.StringLiteral("this \n string \t has \f escapes \\ "), 0, 37)))
       }
 
       it("string with escaped quotes") {
-        TestReaderFactory.fromString("before \\\"quotes\\\" after\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(
-            Token.StringLiteral("before \"quotes\" after"), -1, 23)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"before \\\"quotes\\\" after\""
+        check(input, Some(success(Token.StringLiteral("before \"quotes\" after"), 0, 24)))
       }
 
       it("string with unicode sequences") {
-        TestReaderFactory.fromString("⇒ is the same as \\u21d2!\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(
-            Token.StringLiteral("⇒ is the same as ⇒!"), -1, 24)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"⇒ is the same as \\u21d2!\""
+        check(input, Some(success(Token.StringLiteral("⇒ is the same as ⇒!"), 0, 25)))
       }
     }
 
     describe("multi-line") {
       it("empty string") {
-        TestReaderFactory.fromString("\"\"\"\"\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(Token.MultiLineString(""), -1, 4)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        check("\"\"\"\"\"\"", Some(success(Token.MultiLineString(""), 0, 5)))
       }
 
       it("simple string, no new lines, no escapes") {
-        TestReaderFactory.fromString("\"\"this is a simple string\"\"\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(Token.MultiLineString("this is a simple string"), -1, 27)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"\"\"this is a simple string\"\"\""
+        check(input, Some(success(Token.MultiLineString("this is a simple string"), 0, 28)))
       }
 
       it("string with new lines and escapes") {
-        TestReaderFactory.fromString("\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(
-            Token.MultiLineString("line 1\nline 2\nline 3\nthis\tline\fhas\\escapes "), -1, 51)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\""
+        check(input, Some(success(Token.MultiLineString("line 1\nline 2\nline 3\nthis\tline\fhas\\escapes "), 0, 52)))
       }
 
       it("string with escaped quotes") {
-        TestReaderFactory.fromString("\"\"before \\\"quotes\\\" after\"\"\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(
-            Token.MultiLineString("before \"quotes\" after"), -1, 27)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"\"\"before \\\"quotes\\\" after\"\"\""
+        check(input, Some(success(Token.MultiLineString("before \"quotes\" after"), 0, 28)))
       }
 
       it("string with unescaped quotes") {
-        TestReaderFactory.fromString("\"\"before \"single\" \"\"double\"\" after\"\"\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(
-            Token.MultiLineString("before \"single\" \"\"double\"\" after"), -1, 36)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"\"\"before \"single\" \"\"double\"\" after\"\"\""
+        check(input, Some(success(Token.MultiLineString("before \"single\" \"\"double\"\" after"), 0, 37)))
       }
 
       it("string with unicode sequences") {
-        TestReaderFactory.fromString("\"\"⇒ is the same as \\u21d2!\"\"\" $") { reader =>
-          Literals.stringLiteral(reader, buffer) shouldBe success(
-            Token.MultiLineString("⇒ is the same as ⇒!"), -1, 28)
-          reader.get() shouldBe Some(' ')
-          reader.get() shouldBe Some('$')
-        }
+        val input = "\"\"\"⇒ is the same as \\u21d2!\"\"\""
+        check(input, Some(success(Token.MultiLineString("⇒ is the same as ⇒!"), 0, 29)))
       }
+    }
+
+    it("unclosed single-line string") {
+      val input = "\"abc"
+      check(input, Some(failure(ScannerError.UnclosedStringLiteral, 0, 3)))
+    }
+
+    it("unclosed multi-line string") {
+      val input = "\"\"\"abc"
+      check(input, Some(failure(ScannerError.UnclosedMultiLineString, 0, 5)))
+    }
+  }
+
+  private def check(input: String,
+                    expectedTokens: Option[Pos[Token]]*)
+                   (implicit pos: Position): Unit = {
+    TestReaderFactory.fromString(input) { reader =>
+      val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+      val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
+      assertExpectedTokens(input, expectedTokens.toVector.flatten, actualTokens)
     }
   }
 }
