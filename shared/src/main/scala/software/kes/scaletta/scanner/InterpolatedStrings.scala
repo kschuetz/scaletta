@@ -20,6 +20,11 @@ object InterpolatedStrings {
     def done: Result =
       Pos(Right(InterpolatedPart(buffer.slice())), begin, reader.prevIndex)
 
+    def unclosed: Result = {
+      val error = if (multiLine) UnclosedMultiLineString else UnclosedStringLiteral
+      Pos(Left(error), begin, reader.currentIndex)
+    }
+
     @tailrec
     def go(): Result =
       reader.get() match {
@@ -68,7 +73,7 @@ object InterpolatedStrings {
                   case EscapeResult.Error(error) =>
                     Pos(Left(error), reader.prevIndex)
                   case EscapeResult.Boundary =>
-                    Pos(Left(UnclosedStringLiteral), begin, reader.currentIndex)
+                    unclosed
                 }
               }
             case '\n' =>
@@ -77,14 +82,14 @@ object InterpolatedStrings {
                 go()
               } else {
                 reader.unget(ch)
-                Pos(Left(UnclosedStringLiteral), begin, reader.currentIndex)
+                unclosed
               }
             case other =>
               buffer.write(other)
               go()
           }
         case None =>
-          Pos(Left(UnclosedStringLiteral), begin, reader.currentIndex)
+          unclosed
       }
 
     go()
