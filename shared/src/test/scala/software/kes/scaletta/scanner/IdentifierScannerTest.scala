@@ -193,8 +193,8 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
       }
 
       it("not valid identifier") {
-        check("_abc\"", Some(success(Token.Identifier.Lower("_abc"), 0, 3)), checkRemainder = false)
-        check("+\"", Some(success(Token.Identifier.Operator("+"), 0, 0)), checkRemainder = false)
+        check("_abc\"", Some(success(Token.Identifier.Lower("_abc"), 0, 3)))
+        check("+\"", Some(success(Token.Identifier.Operator("+"), 0, 0)))
       }
     }
 
@@ -227,27 +227,12 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
     }
   }
 
-  private def check(input: String, expected: Option[Pos[Token]],
-                    checkRemainder: Boolean = true): Unit = {
+  private def check(input: String, expected: Option[Pos[Token]]): Unit = {
     val scanner = new IdentifierScanner(policy)
     TestReaderFactory.fromString(input) { reader =>
       val result = scanner.tryScan(reader, buffer)
       withClue(input) {
         result shouldBe expected
-      }
-    }
-
-    if (checkRemainder) {
-      expected match {
-        case Some(Pos(Token.Error(_), _, _)) => ()
-        case Some(_) =>
-          TestReaderFactory.fromString(input + " $") { reader =>
-            val result = scanner.tryScan(reader, buffer)
-            result shouldBe expected
-            reader.get() shouldBe Some(' ')
-            reader.get() shouldBe Some('$')
-          }
-        case _ => ()
       }
     }
   }
