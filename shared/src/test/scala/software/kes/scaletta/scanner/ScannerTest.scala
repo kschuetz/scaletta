@@ -8,6 +8,69 @@ import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactor
 
 class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
   describe("Scanner") {
+    describe("peek(n)") {
+      it("should peek ahead without consuming") {
+        val input = "val x = 1"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          scanner.peek(1).value shouldBe Token.Val
+          scanner.peek(1).value shouldBe Token.Val
+          scanner.peek(2).value shouldBe Token.Identifier.Lower("x")
+          scanner.peek(3).value shouldBe Token.Eq
+          scanner.peek(4).value shouldBe Token.IntLiteral(1)
+          scanner.peek(5).value shouldBe Token.EndOfInput
+
+          scanner.get().value shouldBe Token.Val
+          scanner.peek(1).value shouldBe Token.Identifier.Lower("x")
+          scanner.get().value shouldBe Token.Identifier.Lower("x")
+          scanner.get().value shouldBe Token.Eq
+          scanner.get().value shouldBe Token.IntLiteral(1)
+          scanner.get().value shouldBe Token.EndOfInput
+        }
+      }
+
+      it("should handle semicolon inference during peek") {
+        val input = "1\n2"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          scanner.peek(1).value shouldBe Token.IntLiteral(1)
+          scanner.peek(2).value shouldBe Token.Semicolon
+          scanner.peek(3).value shouldBe Token.IntLiteral(2)
+          scanner.peek(4).value shouldBe Token.EndOfInput
+
+          scanner.get().value shouldBe Token.IntLiteral(1)
+          scanner.get().value shouldBe Token.Semicolon
+          scanner.get().value shouldBe Token.IntLiteral(2)
+          scanner.get().value shouldBe Token.EndOfInput
+        }
+      }
+
+      it("should return EndOfInput indefinitely when peeking beyond end") {
+        val input = "1"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          scanner.peek(1).value shouldBe Token.IntLiteral(1)
+          scanner.peek(2).value shouldBe Token.EndOfInput
+          scanner.peek(3).value shouldBe Token.EndOfInput
+          scanner.peek(100).value shouldBe Token.EndOfInput
+          scanner.peek(1).value shouldBe Token.IntLiteral(1)
+        }
+      }
+
+      it("should throw exception for n < 1") {
+        val input = "1"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          intercept[IllegalArgumentException] {
+            scanner.peek(0)
+          }
+          intercept[IllegalArgumentException] {
+            scanner.peek(-1)
+          }
+        }
+      }
+    }
+
     describe("whitespace and comments") {
       it("should skip whitespace") {
         check("  \t\n  123",

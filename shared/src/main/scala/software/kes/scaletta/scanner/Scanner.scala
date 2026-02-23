@@ -25,15 +25,41 @@ final class Scanner private(reader: CharReader,
                             private var regionStack: RegionStack,
                             private val initialBegin: CharIndex) {
   def get(): Pos[Token] = {
-    while (tokenBuffer.isEmpty) {
-      val effect = readNext()
-      effect(tokenBuffer)
-    }
-    val result = tokenBuffer.dequeue()
-    prevToken = result.value
-    result
+    fillBuffer(1)
+    tokenBuffer.dequeue()
   }
 
+  /**
+   * Returns the token at the specified lookahead position without consuming it.
+   *
+   * @param n the lookahead position (1 for the next token, 2 for the one after that, etc.)
+   * @return the token at the specified position, or EndOfInput if the position is beyond the end of the input
+   * @throws IllegalArgumentException if n < 1
+   */
+  def peek(n: Int): Pos[Token] = {
+    require(n >= 1, "n must be at least 1")
+    fillBuffer(n)
+    if (n <= tokenBuffer.length) {
+      tokenBuffer.get(n - 1)
+    } else {
+      // This should really not happen because fillBuffer enqueues EOF if needed
+      tokenBuffer.lastOption.getOrElse(Pos(Token.EndOfInput, reader.currentIndex, reader.currentIndex))
+    }
+  }
+
+  @tailrec
+  private def fillBuffer(n: Int): Unit = {
+    if (tokenBuffer.length < n && !tokenBuffer.lastOption.exists(_.value == Token.EndOfInput)) {
+      val effect = readNext()
+      val previousLast = tokenBuffer.lastOption.map(_.value).getOrElse(prevToken)
+      effect(tokenBuffer)
+      val newLast = tokenBuffer.lastOption.map(_.value).getOrElse(prevToken)
+      if (newLast != previousLast) {
+        prevToken = newLast
+      }
+      fillBuffer(n)
+    }
+  }
 
   private def yieldSuccess(token: Pos[Token],
                            newlineEncounteredBefore: Option[CharIndex]): TokenBuffer.Effect =
