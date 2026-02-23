@@ -8,7 +8,7 @@ import software.kes.scaletta.util.CharBuffer
 import scala.annotation.{switch, tailrec}
 
 object InterpolatedStrings {
-  type Result = Pos[Either[ScannerError, Token]]
+  type Result = Pos[Token]
 
   def scanPart(reader: CharReader,
                buffer: CharBuffer,
@@ -18,11 +18,11 @@ object InterpolatedStrings {
     buffer.reset()
 
     def done: Result =
-      Pos(Right(InterpolatedPart(buffer.slice())), begin, reader.prevIndex)
+      Pos(InterpolatedPart(buffer.slice()), begin, reader.prevIndex)
 
     def unclosed: Result = {
       val error = if (multiLine) UnclosedMultiLineString else UnclosedStringLiteral
-      Pos(Left(error), begin, reader.currentIndex)
+      Pos(Error(error), begin, reader.currentIndex)
     }
 
     @tailrec
@@ -71,7 +71,7 @@ object InterpolatedStrings {
                     buffer.write(escaped)
                     go()
                   case EscapeResult.Error(error) =>
-                    Pos(Left(error), reader.prevIndex)
+                    Pos(Error(error), reader.prevIndex)
                   case EscapeResult.Boundary =>
                     unclosed
                 }

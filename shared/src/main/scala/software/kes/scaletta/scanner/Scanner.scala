@@ -251,8 +251,8 @@ final class Scanner private(reader: CharReader,
         reader.unget('$')
         val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
         partResult.value match {
-          case Right(token) => yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
-          case Left(error) => partResult.withNewValue(Token.Error(error))
+          case Error(error) => partResult.withNewValue(Token.Error(error))
+          case token => yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
         }
       } else {
         // $identifier or ${
@@ -296,15 +296,16 @@ final class Scanner private(reader: CharReader,
     } else {
       val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
       partResult.value match {
-        case Right(token) =>
-          yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
-        case Left(error) =>
+        case Error(error) =>
           // When a fatal literal error occurs, we must exit the interpolated string region
           // to prevent saturation and redundant errors.
           exitRegion(RegionType.InterpolatedString)
           val posToken: Pos[Token] = partResult.withNewValue(Token.Error(error))
           prevToken = posToken.value
           posToken
+
+        case token =>
+          yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
       }
     }
   }
