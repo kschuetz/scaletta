@@ -11,8 +11,9 @@ object Scanner {
              identifierPolicy: IdentifierPolicy): Scanner = {
     val buffer = CharBuffer.create()
     val identifierScanner = new IdentifierScanner(identifierPolicy)
-    val initialPos = Pos(Token.BeginOfInput: Token, reader.currentIndex, reader.currentIndex)
-    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, Nil, RegionStack.empty, initialPos)
+    val initialBegin = reader.currentIndex
+    val tokenBuffer = TokenBuffer.create()
+    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, tokenBuffer, RegionStack.empty, initialBegin)
   }
 }
 
@@ -20,46 +21,42 @@ final class Scanner private(reader: CharReader,
                             buffer: CharBuffer,
                             identifierScanner: IdentifierScanner,
                             private var prevToken: Token,
-                            private var queue: List[Pos[Token]],
+                            private val tokenBuffer: TokenBuffer,
                             private var regionStack: RegionStack,
-                            private var lastPos: Pos[Token]) {
-  def get(): Pos[Token] =
-    queue match {
-      case h :: t =>
-        queue = t
-        lastPos = h
-        prevToken = h.value
-        h
-      case Nil =>
-        val result = readNext()
-        lastPos = result
-        result
+                            private val initialBegin: CharIndex) {
+  def get(): Pos[Token] = {
+    while (tokenBuffer.isEmpty) {
+      val effect = readNext()
+      effect(tokenBuffer)
     }
+    val result = tokenBuffer.dequeue()
+    prevToken = result.value
+    result
+  }
+
 
   private def yieldSuccess(token: Pos[Token],
-                           newlineEncounteredBefore: Option[CharIndex]): Pos[Token] = {
-    if (newlineEncounteredBefore.isDefined &&
-      prevToken.canTerminateStatement &&
-      token.value.canBeginStatement &&
-      newlinesEnabledInRegion() &&
-      token.value != (Token.Semicolon: Token) &&
-      prevToken != (Token.Semicolon: Token)) {
-      val index = newlineEncounteredBefore.get
-      val semicolonPos = Pos(Token.Semicolon: Token, index, index)
-      queue = token :: queue
-      prevToken = Token.Semicolon
-      semicolonPos
-    } else {
-      val suppressed = updateRegions(token)
-      if (suppressed) {
-        prevToken = token.value
-        get()
+                           newlineEncounteredBefore: Option[CharIndex]): TokenBuffer.Effect =
+    (tokenBuffer: TokenBuffer) => {
+      if (newlineEncounteredBefore.isDefined &&
+        prevToken.canTerminateStatement &&
+        token.value.canBeginStatement &&
+        newlinesEnabledInRegion() &&
+        token.value != (Token.Semicolon: Token) &&
+        prevToken != (Token.Semicolon: Token)) {
+        val index = newlineEncounteredBefore.get
+        val semicolonPos = Pos(Token.Semicolon: Token, index, index)
+        tokenBuffer.enqueue(semicolonPos)
+        tokenBuffer.enqueue(token)
       } else {
-        prevToken = token.value
-        token
+        updateRegions(token) match {
+          case Some(effect) =>
+            effect(tokenBuffer)
+          case None =>
+            tokenBuffer.enqueue(token)
+        }
       }
     }
-  }
 
   private def newlinesEnabledInRegion(): Boolean =
     regionStack.peek match {
@@ -67,7 +64,7 @@ final class Scanner private(reader: CharReader,
       case None => true
     }
 
-  private def readNext(): Pos[Token] =
+  private def readNext(): TokenBuffer.Effect =
     regionStack.peek match {
       case Some(RegionAttributes.InterpolatedString(multiLine, isRaw)) =>
         scanInterpolatedStringPart(multiLine, isRaw)
@@ -75,49 +72,32 @@ final class Scanner private(reader: CharReader,
         val begin = reader.currentIndex
         skipCommentsAndWhitespace(None) match {
           case SkipCommentsResult.Unterminated =>
-            Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex)
+            (tokenBuffer: TokenBuffer) =>
+              tokenBuffer.enqueue(Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex))
           case SkipCommentsResult.NewLinesEncountered(value) =>
-            checkForForcedExit(Some(value)) match {
-              case Some(p) => p
-              case None => readToken(Some(value))
-            }
+            checkForForcedExit(Some(value)).getOrElse(readToken(Some(value)))
           case SkipCommentsResult.NoNewLinesEncountered =>
-            checkForForcedExit(None) match {
-              case Some(p) => p
-              case None => readToken(None)
-            }
+            checkForForcedExit(None).getOrElse(readToken(None))
         }
     }
 
-  private def checkForForcedExit(newlineEncountered: Option[CharIndex]): Option[Pos[Token]] = {
-    regionStack.findFirstInterpolatedString.flatMap {
-      case parentStringRegion: RegionAttributes.InterpolatedString if parentStringRegion.multiLine =>
+  private def checkForForcedExit(newlineEncountered: Option[CharIndex]): Option[TokenBuffer.Effect] = {
+    regionStack.findFirstInterpolatedString match {
+      case Some(parentStringRegion: RegionAttributes.InterpolatedString) if parentStringRegion.multiLine =>
         val begin = reader.currentIndex
         if (reader.matchSequence(ScannerConstants.DoubleQuotes3)) {
           val end = reader.prevIndex
-          //          regionStack = regionStack.dropUntilAndIncluding(RegionType.InterpolatedString)
           regionStack = regionStack.dropUntilInterpolatedString
           val error = ScannerError.UnclosedMultiLineString
           Some(yieldSuccess(Pos(Token.Error(error), begin, end), newlineEncountered))
-        } else None
+        } else {
+          None
+        }
       case _ => None
     }
   }
 
-  private def readNormalToken(): Pos[Token] = {
-    buffer.reset()
-    val begin = reader.currentIndex
-    skipCommentsAndWhitespace(None) match {
-      case SkipCommentsResult.Unterminated =>
-        Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex)
-      case SkipCommentsResult.NewLinesEncountered(value) =>
-        readToken(Some(value))
-      case SkipCommentsResult.NoNewLinesEncountered =>
-        readToken(None)
-    }
-  }
-
-  private def readToken(newlineEncountered: Option[CharIndex]): Pos[Token] = {
+  private def readToken(newlineEncountered: Option[CharIndex]): TokenBuffer.Effect = {
     val begin = reader.currentIndex
 
     def canStartToken(ch: Char): Boolean =
@@ -128,10 +108,10 @@ final class Scanner private(reader: CharReader,
       }
 
     // For tokens containing only one char
-    def success1(token: Token): Pos[Token] =
+    def success1(token: Token): TokenBuffer.Effect =
       yieldSuccess(Pos(token, begin, begin), newlineEncountered)
 
-    def success(p: Pos[Token]): Pos[Token] =
+    def success(p: Pos[Token]): TokenBuffer.Effect =
       yieldSuccess(p, newlineEncountered)
 
     reader.get() match {
@@ -153,7 +133,8 @@ final class Scanner private(reader: CharReader,
               case Some(result) => success(result)
               case None =>
                 // Should not happen as we just peeked a digit
-                Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
+                (tokenBuffer: TokenBuffer) =>
+                  tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin))
             }
           case '.' =>
             reader.get() match {
@@ -163,7 +144,8 @@ final class Scanner private(reader: CharReader,
                 Literals.tryNumericLiteral(reader, buffer) match {
                   case Some(result) => success(result)
                   case None =>
-                    Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
+                    (tokenBuffer: TokenBuffer) =>
+                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin))
                 }
               case Some(c) =>
                 reader.unget(c)
@@ -179,7 +161,8 @@ final class Scanner private(reader: CharReader,
                 Literals.tryNumericLiteral(reader, buffer) match {
                   case Some(result) => success(result)
                   case None =>
-                    Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin)
+                    (tokenBuffer: TokenBuffer) =>
+                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin))
                 }
               case Some(c) =>
                 reader.unget(c)
@@ -205,33 +188,33 @@ final class Scanner private(reader: CharReader,
               case Some(result) => success(result)
               case None =>
                 @tailrec
-                def skipGarbage(): Pos[Token] = {
+                def skipGarbage(): TokenBuffer.Effect =
                   reader.get() match {
                     case Some(c) =>
                       if (CharacterClass.isWhitespace(c) || canStartToken(c)) {
                         reader.unget(c)
-                        Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex)
+                        (tokenBuffer: TokenBuffer) =>
+                          tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex))
                       } else {
                         skipGarbage()
                       }
                     case None =>
-                      Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex)
+                      (tokenBuffer: TokenBuffer) =>
+                        tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex))
                   }
-                }
 
                 skipGarbage()
             }
         }
 
       case None =>
-        lastPos match {
-          case Pos(Token.EndOfInput, _, _) => lastPos
-          case _ => Pos(Token.EndOfInput, begin, begin)
+        (tokenBuffer: TokenBuffer) => {
+          tokenBuffer.updateEndOfInput(begin)
         }
     }
   }
 
-  private def scanInterpolatedStringPart(multiLine: Boolean, isRaw: Boolean): Pos[Token] = {
+  private def scanInterpolatedStringPart(multiLine: Boolean, isRaw: Boolean): TokenBuffer.Effect = {
     val begin = reader.currentIndex
 
     // Check for end of string first
@@ -251,7 +234,9 @@ final class Scanner private(reader: CharReader,
         reader.unget('$')
         val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
         partResult.value match {
-          case Error(error) => partResult.withNewValue(Token.Error(error))
+          case Error(error) =>
+            (tokenBuffer: TokenBuffer) =>
+              tokenBuffer.enqueue(partResult.withNewValue(Token.Error(error)))
           case token => yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
         }
       } else {
@@ -267,7 +252,7 @@ final class Scanner private(reader: CharReader,
               buffer.write(ch)
 
               @tailrec
-              def scanIdentifier(): Pos[Token] = {
+              def scanIdentifier(): TokenBuffer.Effect = {
                 reader.get() match {
                   case Some(c) if CharacterClass.isIdentifierInner(c) && c != '$' =>
                     buffer.write(c)
@@ -287,9 +272,11 @@ final class Scanner private(reader: CharReader,
               scanIdentifier()
             case Some(ch) =>
               reader.unget(ch)
-              Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin)
+              (tokenBuffer: TokenBuffer) =>
+                tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin))
             case None =>
-              Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin)
+              (tokenBuffer: TokenBuffer) =>
+                tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin))
           }
         }
       }
@@ -297,13 +284,13 @@ final class Scanner private(reader: CharReader,
       val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
       partResult.value match {
         case Error(error) =>
-          // When a fatal literal error occurs, we must exit the interpolated string region
-          // to prevent saturation and redundant errors.
-          exitRegion(RegionType.InterpolatedString)
-          val posToken: Pos[Token] = partResult.withNewValue(Token.Error(error))
-          prevToken = posToken.value
-          posToken
-
+          (tokenBuffer: TokenBuffer) => {
+            // When a fatal literal error occurs, we must exit the interpolated string region
+            // to prevent saturation and redundant errors.
+            exitRegion(RegionType.InterpolatedString)
+            val posToken: Pos[Token] = partResult.withNewValue(Token.Error(error))
+            tokenBuffer.enqueue(posToken)
+          }
         case token =>
           yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
       }
@@ -334,56 +321,57 @@ final class Scanner private(reader: CharReader,
    * Updates the current tracking regions based on the provided token.
    *
    * @param token the token that was just scanned
-   * @return true if the token should be suppressed (not emitted to the token stream),
-   *         false otherwise.
+   * @return Some(effect) if the region change requires a special side effect,
+   *         None otherwise (the token should be enqueued normally).
    */
-  private def updateRegions(token: Pos[Token]): Boolean =
+  private def updateRegions(token: Pos[Token]): Option[TokenBuffer.Effect] =
     token.value match {
       case LParen =>
         enterRegion(RegionAttributes.Parens)
-        false
+        None
       case LBracket =>
         enterRegion(RegionAttributes.Brackets)
-        false
+        None
       case LBrace =>
         enterRegion(RegionAttributes.Braces)
-        false
+        None
       case Case =>
         enterRegion(RegionAttributes.Case)
-        false
+        None
       case BeginInterpolatedString(interpolator) =>
         enterRegion(RegionAttributes.InterpolatedString(multiLine = false, isRaw = interpolator == Interpolator.Raw))
-        false
+        None
       case BeginMultiLineInterpolatedString(interpolator) =>
         enterRegion(RegionAttributes.InterpolatedString(multiLine = true, isRaw = interpolator == Interpolator.Raw))
-        false
+        None
       case BeginInterpolatedEscape =>
         enterRegion(RegionAttributes.InterpolatedEscape)
-        false
+        None
       case EndInterpolatedString =>
         exitRegion(RegionType.InterpolatedString)
-        false
+        None
       case RParen =>
         exitRegion(RegionType.Parens)
-        false
+        None
       case RBracket =>
         exitRegion(RegionType.Brackets)
-        false
+        None
       case RBrace =>
         regionStack.peek match {
           case Some(RegionAttributes.InterpolatedEscape) =>
-            exitRegion(RegionType.InterpolatedEscape)
-            val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
-            queue = endPos :: queue
-            true
+            Some((tokenBuffer: TokenBuffer) => {
+              exitRegion(RegionType.InterpolatedEscape)
+              val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
+              tokenBuffer.enqueue(endPos)
+            })
           case _ =>
             exitRegion(RegionType.Braces)
-            false
+            None
         }
       case RDoubleArrow =>
         exitRegion(RegionType.Case)
-        false
-      case _ => false
+        None
+      case _ => None
     }
 
   private def enterRegion(regionAttributes: RegionAttributes): Unit =

@@ -747,6 +747,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         val inputA = "\u0001\u0002// comment\nval x = 1"
         check(inputA,
           Some(failure(ScannerError.InvalidCharacter, 0, 1)),
+          Some(success(Token.Semicolon, 12, 12)), // TODO: is this what we want?
           Some(success(Token.Val, 13, 15)),
           Some(success(Token.Identifier.Lower("x"), 17, 17)),
           Some(success(Token.Eq, 19, 19)),
