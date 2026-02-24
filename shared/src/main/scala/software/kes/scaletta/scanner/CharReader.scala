@@ -17,25 +17,30 @@ final class CharReader private(source: Iterator[Char],
                                private var _currentIndex: CharIndex,
                                private var highWater: CharIndex,
                                private val lineMapBuilder: LineMapBuilder) {
+  private var lastReadWidth: Int = 1
+
   def get(): Option[Char] =
     if (pushback.nonEmpty) {
-      _currentIndex += 1
+      val w = pushback.peekWidth()
+      _currentIndex += w
+      lastReadWidth = w
       Some(pushback.pop())
     } else if (source.hasNext) {
       var result = source.next()
       if (result == '\r') {
         if (source.hasNext) {
           val next = source.next()
-          _currentIndex += 1
-          if (next != '\n') {
-            pushback.push(next)
+          if (next == '\n') {
+            _currentIndex += 2
+            lastReadWidth = 2
+          } else {
+            _currentIndex += 1
+            lastReadWidth = 1
+            pushback.push(next, isDoubleWidth = false)
           }
-          //          if (next == '\n') {
-          //            _currentIndex += 2
-          //          } else {
-          //            _currentIndex += 1
-          //            pushback.push(next)
-          //          }
+        } else {
+          _currentIndex += 1
+          lastReadWidth = 1
         }
         if (highWater < _currentIndex) {
           lineMapBuilder.addLineBegin(_currentIndex)
@@ -44,12 +49,14 @@ final class CharReader private(source: Iterator[Char],
         result = '\n'
       } else if (result == '\n') {
         _currentIndex += 1
+        lastReadWidth = 1
         if (highWater < _currentIndex) {
           lineMapBuilder.addLineBegin(_currentIndex)
           highWater = _currentIndex
         }
       } else {
         _currentIndex += 1
+        lastReadWidth = 1
         if (highWater < _currentIndex) {
           highWater = _currentIndex
         }
@@ -115,13 +122,28 @@ final class CharReader private(source: Iterator[Char],
       Some(pushback.peek())
     } else if (source.hasNext) {
       val result = source.next()
-      pushback.push(result)
-      Some(result)
+      if (result == '\r') {
+        if (source.hasNext) {
+          val next = source.next()
+          if (next == '\n') {
+            pushback.push('\n', isDoubleWidth = true)
+          } else {
+            pushback.push('\n', isDoubleWidth = false)
+            pushback.push(next, isDoubleWidth = false)
+          }
+        } else {
+          pushback.push('\n', isDoubleWidth = false)
+        }
+        Some('\n')
+      } else {
+        pushback.push(result, isDoubleWidth = false)
+        Some(result)
+      }
     } else None
 
   def unget(ch: Char): Unit = {
-    pushback.push(ch)
-    _currentIndex -= 1
+    pushback.push(ch, isDoubleWidth = lastReadWidth == 2)
+    _currentIndex -= lastReadWidth
   }
 
   def ungetString(s: String): Unit =

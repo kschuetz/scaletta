@@ -77,9 +77,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         check(lf"  \t\n  123",
           Some(success(Token.IntLiteral(123), 6, 8))
         )
-        // The \r preceding the \n will be ignored and will not have its own char index:
         check(crlf"  \t\r\n  123",
-          Some(success(Token.IntLiteral(123), 6, 8))
+          Some(success(Token.IntLiteral(123), 7, 9))
         )
       }
 
@@ -563,9 +562,9 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("should emit the semicolon at the same position in the source code the newline was encountered") {
         check(
-          """val foo = 1
-            |val bar = 2
-            |""".stripMargin,
+          lf"""val foo = 1
+              |val bar = 2
+              |""".stripMargin,
           Some(success(Token.Val, 0, 2)),
           Some(success(Token.Identifier.Lower("foo"), 4, 6)),
           Some(success(Token.Eq, 8, 8)),
@@ -593,8 +592,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("handles unclosed string literal and resumes on next line") {
       val input =
-        """val x = "hello world
-          |val y = 2""".stripMargin
+        lf"""val x = "hello world
+            |val y = 2""".stripMargin
 
       // Position breakdown:
       // "val x = " is 0-7
@@ -618,9 +617,9 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("handles unclosed multi-line string literal") {
       val input =
-        """val x = """ + "\"\"\"" +
-          """hello
-            |val y = 2""".stripMargin
+        lf"""val x = """ + "\"\"\"" +
+          lf"""hello
+              |val y = 2""".stripMargin
 
       // Multi-line strings in Literals.scala currently scan until the end of input
       // if not closed. It should return a single error for the whole thing.
@@ -635,8 +634,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("handles unclosed quoted identifier and resumes on next line") {
       val input =
-        """val `unclosed = 1
-          |val y = 2""".stripMargin
+        lf"""val `unclosed = 1
+            |val y = 2""".stripMargin
 
       // In Scaletta, quoted identifiers currently stop at a newline.
       // Index 4: `
@@ -667,8 +666,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("unclosed string with trailing backslash does not leak to next line") {
       val input =
-        """val x = "unclosed \
-          |val y = 2""".stripMargin
+        lf"""val x = "unclosed \\
+            |val y = 2""".stripMargin
 
       check(input,
         Some(success(Token.Val, 0, 2)),
@@ -688,8 +687,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("handles unclosed quoted identifier with trailing backslash does not leak to next line") {
       val input =
-        """val `unclosed \
-          |val y = 2""".stripMargin
+        lf"""val `unclosed \\
+            |val y = 2""".stripMargin
 
       check(input,
         Some(success(Token.Val, 0, 2)),
@@ -1034,12 +1033,12 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
     describe("complex expressions") {
       it("case 1") {
         val input =
-          """{
-            |  val name = "world"
-            |  val msg = s"Hello, ${name.toUpperCase}!"
-            |  val result = (1 + 2) * 3
-            |  msg + " " + result.toString
-            |}""".stripMargin
+          lf"""{
+              |  val name = "world"
+              |  val msg = s"Hello, $${name.toUpperCase}!"
+              |  val result = (1 + 2) * 3
+              |  msg + " " + result.toString
+              |}""".stripMargin
         check(input,
           Some(success(Token.LBrace, 0, 0)),
           Some(success(Token.Val, 4, 6)),
@@ -1084,13 +1083,13 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("case 2") {
         val input =
-          """if (x > 0) {
-            |  s"Positive: $x"
-            |} else if (x < 0) {
-            |  s"Negative: $x"
-            |} else {
-            |  "Zero"
-            |}""".stripMargin
+          lf"""if (x > 0) {
+              |  s"Positive: $$x"
+              |} else if (x < 0) {
+              |  s"Negative: $$x"
+              |} else {
+              |  "Zero"
+              |}""".stripMargin
         check(input,
           Some(success(Token.If, 0, 1)),
           Some(success(Token.LParen, 3, 3)),
@@ -1126,12 +1125,12 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("case 3") {
         val input =
-          """res match {
-            |  case s"foo$x" => s"Matched foo with $x"
-            |  case _ =>
-            |    val fallback = "none"
-            |    fallback
-            |}""".stripMargin
+          lf"""res match {
+              |  case s"foo$$x" => s"Matched foo with $$x"
+              |  case _ =>
+              |    val fallback = "none"
+              |    fallback
+              |}""".stripMargin
         check(input,
           Some(success(Token.Identifier.Lower("res"), 0, 2)),
           Some(success(Token.Match, 4, 8)),
