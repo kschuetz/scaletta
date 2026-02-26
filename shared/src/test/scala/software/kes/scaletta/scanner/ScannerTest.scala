@@ -372,7 +372,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         )
       }
 
-      describe("Line ending invariance") {
+      describe("line ending invariance") {
         it("should infer semicolon for all line ending types (value-only)") {
           val code = "val x = 1\nval y = 2"
           val expected = Vector(
@@ -395,6 +395,32 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
             crlf"1\n  \t  \n2",
             cr"1\n  \t  \n2") { actual =>
             actual.filter(_ != Token.Semicolon) shouldBe expected
+          }
+        }
+
+        it("should handle complex sequences identically (value-only)") {
+          val code =
+            """/* Multi-line
+              |   comment */
+              |val x = 1 // end of line
+              |s"interpolated $x string"
+              |/* outer /* inner */ outer */
+              |1 +
+              |  2""".stripMargin
+
+          val expected = Vector(
+            Token.Val, Token.Identifier.Lower("x"), Token.Eq, Token.IntLiteral(1),
+            Token.BeginInterpolatedString(Interpolator.fromName("s")),
+            Token.InterpolatedPart("interpolated "),
+            Token.Identifier.Lower("x"),
+            Token.InterpolatedPart(" string"),
+            Token.EndInterpolatedString,
+            Token.Semicolon,
+            Token.IntLiteral(1), Token.Identifier.Operator("+"), Token.IntLiteral(2)
+          )
+
+          checkValuesOnly(lf"$code", crlf"$code", cr"$code") { actual =>
+            actual shouldBe expected
           }
         }
       }
@@ -1120,7 +1146,6 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           Some(success(Token.InterpolatedPart("Matched foo with "), 33, 49)),
           Some(success(Token.Identifier.Lower("x"), 51, 51)),
           Some(success(Token.EndInterpolatedString, 52, 52)),
-          Some(success(Token.Semicolon, 53, 53)),
           Some(success(Token.Case, 56, 59)),
           Some(success(Token.Underscore, 61, 61)),
           Some(success(Token.RDoubleArrow, 63, 64)),

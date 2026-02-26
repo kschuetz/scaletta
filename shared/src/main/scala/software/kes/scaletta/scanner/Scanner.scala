@@ -64,6 +64,7 @@ final class Scanner private(reader: CharReader,
   private def yieldSuccess(token: Pos[Token],
                            newlineEncounteredBefore: Option[CharIndex]): TokenBuffer.Effect =
     (tokenBuffer: TokenBuffer) => {
+      val effectOnBuffer = updateRegions(token)
       if (newlineEncounteredBefore.isDefined &&
         prevToken.canTerminateStatement &&
         token.value.canBeginStatement &&
@@ -73,14 +74,12 @@ final class Scanner private(reader: CharReader,
         val index = newlineEncounteredBefore.get
         val semicolonPos = Pos(Token.Semicolon: Token, index, index)
         tokenBuffer.enqueue(semicolonPos)
-        tokenBuffer.enqueue(token)
-      } else {
-        updateRegions(token) match {
-          case Some(effect) =>
-            effect(tokenBuffer)
-          case None =>
-            tokenBuffer.enqueue(token)
-        }
+      }
+      effectOnBuffer match {
+        case Some(effect) =>
+          effect(tokenBuffer)
+        case None =>
+          tokenBuffer.enqueue(token)
       }
     }
 

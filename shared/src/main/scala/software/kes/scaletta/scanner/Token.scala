@@ -131,6 +131,8 @@ object Token {
 
     case class Operator(name: String) extends Token with Identifier {
       override def canBeginStatement: Boolean = false
+
+      override def canTerminateStatement: Boolean = false
     }
   }
 
