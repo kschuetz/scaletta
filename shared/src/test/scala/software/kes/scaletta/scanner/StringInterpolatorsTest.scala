@@ -4,6 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.scanner.ScannerError._
+import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
 
@@ -51,7 +52,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
 
     describe("multi-line interpolators") {
       it("containing multiple lines and an identifier") {
-        check("s\"\"\"line 1\n$name\"\"\"",
+        check(lf"s\"\"\"line 1\n$$name\"\"\"",
           success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
           success(Token.InterpolatedPart("line 1\n"), 4, 10),
           success(Token.Identifier.Lower("name"), 12, 15),
@@ -60,7 +61,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
       }
 
       it("containing multiple lines and no identifier") {
-        check("s\"\"\"line 1\nline 2\"\"\"",
+        check(lf"s\"\"\"line 1\nline 2\"\"\"",
           success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
           success(Token.InterpolatedPart("line 1\nline 2"), 4, 16),
           success(Token.EndInterpolatedString, 17, 19)

@@ -2,6 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.success
 import software.kes.scaletta.testsupport.TestReaderFactory
 import software.kes.scaletta.util.CharBuffer
@@ -66,7 +67,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers {
       }
 
       it("string with new lines and escapes") {
-        TestReaderFactory.fromString("\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\"") { reader =>
+        TestReaderFactory.fromString(lf"\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\"") { reader =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.MultiLineString("line 1\nline 2\nline 3\nthis\tline\fhas\\escapes "), -1, 51)
           reader.get() shouldBe None

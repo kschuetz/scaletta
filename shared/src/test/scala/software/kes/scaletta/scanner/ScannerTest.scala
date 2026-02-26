@@ -3,6 +3,7 @@ package software.kes.scaletta.scanner
 import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
 
@@ -30,7 +31,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should handle semicolon inference during peek") {
-        val input = "1\n2"
+        val input = lf"1\n2"
         TestReaderFactory.fromString(input) { reader =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           scanner.peek(1).value shouldBe Token.IntLiteral(1)
@@ -73,17 +74,17 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     describe("whitespace and comments") {
       it("should skip whitespace") {
-        check("  \t\n  123",
+        check(lf"  \t\n  123",
           Some(success(Token.IntLiteral(123), 6, 8))
         )
         // The \r preceding the \n will be ignored and will not have its own char index:
-        check("  \t\r\n  123",
+        check(crlf"  \t\r\n  123",
           Some(success(Token.IntLiteral(123), 6, 8))
         )
       }
 
       it("should skip line comments") {
-        check("// comment\n123",
+        check(lf"// comment\n123",
           Some(success(Token.IntLiteral(123), 11, 13))
         )
       }
@@ -101,7 +102,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should skip multiple comments and whitespace") {
-        check("  // line\n  /* block */  123",
+        check(lf"  // line\n  /* block */  123",
           Some(success(Token.IntLiteral(123), 25, 27))
         )
       }
@@ -259,7 +260,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should infer semicolon between statements on different lines") {
-        check("val x = 1\nval y = 2",
+        check(lf"val x = 1\nval y = 2",
           Some(success(Token.Val, 0, 2)),
           Some(success(Token.Identifier.Lower("x"), 4, 4)),
           Some(success(Token.Eq, 6, 6)),
@@ -273,7 +274,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should NOT infer semicolon when the previous token cannot terminate a statement") {
-        check("val x =\n1",
+        check(lf"val x =\n1",
           Some(success(Token.Val, 0, 2)),
           Some(success(Token.Identifier.Lower("x"), 4, 4)),
           Some(success(Token.Eq, 6, 6)),
@@ -282,7 +283,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should NOT infer semicolon when the next token cannot begin a statement") {
-        check("x match\n{ case _ => 0 }",
+        check(lf"x match\n{ case _ => 0 }",
           Some(success(Token.Identifier.Lower("x"), 0, 0)),
           Some(success(Token.Match, 2, 6)),
           Some(success(Token.LBrace, 8, 8)),
@@ -295,7 +296,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should NOT infer semicolon inside parentheses") {
-        check("(1 +\n2)",
+        check(lf"(1 +\n2)",
           Some(success(Token.LParen, 0, 0)),
           Some(success(Token.IntLiteral(1), 1, 1)),
           Some(success(Token.Identifier.Operator("+"), 3, 3)),
@@ -305,7 +306,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should NOT infer semicolon inside brackets") {
-        check("[A,\nB]",
+        check(lf"[A,\nB]",
           Some(success(Token.LBracket, 0, 0)),
           Some(success(Token.Identifier.Upper("A"), 1, 1)),
           Some(success(Token.Comma, 2, 2)),
@@ -315,7 +316,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should infer semicolon inside braces") {
-        check("{ val x = 1\nval y = 2 }",
+        check(lf"{ val x = 1\nval y = 2 }",
           Some(success(Token.LBrace, 0, 0)),
           Some(success(Token.Val, 2, 4)),
           Some(success(Token.Identifier.Lower("x"), 6, 6)),
@@ -331,7 +332,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should NOT infer semicolon before 'else'") {
-        check("if (true) 1\nelse 2",
+        check(lf"if (true) 1\nelse 2",
           Some(success(Token.If, 0, 1)),
           Some(success(Token.LParen, 3, 3)),
           Some(success(Token.True, 4, 7)),
@@ -343,7 +344,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should NOT infer semicolon before 'match'") {
-        check("x\nmatch { case _ => 0 }",
+        check(lf"x\nmatch { case _ => 0 }",
           Some(success(Token.Identifier.Lower("x"), 0, 0)),
           Some(success(Token.Match, 2, 6)),
           Some(success(Token.LBrace, 8, 8)),
@@ -356,7 +357,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should infer semicolon after block comment with newline") {
-        check("1 /* comment */\n2",
+        check(lf"1 /* comment */\n2",
           Some(success(Token.IntLiteral(1), 0, 0)),
           Some(success(Token.Semicolon, 15, 15)),
           Some(success(Token.IntLiteral(2), 16, 16))
@@ -364,11 +365,38 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("should infer semicolon after line comment") {
-        check("1 // comment\n2",
+        check(lf"1 // comment\n2",
           Some(success(Token.IntLiteral(1), 0, 0)),
           Some(success(Token.Semicolon, 12, 12)),
           Some(success(Token.IntLiteral(2), 13, 13))
         )
+      }
+
+      describe("Line ending invariance") {
+        it("should infer semicolon for all line ending types (value-only)") {
+          val code = "val x = 1\nval y = 2"
+          val expected = Vector(
+            Token.Val, Token.Identifier.Lower("x"), Token.Eq, Token.IntLiteral(1),
+            Token.Semicolon,
+            Token.Val, Token.Identifier.Lower("y"), Token.Eq, Token.IntLiteral(2)
+          )
+
+          checkValuesOnly(lf"$code",
+            crlf"$code",
+            cr"$code") { actual =>
+            actual shouldBe expected
+          }
+        }
+
+        it("should skip all types of whitespace and line endings (value-only)") {
+          val expected = Vector(Token.IntLiteral(1), Token.IntLiteral(2))
+
+          checkValuesOnly(lf"1\n  \t  \n2",
+            crlf"1\n  \t  \n2",
+            cr"1\n  \t  \n2") { actual =>
+            actual.filter(_ != Token.Semicolon) shouldBe expected
+          }
+        }
       }
 
       it("should NOT infer semicolon when an explicit semicolon is present on the same line") {
@@ -1119,4 +1147,19 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       assertExpectedTokens(input, actualTokens, expectedPosList)
     }
   }
+
+  private def checkValuesOnly(inputs: String*)
+                             (assertions: Vector[Token] => Unit)
+                             (implicit pos: Position): Unit =
+    inputs.foreach { input =>
+      withClue(s"Input: $input") {
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          val actual = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
+          assertions(actual.map(_.value))
+        }
+      }
+    }
+
+
 }
