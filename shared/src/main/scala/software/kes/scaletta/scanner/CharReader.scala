@@ -1,7 +1,7 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.scanner.CharReader.Settings
-import software.kes.scaletta.util.CharPushback
+import software.kes.scaletta.util.{CharPushback, SettingsStack}
 
 object CharReader {
   def create(source: Iterator[Char],
@@ -9,7 +9,7 @@ object CharReader {
              currentIndex: CharIndex = CharIndex(0),
              settings: Settings = Settings()): CharReader = {
     val pushback = CharPushback.create()
-    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder, settings, List.empty)
+    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder, SettingsStack.create(settings))
   }
 
   case class Settings(normalizeNewLines: Boolean = true)
@@ -20,8 +20,7 @@ final class CharReader private(source: Iterator[Char],
                                private var _currentIndex: CharIndex,
                                private var highWater: CharIndex,
                                private val lineMapBuilder: LineMapBuilder,
-                               private var _settings: Settings,
-                               private var settingsStack: List[Settings]) {
+                               private val settingsStack: SettingsStack[Settings]) {
   private var lastReadWidth: Int = 1
 
   def get(): Option[Char] =
@@ -158,23 +157,20 @@ final class CharReader private(source: Iterator[Char],
 
   def prevIndex: CharIndex = _currentIndex - 1
 
-  def settings: CharReader.Settings = _settings
+  def settings: CharReader.Settings = settingsStack.current
 
   /**
    * Modifies the settings in place. Does not affect the settings stack.
    */
-  def modifySettings(fn: Settings => Settings): Unit = {
-    val newSettings = fn(settings)
-    _settings = newSettings
-  }
+  def modifySettings(fn: Settings => Settings): Unit =
+    settingsStack.modify(fn)
 
   /**
    * Pushes the current settings onto the stack, then modifies the active settings.
    * Should eventually be matched with a call to popSettings().
    */
   def pushSettings(fn: Settings => Settings): Unit = {
-    settingsStack = settings :: settingsStack
-    _settings = fn(settings)
+    settingsStack.push(fn)
   }
 
   /**
@@ -182,11 +178,5 @@ final class CharReader private(source: Iterator[Char],
    * Should be matched with a call to pushSettings().
    */
   def popSettings(): Unit =
-    settingsStack match {
-      case head :: tail =>
-        _settings = head
-        settingsStack = tail
-      case Nil =>
-        throw new IllegalStateException("popSettings() called on empty stack")
-    }
+    settingsStack.pop()
 }
