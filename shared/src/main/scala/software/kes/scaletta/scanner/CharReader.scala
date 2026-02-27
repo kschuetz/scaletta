@@ -1,22 +1,27 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.scanner.CharReader.Settings
 import software.kes.scaletta.util.CharPushback
 
 object CharReader {
   def create(source: Iterator[Char],
              lineMapBuilder: LineMapBuilder,
-             currentIndex: CharIndex = CharIndex(0)): CharReader = {
+             currentIndex: CharIndex = CharIndex(0),
+             settings: Settings = Settings()): CharReader = {
     val pushback = CharPushback.create()
-    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder)
+    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder, settings, List.empty)
   }
+
+  case class Settings(normalizeNewLines: Boolean = true)
 }
 
-// TODO: add preserveNewLines flag
 final class CharReader private(source: Iterator[Char],
                                pushback: CharPushback,
                                private var _currentIndex: CharIndex,
                                private var highWater: CharIndex,
-                               private val lineMapBuilder: LineMapBuilder) {
+                               private val lineMapBuilder: LineMapBuilder,
+                               private var _settings: Settings,
+                               private var settingsStack: List[Settings]) {
   private var lastReadWidth: Int = 1
 
   def get(): Option[Char] =
@@ -27,7 +32,7 @@ final class CharReader private(source: Iterator[Char],
       Some(pushback.pop())
     } else if (source.hasNext) {
       var result = source.next()
-      if (result == '\r') {
+      if (settings.normalizeNewLines && result == '\r') {
         if (source.hasNext) {
           val next = source.next()
           if (next == '\n') {
@@ -122,7 +127,7 @@ final class CharReader private(source: Iterator[Char],
       Some(pushback.peek())
     } else if (source.hasNext) {
       val result = source.next()
-      if (result == '\r') {
+      if (settings.normalizeNewLines && result == '\r') {
         if (source.hasNext) {
           val next = source.next()
           if (next == '\n') {
@@ -152,4 +157,36 @@ final class CharReader private(source: Iterator[Char],
   def currentIndex: CharIndex = _currentIndex
 
   def prevIndex: CharIndex = _currentIndex - 1
+
+  def settings: CharReader.Settings = _settings
+
+  /**
+   * Modifies the settings in place. Does not affect the settings stack.
+   */
+  def modifySettings(fn: Settings => Settings): Unit = {
+    val newSettings = fn(settings)
+    _settings = newSettings
+  }
+
+  /**
+   * Pushes the current settings onto the stack, then modifies the active settings.
+   * Should eventually be matched with a call to popSettings().
+   */
+  def pushSettings(fn: Settings => Settings): Unit = {
+    settingsStack = settings :: settingsStack
+    _settings = fn(settings)
+  }
+
+  /**
+   * Pops the topmost settings from the stack, restoring the previous settings.
+   * Should be matched with a call to pushSettings().
+   */
+  def popSettings(): Unit =
+    settingsStack match {
+      case head :: tail =>
+        _settings = head
+        settingsStack = tail
+      case Nil =>
+        throw new IllegalStateException("popSettings() called on empty stack")
+    }
 }

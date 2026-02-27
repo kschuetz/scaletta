@@ -49,5 +49,59 @@ class CharReaderTest extends AnyFunSpec with Matchers {
         reader.prevIndex.value shouldBe 3
       }
     }
+
+    it("should NOT normalize CRLF when normalization is disabled") {
+      val input = "a\r\nb"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.modifySettings(_.copy(normalizeNewLines = false))
+
+        reader.get() shouldBe Some('a') // 0
+        reader.get() shouldBe Some('\r') // 1
+        reader.get() shouldBe Some('\n') // 2
+        reader.get() shouldBe Some('b') // 3
+      }
+    }
+
+    it("should correctly handle peek with normalization disabled") {
+      val input = "\r\n"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.modifySettings(_.copy(normalizeNewLines = false))
+        reader.peek() shouldBe Some('\r')
+        reader.get() shouldBe Some('\r')
+        reader.peek() shouldBe Some('\n')
+        reader.get() shouldBe Some('\n')
+      }
+    }
+
+    it("should toggle normalization correctly") {
+      val input = "\r\n\r\n\r"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.modifySettings(_.copy(normalizeNewLines = false))
+        reader.get() shouldBe Some('\r')
+        reader.get() shouldBe Some('\n')
+
+        reader.modifySettings(_.copy(normalizeNewLines = true))
+        reader.get() shouldBe Some('\n') // normalized from \r\n
+        reader.get() shouldBe Some('\n') // normalized from \r
+        reader.get() shouldBe None
+      }
+    }
+
+    it("should support pushSettings and popSettings") {
+      val input = "\r\n\r\n"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.settings.normalizeNewLines shouldBe true
+
+        reader.pushSettings(_.copy(normalizeNewLines = false))
+        reader.settings.normalizeNewLines shouldBe false
+        reader.get() shouldBe Some('\r')
+        reader.get() shouldBe Some('\n')
+
+        reader.popSettings()
+        reader.settings.normalizeNewLines shouldBe true
+        reader.get() shouldBe Some('\n') // normalized from \r\n
+        reader.get() shouldBe None
+      }
+    }
   }
 }
