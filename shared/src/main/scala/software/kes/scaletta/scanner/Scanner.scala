@@ -39,21 +39,16 @@ final class Scanner private(reader: CharReader,
   def peek(n: Int): Pos[Token] = {
     require(n >= 1, "n must be at least 1")
     fillBuffer(n)
-    if (n <= tokenBuffer.length) {
-      tokenBuffer.get(n - 1)
-    } else {
-      // This should really not happen because fillBuffer enqueues EOF if needed
-      tokenBuffer.lastOption.getOrElse(Pos(Token.EndOfInput, reader.currentIndex, reader.currentIndex))
-    }
+    tokenBuffer.get(n - 1)
   }
 
   @tailrec
   private def fillBuffer(n: Int): Unit = {
-    if (tokenBuffer.length < n && !tokenBuffer.lastOption.exists(_.value == Token.EndOfInput)) {
+    if (tokenBuffer.length < n && !tokenBuffer.isExhausted) {
       val effect = readNext()
-      val previousLast = tokenBuffer.lastOption.map(_.value).getOrElse(prevToken)
+      val previousLast = tokenBuffer.mostRecentlyAdded.map(_.value).getOrElse(prevToken)
       effect(tokenBuffer)
-      val newLast = tokenBuffer.lastOption.map(_.value).getOrElse(prevToken)
+      val newLast = tokenBuffer.mostRecentlyAdded.map(_.value).getOrElse(prevToken)
       if (newLast != previousLast) {
         prevToken = newLast
       }
@@ -234,7 +229,7 @@ final class Scanner private(reader: CharReader,
 
       case None =>
         (tokenBuffer: TokenBuffer) => {
-          tokenBuffer.updateEndOfInput(begin)
+          tokenBuffer.terminate(Pos(Token.EndOfInput, begin, begin))
         }
     }
   }

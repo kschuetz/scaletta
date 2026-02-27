@@ -9,21 +9,42 @@ object TokenBuffer {
 }
 
 final class TokenBuffer private(private val queue: mutable.Queue[Pos[Token]]) {
-  def isEmpty: Boolean = queue.isEmpty
+  private var _terminalToken: Option[Pos[Token]] = None
 
-  def dequeue(): Pos[Token] = queue.dequeue()
+  def isEmpty: Boolean = queue.isEmpty && _terminalToken.isEmpty
 
-  def enqueue(token: Pos[Token]): Unit = queue.enqueue(token)
+  def isExhausted: Boolean = _terminalToken.isDefined
 
-  def get(index: Int): Pos[Token] = queue(index)
+  def dequeue(): Pos[Token] =
+    if (queue.nonEmpty) {
+      queue.dequeue()
+    } else {
+      _terminalToken.getOrElse(throw new NoSuchElementException("dequeue from empty buffer"))
+    }
+
+  def enqueue(token: Pos[Token]): Unit = {
+    if (_terminalToken.isEmpty) {
+      queue.enqueue(token)
+    }
+  }
+
+  def get(index: Int): Pos[Token] = {
+    if (index < queue.length) {
+      queue(index)
+    } else {
+      _terminalToken.getOrElse(throw new IndexOutOfBoundsException(index.toString))
+    }
+  }
 
   def length: Int = queue.length
 
-  def lastOption: Option[Pos[Token]] = queue.lastOption
+  def mostRecentlyAdded: Option[Pos[Token]] =
+    if (queue.nonEmpty) Some(queue.last)
+    else _terminalToken
 
-  def updateEndOfInput(index: CharIndex): Unit = {
-    if (!queue.lastOption.exists(_.value == Token.EndOfInput)) {
-      enqueue(Pos(Token.EndOfInput, index, index))
+  def terminate(pos: Pos[Token]): Unit = {
+    if (_terminalToken.isEmpty) {
+      _terminalToken = Some(pos)
     }
   }
 }
