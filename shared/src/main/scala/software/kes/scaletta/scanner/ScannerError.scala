@@ -34,4 +34,6 @@ object ScannerError {
   case object IdentifierTooLong extends ScannerError
 
   case object InvalidCharacter extends ScannerError
+
+  case object UnbalancedBraces extends ScannerError
 }

@@ -8,12 +8,12 @@ import scala.annotation.{switch, tailrec}
 
 object Scanner {
   def create(reader: CharReader,
-             identifierPolicy: IdentifierPolicy): Scanner = {
+             identifierPolicy: IdentifierPolicy,
+             portalMode: Boolean = false): Scanner = {
     val buffer = CharBuffer.create()
     val identifierScanner = new IdentifierScanner(identifierPolicy)
-    val initialBegin = reader.currentIndex
     val tokenBuffer = TokenBuffer.create()
-    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, tokenBuffer, RegionStack.empty, initialBegin)
+    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, tokenBuffer, RegionStack.empty, portalMode)
   }
 }
 
@@ -23,7 +23,9 @@ final class Scanner private(reader: CharReader,
                             private var prevToken: Token,
                             private val tokenBuffer: TokenBuffer,
                             private var regionStack: RegionStack,
-                            private val initialBegin: CharIndex) {
+                            private val portalMode: Boolean) {
+  private var braceDepth: Int = if (portalMode) 1 else 0
+
   def get(): Pos[Token] = {
     fillBuffer(1)
     tokenBuffer.dequeue()
@@ -59,8 +61,10 @@ final class Scanner private(reader: CharReader,
   private def yieldSuccess(token: Pos[Token],
                            newlineEncounteredBefore: Option[CharIndex]): TokenBuffer.Effect =
     (tokenBuffer: TokenBuffer) => {
+      val isFinalClosingBrace = portalMode && braceDepth == 1 && token.value == Token.RBrace
       val effectOnBuffer = updateRegions(token)
-      if (newlineEncounteredBefore.isDefined &&
+      if (!isFinalClosingBrace &&
+        newlineEncounteredBefore.isDefined &&
         prevToken.canTerminateStatement &&
         token.value.canBeginStatement &&
         newlinesEnabledInRegion() &&
@@ -94,10 +98,24 @@ final class Scanner private(reader: CharReader,
           case SkipCommentsResult.Unterminated =>
             (tokenBuffer: TokenBuffer) =>
               tokenBuffer.enqueue(Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex))
-          case SkipCommentsResult.NewLinesEncountered(value) =>
-            checkForForcedExit(Some(value)).getOrElse(readToken(Some(value)))
+          case SkipCommentsResult.NewLinesEncountered(index) =>
+            val someIndex = Some(index)
+            checkForForcedExit(someIndex).getOrElse(readToken(someIndex))
           case SkipCommentsResult.NoNewLinesEncountered =>
-            checkForForcedExit(None).getOrElse(readToken(None))
+            checkForForcedExit(None).getOrElse {
+              if (reader.peek().isEmpty) {
+                (tokenBuffer: TokenBuffer) => {
+                  if (portalMode && braceDepth > 0) {
+                    val pos: Pos[Token] = Pos(Token.Error(ScannerError.UnbalancedBraces): Token, begin, begin)
+                    tokenBuffer.enqueue(pos)
+                  }
+                  val endOfInputPos: Pos[Token] = Pos(Token.EndOfInput: Token, begin, begin)
+                  tokenBuffer.terminate(endOfInputPos)
+                }
+              } else {
+                readToken(None)
+              }
+            }
         }
     }
 
@@ -229,7 +247,12 @@ final class Scanner private(reader: CharReader,
 
       case None =>
         (tokenBuffer: TokenBuffer) => {
-          tokenBuffer.terminate(Pos(Token.EndOfInput, begin, begin))
+          if (portalMode && braceDepth > 0) {
+            val pos: Pos[Token] = Pos(Token.Error(ScannerError.UnbalancedBraces): Token, begin, begin)
+            tokenBuffer.enqueue(pos)
+          }
+          val endOfInputPos: Pos[Token] = Pos(Token.EndOfInput: Token, begin, begin)
+          tokenBuffer.terminate(endOfInputPos)
         }
     }
   }
@@ -353,6 +376,7 @@ final class Scanner private(reader: CharReader,
         enterRegion(RegionAttributes.Brackets)
         None
       case LBrace =>
+        braceDepth += 1
         enterRegion(RegionAttributes.Braces)
         None
       case Case =>
@@ -377,16 +401,24 @@ final class Scanner private(reader: CharReader,
         exitRegion(RegionType.Brackets)
         None
       case RBrace =>
-        regionStack.peek match {
-          case Some(RegionAttributes.InterpolatedEscape) =>
-            Some((tokenBuffer: TokenBuffer) => {
-              exitRegion(RegionType.InterpolatedEscape)
-              val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
-              tokenBuffer.enqueue(endPos)
-            })
-          case _ =>
-            exitRegion(RegionType.Braces)
-            None
+        braceDepth -= 1
+        if (portalMode && braceDepth == 0) {
+          Some((tokenBuffer: TokenBuffer) => {
+            val endOfInputPos = Pos(Token.EndOfInput: Token, reader.currentIndex, reader.currentIndex)
+            tokenBuffer.terminate(endOfInputPos)
+          })
+        } else {
+          regionStack.peek match {
+            case Some(RegionAttributes.InterpolatedEscape) =>
+              Some((tokenBuffer: TokenBuffer) => {
+                exitRegion(RegionType.InterpolatedEscape)
+                val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
+                tokenBuffer.enqueue(endPos)
+              })
+            case _ =>
+              exitRegion(RegionType.Braces)
+              None
+          }
         }
       case RDoubleArrow =>
         exitRegion(RegionType.Case)

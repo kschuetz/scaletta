@@ -1158,13 +1158,87 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         )
       }
     }
+
+    describe("portal mode") {
+      it("should exit silently at the closing brace that balances the entrance") {
+        val input = "x + 1}"
+        checkPortal(input,
+          Some(success(Token.Identifier.Lower("x"), 0, 0)),
+          Some(success(Token.Identifier.Operator("+"), 2, 2)),
+          Some(success(Token.IntLiteral(1), 4, 4))
+          // No RBrace here
+        )
+      }
+
+      it("should leave the reader positioned exactly after the closing brace") {
+        val input = "x}tail"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
+          scanner.get().value shouldBe Token.Identifier.Lower("x")
+          scanner.get().value shouldBe Token.EndOfInput
+          scanner.get().value shouldBe Token.EndOfInput
+          reader.currentIndex.value shouldBe 2 // exactly at 't' in 'tail'
+        }
+      }
+
+      it("should track nested structural braces and only exit at the top-level one") {
+        val input = "{ x } }"
+        checkPortal(input,
+          Some(success(Token.LBrace, 0, 0)),
+          Some(success(Token.Identifier.Lower("x"), 2, 2)),
+          Some(success(Token.RBrace, 4, 4))
+          // Exits at the second '}'
+        )
+      }
+
+      it("should ignore braces in comments and string literals") {
+        val input =
+          """ "}" // }
+            |}""".stripMargin
+        checkPortal(input,
+          Some(success(Token.StringLiteral("}"), 1, 3))
+          // Exits at the final '}'
+        )
+      }
+
+      it("should yield a fatal error if EndOfInput is reached while depth > 0") {
+        val input = "x + { 1"
+        checkPortal(input,
+          Some(success(Token.Identifier.Lower("x"), 0, 0)),
+          Some(success(Token.Identifier.Operator("+"), 2, 2)),
+          Some(success(Token.LBrace, 4, 4)),
+          Some(success(Token.IntLiteral(1), 6, 6)),
+          Some(failure(ScannerError.UnbalancedBraces, 7, 7))
+        )
+      }
+
+      it("should yield a fatal error if EndOfInput is reached immediately") {
+        val input = ""
+        checkPortal(input,
+          Some(failure(ScannerError.UnbalancedBraces, 0, 0))
+        )
+      }
+    }
   }
 
   private def check(input: String,
                     expectedTokens: Option[Pos[Token]]*)
                    (implicit pos: Position): Unit = {
+    checkWithMode(input, portalMode = false, expectedTokens: _*)
+  }
+
+  private def checkPortal(input: String,
+                          expectedTokens: Option[Pos[Token]]*)
+                         (implicit pos: Position): Unit = {
+    checkWithMode(input, portalMode = true, expectedTokens: _*)
+  }
+
+  private def checkWithMode(input: String,
+                            portalMode: Boolean,
+                            expectedTokens: Option[Pos[Token]]*)
+                           (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
-      val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+      val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = portalMode)
       val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
       val expectedPosList = expectedTokens.toVector.flatten
 
