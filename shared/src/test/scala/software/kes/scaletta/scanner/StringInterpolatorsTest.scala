@@ -113,12 +113,39 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
       )
     }
 
-    // TODO: Fix this later
-    ignore("invalid escape character in part") {
+    it("invalid escape character in part") {
       // Similar to Scala's behavior: Discard the prefix and return only the fatal error.
       check("s\"hello \\z\"",
         success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
         failure(InvalidEscapeCharacter, 8, 8)
+      )
+    }
+
+    it("invalid escape character in multiline part") {
+      check("s\"\"\"hello \\z\"\"\"",
+        success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
+        failure(InvalidEscapeCharacter, 10, 10)
+      )
+    }
+
+    it("unclosed string with invalid escape character") {
+      check("s\"hello \\z",
+        success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
+        failure(UnclosedStringLiteral, 2, 10)
+      )
+    }
+
+    it("unclosed multiline string with invalid escape character") {
+      check("s\"\"\"hello \\z",
+        success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
+        failure(UnclosedMultiLineString, 4, 12)
+      )
+    }
+
+    it("invalid escape character in multiline part with single quotes before closing") {
+      check("s\"\"\"hello \\z \" still in string \"\"\"",
+        success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
+        failure(InvalidEscapeCharacter, 10, 10)
       )
     }
 

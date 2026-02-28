@@ -26,6 +26,24 @@ object InterpolatedStrings {
     }
 
     @tailrec
+    def skipToEnd(error: ScannerError, errorPos: CharIndex): Result =
+      reader.get() match {
+        case Some('"') => Pos(Error(error), errorPos, errorPos)
+        case Some(_) => skipToEnd(error, errorPos)
+        case None => unclosed
+      }
+
+    @tailrec
+    def skipToEndMulti(error: ScannerError, errorPos: CharIndex): Result =
+      reader.get() match {
+        case Some('"') => if (reader.matchSequence(DoubleQuotes2)) {
+          Pos(Error(error), errorPos, errorPos)
+        } else skipToEndMulti(error, errorPos)
+        case Some(_) => skipToEndMulti(error, errorPos)
+        case None => unclosed
+      }
+
+    @tailrec
     def go(): Result =
       reader.get() match {
         case Some(ch) =>
@@ -71,7 +89,9 @@ object InterpolatedStrings {
                     buffer.write(escaped)
                     go()
                   case EscapeResult.Error(error) =>
-                    Pos(Error(error), reader.prevIndex)
+                    if (multiLine) {
+                      skipToEndMulti(error, reader.prevIndex)
+                    } else skipToEnd(error, reader.prevIndex)
                   case EscapeResult.Boundary =>
                     unclosed
                 }
