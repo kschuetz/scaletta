@@ -1166,9 +1166,9 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
     TestReaderFactory.fromString(input) { reader =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
       val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
-      val expectedPosList = expectedTokens.collect { case Some(p) => p }.toVector
+      val expectedPosList = expectedTokens.toVector.flatten
 
-      assertExpectedTokens(input, actualTokens, expectedPosList)
+      assertExpectedTokens(input, expectedPosList, actualTokens)
     }
   }
 
@@ -1184,6 +1184,5 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         }
       }
     }
-
 
 }
