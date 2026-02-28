@@ -1,5 +1,7 @@
 package software.kes.scaletta.scanner
 
+import scala.annotation.switch
+
 object CharacterClass {
   def isWhitespace(ch: Char): Boolean =
     ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n'
@@ -37,7 +39,29 @@ object CharacterClass {
   }
 
   def isOperator(ch: Char): Boolean = {
-    isAsciiOperator(ch) || {
+    if (ch <= 127) {
+      (ch: @switch) match {
+        case '!' |
+             '#' |
+             '%' |
+             '&' |
+             '*' |
+             '+' |
+             '-' |
+             '/' |
+             ':' |
+             '<' |
+             '=' |
+             '>' |
+             '?' |
+             '@' |
+             '\\' |
+             '^' |
+             '|' |
+             '~' => true
+        case _ => false
+      }
+    } else {
       val chtp = Character.getType(ch)
       chtp == Character.MATH_SYMBOL.toInt || chtp == Character.OTHER_SYMBOL.toInt
     }
@@ -46,33 +70,6 @@ object CharacterClass {
   def isUppercase(ch: Char): Boolean =
     if (ch <= 127) (ch >= 'A' && ch <= 'Z')
     else Character.getType(ch) == Character.UPPERCASE_LETTER.toInt
-
-  private def isDelimiter(ch: Char): Boolean =
-    ch match {
-      case '`' |
-           '\'' |
-           '"' |
-           '.' |
-           ';' |
-           ',' => true
-      case _ => false
-    }
-
-  private def isParenthesis(ch: Char): Boolean =
-    ch match {
-      case '(' |
-           ')' |
-           '[' |
-           ']' |
-           '{' |
-           '}' => true
-      case _ => false
-    }
-
-  private def isAsciiOperator(ch: Char): Boolean =
-    (ch >= 33 && ch <= 126) && ! {
-      isIdentifierInner(ch) || isDelimiter(ch) || isParenthesis(ch)
-    }
 
   def main(args: Array[String]): Unit = {
     (0 to 65535).foreach { n =>
