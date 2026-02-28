@@ -14,6 +14,8 @@ object RegionType {
   case object InterpolatedString extends RegionType
 
   case object InterpolatedEscape extends RegionType
+
+  case object Portal extends RegionType
 }
 
 sealed trait RegionAttributes {
@@ -58,5 +60,11 @@ object RegionAttributes {
     def newlinesEnabled: Boolean = true
 
     def regionType: RegionType = RegionType.InterpolatedEscape
+  }
+
+  case object Portal extends RegionAttributes {
+    def newlinesEnabled: Boolean = true
+
+    def regionType: RegionType = RegionType.Portal
   }
 }

@@ -1218,6 +1218,31 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           Some(failure(ScannerError.UnbalancedBraces, 0, 0))
         )
       }
+
+      it("should not exit if a brace is encountered while a non-portal region is on the stack") {
+        val input = "( x }"
+        checkPortal(input,
+          Some(success(Token.LParen, 0, 0)),
+          Some(success(Token.Identifier.Lower("x"), 2, 2)),
+          Some(success(Token.RBrace, 4, 4)),
+          Some(failure(ScannerError.UnbalancedBraces, 5, 5))
+        )
+      }
+
+      it("should only exit when the stack is balanced back to the Portal region") {
+        val input = "val x = (1 } tail }"
+        checkPortal(input,
+          Some(success(Token.Val, 0, 2)),
+          Some(success(Token.Identifier.Lower("x"), 4, 4)),
+          Some(success(Token.Eq, 6, 6)),
+          Some(success(Token.LParen, 8, 8)),
+          Some(success(Token.IntLiteral(1), 9, 9)),
+          Some(success(Token.RBrace, 11, 11)), // typo, doesn't exit
+          Some(success(Token.Identifier.Lower("tail"), 13, 16)),
+          Some(success(Token.RBrace, 18, 18)), // still doesn't exit because '(' is still open
+          Some(failure(ScannerError.UnbalancedBraces, 19, 19)) // reaches EOF while unbalanced
+        )
+      }
     }
   }
 

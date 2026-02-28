@@ -13,7 +13,10 @@ object Scanner {
     val buffer = CharBuffer.create()
     val identifierScanner = new IdentifierScanner(identifierPolicy)
     val tokenBuffer = TokenBuffer.create()
-    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, tokenBuffer, RegionStack.empty, portalMode)
+    val regionStack = if (portalMode) {
+      RegionStack.empty.enter(RegionAttributes.Portal)
+    } else RegionStack.empty
+    new Scanner(reader, buffer, identifierScanner, Token.BeginOfInput, tokenBuffer, regionStack, portalMode)
   }
 }
 
@@ -24,7 +27,6 @@ final class Scanner private(reader: CharReader,
                             private val tokenBuffer: TokenBuffer,
                             private var regionStack: RegionStack,
                             private val portalMode: Boolean) {
-  private var braceDepth: Int = if (portalMode) 1 else 0
 
   def get(): Pos[Token] = {
     fillBuffer(1)
@@ -61,7 +63,7 @@ final class Scanner private(reader: CharReader,
   private def yieldSuccess(token: Pos[Token],
                            newlineEncounteredBefore: Option[CharIndex]): TokenBuffer.Effect =
     (tokenBuffer: TokenBuffer) => {
-      val isFinalClosingBrace = portalMode && braceDepth == 1 && token.value == Token.RBrace
+      val isFinalClosingBrace = regionStack.peek.contains(RegionAttributes.Portal) && token.value == Token.RBrace
       val effectOnBuffer = updateRegions(token)
       if (!isFinalClosingBrace &&
         newlineEncounteredBefore.isDefined &&
@@ -105,7 +107,7 @@ final class Scanner private(reader: CharReader,
             checkForForcedExit(None).getOrElse {
               if (reader.peek().isEmpty) {
                 (tokenBuffer: TokenBuffer) => {
-                  if (portalMode && braceDepth > 0) {
+                  if (portalMode && regionStack.peek.isDefined) {
                     val pos: Pos[Token] = Pos(Token.Error(ScannerError.UnbalancedBraces): Token, begin, begin)
                     tokenBuffer.enqueue(pos)
                   }
@@ -247,7 +249,12 @@ final class Scanner private(reader: CharReader,
 
       case None =>
         (tokenBuffer: TokenBuffer) => {
-          if (portalMode && braceDepth > 0) {
+          val isUnbalanced = regionStack.peek match {
+            case Some(RegionAttributes.Portal) => portalMode
+            case Some(_) => true
+            case None => portalMode
+          }
+          if (isUnbalanced) {
             val pos: Pos[Token] = Pos(Token.Error(ScannerError.UnbalancedBraces): Token, begin, begin)
             tokenBuffer.enqueue(pos)
           }
@@ -376,7 +383,6 @@ final class Scanner private(reader: CharReader,
         enterRegion(RegionAttributes.Brackets)
         None
       case LBrace =>
-        braceDepth += 1
         enterRegion(RegionAttributes.Braces)
         None
       case Case =>
@@ -401,24 +407,21 @@ final class Scanner private(reader: CharReader,
         exitRegion(RegionType.Brackets)
         None
       case RBrace =>
-        braceDepth -= 1
-        if (portalMode && braceDepth == 0) {
-          Some((tokenBuffer: TokenBuffer) => {
-            val endOfInputPos = Pos(Token.EndOfInput: Token, reader.currentIndex, reader.currentIndex)
-            tokenBuffer.terminate(endOfInputPos)
-          })
-        } else {
-          regionStack.peek match {
-            case Some(RegionAttributes.InterpolatedEscape) =>
-              Some((tokenBuffer: TokenBuffer) => {
-                exitRegion(RegionType.InterpolatedEscape)
-                val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
-                tokenBuffer.enqueue(endPos)
-              })
-            case _ =>
-              exitRegion(RegionType.Braces)
-              None
-          }
+        regionStack.peek match {
+          case Some(RegionAttributes.Portal) =>
+            Some((tokenBuffer: TokenBuffer) => {
+              val endOfInputPos = Pos(Token.EndOfInput: Token, reader.currentIndex, reader.currentIndex)
+              tokenBuffer.terminate(endOfInputPos)
+            })
+          case Some(RegionAttributes.InterpolatedEscape) =>
+            Some((tokenBuffer: TokenBuffer) => {
+              exitRegion(RegionType.InterpolatedEscape)
+              val endPos = Pos(Token.EndInterpolatedEscape: Token, token.begin, token.end)
+              tokenBuffer.enqueue(endPos)
+            })
+          case _ =>
+            exitRegion(RegionType.Braces)
+            None
         }
       case RDoubleArrow =>
         exitRegion(RegionType.Case)
