@@ -27,26 +27,41 @@ object CharacterClass {
       ct == Character.ENCLOSING_MARK.toInt
   }
 
-  def isOperator(ch: Char): Boolean =
-    operators.contains(ch) || {
+  def isOperator(ch: Char): Boolean = {
+    isAsciiOperator(ch) || {
       val chtp = Character.getType(ch)
       chtp == Character.MATH_SYMBOL.toInt || chtp == Character.OTHER_SYMBOL.toInt
     }
+  }
 
   def isUppercase(ch: Char): Boolean =
     Character.getType(ch) == Character.UPPERCASE_LETTER.toInt
 
-  private lazy val delimiters =
-    Set('`', '\'', '"', '.', ';', ',')
+  private def isDelimiter(ch: Char): Boolean =
+    ch match {
+      case '`' |
+           '\'' |
+           '"' |
+           '.' |
+           ';' |
+           ',' => true
+      case _ => false
+    }
 
-  private lazy val parentheses =
-    Set('(', ')', '[', ']', '{', '}')
+  private def isParenthesis(ch: Char): Boolean =
+    ch match {
+      case '(' |
+           ')' |
+           '[' |
+           ']' |
+           '{' |
+           '}' => true
+      case _ => false
+    }
 
-  private lazy val operators =
-    (33.toChar to 126.toChar).foldLeft(Set.empty[Char]) {
-      case (acc, ch) =>
-        if (isIdentifierInner(ch) || delimiters.contains(ch) || parentheses.contains(ch)) acc
-        else acc + ch
+  private def isAsciiOperator(ch: Char): Boolean =
+    (ch >= 33 && ch <= 126) && ! {
+      isIdentifierInner(ch) || isDelimiter(ch) || isParenthesis(ch)
     }
 
   def main(args: Array[String]): Unit = {
@@ -56,6 +71,5 @@ object CharacterClass {
 
       if (isOperator(ch)) println(s"${n.toChar}  ${n.toHexString}")
     }
-
   }
 }
