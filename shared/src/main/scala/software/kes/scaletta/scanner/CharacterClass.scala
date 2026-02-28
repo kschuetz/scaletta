@@ -8,10 +8,16 @@ object CharacterClass {
     (ch >= '0' && ch <= '9')
 
   def isLetter(ch: Char): Boolean = {
-    val ct = Character.getType(ch)
-    ct == Character.LOWERCASE_LETTER.toInt || ct == Character.UPPERCASE_LETTER.toInt ||
-      ct == Character.TITLECASE_LETTER.toInt || ct == Character.LETTER_NUMBER.toInt ||
-      ct == Character.MODIFIER_LETTER
+    if (ch <= 127) {
+      (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+    } else {
+      val ct = Character.getType(ch)
+      ct == Character.LOWERCASE_LETTER.toInt ||
+        ct == Character.UPPERCASE_LETTER.toInt ||
+        ct == Character.TITLECASE_LETTER.toInt ||
+        ct == Character.LETTER_NUMBER.toInt ||
+        ct == Character.MODIFIER_LETTER.toInt
+    }
   }
 
   def isIdentifierStart(ch: Char): Boolean =
@@ -21,10 +27,13 @@ object CharacterClass {
     isIdentifierStart(ch) || isDigit(ch) || isCombiningMark(ch)
 
   def isCombiningMark(ch: Char): Boolean = {
-    val ct = Character.getType(ch)
-    ct == Character.NON_SPACING_MARK.toInt ||
-      ct == Character.COMBINING_SPACING_MARK.toInt ||
-      ct == Character.ENCLOSING_MARK.toInt
+    if (ch <= 127) false
+    else {
+      val ct = Character.getType(ch)
+      ct == Character.NON_SPACING_MARK.toInt ||
+        ct == Character.COMBINING_SPACING_MARK.toInt ||
+        ct == Character.ENCLOSING_MARK.toInt
+    }
   }
 
   def isOperator(ch: Char): Boolean = {
@@ -35,7 +44,8 @@ object CharacterClass {
   }
 
   def isUppercase(ch: Char): Boolean =
-    Character.getType(ch) == Character.UPPERCASE_LETTER.toInt
+    if (ch <= 127) (ch >= 'A' && ch <= 'Z')
+    else Character.getType(ch) == Character.UPPERCASE_LETTER.toInt
 
   private def isDelimiter(ch: Char): Boolean =
     ch match {
