@@ -23,61 +23,34 @@ final class CharReader private(source: Iterator[Char],
                                private val settingsStack: SettingsStack[Settings]) {
   private var lastReadWidth: Int = 1
 
-  def get(): Option[Char] = {
-    val (rawCh, rawWidth) = if (pushback.nonEmpty) {
-      val w = pushback.peekWidth()
-      (Some(pushback.pop()), w)
-    } else if (source.hasNext) {
-      (Some(source.next()), 1)
-    } else (None, 0)
-
-    rawCh match {
-      case Some('\r') if settings.normalizeNewLines =>
-        val (nextCh, nextWidth) = if (pushback.nonEmpty) {
-          val w = pushback.peekWidth()
-          (Some(pushback.pop()), w)
-        } else if (source.hasNext) {
-          (Some(source.next()), 1)
-        } else (None, 0)
-
+  def get(): Option[Char] =
+    fetchRaw() match {
+      case (Some('\r'), rawWidth) if settings.normalizeNewLines =>
+        val (nextCh, nextWidth) = fetchRaw()
         nextCh match {
-          case Some('\n') =>
-            _currentIndex += (rawWidth + nextWidth)
-            lastReadWidth = rawWidth + nextWidth
+          case Some('\n') => advance(rawWidth + nextWidth)
           case Some(other) =>
             pushback.push(other, isDoubleWidth = nextWidth == 2)
-            _currentIndex += rawWidth
-            lastReadWidth = rawWidth
-          case None =>
-            _currentIndex += rawWidth
-            lastReadWidth = rawWidth
+            advance(rawWidth)
+          case None => advance(rawWidth)
         }
-        if (highWater < _currentIndex) {
-          lineMapBuilder.addLineBegin(_currentIndex)
-          highWater = _currentIndex
-        }
+        recordNewline(_currentIndex)
         Some('\n')
 
-      case Some('\n') =>
-        _currentIndex += rawWidth
-        lastReadWidth = rawWidth
-        if (highWater < _currentIndex) {
-          lineMapBuilder.addLineBegin(_currentIndex)
-          highWater = _currentIndex
-        }
+      case (Some('\n'), rawWidth) =>
+        advance(rawWidth)
+        recordNewline(_currentIndex)
         Some('\n')
 
-      case Some(other) =>
-        _currentIndex += rawWidth
-        lastReadWidth = rawWidth
+      case (Some(other), rawWidth) =>
+        advance(rawWidth)
         if (highWater < _currentIndex) {
           highWater = _currentIndex
         }
         Some(other)
 
-      case None => None
+      case (None, _) => None
     }
-  }
 
   def tryGet(ch: Char): Boolean =
     get() match {
@@ -136,23 +109,24 @@ final class CharReader private(source: Iterator[Char],
     if (pushback.nonEmpty) {
       Some(pushback.peek())
     } else if (source.hasNext) {
-      val result = source.next()
-      if (settings.normalizeNewLines && result == '\r') {
-        if (source.hasNext) {
-          val next = source.next()
-          if (next == '\n') {
-            pushback.push('\n', isDoubleWidth = true)
-          } else {
-            pushback.push('\n', isDoubleWidth = false)
-            pushback.push(next, isDoubleWidth = false)
+      val (rawCh, rawWidth) = fetchRaw()
+      rawCh match {
+        case Some('\r') if settings.normalizeNewLines =>
+          val (nextCh, nextWidth) = fetchRaw()
+          nextCh match {
+            case Some('\n') =>
+              pushback.push('\n', isDoubleWidth = rawWidth + nextWidth == 2)
+            case Some(other) =>
+              pushback.push('\n', isDoubleWidth = rawWidth == 2)
+              pushback.push(other, isDoubleWidth = nextWidth == 2)
+            case None =>
+              pushback.push('\n', isDoubleWidth = rawWidth == 2)
           }
-        } else {
-          pushback.push('\n', isDoubleWidth = false)
-        }
-        Some('\n')
-      } else {
-        pushback.push(result, isDoubleWidth = false)
-        Some(result)
+          Some('\n')
+        case Some(other) =>
+          pushback.push(other, isDoubleWidth = rawWidth == 2)
+          Some(other)
+        case None => None
       }
     } else None
 
@@ -192,4 +166,23 @@ final class CharReader private(source: Iterator[Char],
    */
   def popSettings(): Unit =
     settingsStack.pop()
+
+  private def fetchRaw(): (Option[Char], Int) =
+    if (pushback.nonEmpty) {
+      val w = pushback.peekWidth()
+      (Some(pushback.pop()), w)
+    } else if (source.hasNext) {
+      (Some(source.next()), 1)
+    } else (None, 0)
+
+  private def advance(width: Int): Unit = {
+    _currentIndex += width
+    lastReadWidth = width
+  }
+
+  private def recordNewline(atIndex: CharIndex): Unit =
+    if (highWater < atIndex) {
+      lineMapBuilder.addLineBegin(atIndex)
+      highWater = atIndex
+    }
 }
