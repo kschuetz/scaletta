@@ -217,8 +217,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
       }
     }
 
-    // TODO: fix this test
-    ignore("should handle multiple unget calls correctly") {
+    it("should handle multiple unget calls correctly") {
       // Current implementation of unget uses lastReadWidth.
       // Consecutive unget calls (without an intervening get) might be problematic
       // if the widths differ.

@@ -1,7 +1,7 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.scanner.CharReader.Settings
-import software.kes.scaletta.util.{CharPushback, SettingsStack}
+import software.kes.scaletta.util.{BooleanStack, CharPushback, SettingsStack}
 
 object CharReader {
   def create(source: Iterator[Char],
@@ -9,7 +9,8 @@ object CharReader {
              currentIndex: CharIndex = CharIndex(0),
              settings: Settings = Settings()): CharReader = {
     val pushback = CharPushback.create()
-    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder, SettingsStack.create(settings))
+    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder, SettingsStack.create(settings),
+      BooleanStack.create())
   }
 
   case class Settings(normalizeNewLines: Boolean = true)
@@ -20,24 +21,30 @@ final class CharReader private(source: Iterator[Char],
                                private var _currentIndex: CharIndex,
                                private var highWater: CharIndex,
                                private val lineMapBuilder: LineMapBuilder,
-                               private val settingsStack: SettingsStack[Settings]) {
-  private var lastReadWidth: Int = 1
+                               private val settingsStack: SettingsStack[Settings],
+                               private val newlineWidths: BooleanStack) {
 
   def get(): Option[Char] =
     fetchRaw() match {
       case (Some('\r'), isDouble) if settings.normalizeNewLines =>
         val (nextCh, nextIsDouble) = fetchRaw()
         nextCh match {
-          case Some('\n') => advance(isDouble, nextIsDouble)
+          case Some('\n') =>
+            newlineWidths.push(true)
+            advance(isDouble, nextIsDouble)
           case Some(other) =>
+            newlineWidths.push(false)
             pushback.push(other, isDoubleWidth = nextIsDouble)
             advance(isDouble)
-          case None => advance(isDouble)
+          case None =>
+            newlineWidths.push(false)
+            advance(isDouble)
         }
         recordNewline(_currentIndex)
         Some('\n')
 
       case (Some('\n'), isDouble) =>
+        newlineWidths.push(isDouble)
         advance(isDouble)
         recordNewline(_currentIndex)
         Some('\n')
@@ -115,7 +122,8 @@ final class CharReader private(source: Iterator[Char],
           val (nextCh, nextIsDouble) = fetchRaw()
           nextCh match {
             case Some('\n') =>
-              pushback.push('\n', isDoubleWidth = rawIsDouble || nextIsDouble)
+              val isDouble = booleanToWidth(rawIsDouble) + booleanToWidth(nextIsDouble) == 2
+              pushback.push('\n', isDoubleWidth = isDouble)
             case Some(other) =>
               pushback.push('\n', isDoubleWidth = rawIsDouble)
               pushback.push(other, isDoubleWidth = nextIsDouble)
@@ -131,8 +139,12 @@ final class CharReader private(source: Iterator[Char],
     } else None
 
   def unget(ch: Char): Unit = {
-    pushback.push(ch, isDoubleWidth = lastReadWidth == 2)
-    _currentIndex -= lastReadWidth
+    val width = if (ch == '\n' && !newlineWidths.isEmpty) {
+      if (newlineWidths.pop()) 2 else 1
+    } else 1
+
+    pushback.push(ch, isDoubleWidth = width == 2)
+    _currentIndex -= width
   }
 
   def ungetString(s: String): Unit =
@@ -183,13 +195,11 @@ final class CharReader private(source: Iterator[Char],
   private def advance(isDoubleWidth: Boolean): Unit = {
     val width = booleanToWidth(isDoubleWidth)
     _currentIndex += width
-    lastReadWidth = width
   }
 
   private def advance(isDoubleWidth1: Boolean, isDoubleWidth2: Boolean): Unit = {
-    val width = (booleanToWidth(isDoubleWidth1)) + (booleanToWidth(isDoubleWidth2))
+    val width = booleanToWidth(isDoubleWidth1) + booleanToWidth(isDoubleWidth2)
     _currentIndex += width
-    lastReadWidth = width
   }
 
   private def booleanToWidth(isDoubleWidth: Boolean): Int =
