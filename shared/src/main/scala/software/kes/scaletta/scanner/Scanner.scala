@@ -348,20 +348,26 @@ final class Scanner private(reader: CharReader,
   @tailrec
   private def skipCommentsAndWhitespace(mostRecentNewline: Option[CharIndex] = None): SkipCommentsResult = {
     val wsResult = Whitespace.scanWhitespace(reader)
-    val newlineEncountered = mostRecentNewline.orElse(wsResult.indexOfLastNewline)
+    val currentNewline = wsResult.indexOfLastNewline.orElse(mostRecentNewline)
+
     Comments.scanComments(reader) match {
       case CommentResult.NoComment =>
-        newlineEncountered match {
-          case Some(value) => SkipCommentsResult.NewLinesEncountered(value)
+        currentNewline match {
+          case Some(index) => SkipCommentsResult.NewLinesEncountered(index)
           case None => SkipCommentsResult.NoNewLinesEncountered
         }
-      case CommentResult.Unterminated => SkipCommentsResult.Unterminated
+
+      case CommentResult.Unterminated =>
+        SkipCommentsResult.Unterminated
+
+      case CommentResult.LineComment(indexOfNewLine) =>
+        skipCommentsAndWhitespace(indexOfNewLine.orElse(currentNewline))
+
       case CommentResult.BlockComment.MultiLine(indexOfLastNewLine) =>
         skipCommentsAndWhitespace(Some(indexOfLastNewLine))
-      case CommentResult.LineComment(indexOfNewLine) =>
-        skipCommentsAndWhitespace(indexOfNewLine.orElse(newlineEncountered))
-      case _ =>
-        skipCommentsAndWhitespace(newlineEncountered)
+
+      case CommentResult.BlockComment.SingleLine =>
+        skipCommentsAndWhitespace(currentNewline)
     }
   }
 

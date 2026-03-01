@@ -187,6 +187,14 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.IntLiteral(1), 0, 0)
         )
       }
+
+      it("should infer a semicolon from a newline that precedes a non-newline comment") {
+        check("1\n/* comment */ 2",
+          success(Token.IntLiteral(1), 0, 0),
+          success(Token.Semicolon, 1, 1),
+          success(Token.IntLiteral(2), 16, 16)
+        )
+      }
     }
 
     describe("numeric literals") {
