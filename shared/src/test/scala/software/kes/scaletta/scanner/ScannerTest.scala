@@ -1157,6 +1157,88 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.RBrace, 105, 105)
         )
       }
+
+      it("case 4") {
+        val input =
+          lf"""items match {
+              |  case (head, tail) if head > 0 =>
+              |    s"$$head and $$tail"
+              |  case _ => "empty"
+              |}""".stripMargin
+        check(input,
+          success(Token.Identifier.Lower("items"), 0, 4),
+          success(Token.Match, 6, 10),
+          success(Token.LBrace, 12, 12),
+          success(Token.Case, 16, 19),
+          success(Token.LParen, 21, 21),
+          success(Token.Identifier.Lower("head"), 22, 25),
+          success(Token.Comma, 26, 26),
+          success(Token.Identifier.Lower("tail"), 28, 31),
+          success(Token.RParen, 32, 32),
+          success(Token.If, 34, 35),
+          success(Token.Identifier.Lower("head"), 37, 40),
+          success(Token.Identifier.Operator(">"), 42, 42),
+          success(Token.IntLiteral(0), 44, 44),
+          success(Token.RDoubleArrow, 46, 47),
+          success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 53, 54),
+          success(Token.Identifier.Lower("head"), 56, 59),
+          success(Token.InterpolatedPart(" and "), 60, 64),
+          success(Token.Identifier.Lower("tail"), 66, 69),
+          success(Token.EndInterpolatedString, 70, 70),
+          success(Token.Case, 74, 77),
+          success(Token.Underscore, 79, 79),
+          success(Token.RDoubleArrow, 81, 82),
+          success(Token.StringLiteral("empty"), 84, 90),
+          success(Token.RBrace, 92, 92)
+        )
+      }
+
+      it("case 5") {
+        val input =
+          lf"""val x = 1.23f
+              |val y = 0xabcdefL
+              |val z = -42
+              |(x + y) / z""".stripMargin
+        check(input,
+          success(Token.Val, 0, 2),
+          success(Token.Identifier.Lower("x"), 4, 4),
+          success(Token.Eq, 6, 6),
+          success(Token.FloatLiteral(1.23f), 8, 12),
+          success(Token.Semicolon, 13, 13),
+          success(Token.Val, 14, 16),
+          success(Token.Identifier.Lower("y"), 18, 18),
+          success(Token.Eq, 20, 20),
+          success(Token.LongLiteral(0xabcdefL), 22, 30),
+          success(Token.Semicolon, 31, 31),
+          success(Token.Val, 32, 34),
+          success(Token.Identifier.Lower("z"), 36, 36),
+          success(Token.Eq, 38, 38),
+          success(Token.IntLiteral(-42), 40, 42),
+          success(Token.LParen, 44, 44),
+          success(Token.Identifier.Lower("x"), 45, 45),
+          success(Token.Identifier.Operator("+"), 47, 47),
+          success(Token.Identifier.Lower("y"), 49, 49),
+          success(Token.RParen, 50, 50),
+          success(Token.Identifier.Operator("/"), 52, 52),
+          success(Token.Identifier.Lower("z"), 54, 54)
+        )
+      }
+
+      it("case 6") {
+        val input =
+          lf"""s\"\"\"Multi
+              |line $${expr}
+              |string\"\"\"""".stripMargin
+        check(input,
+          success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
+          success(Token.InterpolatedPart("Multi\nline "), 4, 14),
+          success(Token.BeginInterpolatedEscape, 15, 16),
+          success(Token.Identifier.Lower("expr"), 17, 20),
+          success(Token.EndInterpolatedEscape, 21, 21),
+          success(Token.InterpolatedPart("\nstring"), 22, 28),
+          success(Token.EndInterpolatedString, 29, 31)
+        )
+      }
     }
 
     describe("portal mode") {
