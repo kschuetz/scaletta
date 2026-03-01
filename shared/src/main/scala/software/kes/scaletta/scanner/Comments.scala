@@ -12,7 +12,7 @@ object CommentResult {
   object BlockComment {
     case object SingleLine extends BlockComment
 
-    case object MultiLine extends BlockComment
+    case class MultiLine(indexOfLastNewLine: CharIndex) extends BlockComment
   }
 
   case class LineComment(indexOfNewLine: Option[CharIndex]) extends CommentResult
@@ -49,7 +49,7 @@ object Comments {
   private def scanBlockComment(reader: CharReader): CommentResult = {
     var depth = 1
     var loop = true
-    var multiLine = false
+    var lastNewLine: Option[CharIndex] = None
     while (loop && depth > 0) {
       reader.get() match {
         case Some(c1) =>
@@ -63,7 +63,7 @@ object Comments {
                   loop = false
               }
             case '\n' =>
-              multiLine = true
+              lastNewLine = Some(reader.prevIndex)
             case '/' =>
               reader.get() match {
                 case Some(c2) =>
@@ -78,7 +78,9 @@ object Comments {
       }
     }
     if (depth > 0) CommentResult.Unterminated
-    else if (multiLine) CommentResult.BlockComment.MultiLine
-    else CommentResult.BlockComment.SingleLine
+    else lastNewLine match {
+      case Some(index) => CommentResult.BlockComment.MultiLine(index)
+      case None => CommentResult.BlockComment.SingleLine
+    }
   }
 }

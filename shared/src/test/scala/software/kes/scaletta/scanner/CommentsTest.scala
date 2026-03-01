@@ -127,7 +127,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
           TestReaderFactory.fromString(
             lf"""/* multi-line
                  block comment */$$""") { reader =>
-            Comments.scanComments(reader) shouldBe BlockComment.MultiLine
+            Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(13))
             reader.get() shouldBe Some('$')
           }
         }
@@ -137,7 +137,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
             lf"""/* multi-line *
                  /* nested */
                  block comment */$$ */""") { reader =>
-            Comments.scanComments(reader) shouldBe BlockComment.MultiLine
+            Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(45))
             reader.get() shouldBe Some('$')
           }
         }
@@ -145,13 +145,13 @@ class CommentsTest extends AnyFunSpec with Matchers {
         describe("line ending invariance") {
           it("CR (\\r)") {
             TestReaderFactory.fromString(cr"/* line 1\nline 2 */$$") { reader =>
-              Comments.scanComments(reader) shouldBe BlockComment.MultiLine
+              Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
             }
           }
           it("CRLF (\\r\\n)") {
             TestReaderFactory.fromString(crlf"/* line 1\nline 2 */$$") { reader =>
-              Comments.scanComments(reader) shouldBe BlockComment.MultiLine
+              Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(10))
               reader.get() shouldBe Some('$')
             }
           }

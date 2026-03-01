@@ -356,8 +356,8 @@ final class Scanner private(reader: CharReader,
           case None => SkipCommentsResult.NoNewLinesEncountered
         }
       case CommentResult.Unterminated => SkipCommentsResult.Unterminated
-      case CommentResult.BlockComment.MultiLine =>
-        skipCommentsAndWhitespace(Some(reader.prevIndex)) // TODO: reevaluate if this is correct
+      case CommentResult.BlockComment.MultiLine(indexOfLastNewLine) =>
+        skipCommentsAndWhitespace(Some(indexOfLastNewLine))
       case CommentResult.LineComment(indexOfNewLine) =>
         skipCommentsAndWhitespace(indexOfNewLine.orElse(newlineEncountered))
       case _ =>

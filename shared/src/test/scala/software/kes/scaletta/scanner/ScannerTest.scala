@@ -481,6 +481,24 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         )
       }
 
+      it("should infer semicolon AT the newline position within a block comment") {
+        // "1 /*\n*/ 2"
+        // 0: '1'
+        // 1: ' '
+        // 2: '/'
+        // 3: '*'
+        // 4: '\n' (Position 4)
+        // 5: '*'
+        // 6: '/'
+        // 7: ' '
+        // 8: '2'
+        check("1 /*\n*/ 2",
+          success(Token.IntLiteral(1), 0, 0),
+          success(Token.Semicolon, 4, 4),
+          success(Token.IntLiteral(2), 8, 8)
+        )
+      }
+
       it("should infer semicolon after line comment") {
         check(lf"1 // comment\n2",
           success(Token.IntLiteral(1), 0, 0),
