@@ -359,7 +359,7 @@ final class Scanner private(reader: CharReader,
       case CommentResult.BlockComment.MultiLine =>
         skipCommentsAndWhitespace(Some(reader.prevIndex)) // TODO: reevaluate if this is correct
       case CommentResult.LineComment(indexOfNewLine) =>
-        skipCommentsAndWhitespace(Some(indexOfNewLine)) // TODO: reevaluate if this is correct
+        skipCommentsAndWhitespace(indexOfNewLine.orElse(newlineEncountered))
       case _ =>
         skipCommentsAndWhitespace(newlineEncountered)
     }

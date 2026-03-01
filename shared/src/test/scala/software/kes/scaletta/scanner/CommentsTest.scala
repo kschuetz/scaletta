@@ -33,28 +33,28 @@ class CommentsTest extends AnyFunSpec with Matchers {
     describe("line comments") {
       it("case 1") {
         TestReaderFactory.fromString("//\n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment(CharIndex(2))
+          Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(2)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 2") {
         TestReaderFactory.fromString("// line comment\n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment(CharIndex(15))
+          Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(15)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 3") {
         TestReaderFactory.fromString("/// line comment\n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment(CharIndex(16))
+          Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(16)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 4") {
         TestReaderFactory.fromString("/// /*line comment*/ \n$") { reader =>
-          Comments.scanComments(reader) shouldBe LineComment(CharIndex(21))
+          Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(21)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
@@ -63,24 +63,31 @@ class CommentsTest extends AnyFunSpec with Matchers {
       describe("line ending invariance") {
         it("LF (\\n)") {
           TestReaderFactory.fromString(lf"// comment\n$$") { reader =>
-            Comments.scanComments(reader) shouldBe LineComment(CharIndex(10))
+            Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\n')
             reader.get() shouldBe Some('$')
           }
         }
         it("CR (\\r)") {
           TestReaderFactory.fromString(cr"// comment\n$$") { reader =>
-            Comments.scanComments(reader) shouldBe LineComment(CharIndex(10))
+            Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\n') // Normalized
             reader.get() shouldBe Some('$')
           }
         }
         it("CRLF (\\r\\n)") {
           TestReaderFactory.fromString(crlf"// comment\n$$") { reader =>
-            Comments.scanComments(reader) shouldBe LineComment(CharIndex(10))
+            Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\n') // Normalized
             reader.get() shouldBe Some('$')
           }
+        }
+      }
+
+      it("at EOF (no newline)") {
+        TestReaderFactory.fromString("// comment") { reader =>
+          Comments.scanComments(reader) shouldBe LineComment(None)
+          reader.get() shouldBe None
         }
       }
     }

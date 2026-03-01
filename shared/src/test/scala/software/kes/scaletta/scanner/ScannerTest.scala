@@ -176,6 +176,17 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           failure(ScannerError.UnclosedComment, 0, 10)
         )
       }
+      it("should NOT infer semicolon after line comment at end of file") {
+        check("1 // comment",
+          success(Token.IntLiteral(1), 0, 0)
+        )
+      }
+
+      it("should NOT infer semicolon after block comment at end of file") {
+        check("1 /* comment */",
+          success(Token.IntLiteral(1), 0, 0)
+        )
+      }
     }
 
     describe("numeric literals") {

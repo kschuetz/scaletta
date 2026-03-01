@@ -15,7 +15,7 @@ object CommentResult {
     case object MultiLine extends BlockComment
   }
 
-  case class LineComment(indexOfNewLine: CharIndex) extends CommentResult
+  case class LineComment(indexOfNewLine: Option[CharIndex]) extends CommentResult
 
   case object Unterminated extends CommentResult
 }
@@ -43,7 +43,7 @@ object Comments {
 
   private def scanLineComment(reader: CharReader): CommentResult = {
     reader.skipUntil(ch => ch == '\r' || ch == '\n')
-    CommentResult.LineComment(reader.currentIndex)
+    CommentResult.LineComment(reader.peek().map(_ => reader.currentIndex))
   }
 
   private def scanBlockComment(reader: CharReader): CommentResult = {
