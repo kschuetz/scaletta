@@ -285,16 +285,8 @@ final class Scanner private(reader: CharReader,
       yieldSuccess(Pos(Token.EndInterpolatedString, begin, end), newlineEncounteredBefore = None)
     } else if (reader.tryGet('$')) {
       if (reader.tryGet('$')) {
-        // Escaped $ - let scanPart handle it
-        reader.unget('$')
-        reader.unget('$')
-        val partResult = InterpolatedStrings.scanPart(reader, buffer, multiLine, isRaw)
-        partResult.value match {
-          case Error(error) =>
-            (tokenBuffer: TokenBuffer) =>
-              tokenBuffer.enqueue(partResult.withNewValue(Token.Error(error)))
-          case token => yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
-        }
+        // Escaped $ - handled directly
+        yieldSuccess(Pos(Token.InterpolatedPart("$"), begin, reader.prevIndex), newlineEncounteredBefore = None)
       } else {
         // $identifier or ${
         if (reader.tryGet('{')) {

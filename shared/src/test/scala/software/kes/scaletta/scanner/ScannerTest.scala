@@ -294,8 +294,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // escaped $$ and error
         check("s\"$$\\z\"",
           success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
-          failure(ScannerError.InvalidEscapeCharacter, 4, 4),
-          failure(ScannerError.UnclosedStringLiteral, 7, 7)
+          success(Token.InterpolatedPart("$"), 2, 3),
+          failure(ScannerError.InvalidEscapeCharacter, 4, 4)
         )
         // s"$" at EOF
         check("s\"$",
