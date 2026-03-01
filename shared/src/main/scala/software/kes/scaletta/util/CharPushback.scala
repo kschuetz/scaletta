@@ -33,12 +33,19 @@ final class CharPushback private(private var buffer: Array[Char],
     buffer(ptr)
   }
 
+  /**
+   * Returns the character at the current pointer, or 0.toChar if the buffer is empty.
+   */
   def peek(): Char =
     if (ptr > 0) buffer(ptr - 1)
     else 0.toChar
 
-  def peekWidth(): Int =
-    if (ptr > 0 && widthFlags.get(ptr - 1)) 2 else 1
+  /**
+   * Returns true if the character at the current pointer is double-width, and false otherwise.
+   * If the buffer is empty, it returns false.
+   */
+  def peekDoubleWidth(): Boolean =
+    ptr > 0 && widthFlags.get(ptr - 1)
 
   def reset(): Unit =
     ptr = 0

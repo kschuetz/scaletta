@@ -11,10 +11,10 @@ class CharPushbackTest extends AnyFunSpec with Matchers {
       pb.push('b')
       pb.nonEmpty shouldBe true
       pb.peek() shouldBe 'b'
-      pb.peekWidth() shouldBe 1
+      pb.peekDoubleWidth() shouldBe false
       pb.pop() shouldBe 'b'
       pb.peek() shouldBe 'a'
-      pb.peekWidth() shouldBe 1
+      pb.peekDoubleWidth() shouldBe false
       pb.pop() shouldBe 'a'
       pb.isEmpty shouldBe true
     }
@@ -23,7 +23,7 @@ class CharPushbackTest extends AnyFunSpec with Matchers {
       val pb = CharPushback.create(16)
       pb.push('\n', isDoubleWidth = true)
       pb.peek() shouldBe '\n'
-      pb.peekWidth() shouldBe 2
+      pb.peekDoubleWidth() shouldBe true
       pb.pop() shouldBe '\n'
       pb.isEmpty shouldBe true
     }
@@ -34,13 +34,13 @@ class CharPushbackTest extends AnyFunSpec with Matchers {
       pb.push('\n', isDoubleWidth = true)
       pb.push('b', isDoubleWidth = false)
 
-      pb.peekWidth() shouldBe 1
+      pb.peekDoubleWidth() shouldBe false
       pb.pop() shouldBe 'b'
 
-      pb.peekWidth() shouldBe 2
+      pb.peekDoubleWidth() shouldBe true
       pb.pop() shouldBe '\n'
 
-      pb.peekWidth() shouldBe 1
+      pb.peekDoubleWidth() shouldBe false
       pb.pop() shouldBe 'a'
 
       pb.isEmpty shouldBe true
@@ -65,7 +65,7 @@ class CharPushbackTest extends AnyFunSpec with Matchers {
       }
 
       for (i <- (0 until 100).reverse) {
-        pb.peekWidth() shouldBe (if (i % 2 == 0) 2 else 1)
+        pb.peekDoubleWidth() shouldBe (i % 2 == 0)
         pb.pop() shouldBe (i % 128).toChar
       }
       pb.isEmpty shouldBe true
@@ -80,7 +80,7 @@ class CharPushbackTest extends AnyFunSpec with Matchers {
       }
 
       for (i <- (0 until 150).reverse) {
-        pb.peekWidth() shouldBe (if (i % 2 == 0) 2 else 1)
+        pb.peekDoubleWidth() shouldBe (i % 2 == 0)
         pb.pop() shouldBe 'x'
       }
       pb.isEmpty shouldBe true
@@ -92,7 +92,7 @@ class CharPushbackTest extends AnyFunSpec with Matchers {
       pb.reset()
       pb.isEmpty shouldBe true
       pb.push('b', isDoubleWidth = false)
-      pb.peekWidth() shouldBe 1
+      pb.peekDoubleWidth() shouldBe false
       pb.pop() shouldBe 'b'
     }
 
@@ -111,7 +111,7 @@ class CharPushbackTest extends AnyFunSpec with Matchers {
     it("should handle peek on empty buffer") {
       val pb = CharPushback.create(16)
       pb.peek() shouldBe 0.toChar
-      pb.peekWidth() shouldBe 1
+      pb.peekDoubleWidth() shouldBe false
     }
   }
 }

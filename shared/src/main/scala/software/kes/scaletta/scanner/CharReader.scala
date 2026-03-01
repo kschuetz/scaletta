@@ -25,25 +25,25 @@ final class CharReader private(source: Iterator[Char],
 
   def get(): Option[Char] =
     fetchRaw() match {
-      case (Some('\r'), rawWidth) if settings.normalizeNewLines =>
-        val (nextCh, nextWidth) = fetchRaw()
+      case (Some('\r'), isDouble) if settings.normalizeNewLines =>
+        val (nextCh, nextIsDouble) = fetchRaw()
         nextCh match {
-          case Some('\n') => advance(rawWidth + nextWidth)
+          case Some('\n') => advance(isDouble, nextIsDouble)
           case Some(other) =>
-            pushback.push(other, isDoubleWidth = nextWidth == 2)
-            advance(rawWidth)
-          case None => advance(rawWidth)
+            pushback.push(other, isDoubleWidth = nextIsDouble)
+            advance(isDouble)
+          case None => advance(isDouble)
         }
         recordNewline(_currentIndex)
         Some('\n')
 
-      case (Some('\n'), rawWidth) =>
-        advance(rawWidth)
+      case (Some('\n'), isDouble) =>
+        advance(isDouble)
         recordNewline(_currentIndex)
         Some('\n')
 
-      case (Some(other), rawWidth) =>
-        advance(rawWidth)
+      case (Some(other), isDouble) =>
+        advance(isDouble)
         if (highWater < _currentIndex) {
           highWater = _currentIndex
         }
@@ -109,22 +109,22 @@ final class CharReader private(source: Iterator[Char],
     if (pushback.nonEmpty) {
       Some(pushback.peek())
     } else if (source.hasNext) {
-      val (rawCh, rawWidth) = fetchRaw()
+      val (rawCh, rawIsDouble) = fetchRaw()
       rawCh match {
         case Some('\r') if settings.normalizeNewLines =>
-          val (nextCh, nextWidth) = fetchRaw()
+          val (nextCh, nextIsDouble) = fetchRaw()
           nextCh match {
             case Some('\n') =>
-              pushback.push('\n', isDoubleWidth = rawWidth + nextWidth == 2)
+              pushback.push('\n', isDoubleWidth = rawIsDouble || nextIsDouble)
             case Some(other) =>
-              pushback.push('\n', isDoubleWidth = rawWidth == 2)
-              pushback.push(other, isDoubleWidth = nextWidth == 2)
+              pushback.push('\n', isDoubleWidth = rawIsDouble)
+              pushback.push(other, isDoubleWidth = nextIsDouble)
             case None =>
-              pushback.push('\n', isDoubleWidth = rawWidth == 2)
+              pushback.push('\n', isDoubleWidth = rawIsDouble)
           }
           Some('\n')
         case Some(other) =>
-          pushback.push(other, isDoubleWidth = rawWidth == 2)
+          pushback.push(other, isDoubleWidth = rawIsDouble)
           Some(other)
         case None => None
       }
@@ -167,18 +167,33 @@ final class CharReader private(source: Iterator[Char],
   def popSettings(): Unit =
     settingsStack.pop()
 
-  private def fetchRaw(): (Option[Char], Int) =
+  /**
+   * Fetches the next character from the pushback buffer or the source iterator.
+   * Returns a tuple containing the character (if any) and a boolean indicating
+   * if it should be treated as a double-width character for index tracking.
+   */
+  private def fetchRaw(): (Option[Char], Boolean) =
     if (pushback.nonEmpty) {
-      val w = pushback.peekWidth()
-      (Some(pushback.pop()), w)
+      val isDouble = pushback.peekDoubleWidth()
+      (Some(pushback.pop()), isDouble)
     } else if (source.hasNext) {
-      (Some(source.next()), 1)
-    } else (None, 0)
+      (Some(source.next()), false)
+    } else (None, false)
 
-  private def advance(width: Int): Unit = {
+  private def advance(isDoubleWidth: Boolean): Unit = {
+    val width = booleanToWidth(isDoubleWidth)
     _currentIndex += width
     lastReadWidth = width
   }
+
+  private def advance(isDoubleWidth1: Boolean, isDoubleWidth2: Boolean): Unit = {
+    val width = (booleanToWidth(isDoubleWidth1)) + (booleanToWidth(isDoubleWidth2))
+    _currentIndex += width
+    lastReadWidth = width
+  }
+
+  private def booleanToWidth(isDoubleWidth: Boolean): Int =
+    if (isDoubleWidth) 2 else 1
 
   private def recordNewline(atIndex: CharIndex): Unit =
     if (highWater < atIndex) {
