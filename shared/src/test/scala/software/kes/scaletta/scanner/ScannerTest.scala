@@ -99,6 +99,42 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           }
         }
       }
+
+      it("should report correct positions for InvalidLiteralNumber during peek") {
+        // Case A: invalid numeric literal '-.' followed by '(x)'
+        val input = "-. (x)"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          // peek(2) triggers scanning of the error token and the '(' token
+          scanner.peek(2).value shouldBe Token.LParen
+
+          val errorToken = scanner.get()
+          errorToken.value shouldBe Token.Error(ScannerError.InvalidLiteralNumber)
+          // The error should span only '-.' (indices 0 to 1)
+          errorToken.begin.value shouldBe 0
+          errorToken.end.value shouldBe 1
+
+          scanner.get().value shouldBe Token.LParen
+        }
+      }
+
+      it("should report correct positions for InvalidCharacter during peek") {
+        // Case B: invalid character '\u0000' (null) followed by '(x)'
+        // Null is not a whitespace, digit, letter, or operator in CharacterClass.
+        val input = "\u0000(x)"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          scanner.peek(2).value shouldBe Token.LParen
+
+          val errorToken = scanner.get()
+          errorToken.value shouldBe Token.Error(ScannerError.InvalidCharacter)
+          // The error should span only '\u0000' (index 0)
+          errorToken.begin.value shouldBe 0
+          errorToken.end.value shouldBe 0
+
+          scanner.get().value shouldBe Token.LParen
+        }
+      }
     }
 
     describe("whitespace and comments") {

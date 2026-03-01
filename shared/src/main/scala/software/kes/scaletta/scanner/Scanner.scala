@@ -183,10 +183,10 @@ final class Scanner private(reader: CharReader,
                 Literals.tryNumericLiteral(reader, buffer) match {
                   case Some(result) => success(result)
                   case None =>
-                    (tokenBuffer: TokenBuffer) => {
-                      reader.get() // consume the '.'
-                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, reader.prevIndex))
-                    }
+                    reader.get() // consume the '.'
+                    val end = reader.prevIndex
+                    (tokenBuffer: TokenBuffer) =>
+                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, end))
                 }
               case Some(c) =>
                 reader.unget(c)
@@ -202,13 +202,11 @@ final class Scanner private(reader: CharReader,
                 Literals.tryNumericLiteral(reader, buffer) match {
                   case Some(result) => success(result)
                   case None =>
-                    (tokenBuffer: TokenBuffer) => {
-                      reader.get() // consume the '-'
-                      if (reader.tryGet('.')) {
-                        // consume the '.' as well to prevent it from being scanned as a separate token
-                      }
-                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, reader.prevIndex))
-                    }
+                    reader.get() // consume the '-'
+                    reader.tryGet('.') // consume the '.' if present
+                    val end = reader.prevIndex
+                    (tokenBuffer: TokenBuffer) =>
+                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, end))
                 }
               case Some(c) =>
                 reader.unget(c)
@@ -239,14 +237,16 @@ final class Scanner private(reader: CharReader,
                     case Some(c) =>
                       if (CharacterClass.isWhitespace(c) || canStartToken(c)) {
                         reader.unget(c)
+                        val end = reader.prevIndex
                         (tokenBuffer: TokenBuffer) =>
-                          tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex))
+                          tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, end))
                       } else {
                         skipGarbage()
                       }
                     case None =>
+                      val end = reader.prevIndex
                       (tokenBuffer: TokenBuffer) =>
-                        tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, reader.prevIndex))
+                        tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, end))
                   }
 
                 skipGarbage()
