@@ -23,14 +23,16 @@ object Scanner {
 final class Scanner private(reader: CharReader,
                             buffer: CharBuffer,
                             identifierScanner: IdentifierScanner,
-                            private var prevToken: Token,
+                            private var lastConsumedToken: Token,
                             private val tokenBuffer: TokenBuffer,
                             private var regionStack: RegionStack,
                             private val portalMode: Boolean) {
 
   def get(): Pos[Token] = {
     fillBuffer(1)
-    tokenBuffer.dequeue()
+    val result = tokenBuffer.dequeue()
+    lastConsumedToken = result.value
+    result
   }
 
   /**
@@ -50,12 +52,7 @@ final class Scanner private(reader: CharReader,
   private def fillBuffer(n: Int): Unit = {
     if (tokenBuffer.length < n && !tokenBuffer.isExhausted) {
       val effect = readNext()
-      val previousLast = tokenBuffer.mostRecentlyAdded.map(_.value).getOrElse(prevToken)
       effect(tokenBuffer)
-      val newLast = tokenBuffer.mostRecentlyAdded.map(_.value).getOrElse(prevToken)
-      if (newLast != previousLast) {
-        prevToken = newLast
-      }
       fillBuffer(n)
     }
   }
@@ -65,13 +62,15 @@ final class Scanner private(reader: CharReader,
     (tokenBuffer: TokenBuffer) => {
       val isFinalClosingBrace = regionStack.peek.contains(RegionAttributes.Portal) && token.value == Token.RBrace
       val effectOnBuffer = updateRegions(token)
+      val precedingToken = tokenBuffer.mostRecentlyAdded.map(_.value).getOrElse(lastConsumedToken)
+
       if (!isFinalClosingBrace &&
         newlineEncounteredBefore.isDefined &&
-        prevToken.canTerminateStatement &&
+        precedingToken.canTerminateStatement &&
         token.value.canBeginStatement &&
         newlinesEnabledInRegion() &&
         token.value != (Token.Semicolon: Token) &&
-        prevToken != (Token.Semicolon: Token)) {
+        precedingToken != (Token.Semicolon: Token)) {
         val index = newlineEncounteredBefore.get
         val semicolonPos = Pos(Token.Semicolon: Token, index, index)
         tokenBuffer.enqueue(semicolonPos)

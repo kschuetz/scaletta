@@ -58,6 +58,35 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         }
       }
 
+      it("should maintain correct semicolon inference when interleaving peek and get") {
+        val input = lf"1\n2\n3"
+        TestReaderFactory.fromString(input) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+          // 1. Peek ahead across first newline
+          scanner.peek(1).value shouldBe Token.IntLiteral(1)
+          scanner.peek(2).value shouldBe Token.Semicolon
+          scanner.peek(3).value shouldBe Token.IntLiteral(2)
+
+          // 2. Consume first token
+          scanner.get().value shouldBe Token.IntLiteral(1)
+
+          // 3. Peek ahead across second newline.
+          // This ensures that yieldSuccess uses the correct preceding token (2)
+          // even though the scanner's internal "last scanned" token is further ahead.
+          scanner.peek(1).value shouldBe Token.Semicolon
+          scanner.peek(2).value shouldBe Token.IntLiteral(2)
+          scanner.peek(3).value shouldBe Token.Semicolon
+          scanner.peek(4).value shouldBe Token.IntLiteral(3)
+
+          // 4. Consume the rest
+          scanner.get().value shouldBe Token.Semicolon
+          scanner.get().value shouldBe Token.IntLiteral(2)
+          scanner.get().value shouldBe Token.Semicolon
+          scanner.get().value shouldBe Token.IntLiteral(3)
+          scanner.get().value shouldBe Token.EndOfInput
+        }
+      }
+
       it("should throw exception for n < 1") {
         val input = "1"
         TestReaderFactory.fromString(input) { reader =>
