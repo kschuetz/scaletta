@@ -184,8 +184,10 @@ final class Scanner private(reader: CharReader,
                 Literals.tryNumericLiteral(reader, buffer) match {
                   case Some(result) => success(result)
                   case None =>
-                    (tokenBuffer: TokenBuffer) =>
-                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin))
+                    (tokenBuffer: TokenBuffer) => {
+                      reader.get() // consume the '.'
+                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, reader.prevIndex))
+                    }
                 }
               case Some(c) =>
                 reader.unget(c)
@@ -201,8 +203,13 @@ final class Scanner private(reader: CharReader,
                 Literals.tryNumericLiteral(reader, buffer) match {
                   case Some(result) => success(result)
                   case None =>
-                    (tokenBuffer: TokenBuffer) =>
-                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin))
+                    (tokenBuffer: TokenBuffer) => {
+                      reader.get() // consume the '-'
+                      if (reader.tryGet('.')) {
+                        // consume the '.' as well to prevent it from being scanned as a separate token
+                      }
+                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, reader.prevIndex))
+                    }
                 }
               case Some(c) =>
                 reader.unget(c)

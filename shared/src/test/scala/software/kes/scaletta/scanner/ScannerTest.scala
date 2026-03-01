@@ -151,6 +151,14 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         check("1_000", success(Token.IntLiteral(1000), 0, 4))
         check("0x12_34", success(Token.IntLiteral(0x1234), 0, 6))
       }
+
+      it("handles ..") {
+        check("..@", success(Token.Dot, 0, 0), success(Token.Dot, 1, 1), success(Token.At, 2, 2))
+      }
+
+      it("handles -.") {
+        check("-.", failure(ScannerError.InvalidLiteralNumber, 0, 1))
+      }
     }
 
     describe("delimiters and operators") {
@@ -162,6 +170,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.Comma, 3, 3),
           success(Token.Semicolon, 4, 4)
         )
+        check(".", success(Token.Dot, 0, 0))
       }
 
       it("should recognize operators") {
@@ -171,6 +180,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.Identifier.Operator("*"), 4, 4),
           success(Token.Identifier.Operator("/"), 6, 6)
         )
+        check("- ", success(Token.Identifier.Operator("-"), 0, 0))
+        check("-", success(Token.Identifier.Operator("-"), 0, 0))
       }
     }
 
@@ -201,6 +212,37 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.InterpolatedPart("hello "), 2, 7),
           success(Token.Identifier.Lower("name"), 9, 12),
           success(Token.EndInterpolatedString, 13, 13)
+        )
+      }
+
+      it("unterminated interpolated strings") {
+        // single-line interpolated string reaches newline or EOF
+        check("s\"hello",
+          success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
+          failure(ScannerError.UnclosedStringLiteral, 2, 7)
+        )
+        // multi-line interpolated string reaches EOF
+        check("s\"\"\"hello",
+          success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
+          failure(ScannerError.UnclosedMultiLineString, 4, 9)
+        )
+        // escaped $$ and error
+        check("s\"$$\\z\"",
+          success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
+          failure(ScannerError.InvalidEscapeCharacter, 4, 4),
+          failure(ScannerError.UnclosedStringLiteral, 7, 7)
+        )
+        // s"$" at EOF
+        check("s\"$",
+          success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
+          failure(ScannerError.InvalidCharacter, 2, 2),
+          failure(ScannerError.UnclosedStringLiteral, 3, 3)
+        )
+        // scanIdentifier within interpolated string
+        check("s\"$name\"",
+          success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
+          success(Token.Identifier.Lower("name"), 3, 6),
+          success(Token.EndInterpolatedString, 7, 7)
         )
       }
 
@@ -1346,7 +1388,9 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
                            (implicit pos: Position): Unit = {
     TestReaderFactory.fromString(input) { reader =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = portalMode)
-      val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
+      val actualTokens = Iterator.continually {
+        scanner.get()
+      }.takeWhile(_.value != Token.EndOfInput).toVector
       val expectedPosList = expectedTokens.toVector
 
       assertExpectedTokens(input, expectedPosList, actualTokens)
