@@ -23,50 +23,61 @@ final class CharReader private(source: Iterator[Char],
                                private val settingsStack: SettingsStack[Settings]) {
   private var lastReadWidth: Int = 1
 
-  def get(): Option[Char] =
-    if (pushback.nonEmpty) {
+  def get(): Option[Char] = {
+    val (rawCh, rawWidth) = if (pushback.nonEmpty) {
       val w = pushback.peekWidth()
-      _currentIndex += w
-      lastReadWidth = w
-      Some(pushback.pop())
+      (Some(pushback.pop()), w)
     } else if (source.hasNext) {
-      var result = source.next()
-      if (settings.normalizeNewLines && result == '\r') {
-        if (source.hasNext) {
-          val next = source.next()
-          if (next == '\n') {
-            _currentIndex += 2
-            lastReadWidth = 2
-          } else {
-            _currentIndex += 1
-            lastReadWidth = 1
-            pushback.push(next, isDoubleWidth = false)
-          }
-        } else {
-          _currentIndex += 1
-          lastReadWidth = 1
+      (Some(source.next()), 1)
+    } else (None, 0)
+
+    rawCh match {
+      case Some('\r') if settings.normalizeNewLines =>
+        val (nextCh, nextWidth) = if (pushback.nonEmpty) {
+          val w = pushback.peekWidth()
+          (Some(pushback.pop()), w)
+        } else if (source.hasNext) {
+          (Some(source.next()), 1)
+        } else (None, 0)
+
+        nextCh match {
+          case Some('\n') =>
+            _currentIndex += (rawWidth + nextWidth)
+            lastReadWidth = rawWidth + nextWidth
+          case Some(other) =>
+            pushback.push(other, isDoubleWidth = nextWidth == 2)
+            _currentIndex += rawWidth
+            lastReadWidth = rawWidth
+          case None =>
+            _currentIndex += rawWidth
+            lastReadWidth = rawWidth
         }
         if (highWater < _currentIndex) {
           lineMapBuilder.addLineBegin(_currentIndex)
           highWater = _currentIndex
         }
-        result = '\n'
-      } else if (result == '\n') {
-        _currentIndex += 1
-        lastReadWidth = 1
+        Some('\n')
+
+      case Some('\n') =>
+        _currentIndex += rawWidth
+        lastReadWidth = rawWidth
         if (highWater < _currentIndex) {
           lineMapBuilder.addLineBegin(_currentIndex)
           highWater = _currentIndex
         }
-      } else {
-        _currentIndex += 1
-        lastReadWidth = 1
+        Some('\n')
+
+      case Some(other) =>
+        _currentIndex += rawWidth
+        lastReadWidth = rawWidth
         if (highWater < _currentIndex) {
           highWater = _currentIndex
         }
-      }
-      Some(result)
-    } else None
+        Some(other)
+
+      case None => None
+    }
+  }
 
   def tryGet(ch: Char): Boolean =
     get() match {
@@ -154,6 +165,8 @@ final class CharReader private(source: Iterator[Char],
     s.reverseIterator.foreach(unget)
 
   def currentIndex: CharIndex = _currentIndex
+
+  def lineMap: LineMap = lineMapBuilder.result
 
   def prevIndex: CharIndex = _currentIndex - 1
 

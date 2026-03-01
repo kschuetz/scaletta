@@ -103,5 +103,52 @@ class CharReaderTest extends AnyFunSpec with Matchers {
         reader.get() shouldBe None
       }
     }
+
+    it("should correctly handle unget of a CR-only normalized newline") {
+      val input = "a\rx"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.get() shouldBe Some('a') // index 0
+        reader.get() shouldBe Some('\n') // normalized from \r (index 1)
+
+        reader.unget('\n')
+        reader.currentIndex.value shouldBe 1 // should be back at index 1 (\r)
+
+        reader.get() shouldBe Some('\n') // normalized from \r (index 1)
+        reader.get() shouldBe Some('x') // index 2
+        reader.prevIndex.value shouldBe 2
+      }
+    }
+
+    it("should report correct positions for CR-only newlines") {
+      val input = "a\rb"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.get() shouldBe Some('a') // line 0, col 0
+        reader.get() shouldBe Some('\n') // normalized \r (line 0, col 1)
+
+        val posB = reader.lineMap.indexToPosition(reader.currentIndex)
+        posB.line.value shouldBe 1
+        posB.column.value shouldBe 0
+
+        reader.get() shouldBe Some('b') // line 1, col 0
+      }
+    }
+
+    it("should normalize a trailing CR at EOF") {
+      val input = "a\r"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.get() shouldBe Some('a')
+        reader.get() shouldBe Some('\n') // normalized from trailing \r
+        reader.get() shouldBe None
+      }
+    }
+
+    it("should handle consecutive CR characters correctly") {
+      val input = "\r\r"
+      TestReaderFactory.fromString(input) { reader =>
+        reader.get() shouldBe Some('\n')
+        reader.get() shouldBe Some('\n')
+        reader.get() shouldBe None
+      }
+    }
   }
 }
