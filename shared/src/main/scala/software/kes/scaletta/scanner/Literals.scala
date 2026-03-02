@@ -270,10 +270,10 @@ object Literals {
             afterSeparator(ch)(_leadingZero(first))
           } else (ch: @switch) match {
             case 'x' | 'X' =>
-              if (first) hex(0, 0, wasSeparator = false)
+              if (first && !wasSeparator) hex(0, 0, wasSeparator = false)
               else invalidLiteralNumber
             case 'b' | 'B' =>
-              if (first) binary(0, 0, wasSeparator = false)
+              if (first && !wasSeparator) binary(0, 0, wasSeparator = false)
               else invalidLiteralNumber
             case '.' =>
               reader.get() match {

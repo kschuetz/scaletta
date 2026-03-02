@@ -15,6 +15,12 @@ class CharLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedToken
       check("'a'", success(Token.CharLiteral('a'), 0, 2))
     }
 
+    it("simple char (no start quote)") {
+      // Direct call to Literals.charLiteral usually assumes the opening ' is already consumed.
+      // But CharLiteralsTest.check uses Scanner, so we use full literals.
+      check("'a'", success(Token.CharLiteral('a'), 0, 2))
+    }
+
     it("space") {
       check("' '", success(Token.CharLiteral(' '), 0, 2))
     }
@@ -31,6 +37,14 @@ class CharLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedToken
       check("'\\u21d2'", success(Token.CharLiteral('⇒'), 0, 7))
     }
 
+    it("escape sequence (\\n)") {
+      check("'\\n'", success(Token.CharLiteral('\n'), 0, 3))
+    }
+
+    it("unicode escape sequence (\\u21d2)") {
+      check("'\\u21d2'", success(Token.CharLiteral('⇒'), 0, 7))
+    }
+
     it("⇒") {
       check("'⇒'", success(Token.CharLiteral('⇒'), 0, 2))
     }
@@ -39,77 +53,16 @@ class CharLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedToken
       check("'a", failure(ScannerError.UnclosedCharacterLiteral, 0, 1))
     }
 
+    it("unclosed char literal (no end quote)") {
+      check("'a", failure(ScannerError.UnclosedCharacterLiteral, 0, 1))
+    }
+
     it("empty") {
       check("''", failure(ScannerError.EmptyCharacterLiteral, 0, 1))
     }
-  }
 
-  describe("stringLiteral") {
-    describe("single-line") {
-      it("empty string") {
-        check("\"\"", success(Token.StringLiteral(""), 0, 1))
-      }
-
-      it("simple string, no escapes") {
-        val input = "\"this is a simple string\""
-        check(input, success(Token.StringLiteral("this is a simple string"), 0, 24))
-      }
-
-      it("string with escapes") {
-        val input = "\"this \\n string \\t has \\f escapes \\\\ \""
-        check(input, success(Token.StringLiteral("this \n string \t has \f escapes \\ "), 0, 37))
-      }
-
-      it("string with escaped quotes") {
-        val input = "\"before \\\"quotes\\\" after\""
-        check(input, success(Token.StringLiteral("before \"quotes\" after"), 0, 24))
-      }
-
-      it("string with unicode sequences") {
-        val input = "\"⇒ is the same as \\u21d2!\""
-        check(input, success(Token.StringLiteral("⇒ is the same as ⇒!"), 0, 25))
-      }
-    }
-
-    describe("multi-line") {
-      it("empty string") {
-        check("\"\"\"\"\"\"", success(Token.MultiLineString(""), 0, 5))
-      }
-
-      it("simple string, no new lines, no escapes") {
-        val input = "\"\"\"this is a simple string\"\"\""
-        check(input, success(Token.MultiLineString("this is a simple string"), 0, 28))
-      }
-
-      it("string with new lines and escapes") {
-        val input = "\"\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\""
-        check(input, success(Token.MultiLineString("line 1\nline 2\nline 3\nthis\tline\fhas\\escapes "), 0, 52))
-      }
-
-      it("string with escaped quotes") {
-        val input = "\"\"\"before \\\"quotes\\\" after\"\"\""
-        check(input, success(Token.MultiLineString("before \"quotes\" after"), 0, 28))
-      }
-
-      it("string with unescaped quotes") {
-        val input = "\"\"\"before \"single\" \"\"double\"\" after\"\"\""
-        check(input, success(Token.MultiLineString("before \"single\" \"\"double\"\" after"), 0, 37))
-      }
-
-      it("string with unicode sequences") {
-        val input = "\"\"\"⇒ is the same as \\u21d2!\"\"\""
-        check(input, success(Token.MultiLineString("⇒ is the same as ⇒!"), 0, 29))
-      }
-    }
-
-    it("unclosed single-line string") {
-      val input = "\"abc"
-      check(input, failure(ScannerError.UnclosedStringLiteral, 0, 3))
-    }
-
-    it("unclosed multi-line string") {
-      val input = "\"\"\"abc"
-      check(input, failure(ScannerError.UnclosedMultiLineString, 0, 5))
+    it("invalid escape sequence") {
+      check("'\\z'", failure(ScannerError.InvalidEscapeCharacter, 1, 1), success(Token.Identifier.Lower("z"), 2, 2), failure(ScannerError.UnclosedCharacterLiteral, 3, 3))
     }
   }
 

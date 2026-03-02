@@ -1,13 +1,14 @@
 package software.kes.scaletta.scanner
 
+import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
-import software.kes.scaletta.testsupport.ScannerTestHelpers.success
-import software.kes.scaletta.testsupport.TestReaderFactory
+import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
+import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
 import software.kes.scaletta.util.CharBuffer
 
-class StringLiteralsTest extends AnyFunSpec with Matchers {
+class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
   private val buffer = CharBuffer.create()
 
   describe("stringLiteral") {
@@ -47,6 +48,40 @@ class StringLiteralsTest extends AnyFunSpec with Matchers {
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.StringLiteral("⇒ is the same as ⇒!"), -1, 24)
           reader.get() shouldBe None
+        }
+      }
+
+      it("invalid escape sequence") {
+        TestReaderFactory.fromString("invalid \\z escape\"") { reader =>
+          val result = Literals.stringLiteral(reader, buffer)
+          result.value shouldBe Token.Error(ScannerError.InvalidEscapeCharacter)
+          result.begin.value shouldBe 8
+        }
+      }
+
+      it("incomplete unicode escape") {
+        TestReaderFactory.fromString("bad \\u12 escape\"") { reader =>
+          val result = Literals.stringLiteral(reader, buffer)
+          result.value shouldBe Token.Error(ScannerError.InvalidEscapeCharacter)
+          result.begin.value shouldBe 4
+        }
+      }
+
+      it("unclosed string literal") {
+        TestReaderFactory.fromString("this string does not end") { reader =>
+          val result = Literals.stringLiteral(reader, buffer)
+          result.value shouldBe Token.Error(ScannerError.UnclosedStringLiteral)
+          result.begin.value shouldBe -1
+          result.end.value shouldBe 23
+        }
+      }
+
+      it("unclosed multi-line string literal") {
+        TestReaderFactory.fromString("\"\"this multi-line string does not end") { reader =>
+          val result = Literals.stringLiteral(reader, buffer)
+          result.value shouldBe Token.Error(ScannerError.UnclosedMultiLineString)
+          result.begin.value shouldBe -1
+          result.end.value shouldBe 36
         }
       }
     }
@@ -112,6 +147,85 @@ class StringLiteralsTest extends AnyFunSpec with Matchers {
           lineMap.indexToPosition(CharIndex(27)).line.value shouldBe 3 // After """ - it's still on line 3!
         }
       }
+    }
+
+    describe("Scanner-based tests") {
+      describe("single-line") {
+        it("empty string") {
+          check("\"\"", success(Token.StringLiteral(""), 0, 1))
+        }
+
+        it("simple string, no escapes") {
+          val input = "\"this is a simple string\""
+          check(input, success(Token.StringLiteral("this is a simple string"), 0, 24))
+        }
+
+        it("string with escapes") {
+          val input = "\"this \\n string \\t has \\f escapes \\\\ \""
+          check(input, success(Token.StringLiteral("this \n string \t has \f escapes \\ "), 0, 37))
+        }
+
+        it("string with escaped quotes") {
+          val input = "\"before \\\"quotes\\\" after\""
+          check(input, success(Token.StringLiteral("before \"quotes\" after"), 0, 24))
+        }
+
+        it("string with unicode sequences") {
+          val input = "\"⇒ is the same as \\u21d2!\""
+          check(input, success(Token.StringLiteral("⇒ is the same as ⇒!"), 0, 25))
+        }
+      }
+
+      describe("multi-line") {
+        it("empty string") {
+          check("\"\"\"\"\"\"", success(Token.MultiLineString(""), 0, 5))
+        }
+
+        it("simple string, no new lines, no escapes") {
+          val input = "\"\"\"this is a simple string\"\"\""
+          check(input, success(Token.MultiLineString("this is a simple string"), 0, 28))
+        }
+
+        it("string with new lines and escapes") {
+          val input = "\"\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\""
+          check(input, success(Token.MultiLineString("line 1\nline 2\nline 3\nthis\tline\fhas\\escapes "), 0, 52))
+        }
+
+        it("string with escaped quotes") {
+          val input = "\"\"\"before \\\"quotes\\\" after\"\"\""
+          check(input, success(Token.MultiLineString("before \"quotes\" after"), 0, 28))
+        }
+
+        it("string with unescaped quotes") {
+          val input = "\"\"\"before \"single\" \"\"double\"\" after\"\"\""
+          check(input, success(Token.MultiLineString("before \"single\" \"\"double\"\" after"), 0, 37))
+        }
+
+        it("string with unicode sequences") {
+          val input = "\"\"\"⇒ is the same as \\u21d2!\"\"\""
+          check(input, success(Token.MultiLineString("⇒ is the same as ⇒!"), 0, 29))
+        }
+      }
+
+      it("unclosed single-line string") {
+        val input = "\"abc"
+        check(input, failure(ScannerError.UnclosedStringLiteral, 0, 3))
+      }
+
+      it("unclosed multi-line string") {
+        val input = "\"\"\"abc"
+        check(input, failure(ScannerError.UnclosedMultiLineString, 0, 5))
+      }
+    }
+  }
+
+  private def check(input: String,
+                    expectedTokens: Pos[Token]*)
+                   (implicit pos: Position): Unit = {
+    TestReaderFactory.fromString(input) { reader =>
+      val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+      val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
+      assertExpectedTokens(input, expectedTokens.toVector, actualTokens)
     }
   }
 }

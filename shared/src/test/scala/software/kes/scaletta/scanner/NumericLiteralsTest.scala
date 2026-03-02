@@ -235,6 +235,15 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
     }
 
     describe("binary") {
+      it("basic") {
+        check("0b1", Some(success(Token.IntLiteral(1), 0, 2)))
+      }
+
+      it("underscores") {
+        check("0b_1", Some(success(Token.IntLiteral(1), 0, 3)))
+        check("0b1_", Some(failure(IllegalSeparator, 3, 3)))
+      }
+
       it("int (small)") {
         check("0b10101010", Some(success(Token.IntLiteral(170), 0, 9)))
         check("0b1010_1010", Some(success(Token.IntLiteral(170), 0, 10)))
@@ -269,6 +278,15 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
     }
 
     describe("hex") {
+      it("basic") {
+        check("0x1", Some(success(Token.IntLiteral(1), 0, 2)))
+      }
+
+      it("underscores") {
+        check("0x_1", Some(success(Token.IntLiteral(1), 0, 3)))
+        check("0x1_", Some(failure(IllegalSeparator, 3, 3)))
+      }
+
       it("int (small)") {
         check("0x1234abcd", Some(success(Token.IntLiteral(0x1234abcd), 0, 9)))
         check("0x1234_abcd", Some(success(Token.IntLiteral(0x1234abcd), 0, 10)))
@@ -376,6 +394,7 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
         check("0.", Some(success(Token.IntLiteral(0), 0, 0)), checkRemainder = false)
         check("1.d", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
         check("1._2", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
+        check("1.e2", Some(success(Token.IntLiteral(1), 0, 0)), checkRemainder = false)
       }
     }
 
