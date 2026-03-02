@@ -25,7 +25,7 @@ class EscapeSequenceTest extends AnyFunSpec with Matchers {
 
     it("should return Boundary and backtrack when hitting a newline or carriage return") {
       testScan("\n", EscapeResult.Boundary, expectedRemainder = "\n")
-      testScan("\r", EscapeResult.Boundary, expectedRemainder = "\n") // we expect /n because the reader will convert the /r to an /n
+      testScan("\r", EscapeResult.Boundary, expectedRemainder = "\r")
     }
 
     it("should return Error and backtrack for invalid non-Unicode escapes") {

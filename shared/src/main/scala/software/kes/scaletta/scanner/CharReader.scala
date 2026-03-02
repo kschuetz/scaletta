@@ -13,7 +13,7 @@ object CharReader {
       BooleanStack.create())
   }
 
-  case class Settings(normalizeNewLines: Boolean = true)
+  case class Settings(normalizeNewLines: Boolean = false)
 }
 
 final class CharReader private(source: Iterator[Char],
