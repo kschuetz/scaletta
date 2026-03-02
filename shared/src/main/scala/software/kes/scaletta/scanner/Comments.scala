@@ -42,8 +42,29 @@ object Comments {
   }
 
   private def scanLineComment(reader: CharReader): CommentResult = {
-    reader.skipUntil(ch => ch == '\r' || ch == '\n')
-    CommentResult.LineComment(reader.peek().map(_ => reader.currentIndex))
+    var loop = true
+    var indexOfNewLine: Option[CharIndex] = None
+    while (loop) {
+      reader.get() match {
+        case Some('\n') =>
+          val index = reader.prevIndex
+          reader.recordNewline(reader.currentIndex)
+          indexOfNewLine = Some(index)
+          reader.unget('\n')
+          loop = false
+        case Some('\r') =>
+          val index = reader.prevIndex
+          val hasLF = reader.tryGet('\n')
+          reader.recordNewline(reader.currentIndex)
+          indexOfNewLine = Some(index)
+          if (hasLF) reader.unget('\n')
+          reader.unget('\r')
+          loop = false
+        case Some(_) => ()
+        case None => loop = false
+      }
+    }
+    CommentResult.LineComment(indexOfNewLine)
   }
 
   private def scanBlockComment(reader: CharReader): CommentResult = {
@@ -63,7 +84,14 @@ object Comments {
                   loop = false
               }
             case '\n' =>
-              lastNewLine = Some(reader.prevIndex)
+              val index = reader.prevIndex
+              reader.recordNewline(reader.currentIndex)
+              lastNewLine = Some(index)
+            case '\r' =>
+              val index = reader.prevIndex
+              reader.tryGet('\n')
+              reader.recordNewline(reader.currentIndex)
+              lastNewLine = Some(index)
             case '/' =>
               reader.get() match {
                 case Some(c2) =>
