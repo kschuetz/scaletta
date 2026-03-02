@@ -26,34 +26,36 @@ final class CharReader private(source: Iterator[Char],
 
   def get(): Option[Char] =
     fetchRaw() match {
-      case (Some('\r'), isDouble) if settings.normalizeNewLines =>
-        val (nextCh, nextIsDouble) = fetchRaw()
-        nextCh match {
-          case Some('\n') =>
-            newlineWidths.push(true)
-            advance(isDouble, nextIsDouble)
-          case Some(other) =>
-            newlineWidths.push(false)
-            pushback.push(other, isDoubleWidth = nextIsDouble)
-            advance(isDouble)
-          case None =>
-            newlineWidths.push(false)
-            advance(isDouble)
+      case (Some('\r'), isDouble) =>
+        advance(isDouble)
+        if (settings.normalizeNewLines) {
+          val (nextCh, nextIsDouble) = fetchRaw()
+          nextCh match {
+            case Some('\n') =>
+              newlineWidths.push(true)
+              advance(nextIsDouble)
+            case Some(other) =>
+              newlineWidths.push(false)
+              pushback.push(other, isDoubleWidth = nextIsDouble)
+            case None =>
+              newlineWidths.push(false)
+          }
+          recordNewline(_currentIndex)
+          Some('\n')
+        } else {
+          Some('\r')
         }
-        recordNewline(_currentIndex)
-        Some('\n')
 
       case (Some('\n'), isDouble) =>
         newlineWidths.push(isDouble)
         advance(isDouble)
-        recordNewline(_currentIndex)
+        if (settings.normalizeNewLines) {
+          recordNewline(_currentIndex)
+        }
         Some('\n')
 
       case (Some(other), isDouble) =>
         advance(isDouble)
-        if (highWater < _currentIndex) {
-          highWater = _currentIndex
-        }
         Some(other)
 
       case (None, _) => None
@@ -205,7 +207,7 @@ final class CharReader private(source: Iterator[Char],
   private def booleanToWidth(isDoubleWidth: Boolean): Int =
     if (isDoubleWidth) 2 else 1
 
-  private def recordNewline(atIndex: CharIndex): Unit =
+  private[scanner] def recordNewline(atIndex: CharIndex): Unit =
     if (highWater < atIndex) {
       lineMapBuilder.addLineBegin(atIndex)
       highWater = atIndex

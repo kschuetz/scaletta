@@ -24,35 +24,38 @@ object Whitespace {
   import WhitespaceResult._
 
   def scanWhitespace(reader: CharReader): WhitespaceResult = {
-    var loop = true
     var result: WhitespaceResult = NoWhitespace
-    var prev: Char = 0
+    var loop = true
+
     while (loop) {
       reader.get() match {
+        case Some('\n') =>
+          val index = reader.prevIndex
+          reader.recordNewline(reader.currentIndex)
+          result = updateResultWithNewline(result, index)
+        case Some('\r') =>
+          val index = reader.prevIndex
+          reader.tryGet('\n')
+          reader.recordNewline(reader.currentIndex)
+          result = updateResultWithNewline(result, index)
+        case Some(ch) if isHorizontalWhitespace(ch) =>
+          if (result == NoWhitespace) result = NoNewlines
         case Some(ch) =>
-          if (ch == '\n') {
-            result match {
-              case NoWhitespace | NoNewlines =>
-                result = Newlines(reader.prevIndex, moreThanOne = false)
-              case _: Newlines =>
-                if (prev == '\n') result = Newlines(reader.prevIndex, moreThanOne = true)
-              case _ => ()
-            }
-            prev = ch
-          } else if (isWhitespace(ch)) {
-            if (result == NoWhitespace) {
-              result = NoNewlines
-            }
-          } else {
-            reader.unget(ch)
-            loop = false
-          }
-        case None => loop = false
+          reader.unget(ch)
+          loop = false
+        case None =>
+          loop = false
       }
     }
     result
   }
 
-  private def isWhitespace(ch: Char): Boolean =
-    ch.isWhitespace
+  private def updateResultWithNewline(current: WhitespaceResult, index: CharIndex): WhitespaceResult =
+    current match {
+      case _: Newlines => Newlines(index, moreThanOne = true)
+      case _ => Newlines(index, moreThanOne = false)
+    }
+
+  private def isHorizontalWhitespace(ch: Char): Boolean =
+    ch == ' ' || ch == '\t' || ch == '\u000B' || ch == '\f'
 }
