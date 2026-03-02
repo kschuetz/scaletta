@@ -33,6 +33,8 @@ object Token {
 
   case object Case extends ReservedWord {
     def name: String = "case"
+
+    override def canBeginStatement: Boolean = false
   }
 
   case object Def extends ReservedWord {

@@ -481,6 +481,24 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         )
       }
 
+      it("should NOT infer semicolon before 'case'") {
+        check(lf"x match {\n  case 1 => 'a'\n  case 2 => 'b'\n}",
+          success(Token.Identifier.Lower("x"), 0, 0),
+          success(Token.Match, 2, 6),
+          success(Token.LBrace, 8, 8),
+          success(Token.Case, 12, 15),
+          success(Token.IntLiteral(1), 17, 17),
+          success(Token.RDoubleArrow, 19, 20),
+          success(Token.CharLiteral('a'), 22, 24),
+          // No semicolon here
+          success(Token.Case, 28, 31),
+          success(Token.IntLiteral(2), 33, 33),
+          success(Token.RDoubleArrow, 35, 36),
+          success(Token.CharLiteral('b'), 38, 40),
+          success(Token.RBrace, 42, 42)
+        )
+      }
+
       it("should infer semicolon after block comment with newline") {
         check(lf"1 /* comment */\n2",
           success(Token.IntLiteral(1), 0, 0),
@@ -1381,6 +1399,39 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.EndInterpolatedEscape, 21, 21),
           success(Token.InterpolatedPart("\nstring"), 22, 28),
           success(Token.EndInterpolatedString, 29, 31)
+        )
+      }
+
+      it("case 7") {
+        val input =
+          lf"""res match {
+              |  case 1 => {
+              |    "one"
+              |  }
+              |  case 2 => "two"
+              |  case _ => "other"
+              |}""".stripMargin
+        check(input,
+          success(Token.Identifier.Lower("res"), 0, 2),
+          success(Token.Match, 4, 8),
+          success(Token.LBrace, 10, 10),
+          success(Token.Case, 14, 17),
+          success(Token.IntLiteral(1), 19, 19),
+          success(Token.RDoubleArrow, 21, 22),
+          success(Token.LBrace, 24, 24),
+          success(Token.StringLiteral("one"), 30, 34),
+          success(Token.RBrace, 38, 38),
+          // No semicolon inferred here despite RBrace being able to terminate a statement
+          success(Token.Case, 42, 45),
+          success(Token.IntLiteral(2), 47, 47),
+          success(Token.RDoubleArrow, 49, 50),
+          success(Token.StringLiteral("two"), 52, 56),
+          // No semicolon inferred here despite StringLiteral being able to terminate a statement
+          success(Token.Case, 60, 63),
+          success(Token.Underscore, 65, 65),
+          success(Token.RDoubleArrow, 67, 68),
+          success(Token.StringLiteral("other"), 70, 76),
+          success(Token.RBrace, 78, 78)
         )
       }
     }
