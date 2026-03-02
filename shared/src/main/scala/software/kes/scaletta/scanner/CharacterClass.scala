@@ -18,7 +18,8 @@ object CharacterClass {
         ct == Character.UPPERCASE_LETTER.toInt ||
         ct == Character.TITLECASE_LETTER.toInt ||
         ct == Character.LETTER_NUMBER.toInt ||
-        ct == Character.MODIFIER_LETTER.toInt
+        ct == Character.MODIFIER_LETTER.toInt ||
+        ct == Character.OTHER_LETTER.toInt
     }
   }
 
@@ -69,7 +70,12 @@ object CharacterClass {
 
   def isUppercase(ch: Char): Boolean =
     if (ch <= 127) (ch >= 'A' && ch <= 'Z')
-    else Character.getType(ch) == Character.UPPERCASE_LETTER.toInt
+    else {
+      val ct = Character.getType(ch)
+      ct == Character.UPPERCASE_LETTER.toInt ||
+        ct == Character.TITLECASE_LETTER.toInt ||
+        ct == Character.LETTER_NUMBER.toInt
+    }
 
   def main(args: Array[String]): Unit = {
     (0 to 65535).foreach { n =>
