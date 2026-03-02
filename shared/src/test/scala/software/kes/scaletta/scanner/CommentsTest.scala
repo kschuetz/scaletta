@@ -62,7 +62,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
 
       describe("line ending invariance") {
         it("LF (\\n)") {
-          TestReaderFactory.fromString(lf"// comment\n$$", CharReader.Settings(normalizeNewLines = false)) { reader =>
+          TestReaderFactory.fromString(lf"// comment\n$$") { reader =>
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\n')
             reader.get() shouldBe Some('$')
@@ -70,7 +70,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
           }
         }
         it("CR (\\r)") {
-          TestReaderFactory.fromString(cr"// comment\n$$", CharReader.Settings(normalizeNewLines = false)) { reader =>
+          TestReaderFactory.fromString(cr"// comment\n$$") { reader =>
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\r')
             reader.get() shouldBe Some('$')
@@ -78,7 +78,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
           }
         }
         it("CRLF (\\r\\n)") {
-          TestReaderFactory.fromString(crlf"// comment\n$$", CharReader.Settings(normalizeNewLines = false)) { reader =>
+          TestReaderFactory.fromString(crlf"// comment\n$$") { reader =>
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\r')
             reader.get() shouldBe Some('\n')
@@ -148,21 +148,21 @@ class CommentsTest extends AnyFunSpec with Matchers {
 
         describe("line ending invariance") {
           it("LF (\\n)") {
-            TestReaderFactory.fromString(lf"/* line 1\nline 2 */$$", CharReader.Settings(normalizeNewLines = false)) { reader =>
+            TestReaderFactory.fromString(lf"/* line 1\nline 2 */$$") { reader =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
               reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(1), ColumnIndex(0))
             }
           }
           it("CR (\\r)") {
-            TestReaderFactory.fromString(cr"/* line 1\nline 2 */$$", CharReader.Settings(normalizeNewLines = false)) { reader =>
+            TestReaderFactory.fromString(cr"/* line 1\nline 2 */$$") { reader =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
               reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(1), ColumnIndex(0))
             }
           }
           it("CRLF (\\r\\n)") {
-            TestReaderFactory.fromString(crlf"/* line 1\nline 2 */$$", CharReader.Settings(normalizeNewLines = false)) { reader =>
+            TestReaderFactory.fromString(crlf"/* line 1\nline 2 */$$") { reader =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
               reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position(LineIndex(1), ColumnIndex(0))

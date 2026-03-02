@@ -100,8 +100,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
         // 25: \n
         // 26-28: """
 
-        val settings = CharReader.Settings(normalizeNewLines = false)
-        TestReaderFactory.fromString(input, settings) { reader =>
+        TestReaderFactory.fromString(input) { reader =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
 
           val first = scanner.get()

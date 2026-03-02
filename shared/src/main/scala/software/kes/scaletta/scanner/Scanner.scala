@@ -235,7 +235,7 @@ final class Scanner private(reader: CharReader,
                 def skipGarbage(): TokenBuffer.Effect =
                   reader.get() match {
                     case Some(c) =>
-                      if (CharacterClass.isWhitespace(c) || canStartToken(c)) {
+                      if (c == '\r' || c == '\n' || CharacterClass.isWhitespace(c) || canStartToken(c)) {
                         reader.unget(c)
                         val end = reader.prevIndex
                         (tokenBuffer: TokenBuffer) =>

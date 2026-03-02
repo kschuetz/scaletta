@@ -2,20 +2,17 @@ package software.kes.scaletta.util
 
 object CharPushback {
   def create(initialCapacity: Int = 256): CharPushback = {
-    if (initialCapacity <= 0) new CharPushback(null, null)
-    else new CharPushback(new Array[Char](initialCapacity),
-      BitArray.create(initialCapacity))
+    if (initialCapacity <= 0) new CharPushback(null)
+    else new CharPushback(new Array[Char](initialCapacity))
   }
 }
 
-final class CharPushback private(private var buffer: Array[Char],
-                                 private var widthFlags: BitArray) {
+final class CharPushback private(private var buffer: Array[Char]) {
   private var ptr = 0
 
-  def push(ch: Char, isDoubleWidth: Boolean = false): Unit = {
+  def push(ch: Char): Unit = {
     grow(ptr + 1)
     buffer(ptr) = ch
-    widthFlags.update(ptr, isDoubleWidth)
     ptr += 1
   }
 
@@ -23,7 +20,6 @@ final class CharPushback private(private var buffer: Array[Char],
     grow(ptr + s.length)
     s.reverseIterator.foreach { ch =>
       buffer(ptr) = ch
-      widthFlags.clear(ptr)
       ptr += 1
     }
   }
@@ -40,13 +36,6 @@ final class CharPushback private(private var buffer: Array[Char],
     if (ptr > 0) buffer(ptr - 1)
     else 0.toChar
 
-  /**
-   * Returns true if the character at the current pointer is double-width, and false otherwise.
-   * If the buffer is empty, it returns false.
-   */
-  def peekDoubleWidth(): Boolean =
-    ptr > 0 && widthFlags.get(ptr - 1)
-
   def reset(): Unit =
     ptr = 0
 
@@ -58,13 +47,11 @@ final class CharPushback private(private var buffer: Array[Char],
     if (buffer == null) {
       val newCapacity = Math.max(capacity * 2, 64)
       buffer = new Array[Char](newCapacity)
-      widthFlags = BitArray.create(newCapacity)
     } else if (capacity > buffer.length) {
       val newCapacity = capacity * 2
       val newBuffer = new Array[Char](newCapacity)
       System.arraycopy(buffer, 0, newBuffer, 0, buffer.length)
       buffer = newBuffer
-      widthFlags.ensureCapacity(newCapacity)
     }
   }
 }

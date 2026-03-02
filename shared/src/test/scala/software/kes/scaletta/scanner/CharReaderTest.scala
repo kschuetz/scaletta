@@ -53,11 +53,9 @@ class CharReaderTest extends AnyFunSpec with Matchers {
       }
     }
 
-    it("should NOT normalize CRLF when normalization is disabled") {
+    it("should NOT normalize CRLF") {
       val input = "a\r\nb"
       TestReaderFactory.fromString(input) { reader =>
-        reader.modifySettings(_.copy(normalizeNewLines = false))
-
         reader.get() shouldBe Some('a') // 0
         reader.get() shouldBe Some('\r') // 1
         reader.get() shouldBe Some('\n') // 2
@@ -65,10 +63,9 @@ class CharReaderTest extends AnyFunSpec with Matchers {
       }
     }
 
-    it("should correctly handle peek with normalization disabled") {
+    it("should correctly handle peek") {
       val input = "\r\n"
       TestReaderFactory.fromString(input) { reader =>
-        reader.modifySettings(_.copy(normalizeNewLines = false))
         reader.peek() shouldBe Some('\r')
         reader.get() shouldBe Some('\r')
         reader.peek() shouldBe Some('\n')
@@ -76,83 +73,13 @@ class CharReaderTest extends AnyFunSpec with Matchers {
       }
     }
 
-    it("should toggle normalization correctly") {
-      val input = "\r\n\r\n\r"
+    it("should correctly handle peek interactions without normalization") {
+      val input = "\r\n"
       TestReaderFactory.fromString(input) { reader =>
-        reader.settings.normalizeNewLines shouldBe false
+        reader.peek() shouldBe Some('\r')
+        reader.currentIndex.value shouldBe 0 // peek should not advance index
         reader.get() shouldBe Some('\r')
-        reader.get() shouldBe Some('\n')
-
-        reader.modifySettings(_.copy(normalizeNewLines = true))
-        reader.get() shouldBe Some('\n') // normalized from \r\n
-        reader.get() shouldBe Some('\n') // normalized from \r
-        reader.get() shouldBe None
-      }
-    }
-
-    it("should support pushSettings and popSettings") {
-      val input = "\r\n\r\n"
-      TestReaderFactory.fromString(input) { reader =>
-        reader.settings.normalizeNewLines shouldBe false
-
-        reader.pushSettings(_.copy(normalizeNewLines = true))
-        reader.settings.normalizeNewLines shouldBe true
-        reader.get() shouldBe Some('\n') // normalized from \r\n
-
-        reader.popSettings()
-        reader.settings.normalizeNewLines shouldBe false
-        reader.get() shouldBe Some('\r')
-        reader.get() shouldBe Some('\n')
-        reader.get() shouldBe None
-      }
-    }
-
-    it("should correctly handle unget of a CR-only newline") {
-      val input = "a\rx"
-      TestReaderFactory.fromString(input) { reader =>
-        reader.get() shouldBe Some('a') // index 0
-        reader.get() shouldBe Some('\r') // index 1
-
-        reader.unget('\r')
         reader.currentIndex.value shouldBe 1
-
-        reader.get() shouldBe Some('\r')
-        reader.get() shouldBe Some('x') // index 2
-        reader.prevIndex.value shouldBe 2
-      }
-    }
-
-    it("should report correct positions for CR-only newlines") {
-      val input = "a\rb"
-      TestReaderFactory.fromString(input) { reader =>
-        reader.get() shouldBe Some('a') // line 0, col 0
-        val cr = reader.get()
-        cr shouldBe Some('\r')
-        reader.recordNewline(reader.currentIndex)
-
-        val posB = reader.lineMap.indexToPosition(reader.currentIndex)
-        posB.line.value shouldBe 1
-        posB.column.value shouldBe 0
-
-        reader.get() shouldBe Some('b') // line 1, col 0
-      }
-    }
-
-    it("should NOT normalize a trailing CR at EOF by default") {
-      val input = "a\r"
-      TestReaderFactory.fromString(input) { reader =>
-        reader.get() shouldBe Some('a')
-        reader.get() shouldBe Some('\r')
-        reader.get() shouldBe None
-      }
-    }
-
-    it("should NOT handle consecutive CR characters as a single event by default") {
-      val input = "\r\r"
-      TestReaderFactory.fromString(input) { reader =>
-        reader.get() shouldBe Some('\r')
-        reader.get() shouldBe Some('\r')
-        reader.get() shouldBe None
       }
     }
   }
@@ -269,25 +196,11 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should support nested settings") {
       TestReaderFactory.fromString("") { reader =>
-        reader.settings.normalizeNewLines shouldBe false
-        reader.pushSettings(_.copy(normalizeNewLines = true))
-        reader.settings.normalizeNewLines shouldBe true
-        reader.pushSettings(_.copy(normalizeNewLines = false))
-        reader.settings.normalizeNewLines shouldBe false
+        val s = reader.settings
+        reader.pushSettings(identity)
+        reader.settings shouldBe s
         reader.popSettings()
-        reader.settings.normalizeNewLines shouldBe true
-        reader.popSettings()
-        reader.settings.normalizeNewLines shouldBe false
-      }
-    }
-
-    it("should correctly handle peek interactions without normalization") {
-      val input = "\r\n"
-      TestReaderFactory.fromString(input) { reader =>
-        reader.peek() shouldBe Some('\r')
-        reader.currentIndex.value shouldBe 0 // peek should not advance index
-        reader.get() shouldBe Some('\r')
-        reader.currentIndex.value shouldBe 1
+        reader.settings shouldBe s
       }
     }
 
