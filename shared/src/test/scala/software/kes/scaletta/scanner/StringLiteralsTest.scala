@@ -97,6 +97,22 @@ class StringLiteralsTest extends AnyFunSpec with Matchers {
           reader.get() shouldBe None
         }
       }
+
+      it("mixed line endings and LineMap accuracy") {
+        val input = "\"\"line 1\r\nline 2\rline 3\n\"\"\""
+        val settings = CharReader.Settings(normalizeNewLines = false)
+        TestReaderFactory.fromString(input, settings) { reader =>
+          Literals.stringLiteral(reader, buffer) shouldBe success(
+            Token.MultiLineString("line 1\nline 2\nline 3\n"), -1, 26)
+
+          val lineMap = reader.lineMap
+          lineMap.indexToPosition(CharIndex(0)).line shouldBe LineIndex(0)
+          lineMap.indexToPosition(CharIndex(10)).line.value shouldBe 1 // After \r\n (8, 9)
+          lineMap.indexToPosition(CharIndex(17)).line.value shouldBe 2 // After \r (16)
+          lineMap.indexToPosition(CharIndex(24)).line.value shouldBe 3 // After \n (23)
+          lineMap.indexToPosition(CharIndex(27)).line.value shouldBe 3 // After """ - it's still on line 3!
+        }
+      }
     }
   }
 }

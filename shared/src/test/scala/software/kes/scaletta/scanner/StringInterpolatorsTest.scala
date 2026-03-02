@@ -86,6 +86,44 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
       }
     }
 
+    describe("newline normalization and LineMap accuracy") {
+      it("mixed line endings in multi-line interpolated strings") {
+        val input = "s\"\"\"line 1\r\nline 2\rline 3\n\"\"\""
+        // Raw characters:
+        // 0-3: s"""
+        // 4-9: line 1
+        // 10: \r
+        // 11: \n
+        // 12-17: line 2
+        // 18: \r
+        // 19-24: line 3
+        // 25: \n
+        // 26-28: """
+
+        val settings = CharReader.Settings(normalizeNewLines = false)
+        TestReaderFactory.fromString(input, settings) { reader =>
+          val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+
+          val first = scanner.get()
+          first.value shouldBe Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s"))
+
+          val second = scanner.get()
+          second.value shouldBe Token.InterpolatedPart("line 1\nline 2\nline 3\n")
+
+          val third = scanner.get()
+          third.value shouldBe Token.EndInterpolatedString
+
+          // Verify LineMap
+          val lineMap = reader.lineMap
+          lineMap.indexToPosition(CharIndex(0)).line shouldBe LineIndex(0)
+          lineMap.indexToPosition(CharIndex(12)).line.value shouldBe 1 // After \r\n (10, 11)
+          lineMap.indexToPosition(CharIndex(19)).line.value shouldBe 2 // After \r (18)
+          lineMap.indexToPosition(CharIndex(26)).line.value shouldBe 3 // After \n (25)
+          lineMap.indexToPosition(CharIndex(29)).line.value shouldBe 3 // After """
+        }
+      }
+    }
+
     it("raw interpolator") {
       check("raw\"\\n $foo\"",
         success(Token.BeginInterpolatedString(Interpolator.fromName("raw")), 0, 3),

@@ -98,10 +98,22 @@ object InterpolatedStrings {
               }
             case '\n' =>
               if (multiLine) {
-                buffer.write(ch)
+                reader.recordNewline(reader.currentIndex)
+                buffer.write('\n')
                 go()
               } else {
-                reader.unget(ch)
+                reader.unget('\n')
+                unclosed
+              }
+            case '\r' =>
+              val hasLF = reader.tryGet('\n')
+              if (multiLine) {
+                reader.recordNewline(reader.currentIndex)
+                buffer.write('\n')
+                go()
+              } else {
+                if (hasLF) reader.unget('\n')
+                reader.unget('\r')
                 unclosed
               }
             case other =>

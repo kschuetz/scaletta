@@ -70,7 +70,14 @@ object Literals {
           (ch: @switch) match {
             case '"' => q2
             case '\n' =>
-              reader.unget(ch)
+              reader.recordNewline(reader.currentIndex)
+              reader.unget('\n')
+              unclosed
+            case '\r' =>
+              val hasLF = reader.tryGet('\n')
+              reader.recordNewline(reader.currentIndex)
+              if (hasLF) reader.unget('\n')
+              reader.unget('\r')
               unclosed
             case '\\' => escapeSequence(multiLineMode = false)
             case other =>
@@ -87,7 +94,14 @@ object Literals {
           (ch: @switch) match {
             case '"' => Pos(StringLiteral(buffer.slice()), begin, reader.prevIndex)
             case '\n' =>
-              reader.unget(ch)
+              reader.recordNewline(reader.currentIndex)
+              reader.unget('\n')
+              unclosed
+            case '\r' =>
+              val hasLF = reader.tryGet('\n')
+              reader.recordNewline(reader.currentIndex)
+              if (hasLF) reader.unget('\n')
+              reader.unget('\r')
               unclosed
             case '\\' => escapeSequence(multiLineMode = false)
             case other =>
@@ -114,6 +128,15 @@ object Literals {
         case Some(ch) =>
           (ch: @switch) match {
             case '"' => endQ1
+            case '\n' =>
+              reader.recordNewline(reader.currentIndex)
+              buffer.write('\n')
+              inMultiLineStr
+            case '\r' =>
+              reader.tryGet('\n')
+              reader.recordNewline(reader.currentIndex)
+              buffer.write('\n')
+              inMultiLineStr
             case '\\' => escapeSequence(multiLineMode = true)
             case other =>
               buffer.write(other)
