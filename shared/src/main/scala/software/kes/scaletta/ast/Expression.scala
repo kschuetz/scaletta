@@ -6,7 +6,7 @@ sealed trait Expression
 
 case class Block(bindings: Vector[Binding], result: Expression) extends Expression
 
-case class Reference(name: Identifier) extends Expression
+case class Reference(path: ::[Identifier]) extends Expression
 
 sealed trait Literal extends Expression
 
@@ -44,9 +44,11 @@ case class Conditional(condition: Expression,
                        thenBranch: Expression,
                        elseBranch: Expression) extends Expression
 
-case class FunctionCall(name: Identifier, args: Vector[Argument]) extends Expression
+case class FunctionCall(target: Expression,
+                        args: Vector[Argument]) extends Expression
 
-case class Lambda(params: Vector[LambdaParameter], body: Expression) extends Expression
+case class Lambda(params: Vector[LambdaParameter],
+                  body: Expression) extends Expression
 
 case class InterpolatedString(interpolator: Interpolator,
                               value: Concat) extends Expression
