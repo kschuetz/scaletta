@@ -44,9 +44,25 @@ case class Conditional(condition: Expression,
                        thenBranch: Expression,
                        elseBranch: Expression) extends Expression
 
-case class FunctionCall(target: Expression,
-                        typeArgs: Vector[TypeArgument],
-                        args: Vector[ArgumentGroup]) extends Expression
+sealed trait Call extends Expression {
+  def target: Expression
+}
+
+object Call {
+  case class Standard(target: Expression,
+                      typeArgs: Vector[TypeArgument],
+                      args: Vector[ArgumentGroup]) extends Call
+
+  case class Infix(left: Expression,
+                   operation: Identifier,
+                   typeArgs: Vector[TypeArgument],
+                   right: Expression) extends Call {
+    def target: Expression = left
+  }
+
+  case class Postfix(target: Expression,
+                     operation: Identifier) extends Call
+}
 
 case class Lambda(params: Vector[LambdaParameter],
                   body: Expression) extends Expression
