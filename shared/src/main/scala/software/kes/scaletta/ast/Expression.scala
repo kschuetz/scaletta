@@ -45,7 +45,8 @@ case class Conditional(condition: Expression,
                        elseBranch: Expression) extends Expression
 
 case class FunctionCall(target: Expression,
-                        args: Vector[Argument]) extends Expression
+                        typeArgs: Vector[TypeArgument],
+                        args: Vector[ArgumentGroup]) extends Expression
 
 case class Lambda(params: Vector[LambdaParameter],
                   body: Expression) extends Expression

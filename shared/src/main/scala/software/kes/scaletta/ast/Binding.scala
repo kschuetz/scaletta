@@ -7,7 +7,7 @@ object Binding {
                  rhs: Expression) extends Binding
 
   case class Def(name: Identifier,
-                 params: Vector[FormalParameter],
+                 params: Vector[FormalParameterGroup],
                  body: Expression) extends Binding
 
   case class LazyVal(name: Identifier,
