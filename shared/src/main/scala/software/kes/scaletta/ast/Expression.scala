@@ -4,9 +4,13 @@ import software.kes.scaletta.common.Interpolator
 
 sealed trait Expression
 
-case class Block(bindings: Vector[Binding], result: Expression) extends Expression
+case class Block(bindings: Vector[Binding],
+                 result: Expression) extends Expression
 
 case class Reference(path: ::[Identifier]) extends Expression
+
+case class Typed(expression: Expression,
+                 ascription: TypeIdentifier) extends Expression
 
 sealed trait Literal extends Expression
 
