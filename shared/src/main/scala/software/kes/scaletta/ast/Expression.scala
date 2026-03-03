@@ -72,4 +72,5 @@ case class Lambda(params: Vector[LambdaParameter],
                   body: Expression) extends Expression
 
 case class InterpolatedString(interpolator: Interpolator,
-                              value: Concat) extends Expression
+                              initial: String,
+                              segments: Vector[(Expression, String)]) extends Expression
