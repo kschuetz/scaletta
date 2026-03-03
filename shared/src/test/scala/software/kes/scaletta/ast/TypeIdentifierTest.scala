@@ -2,31 +2,30 @@ package software.kes.scaletta.ast
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.common.TypeName
 import software.kes.scaletta.types.ConjunctionType
 
 class TypeIdentifierTest extends AnyFunSpec with Matchers {
-  private val typeA = TypeIdentifier.name(TypeName("A"))
-  private val typeB = TypeIdentifier.name(TypeName("B"))
-  private val typeC = TypeIdentifier.name(TypeName("C"))
+  private val typeA = TypeIdentifier.name(Identifier("A"))
+  private val typeB = TypeIdentifier.name(Identifier("B"))
+  private val typeC = TypeIdentifier.name(Identifier("C"))
 
   describe("TypeIdentifier") {
     describe("name") {
       it("should create a Name node") {
-        val ti = TypeIdentifier.name(TypeName("Int"))
-        ti shouldBe TypeIdentifier.Name(TypeName("Int"))
+        val ti = TypeIdentifier.name(Identifier("Int"))
+        ti shouldBe TypeIdentifier.Name(Identifier("Int"))
       }
     }
 
     describe("applied") {
       it("should create an Applied node with arguments") {
-        val ti = TypeIdentifier.applied(TypeName("List"), typeA)
-        ti shouldBe TypeIdentifier.Applied(TypeName("List"), ::(typeA, Nil))
+        val ti = TypeIdentifier.applied(Identifier("List"), typeA)
+        ti shouldBe TypeIdentifier.Applied(Identifier("List"), ::(typeA, Nil))
       }
 
       it("should fall back to Name for zero arguments") {
-        val ti = TypeIdentifier.applied(TypeName("Int"))
-        ti shouldBe TypeIdentifier.Name(TypeName("Int"))
+        val ti = TypeIdentifier.applied(Identifier("Int"))
+        ti shouldBe TypeIdentifier.Name(Identifier("Int"))
       }
     }
 
