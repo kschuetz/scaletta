@@ -4,6 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.BeforeAndAfter
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.scanner.ScannerError.{EmptyQuotedIdentifier, IdentifierTooLong, UnclosedQuotedIdentifier}
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}

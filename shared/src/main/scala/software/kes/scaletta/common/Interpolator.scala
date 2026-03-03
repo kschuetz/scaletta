@@ -1,4 +1,4 @@
-package software.kes.scaletta.scanner
+package software.kes.scaletta.common
 
 sealed trait Interpolator {
   def name: String
@@ -7,23 +7,22 @@ sealed trait Interpolator {
 object Interpolator {
 
   def fromName(name: String): Interpolator = name match {
-    case ScannerConstants.Raw => Raw
+    case Raw.name => Raw
     case "f" => F
     case _ => Custom(name)
   }
 
-
   /**
-   * The "raw" and "f" interpolators will required special handling.
+   * The "raw" and "f" interpolators will require special handling.
    */
 
   case class Custom(name: String) extends Interpolator
 
   case object Raw extends Interpolator {
-    def name: String = ScannerConstants.Raw
+    final val name: String = "raw"
   }
 
   case object F extends Interpolator {
-    def name: String = "f"
+    final val name: String = "f"
   }
 }

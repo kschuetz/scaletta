@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.scanner.ScannerConstants.DoubleQuotes3
 import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer

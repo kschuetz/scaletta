@@ -2,6 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
 
 class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens {

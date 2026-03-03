@@ -1,5 +1,7 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.common.Interpolator
+
 sealed trait Token {
   def canBeginStatement: Boolean = true
 
