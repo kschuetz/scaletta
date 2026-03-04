@@ -3,6 +3,14 @@ package software.kes.scaletta.parser
 import software.kes.scaletta.ast.Expression
 import software.kes.scaletta.reporting.Pos
 
+object ParseResult {
+  def empty: ParseResult = ParseResult()
+
+  def create(value: Expression): ParseResult = ParseResult(Some(value))
+
+  def error(error: Pos[ParseError]): ParseResult = ParseResult(errors = Vector(error))
+}
+
 case class ParseResult(value: Option[Expression] = None,
                        errors: Vector[Pos[ParseError]] = Vector.empty,
                        warnings: Vector[Pos[ParseWarning]] = Vector.empty) {
