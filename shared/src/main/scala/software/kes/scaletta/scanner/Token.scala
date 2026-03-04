@@ -123,6 +123,8 @@ object Token {
   }
 
   sealed trait Identifier extends Token {
+    def name: String
+
     override def canTerminateStatement: Boolean = true
   }
 
