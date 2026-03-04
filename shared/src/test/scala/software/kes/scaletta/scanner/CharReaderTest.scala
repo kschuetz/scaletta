@@ -2,6 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.reporting.CharIndex
 import software.kes.scaletta.testsupport.TestReaderFactory
 
 class CharReaderTest extends AnyFunSpec with Matchers {

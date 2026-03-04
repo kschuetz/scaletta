@@ -1,6 +1,7 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.scanner.{Pos, Token}
+import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.scanner.Token
 
 object TestErrorFormatting {
 

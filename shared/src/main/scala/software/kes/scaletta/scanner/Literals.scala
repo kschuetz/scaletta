@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.scanner.CharacterClass.{isDigit, isLetter}
 import software.kes.scaletta.scanner.ScannerError._
 import software.kes.scaletta.scanner.Token._

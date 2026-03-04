@@ -1,5 +1,6 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.reporting.{CharIndex, LineMap, LineMapBuilder}
 import software.kes.scaletta.scanner.CharReader.Settings
 import software.kes.scaletta.util.{CharPushback, SettingsStack}
 

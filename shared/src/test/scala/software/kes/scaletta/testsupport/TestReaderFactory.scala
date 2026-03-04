@@ -1,6 +1,7 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.scanner.{CharReader, LineMap}
+import software.kes.scaletta.reporting.LineMap
+import software.kes.scaletta.scanner.CharReader
 
 object TestReaderFactory {
   def fromString[A](s: String,

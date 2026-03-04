@@ -2,7 +2,8 @@ package software.kes.scaletta.testsupport
 
 import org.scalactic.source.Position
 import org.scalatest.Assertions
-import software.kes.scaletta.scanner.{Pos, Token}
+import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.scanner.Token
 import software.kes.scaletta.testsupport.TestErrorFormatting.{formatToken, renderUnderline}
 
 trait AssertExpectedTokens {

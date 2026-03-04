@@ -1,4 +1,4 @@
-package software.kes.scaletta.scanner
+package software.kes.scaletta.reporting
 
 object Position {
   val zero: Position = Position(LineIndex(0), ColumnIndex(0))

@@ -1,5 +1,7 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.reporting.CharIndex
+
 sealed trait WhitespaceResult {
   def indexOfLastNewline: Option[CharIndex]
 }

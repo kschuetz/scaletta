@@ -2,6 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.reporting.{CharIndex, Pos}
 
 class TokenBufferTest extends AnyFunSpec with Matchers {
   private def posToken(token: Token, begin: Int, end: Int): Pos[Token] =
