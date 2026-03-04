@@ -1,5 +1,7 @@
 package software.kes.scaletta.reporting
 
+import software.kes.scaletta.util.functional.Functor
+
 object Position {
   val zero: Position = Position(LineIndex(0), ColumnIndex(0))
 }
@@ -51,6 +53,10 @@ final class CharIndex(val value: Int) extends AnyVal {
 object Pos {
   def apply[A](value: A, index: CharIndex): Pos[A] =
     Pos(value, index, index)
+
+  implicit object posFunctor extends Functor[Pos] {
+    def map[A, B](fa: Pos[A])(f: A => B): Pos[B] = fa.map(f)
+  }
 }
 
 case class Pos[A](value: A,
