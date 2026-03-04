@@ -74,3 +74,10 @@ case class Lambda(params: Vector[LambdaParameter],
 case class InterpolatedString(interpolator: Interpolator,
                               initial: String,
                               segments: Vector[(Expression, String)]) extends Expression
+
+case class Match(expression: Expression,
+                 cases: Vector[Case]) extends Expression
+
+case class Case(pattern: Pattern,
+                guard: Option[Expression],
+                body: Expression)
