@@ -55,7 +55,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       it("invalid escape sequence") {
         TestReaderFactory.fromString("invalid \\z escape\"") { reader =>
           val result = Literals.stringLiteral(reader, buffer)
-          result.value shouldBe Token.Error(ScannerError.InvalidEscapeCharacter)
+          result.value shouldBe Token.Error(ScanError.InvalidEscapeCharacter)
           result.begin.value shouldBe 8
         }
       }
@@ -63,7 +63,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       it("incomplete unicode escape") {
         TestReaderFactory.fromString("bad \\u12 escape\"") { reader =>
           val result = Literals.stringLiteral(reader, buffer)
-          result.value shouldBe Token.Error(ScannerError.InvalidEscapeCharacter)
+          result.value shouldBe Token.Error(ScanError.InvalidEscapeCharacter)
           result.begin.value shouldBe 4
         }
       }
@@ -71,7 +71,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       it("unclosed string literal") {
         TestReaderFactory.fromString("this string does not end") { reader =>
           val result = Literals.stringLiteral(reader, buffer)
-          result.value shouldBe Token.Error(ScannerError.UnclosedStringLiteral)
+          result.value shouldBe Token.Error(ScanError.UnclosedStringLiteral)
           result.begin.value shouldBe -1
           result.end.value shouldBe 23
         }
@@ -80,7 +80,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       it("unclosed multi-line string literal") {
         TestReaderFactory.fromString("\"\"this multi-line string does not end") { reader =>
           val result = Literals.stringLiteral(reader, buffer)
-          result.value shouldBe Token.Error(ScannerError.UnclosedMultiLineString)
+          result.value shouldBe Token.Error(ScanError.UnclosedMultiLineString)
           result.begin.value shouldBe -1
           result.end.value shouldBe 36
         }
@@ -210,12 +210,12 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
 
       it("unclosed single-line string") {
         val input = "\"abc"
-        check(input, failure(ScannerError.UnclosedStringLiteral, 0, 3))
+        check(input, failure(ScanError.UnclosedStringLiteral, 0, 3))
       }
 
       it("unclosed multi-line string") {
         val input = "\"\"\"abc"
-        check(input, failure(ScannerError.UnclosedMultiLineString, 0, 5))
+        check(input, failure(ScanError.UnclosedMultiLineString, 0, 5))
       }
     }
   }

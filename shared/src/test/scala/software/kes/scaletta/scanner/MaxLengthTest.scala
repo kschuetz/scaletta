@@ -15,7 +15,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       TestReaderFactory.fromString(input) { reader =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
-        t1.value shouldBe Token.Error(ScannerError.IdentifierTooLong)
+        t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
         t1.begin.value shouldBe 0
         t1.end.value shouldBe 10
       }
@@ -35,7 +35,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       TestReaderFactory.fromString(input) { reader =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
-        t1.value shouldBe Token.Error(ScannerError.IdentifierTooLong)
+        t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
       }
     }
 
@@ -44,7 +44,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       TestReaderFactory.fromString(input) { reader =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
-        t1.value shouldBe Token.Error(ScannerError.IdentifierTooLong)
+        t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
       }
     }
 
@@ -54,7 +54,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       TestReaderFactory.fromString(input) { reader =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
-        t1.value shouldBe Token.Error(ScannerError.IdentifierTooLong)
+        t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
       }
     }
 
@@ -82,7 +82,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // but it should not crash or hang.
         t1.value match {
           case Token.IntLiteral(_) => // ok
-          case Token.Error(ScannerError.IntegerNumberTooLarge) => // also ok
+          case Token.Error(ScanError.IntegerNumberTooLarge) => // also ok
           case other => fail(s"Unexpected token: $other")
         }
       }

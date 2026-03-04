@@ -21,9 +21,9 @@ object EscapeSequence {
             EscapeResult.Boundary
           case other =>
             reader.unget(other)
-            EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+            EscapeResult.Error(ScanError.InvalidEscapeCharacter)
         }
-      case None => EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+      case None => EscapeResult.Error(ScanError.InvalidEscapeCharacter)
     }
 
   private def scanUnicodeSequence(reader: CharReader): EscapeResult = {
@@ -34,10 +34,10 @@ object EscapeSequence {
         EscapeResult.Boundary
       case Left(Some(_)) =>
         reader.unget('u')
-        EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+        EscapeResult.Error(ScanError.InvalidEscapeCharacter)
       case Left(None) =>
         reader.unget('u')
-        EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+        EscapeResult.Error(ScanError.InvalidEscapeCharacter)
     }
   }
 }

@@ -51,19 +51,19 @@ class CharLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedToken
     }
 
     it("unclosed 1") {
-      check("'a", failure(ScannerError.UnclosedCharacterLiteral, 0, 1))
+      check("'a", failure(ScanError.UnclosedCharacterLiteral, 0, 1))
     }
 
     it("unclosed char literal (no end quote)") {
-      check("'a", failure(ScannerError.UnclosedCharacterLiteral, 0, 1))
+      check("'a", failure(ScanError.UnclosedCharacterLiteral, 0, 1))
     }
 
     it("empty") {
-      check("''", failure(ScannerError.EmptyCharacterLiteral, 0, 1))
+      check("''", failure(ScanError.EmptyCharacterLiteral, 0, 1))
     }
 
     it("invalid escape sequence") {
-      check("'\\z'", failure(ScannerError.InvalidEscapeCharacter, 1, 1), success(Token.Identifier.Lower("z"), 2, 2), failure(ScannerError.UnclosedCharacterLiteral, 3, 3))
+      check("'\\z'", failure(ScanError.InvalidEscapeCharacter, 1, 1), success(Token.Identifier.Lower("z"), 2, 2), failure(ScanError.UnclosedCharacterLiteral, 3, 3))
     }
   }
 

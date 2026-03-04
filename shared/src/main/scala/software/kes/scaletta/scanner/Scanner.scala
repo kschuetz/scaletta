@@ -100,7 +100,7 @@ final class Scanner private(reader: CharReader,
         skipCommentsAndWhitespace(None) match {
           case SkipCommentsResult.Unterminated =>
             (tokenBuffer: TokenBuffer) =>
-              tokenBuffer.enqueue(Pos(Token.Error(ScannerError.UnclosedComment), begin, reader.currentIndex))
+              tokenBuffer.enqueue(Pos(Token.Error(ScanError.UnclosedComment), begin, reader.currentIndex))
           case SkipCommentsResult.NewLinesEncountered(index) =>
             val someIndex = Some(index)
             checkForForcedExit(someIndex).getOrElse(readToken(someIndex))
@@ -109,7 +109,7 @@ final class Scanner private(reader: CharReader,
               if (reader.peek().isEmpty) {
                 (tokenBuffer: TokenBuffer) => {
                   if (portalMode && regionStack.peek.isDefined) {
-                    val pos: Pos[Token] = Pos(Token.Error(ScannerError.UnbalancedBraces): Token, begin, begin)
+                    val pos: Pos[Token] = Pos(Token.Error(ScanError.UnbalancedBraces): Token, begin, begin)
                     tokenBuffer.enqueue(pos)
                   }
                   val endOfInputPos: Pos[Token] = Pos(Token.EndOfInput: Token, begin, begin)
@@ -129,7 +129,7 @@ final class Scanner private(reader: CharReader,
         if (reader.matchSequence(ScannerConstants.DoubleQuotes3)) {
           val end = reader.prevIndex
           regionStack = regionStack.dropUntilInterpolatedString
-          val error = ScannerError.UnclosedMultiLineString
+          val error = ScanError.UnclosedMultiLineString
           Some(yieldSuccess(Pos(Token.Error(error), begin, end), newlineEncountered))
         } else {
           None
@@ -175,7 +175,7 @@ final class Scanner private(reader: CharReader,
               case None =>
                 // Should not happen as we just peeked a digit
                 (tokenBuffer: TokenBuffer) =>
-                  tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, begin))
+                  tokenBuffer.enqueue(Pos(Error(ScanError.InvalidLiteralNumber), begin, begin))
             }
           case '.' =>
             reader.get() match {
@@ -188,7 +188,7 @@ final class Scanner private(reader: CharReader,
                     reader.get() // consume the '.'
                     val end = reader.prevIndex
                     (tokenBuffer: TokenBuffer) =>
-                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, end))
+                      tokenBuffer.enqueue(Pos(Error(ScanError.InvalidLiteralNumber), begin, end))
                 }
               case Some(c) =>
                 reader.unget(c)
@@ -208,7 +208,7 @@ final class Scanner private(reader: CharReader,
                     reader.tryGet('.') // consume the '.' if present
                     val end = reader.prevIndex
                     (tokenBuffer: TokenBuffer) =>
-                      tokenBuffer.enqueue(Pos(Error(ScannerError.InvalidLiteralNumber), begin, end))
+                      tokenBuffer.enqueue(Pos(Error(ScanError.InvalidLiteralNumber), begin, end))
                 }
               case Some(c) =>
                 reader.unget(c)
@@ -241,14 +241,14 @@ final class Scanner private(reader: CharReader,
                         reader.unget(c)
                         val end = reader.prevIndex
                         (tokenBuffer: TokenBuffer) =>
-                          tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, end))
+                          tokenBuffer.enqueue(Pos(Token.Error(ScanError.InvalidCharacter), begin, end))
                       } else {
                         skipGarbage()
                       }
                     case None =>
                       val end = reader.prevIndex
                       (tokenBuffer: TokenBuffer) =>
-                        tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, end))
+                        tokenBuffer.enqueue(Pos(Token.Error(ScanError.InvalidCharacter), begin, end))
                   }
 
                 skipGarbage()
@@ -263,7 +263,7 @@ final class Scanner private(reader: CharReader,
             case None => portalMode
           }
           if (isUnbalanced) {
-            val pos: Pos[Token] = Pos(Token.Error(ScannerError.UnbalancedBraces): Token, begin, begin)
+            val pos: Pos[Token] = Pos(Token.Error(ScanError.UnbalancedBraces): Token, begin, begin)
             tokenBuffer.enqueue(pos)
           }
           val endOfInputPos: Pos[Token] = Pos(Token.EndOfInput: Token, begin, begin)
@@ -323,10 +323,10 @@ final class Scanner private(reader: CharReader,
             case Some(ch) =>
               reader.unget(ch)
               (tokenBuffer: TokenBuffer) =>
-                tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin))
+                tokenBuffer.enqueue(Pos(Token.Error(ScanError.InvalidCharacter), begin, begin))
             case None =>
               (tokenBuffer: TokenBuffer) =>
-                tokenBuffer.enqueue(Pos(Token.Error(ScannerError.InvalidCharacter), begin, begin))
+                tokenBuffer.enqueue(Pos(Token.Error(ScanError.InvalidCharacter), begin, begin))
           }
         }
       }

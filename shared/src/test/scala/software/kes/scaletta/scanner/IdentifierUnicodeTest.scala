@@ -154,7 +154,7 @@ class IdentifierUnicodeTest extends AnyFunSpec with Matchers with AssertExpected
         // Current behavior: they are treated as InvalidCharacter because Character.isLetter(Char)
         // and Character.getType(Char) don't handle surrogates as single code points.
         assertExpectedTokens(input, Vector(
-          Pos(Token.Error(ScannerError.InvalidCharacter), CharIndex(0), CharIndex(1)),
+          Pos(Token.Error(ScanError.InvalidCharacter), CharIndex(0), CharIndex(1)),
           success(Token.EndOfInput, 2, 2)
         ), tokens)
       }

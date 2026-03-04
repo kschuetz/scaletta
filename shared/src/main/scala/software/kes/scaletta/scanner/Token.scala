@@ -13,7 +13,7 @@ object Token {
 
   case object EndOfInput extends Token
 
-  case class Error(error: ScannerError) extends Token {
+  case class Error(error: ScanError) extends Token {
     override def canTerminateStatement: Boolean = true
   }
 

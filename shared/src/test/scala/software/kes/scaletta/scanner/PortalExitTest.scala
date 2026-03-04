@@ -184,7 +184,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
         scanner.get().value shouldBe Token.Identifier.Lower("x")
 
         val t3 = scanner.get()
-        t3.value shouldBe Token.Error(ScannerError.UnbalancedBraces)
+        t3.value shouldBe Token.Error(ScanError.UnbalancedBraces)
         // Error index should be at EOF
         t3.begin.value shouldBe 3
         t3.end.value shouldBe 3

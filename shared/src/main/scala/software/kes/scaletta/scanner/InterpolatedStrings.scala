@@ -1,8 +1,8 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.reporting.{CharIndex, Pos}
+import software.kes.scaletta.scanner.ScanError._
 import software.kes.scaletta.scanner.ScannerConstants.{DoubleQuotes2, DoubleQuotes3}
-import software.kes.scaletta.scanner.ScannerError._
 import software.kes.scaletta.scanner.Token._
 import software.kes.scaletta.util.CharBuffer
 
@@ -27,7 +27,7 @@ object InterpolatedStrings {
     }
 
     @tailrec
-    def skipToEnd(error: ScannerError, errorPos: CharIndex): Result =
+    def skipToEnd(error: ScanError, errorPos: CharIndex): Result =
       reader.get() match {
         case Some('"') => Pos(Error(error), errorPos, errorPos)
         case Some(_) => skipToEnd(error, errorPos)
@@ -35,7 +35,7 @@ object InterpolatedStrings {
       }
 
     @tailrec
-    def skipToEndMulti(error: ScannerError, errorPos: CharIndex): Result =
+    def skipToEndMulti(error: ScanError, errorPos: CharIndex): Result =
       reader.get() match {
         case Some('"') => if (reader.matchSequence(DoubleQuotes2)) {
           Pos(Error(error), errorPos, errorPos)

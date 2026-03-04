@@ -6,7 +6,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.reporting.Pos
-import software.kes.scaletta.scanner.ScannerError.{EmptyQuotedIdentifier, IdentifierTooLong, UnclosedQuotedIdentifier}
+import software.kes.scaletta.scanner.ScanError.{EmptyQuotedIdentifier, IdentifierTooLong, UnclosedQuotedIdentifier}
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
 
@@ -27,13 +27,13 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
         check("0", success(Token.IntLiteral(0), 0, 0))
         check("123", success(Token.IntLiteral(123), 0, 2))
         check("1_23", success(Token.IntLiteral(123), 0, 3))
-        check("1_abc", failure(ScannerError.IllegalSeparator, 1, 1),
+        check("1_abc", failure(ScanError.IllegalSeparator, 1, 1),
           success(Token.Identifier.Lower("abc"), 2, 4))
       }
 
       it("delimiters") {
-        check("'", failure(ScannerError.UnclosedCharacterLiteral, 0, 0))
-        check("\"", failure(ScannerError.UnclosedStringLiteral, 0, 0))
+        check("'", failure(ScanError.UnclosedCharacterLiteral, 0, 0))
+        check("\"", failure(ScanError.UnclosedStringLiteral, 0, 0))
         check("{", success(Token.LBrace, 0, 0))
         check("}", success(Token.RBrace, 0, 0))
         check("(", success(Token.LParen, 0, 0))
@@ -122,7 +122,7 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
         check("``", failure(EmptyQuotedIdentifier, 0, 1))
         check("`unclosed", failure(UnclosedQuotedIdentifier, 0, 8))
         check("`newline:\n`", failure(UnclosedQuotedIdentifier, 0, 8),
-          success(Token.Semicolon, 9, 9), failure(ScannerError.UnclosedQuotedIdentifier, 10, 10))
+          success(Token.Semicolon, 9, 9), failure(ScanError.UnclosedQuotedIdentifier, 10, 10))
       }
     }
 
@@ -188,33 +188,33 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
       it("single line") {
         check("s\"",
           success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
-          failure(ScannerError.UnclosedStringLiteral, 2, 2)
+          failure(ScanError.UnclosedStringLiteral, 2, 2)
         )
         check("Abc_123_$_xyz\"",
           success(Token.BeginInterpolatedString(Interpolator.fromName("Abc_123_$_xyz")), 0, 13),
-          failure(ScannerError.UnclosedStringLiteral, 14, 14)
+          failure(ScanError.UnclosedStringLiteral, 14, 14)
         )
       }
 
       it("multi-line") {
         check("s\"\"\"",
           success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
-          failure(ScannerError.UnclosedMultiLineString, 4, 4)
+          failure(ScanError.UnclosedMultiLineString, 4, 4)
         )
         check("Abc_123_$_xyz\"\"\"",
           success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("Abc_123_$_xyz")), 0, 15),
-          failure(ScannerError.UnclosedMultiLineString, 16, 16)
+          failure(ScanError.UnclosedMultiLineString, 16, 16)
         )
       }
 
       it("not valid identifier") {
         check("_abc\"",
           success(Token.Identifier.Lower("_abc"), 0, 3),
-          failure(ScannerError.UnclosedStringLiteral, 4, 4)
+          failure(ScanError.UnclosedStringLiteral, 4, 4)
         )
         check("+\"",
           success(Token.Identifier.Operator("+"), 0, 0),
-          failure(ScannerError.UnclosedStringLiteral, 1, 1)
+          failure(ScanError.UnclosedStringLiteral, 1, 1)
         )
       }
     }
@@ -243,7 +243,7 @@ class IdentifierScannerTest extends AnyFunSpec with Matchers with BeforeAndAfter
       it("should not allow a combining mark to start an identifier") {
         // A combining mark by itself or at the start is not a valid identifier start.
         val input = "\u0301abc"
-        check(input, failure(ScannerError.InvalidCharacter, 0, 0), success(Token.Identifier.Lower("abc"), 1, 3))
+        check(input, failure(ScanError.InvalidCharacter, 0, 0), success(Token.Identifier.Lower("abc"), 1, 3))
       }
     }
   }

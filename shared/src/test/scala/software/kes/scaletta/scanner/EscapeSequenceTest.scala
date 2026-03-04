@@ -29,18 +29,18 @@ class EscapeSequenceTest extends AnyFunSpec with Matchers {
     }
 
     it("should return Error and backtrack for invalid non-Unicode escapes") {
-      testScan("z", EscapeResult.Error(ScannerError.InvalidEscapeCharacter), expectedRemainder = "z")
-      testScan(" ", EscapeResult.Error(ScannerError.InvalidEscapeCharacter), expectedRemainder = " ")
+      testScan("z", EscapeResult.Error(ScanError.InvalidEscapeCharacter), expectedRemainder = "z")
+      testScan(" ", EscapeResult.Error(ScanError.InvalidEscapeCharacter), expectedRemainder = " ")
     }
 
     it("should return Error and backtrack for partial Unicode escapes (missing digits)") {
-      testScan("u00", EscapeResult.Error(ScannerError.InvalidEscapeCharacter), expectedRemainder = "u00")
-      testScan("u0", EscapeResult.Error(ScannerError.InvalidEscapeCharacter), expectedRemainder = "u0")
-      testScan("u", EscapeResult.Error(ScannerError.InvalidEscapeCharacter), expectedRemainder = "u")
+      testScan("u00", EscapeResult.Error(ScanError.InvalidEscapeCharacter), expectedRemainder = "u00")
+      testScan("u0", EscapeResult.Error(ScanError.InvalidEscapeCharacter), expectedRemainder = "u0")
+      testScan("u", EscapeResult.Error(ScanError.InvalidEscapeCharacter), expectedRemainder = "u")
     }
 
     it("should return Error and backtrack for partial Unicode escapes (invalid character)") {
-      testScan("u00G", EscapeResult.Error(ScannerError.InvalidEscapeCharacter), expectedRemainder = "u00G")
+      testScan("u00G", EscapeResult.Error(ScanError.InvalidEscapeCharacter), expectedRemainder = "u00G")
     }
 
     it("should return Boundary and backtrack when hitting a newline inside a Unicode escape") {
@@ -49,7 +49,7 @@ class EscapeSequenceTest extends AnyFunSpec with Matchers {
 
     it("should return Error for empty input") {
       TestReaderFactory.fromString("") { reader =>
-        EscapeSequence.scan(reader) shouldBe EscapeResult.Error(ScannerError.InvalidEscapeCharacter)
+        EscapeSequence.scan(reader) shouldBe EscapeResult.Error(ScanError.InvalidEscapeCharacter)
       }
     }
   }

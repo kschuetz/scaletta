@@ -19,7 +19,7 @@ object EscapeResult {
    *
    * @param error the specific lexical error
    */
-  case class Error(error: ScannerError) extends EscapeResult
+  case class Error(error: ScanError) extends EscapeResult
 
   /**
    * Encountered a physical line boundary (newline or carriage return) during scanning.

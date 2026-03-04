@@ -5,7 +5,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.reporting.{CharIndex, LineIndex, Pos}
-import software.kes.scaletta.scanner.ScannerError._
+import software.kes.scaletta.scanner.ScanError._
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
@@ -200,11 +200,11 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
 
           // Second call: Error
           val second = scanner.get()
-          second.value shouldBe Token.Error(ScannerError.UnclosedStringLiteral)
+          second.value shouldBe Token.Error(ScanError.UnclosedStringLiteral)
 
           // Third call: Should be EndOfInput, NOT the same error again
           val third = scanner.get()
-          if (third.value == Token.Error(ScannerError.UnclosedStringLiteral)) {
+          if (third.value == Token.Error(ScanError.UnclosedStringLiteral)) {
             fail("Scanner saturated on the Error token instead of transitioning to EndOfInput")
           }
           third.value shouldBe Token.EndOfInput

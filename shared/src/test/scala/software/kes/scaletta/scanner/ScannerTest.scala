@@ -111,7 +111,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           scanner.peek(2).value shouldBe Token.LParen
 
           val errorToken = scanner.get()
-          errorToken.value shouldBe Token.Error(ScannerError.InvalidLiteralNumber)
+          errorToken.value shouldBe Token.Error(ScanError.InvalidLiteralNumber)
           // The error should span only '-.' (indices 0 to 1)
           errorToken.begin.value shouldBe 0
           errorToken.end.value shouldBe 1
@@ -129,7 +129,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           scanner.peek(2).value shouldBe Token.LParen
 
           val errorToken = scanner.get()
-          errorToken.value shouldBe Token.Error(ScannerError.InvalidCharacter)
+          errorToken.value shouldBe Token.Error(ScanError.InvalidCharacter)
           // The error should span only '\u0000' (index 0)
           errorToken.begin.value shouldBe 0
           errorToken.end.value shouldBe 0
@@ -175,7 +175,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("should handle unterminated block comments") {
         check("/* comment",
-          failure(ScannerError.UnclosedComment, 0, 10)
+          failure(ScanError.UnclosedComment, 0, 10)
         )
       }
       it("should NOT infer semicolon after line comment at end of file") {
@@ -243,7 +243,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       }
 
       it("handles -.") {
-        check("-.", failure(ScannerError.InvalidLiteralNumber, 0, 1))
+        check("-.", failure(ScanError.InvalidLiteralNumber, 0, 1))
       }
     }
 
@@ -305,24 +305,24 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // single-line interpolated string reaches newline or EOF
         check("s\"hello",
           success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
-          failure(ScannerError.UnclosedStringLiteral, 2, 7)
+          failure(ScanError.UnclosedStringLiteral, 2, 7)
         )
         // multi-line interpolated string reaches EOF
         check("s\"\"\"hello",
           success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), 0, 3),
-          failure(ScannerError.UnclosedMultiLineString, 4, 9)
+          failure(ScanError.UnclosedMultiLineString, 4, 9)
         )
         // escaped $$ and error
         check("s\"$$\\z\"",
           success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
           success(Token.InterpolatedPart("$"), 2, 3),
-          failure(ScannerError.InvalidEscapeCharacter, 4, 4)
+          failure(ScanError.InvalidEscapeCharacter, 4, 4)
         )
         // s"$" at EOF
         check("s\"$",
           success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
-          failure(ScannerError.InvalidCharacter, 2, 2),
-          failure(ScannerError.UnclosedStringLiteral, 3, 3)
+          failure(ScanError.InvalidCharacter, 2, 2),
+          failure(ScanError.UnclosedStringLiteral, 3, 3)
         )
         // scanIdentifier within interpolated string
         check("s\"$name\"",
@@ -746,7 +746,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       val input = "val \u0001 123 . . 5"
       check(input,
         success(Token.Val, 0, 2),
-        failure(ScannerError.InvalidCharacter, 4, 4),
+        failure(ScanError.InvalidCharacter, 4, 4),
         success(Token.IntLiteral(123), 6, 8),
         success(Token.Dot, 10, 10),
         success(Token.Dot, 12, 12),
@@ -770,7 +770,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         success(Token.Val, 0, 2),
         success(Token.Identifier.Lower("x"), 4, 4),
         success(Token.Eq, 6, 6),
-        failure(ScannerError.UnclosedStringLiteral, 8, 19),
+        failure(ScanError.UnclosedStringLiteral, 8, 19),
         success(Token.Semicolon, 20, 20),
         success(Token.Val, 21, 23),
         success(Token.Identifier.Lower("y"), 25, 25),
@@ -792,7 +792,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         success(Token.Val, 0, 2),
         success(Token.Identifier.Lower("x"), 4, 4),
         success(Token.Eq, 6, 6),
-        failure(ScannerError.UnclosedMultiLineString, 8, 25)
+        failure(ScanError.UnclosedMultiLineString, 8, 25)
       )
     }
 
@@ -816,7 +816,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         success(Token.Val, 0, 2),
         // "val `unclosed = 1"
         // 01234567890123456
-        failure(ScannerError.UnclosedQuotedIdentifier, 4, 16),
+        failure(ScanError.UnclosedQuotedIdentifier, 4, 16),
         // After Error, Scanner.get calls readNext -> skipCommentsAndWhitespace.
         // It skips the \n at 17.
         // readToken(Some(17)) sees "val y = 2" starting at 18.
@@ -840,7 +840,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // "unclosed \
         // starts at 8. It hits \ at 18.
         // It identifies the newline as a boundary and returns UnclosedStringLiteral error.
-        failure(ScannerError.UnclosedStringLiteral, 8, 18),
+        failure(ScanError.UnclosedStringLiteral, 8, 18),
         success(Token.Semicolon, 19, 19),
         success(Token.Val, 20, 22),
         success(Token.Identifier.Lower("y"), 24, 24),
@@ -858,7 +858,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         success(Token.Val, 0, 2),
         // `unclosed \
         // Similar to string above.
-        failure(ScannerError.UnclosedQuotedIdentifier, 4, 14),
+        failure(ScanError.UnclosedQuotedIdentifier, 4, 14),
         success(Token.Semicolon, 15, 15),
         success(Token.Val, 16, 18),
         success(Token.Identifier.Lower("y"), 20, 20),
@@ -875,7 +875,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       check(input,
         // The Unicode escape hits the newline and triggers a boundary exit.
         // It reports the string as unclosed up to the point where it hit the boundary.
-        failure(ScannerError.UnclosedStringLiteral, 0, 10),
+        failure(ScanError.UnclosedStringLiteral, 0, 10),
         success(Token.Semicolon, 11, 11),
         success(Token.Val, 12, 14),
         success(Token.Identifier.Lower("y"), 16, 16),
@@ -903,7 +903,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         success(Token.Semicolon, 36, 36),
         // The closing """ is at index 37-39.
         // Robust behavior: forced exit and report error.
-        failure(ScannerError.UnclosedMultiLineString, 37, 39),
+        failure(ScanError.UnclosedMultiLineString, 37, 39),
         success(Token.Semicolon, 40, 40),
         success(Token.Val, 41, 43),
         success(Token.Identifier.Lower("z"), 45, 45),
@@ -916,7 +916,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       // 0xG should be one error, then resume
       val input = "0xG val"
       check(input,
-        failure(ScannerError.InvalidLiteralNumber, 0, 2), // Consumes ''
+        failure(ScanError.InvalidLiteralNumber, 0, 2), // Consumes ''
         success(Token.Val, 4, 6)
       )
     }
@@ -936,7 +936,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       // Strict behavior: The whole 123_ is a failed number literal.
       val input = "123_ val"
       check(input,
-        failure(ScannerError.IllegalSeparator, 3, 3),
+        failure(ScanError.IllegalSeparator, 3, 3),
         success(Token.Val, 5, 7)
       )
     }
@@ -946,7 +946,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       // Strict behavior: 1e is a failed number literal. The + should be preserved.
       val input = "1e+ val"
       check(input,
-        failure(ScannerError.InvalidLiteralNumber, 0, 1),
+        failure(ScanError.InvalidLiteralNumber, 0, 1),
         success(Token.Identifier.Operator("+"), 2, 2),
         success(Token.Val, 4, 6)
       )
@@ -956,7 +956,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       // Case A: 1_e+10. Underscore before 'e' is illegal in Scala.
       // Scala reports illegal separator and doesn't yield the '1'.
       check("1_e+10",
-        failure(ScannerError.IllegalSeparator, 1, 1),
+        failure(ScanError.IllegalSeparator, 1, 1),
         success(Token.Identifier.Lower("e"), 2, 2),
         success(Token.Identifier.Operator("+"), 3, 3),
         success(Token.IntLiteral(10), 4, 5)
@@ -965,7 +965,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       // Case B: 1e+_10. Underscore after '+' is illegal.
       // 1e+ is an invalid literal number.
       check("1e+_10",
-        failure(ScannerError.IllegalSeparator, 3, 3),
+        failure(ScanError.IllegalSeparator, 3, 3),
         success(Token.IntLiteral(10), 4, 5)
       )
     }
@@ -975,7 +975,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         val input = "\u0001\u0002\u0003 val"
         // Goal: One error for the cluster, then resume at 'val'
         check(input,
-          failure(ScannerError.InvalidCharacter, 0, 2),
+          failure(ScanError.InvalidCharacter, 0, 2),
           success(Token.Val, 4, 6)
         )
       }
@@ -984,7 +984,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         val input = "\u0001\u0002\u0003val"
         // Goal: Group garbage, then resume immediately at identifier 'val'
         check(input,
-          failure(ScannerError.InvalidCharacter, 0, 2),
+          failure(ScanError.InvalidCharacter, 0, 2),
           success(Token.Val, 3, 5)
         )
       }
@@ -993,8 +993,8 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         val input = "\u0001\u0002\n\u0003\u0004"
         // Garbage should be grouped per-line to preserve newline synchronization
         check(input,
-          failure(ScannerError.InvalidCharacter, 0, 1),
-          failure(ScannerError.InvalidCharacter, 3, 4)
+          failure(ScanError.InvalidCharacter, 0, 1),
+          failure(ScanError.InvalidCharacter, 3, 4)
         )
       }
 
@@ -1002,7 +1002,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         val input = "\u0001\u0002(123)"
         // Garbage should not 'eat' the opening parenthesis
         check(input,
-          failure(ScannerError.InvalidCharacter, 0, 1),
+          failure(ScanError.InvalidCharacter, 0, 1),
           success(Token.LParen, 2, 2),
           success(Token.IntLiteral(123), 3, 5),
           success(Token.RParen, 6, 6)
@@ -1015,7 +1015,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         check(input,
           success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 0, 1),
           success(Token.BeginInterpolatedEscape, 2, 3),
-          failure(ScannerError.InvalidCharacter, 4, 5),
+          failure(ScanError.InvalidCharacter, 4, 5),
           success(Token.EndInterpolatedEscape, 6, 6),
           success(Token.EndInterpolatedString, 7, 7)
         )
@@ -1026,7 +1026,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // The grouping must stop at the '/' so the comment scanner can see it.
         val inputA = "\u0001\u0002// comment\nval x = 1"
         check(inputA,
-          failure(ScannerError.InvalidCharacter, 0, 1),
+          failure(ScanError.InvalidCharacter, 0, 1),
           success(Token.Semicolon, 12, 12),
           success(Token.Val, 13, 15),
           success(Token.Identifier.Lower("x"), 17, 17),
@@ -1037,7 +1037,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // Example B: Garbage following a block comment
         val inputB = "/* comment */\u0003\u0004 val"
         check(inputB,
-          failure(ScannerError.InvalidCharacter, 13, 14),
+          failure(ScanError.InvalidCharacter, 13, 14),
           success(Token.Val, 16, 18)
         )
       }
@@ -1045,13 +1045,13 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       it("garbage cluster grouping stops at dots (number or field access)") {
         // Case A: Followed by number
         check("\u0001.123",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.DoubleLiteral(0.123), 1, 4)
         )
 
         // Case B: Followed by field access
         check("\u0001.foo",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.Dot, 1, 1),
           success(Token.Identifier.Lower("foo"), 2, 4)
         )
@@ -1070,7 +1070,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // Using non-whitespace control characters that aren't operators or identifiers
         val input = "\u0001\u0002\u0003 val"
         check(input,
-          failure(ScannerError.InvalidCharacter, 0, 2),
+          failure(ScanError.InvalidCharacter, 0, 2),
           success(Token.Val, 4, 6)
         )
       }
@@ -1078,20 +1078,20 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       it("garbage cluster grouping stops at literal delimiters") {
         // Case A: Followed by string
         check("\u0001\"hello\"",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.StringLiteral("hello"), 1, 7)
         )
 
         // Case B: Followed by character
         check("\u0001'a'",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.CharLiteral('a'), 1, 3)
         )
       }
 
       it("garbage cluster grouping interacts correctly with interpolation starts: single line") {
         check("\u0001s\"hello\"",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.BeginInterpolatedString(Interpolator.fromName("s")), 1, 2),
           success(Token.InterpolatedPart("hello"), 3, 7),
           success(Token.EndInterpolatedString, 8, 8)
@@ -1100,7 +1100,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("garbage cluster grouping interacts correctly with interpolation starts: multi-line") {
         check("\u0001raw\"\"\"hello\"\"\"",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("raw")), 1, 6),
           success(Token.InterpolatedPart("hello"), 7, 11),
           success(Token.EndInterpolatedString, 12, 14)
@@ -1111,7 +1111,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // This test specifically targets the hand-off between garbage and multi-character identifiers
         // that are NOT interpolators.
         check("\u0001abc",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.Identifier.Lower("abc"), 1, 3)
         )
       }
@@ -1119,7 +1119,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       it("garbage followed by '+'") {
         // If we have redundant unget, this will fail or return shifted tokens
         check("\u0001+",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.Identifier.Operator("+"), 1, 1)
         )
       }
@@ -1127,7 +1127,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       it("handles garbage followed by '-' and then a digit") {
         // This tests the case where '-' is ambiguous until we see the digit
         check("\u0001-123",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.IntLiteral(-123), 1, 4)
         )
       }
@@ -1136,7 +1136,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // 'raw' followed by a space is NOT an interpolator.
         // It should be scanned as an identifier after the garbage error.
         check("\u0001raw ",
-          failure(ScannerError.InvalidCharacter, 0, 0),
+          failure(ScanError.InvalidCharacter, 0, 0),
           success(Token.Identifier.Lower("raw"), 1, 3)
         )
       }
@@ -1147,7 +1147,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         check("1.\u0001",
           success(Token.IntLiteral(1), 0, 0),
           success(Token.Dot, 1, 1),
-          failure(ScannerError.InvalidCharacter, 2, 2)
+          failure(ScanError.InvalidCharacter, 2, 2)
         )
       }
     }
@@ -1487,14 +1487,14 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.Identifier.Operator("+"), 2, 2),
           success(Token.LBrace, 4, 4),
           success(Token.IntLiteral(1), 6, 6),
-          failure(ScannerError.UnbalancedBraces, 7, 7)
+          failure(ScanError.UnbalancedBraces, 7, 7)
         )
       }
 
       it("should yield a fatal error if EndOfInput is reached immediately") {
         val input = ""
         checkPortal(input,
-          failure(ScannerError.UnbalancedBraces, 0, 0)
+          failure(ScanError.UnbalancedBraces, 0, 0)
         )
       }
 
@@ -1504,7 +1504,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.LParen, 0, 0),
           success(Token.Identifier.Lower("x"), 2, 2),
           success(Token.RBrace, 4, 4),
-          failure(ScannerError.UnbalancedBraces, 5, 5)
+          failure(ScanError.UnbalancedBraces, 5, 5)
         )
       }
 
@@ -1519,7 +1519,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
           success(Token.RBrace, 11, 11), // typo, doesn't exit
           success(Token.Identifier.Lower("tail"), 13, 16),
           success(Token.RBrace, 18, 18), // still doesn't exit because '(' is still opn
-          failure(ScannerError.UnbalancedBraces, 19, 19) // reaches EOF while unbalancd
+          failure(ScanError.UnbalancedBraces, 19, 19) // reaches EOF while unbalancd
         )
       }
     }
