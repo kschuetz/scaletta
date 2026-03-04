@@ -1,83 +1,176 @@
 package software.kes.scaletta.ast
 
 import software.kes.scaletta.common.Interpolator
+import software.kes.scaletta.util.functional.{Functor, ~>}
 
-sealed trait Expression
+sealed trait Expression[F[_]] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Expression[G]
+}
 
-case class Block(bindings: Vector[Binding],
-                 result: Expression) extends Expression
+case class Block[F[_]](bindings: Vector[F[Binding[F]]],
+                       result: F[Expression[F]]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Block[G] =
+    Block(
+      bindings.map(b => phi(F.map(b)(_.mapK(phi)))),
+      phi(F.map(result)(_.mapK(phi)))
+    )
+}
 
-case class Reference(path: ::[Identifier]) extends Expression
+case class Reference[F[_]](path: ::[F[Identifier]]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Reference[G] =
+    Reference(::(phi(path.head), path.tail.map(phi.apply)))
+}
 
-case class Typed(expression: Expression,
-                 ascription: TypeIdentifier) extends Expression
+case class Typed[F[_]](expression: F[Expression[F]],
+                       ascription: F[TypeIdentifier]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Typed[G] =
+    Typed(
+      phi(F.map(expression)(_.mapK(phi))),
+      phi(ascription)
+    )
+}
 
-sealed trait Literal extends Expression
+sealed trait Literal[F[_]] extends Expression[F]
 
 object Literal {
-  case class IntLiteral(value: Int) extends Literal
+  case class IntLiteral[F[_]](value: Int) extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): IntLiteral[G] = IntLiteral(value)
+  }
 
-  case class LongLiteral(value: Long) extends Literal
+  case class LongLiteral[F[_]](value: Long) extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): LongLiteral[G] = LongLiteral(value)
+  }
 
-  case class FloatLiteral(value: Float) extends Literal
+  case class FloatLiteral[F[_]](value: Float) extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): FloatLiteral[G] = FloatLiteral(value)
+  }
 
-  case class DoubleLiteral(value: Double) extends Literal
+  case class DoubleLiteral[F[_]](value: Double) extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): DoubleLiteral[G] = DoubleLiteral(value)
+  }
 
-  sealed trait BooleanLiteral extends Literal {
+  sealed trait BooleanLiteral[F[_]] extends Literal[F] {
     def value: Boolean
   }
 
-  case object True extends BooleanLiteral {
+  case class True[F[_]]() extends BooleanLiteral[F] {
     def value: Boolean = true
+
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): True[G] = True()
   }
 
-  case object False extends BooleanLiteral {
+  case class False[F[_]]() extends BooleanLiteral[F] {
     def value: Boolean = false
+
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): False[G] = False()
   }
 
-  case object Null extends Literal
+  case class Null[F[_]]() extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Null[G] = Null()
+  }
 
-  case class CharLiteral(value: Char) extends Literal
+  case class CharLiteral[F[_]](value: Char) extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): CharLiteral[G] = CharLiteral(value)
+  }
 
-  case class StringLiteral(value: String) extends Literal
+  case class StringLiteral[F[_]](value: String) extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): StringLiteral[G] = StringLiteral(value)
+  }
 }
 
-case class Tuple(elements: Vector[Expression]) extends Expression
+case class Tuple[F[_]](elements: Vector[F[Expression[F]]]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Tuple[G] =
+    Tuple(elements.map(e => phi(F.map(e)(_.mapK(phi)))))
+}
 
-case class Conditional(condition: Expression,
-                       thenBranch: Expression,
-                       elseBranch: Expression) extends Expression
+case class Conditional[F[_]](condition: F[Expression[F]],
+                             thenBranch: F[Expression[F]],
+                             elseBranch: F[Expression[F]]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Conditional[G] =
+    Conditional(
+      phi(F.map(condition)(_.mapK(phi))),
+      phi(F.map(thenBranch)(_.mapK(phi))),
+      phi(F.map(elseBranch)(_.mapK(phi)))
+    )
+}
 
-sealed trait Call extends Expression {
-  def target: Expression
+sealed trait Call[F[_]] extends Expression[F] {
+  def target: F[Expression[F]]
 }
 
 object Call {
-  case class Standard(target: Expression,
-                      typeArgs: Vector[TypeArgument],
-                      args: Vector[ArgumentGroup]) extends Call
-
-  case class Infix(left: Expression,
-                   operation: Identifier,
-                   typeArgs: Vector[TypeArgument],
-                   right: Expression) extends Call {
-    def target: Expression = left
+  case class Standard[F[_]](target: F[Expression[F]],
+                            typeArgs: Vector[F[TypeArgument[F]]],
+                            args: Vector[F[ArgumentGroup[F]]]) extends Call[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Standard[G] =
+      Standard(
+        phi(F.map(target)(_.mapK(phi))),
+        typeArgs.map(ta => phi(F.map(ta)(_.mapK(phi)))),
+        args.map(ag => phi(F.map(ag)(_.mapK(phi))))
+      )
   }
 
-  case class Postfix(target: Expression,
-                     operation: Identifier) extends Call
+  case class Infix[F[_]](left: F[Expression[F]],
+                         operation: F[Identifier],
+                         typeArgs: Vector[F[TypeArgument[F]]],
+                         right: F[Expression[F]]) extends Call[F] {
+    def target: F[Expression[F]] = left
+
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Infix[G] =
+      Infix(
+        phi(F.map(left)(_.mapK(phi))),
+        phi(operation),
+        typeArgs.map(ta => phi(F.map(ta)(_.mapK(phi)))),
+        phi(F.map(right)(_.mapK(phi)))
+      )
+  }
+
+  case class Postfix[F[_]](target: F[Expression[F]],
+                           operation: F[Identifier]) extends Call[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Postfix[G] =
+      Postfix(
+        phi(F.map(target)(_.mapK(phi))),
+        phi(operation)
+      )
+  }
 }
 
-case class Lambda(params: Vector[LambdaParameter],
-                  body: Expression) extends Expression
+case class Lambda[F[_]](params: Vector[F[LambdaParameter[F]]],
+                        body: F[Expression[F]]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Lambda[G] =
+    Lambda(
+      params.map(p => phi(F.map(p)(_.mapK(phi)))),
+      phi(F.map(body)(_.mapK(phi)))
+    )
+}
 
-case class InterpolatedString(interpolator: Interpolator,
-                              initial: String,
-                              segments: Vector[(Expression, String)]) extends Expression
+case class InterpolatedString[F[_]](interpolator: Interpolator,
+                                    initial: String,
+                                    segments: Vector[(F[Expression[F]], String)]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): InterpolatedString[G] =
+    InterpolatedString(
+      interpolator,
+      initial,
+      segments.map { case (e, s) => (phi(F.map(e)(_.mapK(phi))), s) }
+    )
+}
 
-case class Match(expression: Expression,
-                 cases: Vector[Case]) extends Expression
+case class Match[F[_]](expression: F[Expression[F]],
+                       cases: Vector[F[Case[F]]]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Match[G] =
+    Match(
+      phi(F.map(expression)(_.mapK(phi))),
+      cases.map(c => phi(F.map(c)(_.mapK(phi))))
+    )
+}
 
-case class Case(pattern: Pattern,
-                guard: Option[Expression],
-                body: Expression)
+case class Case[F[_]](pattern: F[Pattern[F]],
+                      guard: Option[F[Expression[F]]],
+                      body: F[Expression[F]]) {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Case[G] =
+    Case(
+      phi(F.map(pattern)(_.mapK(phi))),
+      guard.map(g => phi(F.map(g)(_.mapK(phi)))),
+      phi(F.map(body)(_.mapK(phi)))
+    )
+}

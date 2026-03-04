@@ -1,7 +1,18 @@
 package software.kes.scaletta.ast
 
-case class Argument(value: Expression,
-                    name: Option[Identifier] = None)
+import software.kes.scaletta.util.functional.{Functor, ~>}
 
-case class ArgumentGroup(arguments: Vector[Argument],
-                         splat: Option[Argument] = None)
+case class Argument[F[_]](value: F[Expression[F]],
+                          name: Option[F[Identifier]] = None) {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Argument[G] =
+    Argument(phi(F.map(value)(_.mapK(phi))), name.map(phi.apply))
+}
+
+case class ArgumentGroup[F[_]](arguments: Vector[F[Argument[F]]],
+                               splat: Option[F[Argument[F]]] = None) {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): ArgumentGroup[G] =
+    ArgumentGroup(
+      arguments.map(a => phi(F.map(a)(_.mapK(phi)))),
+      splat.map(s => phi(F.map(s)(_.mapK(phi))))
+    )
+}

@@ -4,24 +4,24 @@ import software.kes.scaletta.ast.Expression
 import software.kes.scaletta.reporting.Pos
 
 object ParseResult {
-  def empty: ParseResult = ParseResult()
+  def empty[F[_]]: ParseResult[F] = ParseResult()
 
-  def create(value: Expression): ParseResult = ParseResult(Some(value))
+  def create[F[_]](value: Expression[F]): ParseResult[F] = ParseResult(Some(value))
 
-  def error(error: Pos[ParseError]): ParseResult = ParseResult(errors = Vector(error))
+  def error[F[_]](error: Pos[ParseError]): ParseResult[F] = ParseResult(errors = Vector(error))
 }
 
-case class ParseResult(value: Option[Expression] = None,
+case class ParseResult[F[_]](value: Option[Expression[F]] = None,
                        errors: Vector[Pos[ParseError]] = Vector.empty,
                        warnings: Vector[Pos[ParseWarning]] = Vector.empty) {
   def isSuccess: Boolean = value.isDefined && errors.isEmpty
 
-  def withExpression(value: Expression): ParseResult =
+  def withExpression(value: Expression[F]): ParseResult[F] =
     copy(value = Some(value))
 
-  def addError(error: Pos[ParseError]): ParseResult =
+  def addError(error: Pos[ParseError]): ParseResult[F] =
     copy(errors = errors :+ error)
 
-  def addWarning(warning: Pos[ParseWarning]): ParseResult =
+  def addWarning(warning: Pos[ParseWarning]): ParseResult[F] =
     copy(warnings = warnings :+ warning)
 }
