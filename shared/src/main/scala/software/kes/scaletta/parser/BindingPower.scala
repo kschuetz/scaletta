@@ -1,5 +1,7 @@
 package software.kes.scaletta.parser
 
+import software.kes.scaletta.parser.BindingPower.BindingPowerOrdering
+
 import scala.annotation.tailrec
 
 sealed trait BindingPower {
@@ -16,6 +18,14 @@ sealed trait BindingPower {
       case _ => BindingPower.Nudge(this, amount)
     }
   }
+
+  def >(other: BindingPower): Boolean = BindingPowerOrdering.gt(this, other)
+
+  def >=(other: BindingPower): Boolean = BindingPowerOrdering.gteq(this, other)
+
+  def <(other: BindingPower): Boolean = BindingPowerOrdering.lt(this, other)
+
+  def <=(other: BindingPower): Boolean = BindingPowerOrdering.lteq(this, other)
 }
 
 object BindingPower {
