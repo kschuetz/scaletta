@@ -6,24 +6,26 @@ import software.kes.scaletta.ast._
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner}
 
+import scala.annotation.tailrec
+
 class ParserTest extends AnyFunSpec with Matchers {
 
   describe("Parser") {
     it("should parse an integer literal") {
-      parseValue("123") shouldBe Literal.IntLiteral[Pos](123)
+      parseValue("123") shouldBe Literal.int(123)
     }
 
     it("should parse a string literal") {
-      parseValue("\"hello\"") shouldBe Literal.StringLiteral[Pos]("hello")
+      parseValue("\"hello\"") shouldBe Literal.string("hello")
     }
 
     it("should parse boolean literals") {
-      parseValue("true") shouldBe Literal.True[Pos]()
-      parseValue("false") shouldBe Literal.False[Pos]()
+      parseValue("true") shouldBe Literal.true_()
+      parseValue("false") shouldBe Literal.false_()
     }
 
     it("should parse null literal") {
-      parseValue("null") shouldBe Literal.Null[Pos]()
+      parseValue("null") shouldBe Literal.null_()
     }
 
     it("should parse an identifier") {
@@ -36,9 +38,9 @@ class ParserTest extends AnyFunSpec with Matchers {
     it("should parse infix addition") {
       parseValue("1 + 2") match {
         case Call.Infix(left, op, _, right) =>
-          left.value shouldBe Literal.IntLiteral[Pos](1)
+          left.value shouldBe Literal.int(1)
           op.value shouldBe Identifier("+")
-          right.value shouldBe Literal.IntLiteral[Pos](2)
+          right.value shouldBe Literal.int(2)
         case other => fail(s"Expected Infix call, got $other")
       }
     }
@@ -46,13 +48,13 @@ class ParserTest extends AnyFunSpec with Matchers {
     it("should respect operator precedence (1 + 2 * 3)") {
       parseValue("1 + 2 * 3") match {
         case Call.Infix(left, op, _, right) =>
-          left.value shouldBe Literal.IntLiteral[Pos](1)
+          left.value shouldBe Literal.int(1)
           op.value shouldBe Identifier("+")
           right.value match {
             case Call.Infix(rLeft, rOp, _, rRight) =>
-              rLeft.value shouldBe Literal.IntLiteral[Pos](2)
+              rLeft.value shouldBe Literal.int(2)
               rOp.value shouldBe Identifier("*")
-              rRight.value shouldBe Literal.IntLiteral[Pos](3)
+              rRight.value shouldBe Literal.int(3)
             case other => fail(s"Expected nested Infix call, got $other")
           }
         case other => fail(s"Expected Infix call, got $other")
@@ -64,13 +66,13 @@ class ParserTest extends AnyFunSpec with Matchers {
         case Call.Infix(left, op, _, right) =>
           left.value match {
             case Call.Infix(lLeft, lOp, _, lRight) =>
-              lLeft.value shouldBe Literal.IntLiteral[Pos](1)
+              lLeft.value shouldBe Literal.int(1)
               lOp.value shouldBe Identifier("*")
-              lRight.value shouldBe Literal.IntLiteral[Pos](2)
+              lRight.value shouldBe Literal.int(2)
             case other => fail(s"Expected nested Infix call, got $other")
           }
           op.value shouldBe Identifier("+")
-          right.value shouldBe Literal.IntLiteral[Pos](3)
+          right.value shouldBe Literal.int(3)
         case other => fail(s"Expected Infix call, got $other")
       }
     }
@@ -80,13 +82,13 @@ class ParserTest extends AnyFunSpec with Matchers {
         case Call.Infix(left, op, _, right) =>
           left.value match {
             case Call.Infix(lLeft, lOp, _, lRight) =>
-              lLeft.value shouldBe Literal.IntLiteral[Pos](1)
+              lLeft.value shouldBe Literal.int(1)
               lOp.value shouldBe Identifier("+")
-              lRight.value shouldBe Literal.IntLiteral[Pos](2)
+              lRight.value shouldBe Literal.int(2)
             case other => fail(s"Expected nested Infix call, got $other")
           }
           op.value shouldBe Identifier("*")
-          right.value shouldBe Literal.IntLiteral[Pos](3)
+          right.value shouldBe Literal.int(3)
         case other => fail(s"Expected Infix call, got $other")
       }
     }
@@ -103,6 +105,7 @@ class ParserTest extends AnyFunSpec with Matchers {
           val group = args.head.value
           group.arguments.size shouldBe 2
 
+          @tailrec
           def checkRef(obj: Any, expected: String): Unit = obj match {
             case r: Reference[_] => r.path.head.asInstanceOf[Pos[_]].value shouldBe Identifier(expected)
             case p: Pos[_] => checkRef(p.value, expected)
