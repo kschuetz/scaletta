@@ -6,8 +6,6 @@ import software.kes.scaletta.ast._
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner}
 
-import scala.annotation.tailrec
-
 class ParserTest extends AnyFunSpec with Matchers {
 
   describe("Parser") {
@@ -29,134 +27,95 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should parse an identifier") {
-      parseValue("foo") match {
-        case Reference(::(id, Nil)) => id.value shouldBe Identifier("foo")
-        case other => fail(s"Expected Reference, got $other")
-      }
+      expectReference(parseValue("foo"), "foo")
     }
 
     it("should parse infix addition") {
-      parseValue("1 + 2") match {
-        case Call.Infix(left, op, _, right) =>
-          left.value shouldBe Literal.int(1)
-          op.value shouldBe Identifier("+")
-          right.value shouldBe Literal.int(2)
-        case other => fail(s"Expected Infix call, got $other")
-      }
+      val root = expectInfix(parseValue("1 + 2"))
+      expectInt(root.left.value, 1)
+      root.operation.value shouldBe Identifier("+")
+      expectInt(root.right.value, 2)
     }
 
     it("should respect operator precedence (1 + 2 * 3)") {
-      parseValue("1 + 2 * 3") match {
-        case Call.Infix(left, op, _, right) =>
-          left.value shouldBe Literal.int(1)
-          op.value shouldBe Identifier("+")
-          right.value match {
-            case Call.Infix(rLeft, rOp, _, rRight) =>
-              rLeft.value shouldBe Literal.int(2)
-              rOp.value shouldBe Identifier("*")
-              rRight.value shouldBe Literal.int(3)
-            case other => fail(s"Expected nested Infix call, got $other")
-          }
-        case other => fail(s"Expected Infix call, got $other")
-      }
+      val root = expectInfix(parseValue("1 + 2 * 3"))
+      expectInt(root.left.value, 1)
+      root.operation.value shouldBe Identifier("+")
+
+      val right = expectInfix(root.right.value)
+      expectInt(right.left.value, 2)
+      right.operation.value shouldBe Identifier("*")
+      expectInt(right.right.value, 3)
     }
 
     it("should respect operator precedence (1 * 2 + 3)") {
-      parseValue("1 * 2 + 3") match {
-        case Call.Infix(left, op, _, right) =>
-          left.value match {
-            case Call.Infix(lLeft, lOp, _, lRight) =>
-              lLeft.value shouldBe Literal.int(1)
-              lOp.value shouldBe Identifier("*")
-              lRight.value shouldBe Literal.int(2)
-            case other => fail(s"Expected nested Infix call, got $other")
-          }
-          op.value shouldBe Identifier("+")
-          right.value shouldBe Literal.int(3)
-        case other => fail(s"Expected Infix call, got $other")
-      }
+      val root = expectInfix(parseValue("1 * 2 + 3"))
+      val left = expectInfix(root.left.value)
+      expectInt(left.left.value, 1)
+      left.operation.value shouldBe Identifier("*")
+      expectInt(left.right.value, 2)
+
+      root.operation.value shouldBe Identifier("+")
+      expectInt(root.right.value, 3)
     }
 
     it("should handle parentheses for grouping") {
-      parseValue("(1 + 2) * 3") match {
-        case Call.Infix(left, op, _, right) =>
-          left.value match {
-            case Call.Infix(lLeft, lOp, _, lRight) =>
-              lLeft.value shouldBe Literal.int(1)
-              lOp.value shouldBe Identifier("+")
-              lRight.value shouldBe Literal.int(2)
-            case other => fail(s"Expected nested Infix call, got $other")
-          }
-          op.value shouldBe Identifier("*")
-          right.value shouldBe Literal.int(3)
-        case other => fail(s"Expected Infix call, got $other")
-      }
+      val root = expectInfix(parseValue("(1 + 2) * 3"))
+      val left = expectInfix(root.left.value)
+      expectInt(left.left.value, 1)
+      left.operation.value shouldBe Identifier("+")
+      expectInt(left.right.value, 2)
+
+      root.operation.value shouldBe Identifier("*")
+      expectInt(root.right.value, 3)
     }
 
     it("should parse a standard function call (f(x, y))") {
-      parseValue("f(x, y)") match {
-        case Call.Standard(target, typeArgs, args) =>
-          target.value match {
-            case Reference(::(id, Nil)) => id.value shouldBe Identifier("f")
-            case other => fail(s"Expected Reference target, got $other")
-          }
-          typeArgs shouldBe empty
-          args.size shouldBe 1
-          val group = args.head.value
-          group.arguments.size shouldBe 2
+      val root = expectStandardCall(parseValue("f(x, y)"))
+      expectReference(root.target.value, "f")
+      root.typeArgs shouldBe empty
+      root.args.size shouldBe 1
+      val group = root.args.head.value
+      group.arguments.size shouldBe 2
 
-          @tailrec
-          def checkRef(obj: Any, expected: String): Unit = obj match {
-            case r: Reference[_] => r.path.head.asInstanceOf[Pos[_]].value shouldBe Identifier(expected)
-            case p: Pos[_] => checkRef(p.value, expected)
-            case other => fail(s"Expected Reference, got $other")
-          }
-
-          checkRef(group.arguments(0).value.value.value, "x")
-          checkRef(group.arguments(1).value.value.value, "y")
-        case other => fail(s"Expected Standard call, got $other")
-      }
+      expectReference(group.arguments(0).value.value.value, "x")
+      expectReference(group.arguments(1).value.value.value, "y")
     }
 
     it("should parse a function call with no arguments (f())") {
-      parseValue("f()") match {
-        case Call.Standard(_, _, args) =>
-          args.size shouldBe 1
-          args.head.value.arguments shouldBe empty
-        case other => fail(s"Expected Standard call, got $other")
-      }
+      val root = expectStandardCall(parseValue("f()"))
+      root.args.size shouldBe 1
+      root.args.head.value.arguments shouldBe empty
     }
 
     it("should parse a nested function call (f(g(x)))") {
-      parseValue("f(g(x))") match {
-        case Call.Standard(_, _, args) =>
-          val gCallResult = args.head.value.arguments.head.value
-          val gCall = gCallResult.value
-          gCall.toString should include("Standard")
-        case other => fail(s"Expected nested Standard call, got $other")
-      }
+      val root = expectStandardCall(parseValue("f(g(x))"))
+      expectReference(root.target.value, "f")
+      val gCallExpr = root.args.head.value.arguments.head.value.value
+      val gCall = expectStandardCall(gCallExpr.value)
+      expectReference(gCall.target.value, "g")
+      val xExpr = gCall.args.head.value.arguments.head.value.value
+      expectReference(xExpr.value, "x")
     }
 
     it("should parse a call on an expression target ((f + g)(x))") {
-      parseValue("(f + g)(x)") match {
-        case Call.Standard(target, _, args) =>
-          target.value match {
-            case Call.Infix(_, _, _, _) => // OK
-            case other => fail(s"Expected Infix target, got $other")
-          }
-          args.size shouldBe 1
-        case other => fail(s"Expected Standard call, got $other")
-      }
+      val root = expectStandardCall(parseValue("(f + g)(x)"))
+      val target = expectInfix(root.target.value)
+      expectReference(target.left.value, "f")
+      target.operation.value shouldBe Identifier("+")
+      expectReference(target.right.value, "g")
+
+      root.args.size shouldBe 1
+      val xExpr = root.args.head.value.arguments.head.value.value
+      expectReference(xExpr.value, "x")
     }
 
     ignore("should parse multiple argument groups (f(x)(y))") {
-      parseValue("f(x)(y)") match {
-        case Call.Standard(target, _, args) =>
-          target.value.toString should include("Standard")
-          args.size shouldBe 1
-          args.head.value.arguments.head.value.toString should include("Reference")
-        case other => fail(s"Expected Standard call, got $other")
-      }
+      val root = expectStandardCall(parseValue("f(x)(y)"))
+      root.args.size shouldBe 2
+      expectReference(root.target.value, "f")
+      expectReference(root.args(0).value.arguments(0).value.value.value, "x")
+      expectReference(root.args(1).value.arguments(0).value.value.value, "y")
     }
   }
 
@@ -166,6 +125,34 @@ class ParserTest extends AnyFunSpec with Matchers {
     result.value match {
       case Some(pos) => pos.value
       case None => fail(s"Parser returned no value for input: $input")
+    }
+  }
+
+  private def expectInt(expr: Expression[Pos], expected: Int): Literal.IntLiteral[Pos] = {
+    expr shouldBe Literal.int(expected)
+    expr.asInstanceOf[Literal.IntLiteral[Pos]]
+  }
+
+  private def expectReference(expr: Expression[Pos], expected: String): Reference[Pos] = {
+    expr match {
+      case r@Reference(::(id, Nil)) =>
+        id.value shouldBe Identifier(expected)
+        r
+      case other => fail(s"Expected Identifier '$expected', but got $other")
+    }
+  }
+
+  private def expectInfix(expr: Expression[Pos]): Call.Infix[Pos] = {
+    expr match {
+      case c: Call.Infix[Pos] @unchecked => c
+      case other => fail(s"Expected Infix call, but got $other")
+    }
+  }
+
+  private def expectStandardCall(expr: Expression[Pos]): Call.Standard[Pos] = {
+    expr match {
+      case s: Call.Standard[Pos] @unchecked => s
+      case other => fail(s"Expected Standard call, got $other")
     }
   }
 
