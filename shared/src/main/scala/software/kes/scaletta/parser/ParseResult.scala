@@ -14,7 +14,9 @@ object ParseResult {
 case class ParseResult[F[_]](value: Option[F[Expression[F]]] = None,
                              errors: Vector[Pos[ParseError]] = Vector.empty,
                              warnings: Vector[Pos[ParseWarning]] = Vector.empty) {
-  def isSuccess: Boolean = value.isDefined && errors.isEmpty
+  def isSuccess: Boolean = value.isDefined && !hasErrors
+
+  def hasErrors: Boolean = errors.nonEmpty
 
   def withExpression(value: F[Expression[F]]): ParseResult[F] =
     copy(value = Some(value))

@@ -26,7 +26,7 @@ final class Parser private() {
   }
 
   private def shouldContinue(scanner: Scanner, minBindingPower: BindingPower, currentResult: ParseResult[Pos]): Boolean = {
-    if (currentResult.errors.nonEmpty) {
+    if (currentResult.hasErrors) {
       false
     } else {
       val next = scanner.peek(1).value
