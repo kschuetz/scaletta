@@ -65,7 +65,7 @@ case class Pos[A](value: A,
   def map[B](fn: A => B): Pos[B] =
     Pos(fn(value), begin, end)
 
-  def withNewValue[B](value: B): Pos[B] =
+  def as[B](value: B): Pos[B] =
     Pos(value, begin, end)
 
   def positionTuple: (Int, Int) = (begin.value, end.value)

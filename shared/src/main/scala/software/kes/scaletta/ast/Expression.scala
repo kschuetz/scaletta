@@ -16,6 +16,11 @@ case class Block[F[_]](bindings: Vector[F[Binding[F]]],
     )
 }
 
+object Reference {
+  def single[F[_]](id: F[Identifier]): Reference[F] =
+    Reference(::(id, Nil))
+}
+
 case class Reference[F[_]](path: ::[F[Identifier]]) extends Expression[F] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Reference[G] =
     Reference(::(phi(path.head), path.tail.map(phi.apply)))
@@ -33,6 +38,26 @@ case class Typed[F[_]](expression: F[Expression[F]],
 sealed trait Literal[F[_]] extends Expression[F]
 
 object Literal {
+  def int[F[_]](value: Int): Literal[F] = IntLiteral(value)
+
+  def long[F[_]](value: Long): Literal[F] = LongLiteral(value)
+
+  def float[F[_]](value: Float): Literal[F] = FloatLiteral(value)
+
+  def double[F[_]](value: Double): Literal[F] = DoubleLiteral(value)
+
+  def boolean[F[_]](value: Boolean): Literal[F] = if (value) True() else False()
+
+  def true_[F[_]](): Literal[F] = True()
+
+  def false_[F[_]](): Literal[F] = False()
+
+  def null_[F[_]](): Literal[F] = Null()
+
+  def char[F[_]](value: Char): Literal[F] = CharLiteral(value)
+
+  def string[F[_]](value: String): Literal[F] = StringLiteral(value)
+
   case class IntLiteral[F[_]](value: Int) extends Literal[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): IntLiteral[G] = IntLiteral(value)
   }

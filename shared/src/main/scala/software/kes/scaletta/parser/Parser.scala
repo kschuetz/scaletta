@@ -41,19 +41,14 @@ final class Parser private() {
 
   private def nud(token: Pos[Token], scanner: Scanner): ParseResult[Pos] = {
     token.value match {
-      case Token.IntLiteral(v) => ParseResult.create(token.withNewValue(Literal.IntLiteral[Pos](v)))
-      case Token.StringLiteral(v) => ParseResult.create(token.withNewValue(Literal.StringLiteral[Pos](v)))
-      case Token.True => ParseResult.create(token.withNewValue(Literal.True[Pos]()))
-      case Token.False => ParseResult.create(token.withNewValue(Literal.False[Pos]()))
-      case Token.Null => ParseResult.create(token.withNewValue(Literal.Null[Pos]()))
-      case Token.Identifier.Lower(name) =>
-        ParseResult.create(token.withNewValue(Reference(::(Pos(Identifier(name), token.begin, token.end), Nil))))
-      case Token.Identifier.Upper(name) =>
-        ParseResult.create(token.withNewValue(Reference(::(Pos(Identifier(name), token.begin, token.end), Nil))))
-      case Token.Identifier.Operator(name) =>
-        ParseResult.create(token.withNewValue(Reference(::(Pos(Identifier(name), token.begin, token.end), Nil))))
-      case Token.Identifier.Quoted(name) =>
-        ParseResult.create(token.withNewValue(Reference(::(Pos(Identifier(name), token.begin, token.end), Nil))))
+      case Token.IntLiteral(v) => ParseResult.create(token.as(Literal.int(v)))
+      case Token.StringLiteral(v) => ParseResult.create(token.as(Literal.string(v)))
+      case Token.True => ParseResult.create(token.as(Literal.true_()))
+      case Token.False => ParseResult.create(token.as(Literal.false_()))
+      case Token.Null => ParseResult.create(token.as(Literal.null_()))
+      case idToken: Token.Identifier =>
+        val id = token.as(Identifier(idToken.name))
+        ParseResult.create(token.as(Reference.single(id)))
       case Token.LParen =>
         val result = parseExpression(scanner, BindingPower.Minimum)
         val next = scanner.get()

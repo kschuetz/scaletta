@@ -338,11 +338,11 @@ final class Scanner private(reader: CharReader,
             // When a fatal literal error occurs, we must exit the interpolated string region
             // to prevent saturation and redundant errors.
             exitRegion(RegionType.InterpolatedString)
-            val posToken: Pos[Token] = partResult.withNewValue(Token.Error(error))
+            val posToken: Pos[Token] = partResult.as(Token.Error(error))
             tokenBuffer.enqueue(posToken)
           }
         case token =>
-          yieldSuccess(partResult.withNewValue(token), newlineEncounteredBefore = None)
+          yieldSuccess(partResult.as(token), newlineEncounteredBefore = None)
       }
     }
   }
