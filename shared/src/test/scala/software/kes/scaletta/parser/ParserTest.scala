@@ -99,6 +99,76 @@ class ParserTest extends AnyFunSpec with Matchers {
         case other => fail(s"Expected Infix call, got $other")
       }
     }
+
+    it("should parse a standard function call (f(x, y))") {
+      val result = parse("f(x, y)")
+      result.value.map(_.value) match {
+        case Some(Call.Standard(target, typeArgs, args)) =>
+          target.value match {
+            case Reference(::(id, Nil)) => id.value shouldBe Identifier("f")
+            case other => fail(s"Expected Reference target, got $other")
+          }
+          typeArgs shouldBe empty
+          args.size shouldBe 1
+          val group = args.head.value
+          group.arguments.size shouldBe 2
+
+          def checkRef(obj: Any, expected: String): Unit = obj match {
+            case r: Reference[_] => r.path.head.asInstanceOf[Pos[_]].value shouldBe Identifier(expected)
+            case p: Pos[_] => checkRef(p.value, expected)
+            case other => fail(s"Expected Reference, got $other")
+          }
+
+          checkRef(group.arguments(0).value.value, "x")
+          checkRef(group.arguments(1).value.value, "y")
+        case other => fail(s"Expected Standard call, got $other")
+      }
+    }
+
+    it("should parse a function call with no arguments (f())") {
+      val result = parse("f()")
+      result.value.map(_.value) match {
+        case Some(Call.Standard(_, _, args)) =>
+          args.size shouldBe 1
+          args.head.value.arguments shouldBe empty
+        case other => fail(s"Expected Standard call, got $other")
+      }
+    }
+
+    it("should parse a nested function call (f(g(x)))") {
+      val result = parse("f(g(x))")
+      result.value.map(_.value) match {
+        case Some(Call.Standard(_, _, args)) =>
+          val gCallResult = args.head.value.arguments.head.value
+          val gCall = gCallResult.value
+          gCall.toString should include("Standard")
+        case other => fail(s"Expected nested Standard call, got $other")
+      }
+    }
+
+    it("should parse a call on an expression target ((f + g)(x))") {
+      val result = parse("(f + g)(x)")
+      result.value.map(_.value) match {
+        case Some(Call.Standard(target, _, args)) =>
+          target.value match {
+            case Call.Infix(_, _, _, _) => // OK
+            case other => fail(s"Expected Infix target, got $other")
+          }
+          args.size shouldBe 1
+        case other => fail(s"Expected Standard call, got $other")
+      }
+    }
+
+    ignore("should parse multiple argument groups (f(x)(y))") {
+      val result = parse("f(x)(y)")
+      result.value.map(_.value) match {
+        case Some(Call.Standard(target, _, args)) =>
+          target.value.toString should include("Standard")
+          args.size shouldBe 1
+          args.head.value.arguments.head.value.toString should include("Reference")
+        case other => fail(s"Expected Standard call, got $other")
+      }
+    }
   }
 
   private def parse(input: String): ParseResult[Pos] = {

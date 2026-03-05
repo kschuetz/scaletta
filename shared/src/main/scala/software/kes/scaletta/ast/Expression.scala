@@ -124,6 +124,21 @@ sealed trait Call[F[_]] extends Expression[F] {
 }
 
 object Call {
+  def standard[F[_]](target: F[Expression[F]],
+                     typeArgs: Vector[F[TypeArgument[F]]],
+                     args: Vector[F[ArgumentGroup[F]]]): Call[F] =
+    Standard(target, typeArgs, args)
+
+  def infix[F[_]](left: F[Expression[F]],
+                  operation: F[Identifier],
+                  typeArgs: Vector[F[TypeArgument[F]]],
+                  right: F[Expression[F]]): Call[F] =
+    Infix(left, operation, typeArgs, right)
+
+  def postfix[F[_]](target: F[Expression[F]],
+                    operation: F[Identifier]): Call[F] =
+    Postfix(target, operation)
+
   case class Standard[F[_]](target: F[Expression[F]],
                             typeArgs: Vector[F[TypeArgument[F]]],
                             args: Vector[F[ArgumentGroup[F]]]) extends Call[F] {
