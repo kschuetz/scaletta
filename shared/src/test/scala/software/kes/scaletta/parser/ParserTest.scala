@@ -10,38 +10,32 @@ class ParserTest extends AnyFunSpec with Matchers {
 
   describe("Parser") {
     it("should parse an integer literal") {
-      val result = parse("123")
-      result.value.map(_.value) shouldBe Some(Literal.IntLiteral[Pos](123))
-      result.errors shouldBe empty
+      parseValue("123") shouldBe Literal.IntLiteral[Pos](123)
     }
 
     it("should parse a string literal") {
-      val result = parse("\"hello\"")
-      result.value.map(_.value) shouldBe Some(Literal.StringLiteral[Pos]("hello"))
-      result.errors shouldBe empty
+      parseValue("\"hello\"") shouldBe Literal.StringLiteral[Pos]("hello")
     }
 
     it("should parse boolean literals") {
-      parse("true").value.map(_.value) shouldBe Some(Literal.True[Pos]())
-      parse("false").value.map(_.value) shouldBe Some(Literal.False[Pos]())
+      parseValue("true") shouldBe Literal.True[Pos]()
+      parseValue("false") shouldBe Literal.False[Pos]()
     }
 
     it("should parse null literal") {
-      parse("null").value.map(_.value) shouldBe Some(Literal.Null[Pos]())
+      parseValue("null") shouldBe Literal.Null[Pos]()
     }
 
     it("should parse an identifier") {
-      val result = parse("foo")
-      result.value.map(_.value) match {
-        case Some(Reference(::(id, Nil))) => id.value shouldBe Identifier("foo")
+      parseValue("foo") match {
+        case Reference(::(id, Nil)) => id.value shouldBe Identifier("foo")
         case other => fail(s"Expected Reference, got $other")
       }
     }
 
     it("should parse infix addition") {
-      val result = parse("1 + 2")
-      result.value.map(_.value) match {
-        case Some(Call.Infix(left, op, _, right)) =>
+      parseValue("1 + 2") match {
+        case Call.Infix(left, op, _, right) =>
           left.value shouldBe Literal.IntLiteral[Pos](1)
           op.value shouldBe Identifier("+")
           right.value shouldBe Literal.IntLiteral[Pos](2)
@@ -50,9 +44,8 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should respect operator precedence (1 + 2 * 3)") {
-      val result = parse("1 + 2 * 3")
-      result.value.map(_.value) match {
-        case Some(Call.Infix(left, op, _, right)) =>
+      parseValue("1 + 2 * 3") match {
+        case Call.Infix(left, op, _, right) =>
           left.value shouldBe Literal.IntLiteral[Pos](1)
           op.value shouldBe Identifier("+")
           right.value match {
@@ -67,9 +60,8 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should respect operator precedence (1 * 2 + 3)") {
-      val result = parse("1 * 2 + 3")
-      result.value.map(_.value) match {
-        case Some(Call.Infix(left, op, _, right)) =>
+      parseValue("1 * 2 + 3") match {
+        case Call.Infix(left, op, _, right) =>
           left.value match {
             case Call.Infix(lLeft, lOp, _, lRight) =>
               lLeft.value shouldBe Literal.IntLiteral[Pos](1)
@@ -84,9 +76,8 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should handle parentheses for grouping") {
-      val result = parse("(1 + 2) * 3")
-      result.value.map(_.value) match {
-        case Some(Call.Infix(left, op, _, right)) =>
+      parseValue("(1 + 2) * 3") match {
+        case Call.Infix(left, op, _, right) =>
           left.value match {
             case Call.Infix(lLeft, lOp, _, lRight) =>
               lLeft.value shouldBe Literal.IntLiteral[Pos](1)
@@ -101,9 +92,8 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should parse a standard function call (f(x, y))") {
-      val result = parse("f(x, y)")
-      result.value.map(_.value) match {
-        case Some(Call.Standard(target, typeArgs, args)) =>
+      parseValue("f(x, y)") match {
+        case Call.Standard(target, typeArgs, args) =>
           target.value match {
             case Reference(::(id, Nil)) => id.value shouldBe Identifier("f")
             case other => fail(s"Expected Reference target, got $other")
@@ -119,16 +109,15 @@ class ParserTest extends AnyFunSpec with Matchers {
             case other => fail(s"Expected Reference, got $other")
           }
 
-          checkRef(group.arguments(0).value.value, "x")
-          checkRef(group.arguments(1).value.value, "y")
+          checkRef(group.arguments(0).value.value.value, "x")
+          checkRef(group.arguments(1).value.value.value, "y")
         case other => fail(s"Expected Standard call, got $other")
       }
     }
 
     it("should parse a function call with no arguments (f())") {
-      val result = parse("f()")
-      result.value.map(_.value) match {
-        case Some(Call.Standard(_, _, args)) =>
+      parseValue("f()") match {
+        case Call.Standard(_, _, args) =>
           args.size shouldBe 1
           args.head.value.arguments shouldBe empty
         case other => fail(s"Expected Standard call, got $other")
@@ -136,9 +125,8 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should parse a nested function call (f(g(x)))") {
-      val result = parse("f(g(x))")
-      result.value.map(_.value) match {
-        case Some(Call.Standard(_, _, args)) =>
+      parseValue("f(g(x))") match {
+        case Call.Standard(_, _, args) =>
           val gCallResult = args.head.value.arguments.head.value
           val gCall = gCallResult.value
           gCall.toString should include("Standard")
@@ -147,9 +135,8 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should parse a call on an expression target ((f + g)(x))") {
-      val result = parse("(f + g)(x)")
-      result.value.map(_.value) match {
-        case Some(Call.Standard(target, _, args)) =>
+      parseValue("(f + g)(x)") match {
+        case Call.Standard(target, _, args) =>
           target.value match {
             case Call.Infix(_, _, _, _) => // OK
             case other => fail(s"Expected Infix target, got $other")
@@ -160,14 +147,22 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
 
     ignore("should parse multiple argument groups (f(x)(y))") {
-      val result = parse("f(x)(y)")
-      result.value.map(_.value) match {
-        case Some(Call.Standard(target, _, args)) =>
+      parseValue("f(x)(y)") match {
+        case Call.Standard(target, _, args) =>
           target.value.toString should include("Standard")
           args.size shouldBe 1
           args.head.value.arguments.head.value.toString should include("Reference")
         case other => fail(s"Expected Standard call, got $other")
       }
+    }
+  }
+
+  private def parseValue(input: String): Expression[Pos] = {
+    val result = parse(input)
+    result.errors shouldBe empty
+    result.value match {
+      case Some(pos) => pos.value
+      case None => fail(s"Parser returned no value for input: $input")
     }
   }
 
