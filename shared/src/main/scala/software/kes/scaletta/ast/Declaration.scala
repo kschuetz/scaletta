@@ -2,13 +2,13 @@ package software.kes.scaletta.ast
 
 import software.kes.scaletta.util.functional.{Functor, ~>}
 
-sealed trait Binding[F[_]] {
-  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Binding[G]
+sealed trait Declaration[F[_]] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Declaration[G]
 }
 
-object Binding {
+object Declaration {
   case class Val[F[_]](pattern: F[Pattern[F]],
-                       rhs: F[Expression[F]]) extends Binding[F] {
+                       rhs: F[Expression[F]]) extends Declaration[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Val[G] =
       Val(
         phi(F.map(pattern)(_.mapK(phi))),
@@ -18,7 +18,7 @@ object Binding {
 
   case class Def[F[_]](name: F[Identifier],
                        params: Vector[F[FormalParameterGroup[F]]],
-                       body: F[Expression[F]]) extends Binding[F] {
+                       body: F[Expression[F]]) extends Declaration[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Def[G] =
       Def(
         phi(name),
@@ -28,7 +28,7 @@ object Binding {
   }
 
   case class LazyVal[F[_]](pattern: F[Pattern[F]],
-                           rhs: F[Expression[F]]) extends Binding[F] {
+                           rhs: F[Expression[F]]) extends Declaration[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): LazyVal[G] =
       LazyVal(
         phi(F.map(pattern)(_.mapK(phi))),

@@ -7,11 +7,11 @@ sealed trait Expression[F[_]] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Expression[G]
 }
 
-case class Block[F[_]](bindings: Vector[F[Binding[F]]],
+case class Block[F[_]](declarations: Vector[F[Declaration[F]]],
                        result: F[Expression[F]]) extends Expression[F] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Block[G] =
     Block(
-      bindings.map(b => phi(F.map(b)(_.mapK(phi)))),
+      declarations.map(d => phi(F.map(d)(_.mapK(phi)))),
       phi(F.map(result)(_.mapK(phi)))
     )
 }

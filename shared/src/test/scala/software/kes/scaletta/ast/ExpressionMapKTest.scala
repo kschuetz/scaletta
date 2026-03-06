@@ -16,12 +16,12 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
 
     it("should transform Block") {
       val expr = Block[Id](
-        Vector(Binding.Val[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))),
+        Vector(Declaration.Val[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))),
         Literal.IntLiteral[Id](2)
       )
       val result = expr.mapK(idToOption)
       result shouldBe Block[Option](
-        Vector(Some(Binding.Val[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1))))),
+        Vector(Some(Declaration.Val[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1))))),
         Some(Literal.IntLiteral[Option](2))
       )
     }
@@ -152,18 +152,18 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     }
   }
 
-  describe("Binding.mapK") {
+  describe("Declaration.mapK") {
     it("should transform Val") {
-      val expr = Binding.Val[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
+      val expr = Declaration.Val[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
       val result = expr.mapK(idToOption)
-      result shouldBe Binding.Val[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1)))
+      result shouldBe Declaration.Val[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1)))
     }
 
     it("should transform Def") {
       val paramGroup = FormalParameterGroup[Id](Vector(FormalParameter[Id](Identifier("p"), TypeIdentifier.name(Identifier("Int")), None)))
-      val expr = Binding.Def[Id](Identifier("f"), Vector(paramGroup), Literal.Null[Id]())
+      val expr = Declaration.Def[Id](Identifier("f"), Vector(paramGroup), Literal.Null[Id]())
       val result = expr.mapK(idToOption)
-      result shouldBe Binding.Def[Option](
+      result shouldBe Declaration.Def[Option](
         Some(Identifier("f")),
         Vector(Some(paramGroup.mapK(idToOption))),
         Some(Literal.Null[Option]())
@@ -171,9 +171,9 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     }
 
     it("should transform LazyVal") {
-      val expr = Binding.LazyVal[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
+      val expr = Declaration.LazyVal[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
       val result = expr.mapK(idToOption)
-      result shouldBe Binding.LazyVal[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1)))
+      result shouldBe Declaration.LazyVal[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1)))
     }
   }
 

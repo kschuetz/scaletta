@@ -100,8 +100,8 @@ class ParserTest extends AnyFunSpec with Matchers {
     Call.standard[Id](target, Vector.empty, groups)
   }
 
-  private def block(bindings: Vector[Binding[Id]], result: Expression[Id]): Expression[Id] =
-    Block[Id](bindings, result)
+  private def block(declarations: Vector[Declaration[Id]], result: Expression[Id]): Expression[Id] =
+    Block[Id](declarations, result)
 
   private def tuple(elements: Expression[Id]*): Expression[Id] =
     Tuple[Id](elements.toVector)
@@ -109,19 +109,19 @@ class ParserTest extends AnyFunSpec with Matchers {
   private def cond(condition: Expression[Id], thenBranch: Expression[Id], elseBranch: Expression[Id]): Expression[Id] =
     Conditional[Id](condition, thenBranch, elseBranch)
 
-  private def valDecl(pattern: Pattern[Id], rhs: Expression[Id]): Binding[Id] =
-    Binding.Val[Id](pattern, rhs)
+  private def valDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
+    Declaration.Val[Id](pattern, rhs)
 
-  private def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Binding[Id] =
-    Binding.LazyVal[Id](pattern, rhs)
+  private def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
+    Declaration.LazyVal[Id](pattern, rhs)
 
-  private def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Binding[Id] = {
+  private def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] = {
     val paramGroups = params.map { group =>
       FormalParameterGroup[Id](group.map { case (n, t) =>
         FormalParameter[Id](Identifier(n), TypeIdentifier.name(Identifier(t)), None)
       })
     }
-    Binding.Def[Id](Identifier(name), paramGroups, body)
+    Declaration.Def[Id](Identifier(name), paramGroups, body)
   }
 
   private def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
