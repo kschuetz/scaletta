@@ -2,57 +2,49 @@ package software.kes.scaletta.parser
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 import software.kes.scaletta.ast.AstBuilders._
 import software.kes.scaletta.scanner.Token
 import software.kes.scaletta.testsupport.ParserTestSupport
 
-class ParserTest extends AnyFunSpec with Matchers {
+class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks {
   private val support = new ParserTestSupport() with Matchers
 
   import support._
 
   describe("Parser") {
-    describe("Literals") {
-      it("should parse an integer literal") {
-        parseValue("123") shouldBe lit(123)
-      }
+    describe("Simple Expressions") {
+      it("should parse various literals and identifiers correctly") {
+        val simpleExpressions = Table(
+          ("input", "expectedAst"),
+          ("123", lit(123)),
+          ("\"hello\"", lit("hello")),
+          ("true", lit(true)),
+          ("false", lit(false)),
+          ("null", litNull),
+          ("foo", ref("foo"))
+        )
 
-      it("should parse a string literal") {
-        parseValue("\"hello\"") shouldBe lit("hello")
-      }
-
-      it("should parse boolean literals") {
-        parseValue("true") shouldBe lit(true)
-        parseValue("false") shouldBe lit(false)
-      }
-
-      it("should parse null literal") {
-        parseValue("null") shouldBe litNull
-      }
-    }
-
-    describe("Identifiers") {
-      it("should parse an identifier") {
-        parseValue("foo") shouldBe ref("foo")
+        forAll(simpleExpressions) { (input, expected) =>
+          parseValue(input) shouldBe expected
+        }
       }
     }
 
     describe("Expressions") {
       describe("Arithmetic & Precedence") {
-        it("should parse infix addition") {
-          parseValue("1 + 2") shouldBe infix(lit(1), "+", lit(2))
-        }
+        it("should respect operator precedence and grouping") {
+          val arithmeticTests = Table(
+            ("input", "expectedAst"),
+            ("1 + 2", infix(lit(1), "+", lit(2))),
+            ("1 + 2 * 3", infix(lit(1), "+", infix(lit(2), "*", lit(3)))),
+            ("1 * 2 + 3", infix(infix(lit(1), "*", lit(2)), "+", lit(3))),
+            ("(1 + 2) * 3", infix(infix(lit(1), "+", lit(2)), "*", lit(3)))
+          )
 
-        it("should respect operator precedence (1 + 2 * 3)") {
-          parseValue("1 + 2 * 3") shouldBe infix(lit(1), "+", infix(lit(2), "*", lit(3)))
-        }
-
-        it("should respect operator precedence (1 * 2 + 3)") {
-          parseValue("1 * 2 + 3") shouldBe infix(infix(lit(1), "*", lit(2)), "+", lit(3))
-        }
-
-        it("should handle parentheses for grouping") {
-          parseValue("(1 + 2) * 3") shouldBe infix(infix(lit(1), "+", lit(2)), "*", lit(3))
+          forAll(arithmeticTests) { (input, expected) =>
+            parseValue(input) shouldBe expected
+          }
         }
       }
 
