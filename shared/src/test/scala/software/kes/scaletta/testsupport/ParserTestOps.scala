@@ -16,21 +16,25 @@ object ParserTestOps {
     }
 
     def shouldFailWith(expected: ParseErrorMatchers.ErrorWithPosition)
-                      (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
-      import ParseErrorMatchers._
-      import matchers._
-      val (_, errors) = support.parseWithErrors(input)
-      errors should containError(expected)
+                      (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ErrorResultVerifier = {
+      shouldFailWith(Vector(expected): _*)
     }
 
     def shouldFailWith(expectedErrors: ParseErrorMatchers.ErrorWithPosition*)
-                      (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
+                      (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ErrorResultVerifier = {
       import ParseErrorMatchers._
       import matchers._
-      val (_, errors) = support.parseWithErrors(input)
-      expectedErrors.foreach { expected =>
-        errors should containError(expected)
-      }
+      val (ast, errors) = support.parseWithErrors(input)
+      errors should matchExactlyErrors(input, expectedErrors.toVector)
+      new ErrorResultVerifier(ast)
+    }
+  }
+
+  class ErrorResultVerifier(val actualAst: Option[Expression[Id]]) {
+    def producing(expectedAst: Expression[Id])
+                 (implicit matchers: Matchers, pos: Position): Unit = {
+      import matchers._
+      actualAst shouldBe Some(expectedAst)
     }
   }
 

@@ -13,7 +13,6 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
   private implicit val matchers: Matchers = Matchers
 
   import ParserTestOps._
-  import support._
 
   describe("Parser") {
     describe("Simple Expressions") {
@@ -77,24 +76,24 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
   describe("Parser Error Recovery") {
     it("should recover from an unexpected token in a function call") {
-      "f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5)
-      val (ast, _) = parseWithErrors("f(1, @, 2)")
-      ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
+      "f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5) producing {
+        call(ref("f"), lit(1), lit(2))
+      }
     }
 
     it("should collect multiple errors in a function call") {
       "f(1, @, #, 2)" shouldFailWith(
         ParseError.UnexpectedToken(Token.At) at 5,
         ParseError.UnexpectedToken(Token.Hash) at 8
-      )
-      val (ast, _) = parseWithErrors("f(1, @, #, 2)")
-      ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
+      ) producing {
+        call(ref("f"), lit(1), lit(2))
+      }
     }
 
     it("should handle an unexpected token at the start of an argument") {
-      "f(@, 1)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 2)
-      val (ast, _) = parseWithErrors("f(@, 1)")
-      ast shouldBe Some(call(ref("f"), lit(1)))
+      "f(@, 1)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 2) producing {
+        call(ref("f"), lit(1))
+      }
     }
   }
 
