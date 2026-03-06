@@ -1,0 +1,68 @@
+package software.kes.scaletta.ast
+
+import software.kes.scaletta.util.functional.Id._
+
+object AstBuilders {
+  def lit(n: Int): Expression[Id] = Literal.int(n)
+
+  def lit(s: String): Expression[Id] = Literal.string(s)
+
+  def lit(b: Boolean): Expression[Id] = Literal.boolean(b)
+
+  def litNull: Expression[Id] = Literal.null_()
+
+  def ref(name: String): Expression[Id] = Reference.single[Id](Identifier(name))
+
+  def infix(left: Expression[Id], op: String, right: Expression[Id]): Expression[Id] =
+    Call.infix[Id](left, Identifier(op), Vector.empty, right)
+
+  def call(target: Expression[Id], args: Expression[Id]*): Expression[Id] = {
+    val argGroup = ArgumentGroup[Id](args.toVector.map(a => Argument[Id](a)))
+    Call.standard[Id](target, Vector.empty, Vector(argGroup))
+  }
+
+  def multiCall(target: Expression[Id], argGroups: Vector[Vector[Expression[Id]]]): Expression[Id] = {
+    val groups = argGroups.map(group => ArgumentGroup[Id](group.map(a => Argument[Id](a))))
+    Call.standard[Id](target, Vector.empty, groups)
+  }
+
+  def block(declarations: Vector[Declaration[Id]], result: Expression[Id]): Expression[Id] =
+    Block[Id](declarations, result)
+
+  def tuple(elements: Expression[Id]*): Expression[Id] =
+    Tuple[Id](elements.toVector)
+
+  def cond(condition: Expression[Id], thenBranch: Expression[Id], elseBranch: Expression[Id]): Expression[Id] =
+    Conditional[Id](condition, thenBranch, elseBranch)
+
+  def valDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
+    Declaration.val_[Id](pattern, rhs)
+
+  def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
+    Declaration.lazyVal[Id](pattern, rhs)
+
+  def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] = {
+    val paramGroups = params.map { group =>
+      FormalParameterGroup[Id](group.map { case (n, t) =>
+        FormalParameter[Id](Identifier(n), TypeIdentifier.name(Identifier(t)), None)
+      })
+    }
+    Declaration.def_[Id](Identifier(name), paramGroups, body)
+  }
+
+  def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
+
+  def pId(name: String): Pattern[Id] = Pattern.Identifier[Id](Identifier(name))
+
+  def pLit(expr: Literal[Id]): Pattern[Id] = Pattern.Literal[Id](expr)
+
+  def pAs(name: String, pattern: Pattern[Id]): Pattern[Id] = Pattern.As[Id](Identifier(name), pattern)
+
+  def pTyped(pattern: Pattern[Id], typeName: String): Pattern[Id] =
+    Pattern.Typed[Id](pattern, TypeIdentifier.name(Identifier(typeName)))
+
+  def pTuple(elements: Pattern[Id]*): Pattern[Id] = Pattern.Tuple[Id](elements.toVector)
+
+  def pProduct(typeName: String, args: Pattern[Id]*): Pattern[Id] =
+    Pattern.Product[Id](TypeIdentifier.name(Identifier(typeName)), args.toVector)
+}

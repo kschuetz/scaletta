@@ -2,6 +2,7 @@ package software.kes.scaletta.parser
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.ast.AstBuilders._
 import software.kes.scaletta.ast._
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner, Token}
@@ -105,69 +106,6 @@ class ParserTest extends AnyFunSpec with Matchers {
     val result = parse(input)
     (result.value.map(_.value.mapK(posToId)), result.errors.map(_.value))
   }
-
-  private def lit(n: Int): Expression[Id] = Literal.int(n)
-
-  private def lit(s: String): Expression[Id] = Literal.string(s)
-
-  private def lit(b: Boolean): Expression[Id] = Literal.boolean(b)
-
-  private def litNull: Expression[Id] = Literal.null_()
-
-  private def ref(name: String): Expression[Id] = Reference.single[Id](Identifier(name))
-
-  private def infix(left: Expression[Id], op: String, right: Expression[Id]): Expression[Id] =
-    Call.infix[Id](left, Identifier(op), Vector.empty, right)
-
-  private def call(target: Expression[Id], args: Expression[Id]*): Expression[Id] = {
-    val argGroup = ArgumentGroup[Id](args.toVector.map(a => Argument[Id](a)))
-    Call.standard[Id](target, Vector.empty, Vector(argGroup))
-  }
-
-  private def multiCall(target: Expression[Id], argGroups: Vector[Vector[Expression[Id]]]): Expression[Id] = {
-    val groups = argGroups.map(group => ArgumentGroup[Id](group.map(a => Argument[Id](a))))
-    Call.standard[Id](target, Vector.empty, groups)
-  }
-
-  private def block(declarations: Vector[Declaration[Id]], result: Expression[Id]): Expression[Id] =
-    Block[Id](declarations, result)
-
-  private def tuple(elements: Expression[Id]*): Expression[Id] =
-    Tuple[Id](elements.toVector)
-
-  private def cond(condition: Expression[Id], thenBranch: Expression[Id], elseBranch: Expression[Id]): Expression[Id] =
-    Conditional[Id](condition, thenBranch, elseBranch)
-
-  private def valDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
-    Declaration.val_[Id](pattern, rhs)
-
-  private def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
-    Declaration.lazyVal[Id](pattern, rhs)
-
-  private def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] = {
-    val paramGroups = params.map { group =>
-      FormalParameterGroup[Id](group.map { case (n, t) =>
-        FormalParameter[Id](Identifier(n), TypeIdentifier.name(Identifier(t)), None)
-      })
-    }
-    Declaration.def_[Id](Identifier(name), paramGroups, body)
-  }
-
-  private def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
-
-  private def pId(name: String): Pattern[Id] = Pattern.Identifier[Id](Identifier(name))
-
-  private def pLit(expr: Literal[Id]): Pattern[Id] = Pattern.Literal[Id](expr)
-
-  private def pAs(name: String, pattern: Pattern[Id]): Pattern[Id] = Pattern.As[Id](Identifier(name), pattern)
-
-  private def pTyped(pattern: Pattern[Id], typeName: String): Pattern[Id] =
-    Pattern.Typed[Id](pattern, TypeIdentifier.name(Identifier(typeName)))
-
-  private def pTuple(elements: Pattern[Id]*): Pattern[Id] = Pattern.Tuple[Id](elements.toVector)
-
-  private def pProduct(typeName: String, args: Pattern[Id]*): Pattern[Id] =
-    Pattern.Product[Id](TypeIdentifier.name(Identifier(typeName)), args.toVector)
 
   private def parse(input: String): ParseResult[Pos] = {
     val reader = CharReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
