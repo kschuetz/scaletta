@@ -52,8 +52,8 @@ class ParserTestSupport() {
   /**
    * Parses the input string and returns both the (partial) expression and any errors.
    */
-  def parseWithErrors(input: String): (Option[Expression[Id]], Vector[ParseError]) = {
+  def parseWithErrors(input: String): (Option[Expression[Id]], Vector[Pos[ParseError]]) = {
     val result = parse(input)
-    (result.value.map(_.value.mapK(posToId)), result.errors.map(_.value))
+    (result.value.map(_.value.mapK(posToId)), result.errors)
   }
 }

@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import software.kes.scaletta.ast.AstBuilders._
 import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.testsupport.ParseErrorMatchers._
 import software.kes.scaletta.testsupport.ParserTestSupport
 
 class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks {
@@ -77,22 +78,22 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       val (ast, errors) = parseWithErrors("f(1, @, 2)")
       ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
       errors should have size 1
-      errors.head shouldBe ParseError.UnexpectedToken(Token.At)
+      errors should containError(ParseError.UnexpectedToken(Token.At) at 5)
     }
 
     it("should collect multiple errors in a function call") {
       val (ast, errors) = parseWithErrors("f(1, @, #, 2)")
       ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
       errors should have size 2
-      errors(0) shouldBe ParseError.UnexpectedToken(Token.At)
-      errors(1) shouldBe ParseError.UnexpectedToken(Token.Hash)
+      errors should containError(ParseError.UnexpectedToken(Token.At) at 5)
+      errors should containError(ParseError.UnexpectedToken(Token.Hash) at 8)
     }
 
     it("should handle an unexpected token at the start of an argument") {
       val (ast, errors) = parseWithErrors("f(@, 1)")
       ast shouldBe Some(call(ref("f"), lit(1)))
       errors should have size 1
-      errors.head shouldBe ParseError.UnexpectedToken(Token.At)
+      errors should containError(ParseError.UnexpectedToken(Token.At) at 2)
     }
   }
 
