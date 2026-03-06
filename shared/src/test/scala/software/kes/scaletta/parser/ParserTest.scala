@@ -110,7 +110,7 @@ class ParserTest extends AnyFunSpec with Matchers {
       expectReference(xExpr.value, "x")
     }
 
-    ignore("should parse multiple argument groups (f(x)(y))") {
+    it("should parse multiple argument groups (f(x)(y))") {
       val root = expectStandardCall(parseValue("f(x)(y)"))
       root.args.size shouldBe 2
       expectReference(root.target.value, "f")
