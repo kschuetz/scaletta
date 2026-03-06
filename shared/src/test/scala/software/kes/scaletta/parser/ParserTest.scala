@@ -4,7 +4,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast._
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
-import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner}
+import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner, Token}
 import software.kes.scaletta.util.functional.Id._
 import software.kes.scaletta.util.functional.~>
 
@@ -68,6 +68,30 @@ class ParserTest extends AnyFunSpec with Matchers {
     }
   }
 
+  describe("Parser Error Recovery") {
+    it("should recover from an unexpected token in a function call") {
+      val (ast, errors) = parseWithErrors("f(1, @, 2)")
+      ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
+      errors should have size 1
+      errors.head shouldBe ParseError.UnexpectedToken(Token.At)
+    }
+
+    it("should collect multiple errors in a function call") {
+      val (ast, errors) = parseWithErrors("f(1, @, #, 2)")
+      ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
+      errors should have size 2
+      errors(0) shouldBe ParseError.UnexpectedToken(Token.At)
+      errors(1) shouldBe ParseError.UnexpectedToken(Token.Hash)
+    }
+
+    it("should handle an unexpected token at the start of an argument") {
+      val (ast, errors) = parseWithErrors("f(@, 1)")
+      ast shouldBe Some(call(ref("f"), lit(1)))
+      errors should have size 1
+      errors.head shouldBe ParseError.UnexpectedToken(Token.At)
+    }
+  }
+
   private def parseValue(input: String): Expression[Id] = {
     val result = parse(input)
     result.errors shouldBe empty
@@ -75,6 +99,11 @@ class ParserTest extends AnyFunSpec with Matchers {
       case Some(pos) => pos.value.mapK(posToId)
       case None => fail(s"Parser returned no value for input: $input")
     }
+  }
+
+  private def parseWithErrors(input: String): (Option[Expression[Id]], Vector[ParseError]) = {
+    val result = parse(input)
+    (result.value.map(_.value.mapK(posToId)), result.errors.map(_.value))
   }
 
   private def lit(n: Int): Expression[Id] = Literal.int(n)
