@@ -16,7 +16,7 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
 
     it("should transform Block") {
       val expr = Block[Id](
-        Vector(Declaration.Val[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))),
+        Vector(Declaration.val_[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))),
         Literal.IntLiteral[Id](2)
       )
       val result = expr.mapK(idToOption)
@@ -154,14 +154,14 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
 
   describe("Declaration.mapK") {
     it("should transform Val") {
-      val expr = Declaration.Val[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
+      val expr = Declaration.val_[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
       val result = expr.mapK(idToOption)
       result shouldBe Declaration.Val[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1)))
     }
 
     it("should transform Def") {
       val paramGroup = FormalParameterGroup[Id](Vector(FormalParameter[Id](Identifier("p"), TypeIdentifier.name(Identifier("Int")), None)))
-      val expr = Declaration.Def[Id](Identifier("f"), Vector(paramGroup), Literal.Null[Id]())
+      val expr = Declaration.def_[Id](Identifier("f"), Vector(paramGroup), Literal.Null[Id]())
       val result = expr.mapK(idToOption)
       result shouldBe Declaration.Def[Option](
         Some(Identifier("f")),
@@ -171,7 +171,7 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     }
 
     it("should transform LazyVal") {
-      val expr = Declaration.LazyVal[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
+      val expr = Declaration.lazyVal[Id](Pattern.Wildcard[Id](), Literal.IntLiteral[Id](1))
       val result = expr.mapK(idToOption)
       result shouldBe Declaration.LazyVal[Option](Some(Pattern.Wildcard[Option]()), Some(Literal.IntLiteral[Option](1)))
     }

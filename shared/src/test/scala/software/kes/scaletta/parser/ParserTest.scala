@@ -110,10 +110,10 @@ class ParserTest extends AnyFunSpec with Matchers {
     Conditional[Id](condition, thenBranch, elseBranch)
 
   private def valDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
-    Declaration.Val[Id](pattern, rhs)
+    Declaration.val_[Id](pattern, rhs)
 
   private def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
-    Declaration.LazyVal[Id](pattern, rhs)
+    Declaration.lazyVal[Id](pattern, rhs)
 
   private def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] = {
     val paramGroups = params.map { group =>
@@ -121,7 +121,7 @@ class ParserTest extends AnyFunSpec with Matchers {
         FormalParameter[Id](Identifier(n), TypeIdentifier.name(Identifier(t)), None)
       })
     }
-    Declaration.Def[Id](Identifier(name), paramGroups, body)
+    Declaration.def_[Id](Identifier(name), paramGroups, body)
   }
 
   private def pWild: Pattern[Id] = Pattern.Wildcard[Id]()

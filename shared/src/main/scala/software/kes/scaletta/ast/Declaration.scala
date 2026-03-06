@@ -7,6 +7,17 @@ sealed trait Declaration[F[_]] {
 }
 
 object Declaration {
+  def val_[F[_]](pattern: F[Pattern[F]], rhs: F[Expression[F]]): Declaration[F] =
+    Val(pattern, rhs)
+
+  def lazyVal[F[_]](pattern: F[Pattern[F]], rhs: F[Expression[F]]): Declaration[F] =
+    LazyVal(pattern, rhs)
+
+  def def_[F[_]](name: F[Identifier],
+                 params: Vector[F[FormalParameterGroup[F]]],
+                 body: F[Expression[F]]): Declaration[F] =
+    Def(name, params, body)
+
   case class Val[F[_]](pattern: F[Pattern[F]],
                        rhs: F[Expression[F]]) extends Declaration[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Val[G] =
