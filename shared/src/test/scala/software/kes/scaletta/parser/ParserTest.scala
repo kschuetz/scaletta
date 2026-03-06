@@ -3,13 +3,14 @@ package software.kes.scaletta.parser
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast.AstBuilders._
-import software.kes.scaletta.ast._
-import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
-import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner, Token}
-import software.kes.scaletta.util.functional.Id._
-import software.kes.scaletta.util.functional.~>
+import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.testsupport.ParserTestSupport
 
 class ParserTest extends AnyFunSpec with Matchers {
+  private val support = new ParserTestSupport() with Matchers
+
+  import support._
+
   describe("Parser") {
     describe("Literals") {
       it("should parse an integer literal") {
@@ -101,31 +102,6 @@ class ParserTest extends AnyFunSpec with Matchers {
       errors should have size 1
       errors.head shouldBe ParseError.UnexpectedToken(Token.At)
     }
-  }
-
-  private def parseValue(input: String): Expression[Id] = {
-    val result = parse(input)
-    result.errors shouldBe empty
-    result.value match {
-      case Some(pos) => pos.value.mapK(posToId)
-      case None => fail(s"Parser returned no value for input: $input")
-    }
-  }
-
-  private def parseWithErrors(input: String): (Option[Expression[Id]], Vector[ParseError]) = {
-    val result = parse(input)
-    (result.value.map(_.value.mapK(posToId)), result.errors.map(_.value))
-  }
-
-  private def parse(input: String): ParseResult[Pos] = {
-    val reader = CharReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
-    val scanner = Scanner.create(reader, IdentifierPolicy.Default)
-    val parser = Parser.create()
-    parser.parse(scanner)
-  }
-
-  private object posToId extends (Pos ~> Id) {
-    def apply[A](fa: Pos[A]): Id[A] = fa.value
   }
 
 }
