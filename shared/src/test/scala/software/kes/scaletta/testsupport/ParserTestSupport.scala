@@ -41,7 +41,8 @@ class ParserTestSupport() {
                 (implicit pos: Position): Expression[Id] = {
     val result = parse(input)
     if (result.errors.nonEmpty) {
-      fail(s"Parser errors for input '$input': ${result.errors}")
+      val errorMsg = result.errors.map(e => s"${e.value} at ${e.begin.value}").mkString(", ")
+      fail(s"Parser errors for input '$input': $errorMsg")
     }
     result.value match {
       case Some(pos) => pos.value.mapK(posToId)

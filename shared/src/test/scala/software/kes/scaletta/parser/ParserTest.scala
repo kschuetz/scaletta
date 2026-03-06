@@ -6,11 +6,13 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 import software.kes.scaletta.ast.AstBuilders._
 import software.kes.scaletta.scanner.Token
 import software.kes.scaletta.testsupport.ParseErrorMatchers._
-import software.kes.scaletta.testsupport.ParserTestSupport
+import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 
 class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks {
-  private val support = new ParserTestSupport() with Matchers
+  private implicit val support: ParserTestSupport = new ParserTestSupport() with Matchers
+  private implicit val matchers: Matchers = Matchers
 
+  import ParserTestOps._
   import support._
 
   describe("Parser") {
@@ -27,7 +29,7 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         )
 
         forAll(simpleExpressions) { (input, expected) =>
-          parseValue(input) shouldBe expected
+          input shouldParseTo expected
         }
       }
     }
@@ -44,30 +46,30 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
           )
 
           forAll(arithmeticTests) { (input, expected) =>
-            parseValue(input) shouldBe expected
+            input shouldParseTo expected
           }
         }
       }
 
       describe("Function Calls") {
         it("should parse a standard function call (f(x, y))") {
-          parseValue("f(x, y)") shouldBe call(ref("f"), ref("x"), ref("y"))
+          "f(x, y)" shouldParseTo call(ref("f"), ref("x"), ref("y"))
         }
 
         it("should parse a function call with no arguments (f())") {
-          parseValue("f()") shouldBe call(ref("f"))
+          "f()" shouldParseTo call(ref("f"))
         }
 
         it("should parse a nested function call (f(g(x)))") {
-          parseValue("f(g(x))") shouldBe call(ref("f"), call(ref("g"), ref("x")))
+          "f(g(x))" shouldParseTo call(ref("f"), call(ref("g"), ref("x")))
         }
 
         it("should parse a call on an expression target ((f + g)(x))") {
-          parseValue("(f + g)(x)") shouldBe call(infix(ref("f"), "+", ref("g")), ref("x"))
+          "(f + g)(x)" shouldParseTo call(infix(ref("f"), "+", ref("g")), ref("x"))
         }
 
         it("should parse multiple argument groups (f(x)(y))") {
-          parseValue("f(x)(y)") shouldBe multiCall(ref("f"), Vector(Vector(ref("x")), Vector(ref("y"))))
+          "f(x)(y)" shouldParseTo multiCall(ref("f"), Vector(Vector(ref("x")), Vector(ref("y"))))
         }
       }
     }
@@ -75,25 +77,24 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
   describe("Parser Error Recovery") {
     it("should recover from an unexpected token in a function call") {
-      val (ast, errors) = parseWithErrors("f(1, @, 2)")
+      "f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5)
+      val (ast, _) = parseWithErrors("f(1, @, 2)")
       ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
-      errors should have size 1
-      errors should containError(ParseError.UnexpectedToken(Token.At) at 5)
     }
 
     it("should collect multiple errors in a function call") {
-      val (ast, errors) = parseWithErrors("f(1, @, #, 2)")
+      "f(1, @, #, 2)" shouldFailWith(
+        ParseError.UnexpectedToken(Token.At) at 5,
+        ParseError.UnexpectedToken(Token.Hash) at 8
+      )
+      val (ast, _) = parseWithErrors("f(1, @, #, 2)")
       ast shouldBe Some(call(ref("f"), lit(1), lit(2)))
-      errors should have size 2
-      errors should containError(ParseError.UnexpectedToken(Token.At) at 5)
-      errors should containError(ParseError.UnexpectedToken(Token.Hash) at 8)
     }
 
     it("should handle an unexpected token at the start of an argument") {
-      val (ast, errors) = parseWithErrors("f(@, 1)")
+      "f(@, 1)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 2)
+      val (ast, _) = parseWithErrors("f(@, 1)")
       ast shouldBe Some(call(ref("f"), lit(1)))
-      errors should have size 1
-      errors should containError(ParseError.UnexpectedToken(Token.At) at 2)
     }
   }
 
