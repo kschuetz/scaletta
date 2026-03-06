@@ -5,8 +5,11 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast._
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner}
+import software.kes.scaletta.util.functional.Id._
+import software.kes.scaletta.util.functional.~>
 
 class ParserTest extends AnyFunSpec with Matchers {
+
 
   describe("Parser") {
     it("should parse an integer literal") {
@@ -32,126 +35,126 @@ class ParserTest extends AnyFunSpec with Matchers {
 
     it("should parse infix addition") {
       val root = expectInfix(parseValue("1 + 2"))
-      expectInt(root.left.value, 1)
-      root.operation.value shouldBe Identifier("+")
-      expectInt(root.right.value, 2)
+      expectInt(root.left, 1)
+      root.operation shouldBe Identifier("+")
+      expectInt(root.right, 2)
     }
 
     it("should respect operator precedence (1 + 2 * 3)") {
       val root = expectInfix(parseValue("1 + 2 * 3"))
-      expectInt(root.left.value, 1)
-      root.operation.value shouldBe Identifier("+")
+      expectInt(root.left, 1)
+      root.operation shouldBe Identifier("+")
 
-      val right = expectInfix(root.right.value)
-      expectInt(right.left.value, 2)
-      right.operation.value shouldBe Identifier("*")
-      expectInt(right.right.value, 3)
+      val right = expectInfix(root.right)
+      expectInt(right.left, 2)
+      right.operation shouldBe Identifier("*")
+      expectInt(right.right, 3)
     }
 
     it("should respect operator precedence (1 * 2 + 3)") {
       val root = expectInfix(parseValue("1 * 2 + 3"))
-      val left = expectInfix(root.left.value)
-      expectInt(left.left.value, 1)
-      left.operation.value shouldBe Identifier("*")
-      expectInt(left.right.value, 2)
+      val left = expectInfix(root.left)
+      expectInt(left.left, 1)
+      left.operation shouldBe Identifier("*")
+      expectInt(left.right, 2)
 
-      root.operation.value shouldBe Identifier("+")
-      expectInt(root.right.value, 3)
+      root.operation shouldBe Identifier("+")
+      expectInt(root.right, 3)
     }
 
     it("should handle parentheses for grouping") {
       val root = expectInfix(parseValue("(1 + 2) * 3"))
-      val left = expectInfix(root.left.value)
-      expectInt(left.left.value, 1)
-      left.operation.value shouldBe Identifier("+")
-      expectInt(left.right.value, 2)
+      val left = expectInfix(root.left)
+      expectInt(left.left, 1)
+      left.operation shouldBe Identifier("+")
+      expectInt(left.right, 2)
 
-      root.operation.value shouldBe Identifier("*")
-      expectInt(root.right.value, 3)
+      root.operation shouldBe Identifier("*")
+      expectInt(root.right, 3)
     }
 
     it("should parse a standard function call (f(x, y))") {
       val root = expectStandardCall(parseValue("f(x, y)"))
-      expectReference(root.target.value, "f")
+      expectReference(root.target, "f")
       root.typeArgs shouldBe empty
       root.args.size shouldBe 1
-      val group = root.args.head.value
+      val group = root.args.head
       group.arguments.size shouldBe 2
 
-      expectReference(group.arguments(0).value.value.value, "x")
-      expectReference(group.arguments(1).value.value.value, "y")
+      expectReference(group.arguments(0).value, "x")
+      expectReference(group.arguments(1).value, "y")
     }
 
     it("should parse a function call with no arguments (f())") {
       val root = expectStandardCall(parseValue("f()"))
       root.args.size shouldBe 1
-      root.args.head.value.arguments shouldBe empty
+      root.args.head.arguments shouldBe empty
     }
 
     it("should parse a nested function call (f(g(x)))") {
       val root = expectStandardCall(parseValue("f(g(x))"))
-      expectReference(root.target.value, "f")
-      val gCallExpr = root.args.head.value.arguments.head.value.value
-      val gCall = expectStandardCall(gCallExpr.value)
-      expectReference(gCall.target.value, "g")
-      val xExpr = gCall.args.head.value.arguments.head.value.value
-      expectReference(xExpr.value, "x")
+      expectReference(root.target, "f")
+      val gCallExpr = root.args.head.arguments.head.value
+      val gCall = expectStandardCall(gCallExpr)
+      expectReference(gCall.target, "g")
+      val xExpr = gCall.args.head.arguments.head.value
+      expectReference(xExpr, "x")
     }
 
     it("should parse a call on an expression target ((f + g)(x))") {
       val root = expectStandardCall(parseValue("(f + g)(x)"))
-      val target = expectInfix(root.target.value)
-      expectReference(target.left.value, "f")
-      target.operation.value shouldBe Identifier("+")
-      expectReference(target.right.value, "g")
+      val target = expectInfix(root.target)
+      expectReference(target.left, "f")
+      target.operation shouldBe Identifier("+")
+      expectReference(target.right, "g")
 
       root.args.size shouldBe 1
-      val xExpr = root.args.head.value.arguments.head.value.value
-      expectReference(xExpr.value, "x")
+      val xExpr = root.args.head.arguments.head.value
+      expectReference(xExpr, "x")
     }
 
     it("should parse multiple argument groups (f(x)(y))") {
       val root = expectStandardCall(parseValue("f(x)(y)"))
       root.args.size shouldBe 2
-      expectReference(root.target.value, "f")
-      expectReference(root.args(0).value.arguments(0).value.value.value, "x")
-      expectReference(root.args(1).value.arguments(0).value.value.value, "y")
+      expectReference(root.target, "f")
+      expectReference(root.args(0).arguments(0).value, "x")
+      expectReference(root.args(1).arguments(0).value, "y")
     }
   }
 
-  private def parseValue(input: String): Expression[Pos] = {
+  private def parseValue(input: String): Expression[Id] = {
     val result = parse(input)
     result.errors shouldBe empty
     result.value match {
-      case Some(pos) => pos.value
+      case Some(pos) => pos.value.mapK(posToId)
       case None => fail(s"Parser returned no value for input: $input")
     }
   }
 
-  private def expectInt(expr: Expression[Pos], expected: Int): Literal.IntLiteral[Pos] = {
+  private def expectInt(expr: Expression[Id], expected: Int): Literal.IntLiteral[Id] = {
     expr shouldBe Literal.int(expected)
-    expr.asInstanceOf[Literal.IntLiteral[Pos]]
+    expr.asInstanceOf[Literal.IntLiteral[Id]]
   }
 
-  private def expectReference(expr: Expression[Pos], expected: String): Reference[Pos] = {
+  private def expectReference(expr: Expression[Id], expected: String): Reference[Id] = {
     expr match {
       case r@Reference(::(id, Nil)) =>
-        id.value shouldBe Identifier(expected)
+        id shouldBe Identifier(expected)
         r
       case other => fail(s"Expected Identifier '$expected', but got $other")
     }
   }
 
-  private def expectInfix(expr: Expression[Pos]): Call.Infix[Pos] = {
+  private def expectInfix(expr: Expression[Id]): Call.Infix[Id] = {
     expr match {
-      case c: Call.Infix[Pos] @unchecked => c
+      case c: Call.Infix[Id] @unchecked => c
       case other => fail(s"Expected Infix call, but got $other")
     }
   }
 
-  private def expectStandardCall(expr: Expression[Pos]): Call.Standard[Pos] = {
+  private def expectStandardCall(expr: Expression[Id]): Call.Standard[Id] = {
     expr match {
-      case s: Call.Standard[Pos] @unchecked => s
+      case s: Call.Standard[Id] @unchecked => s
       case other => fail(s"Expected Standard call, got $other")
     }
   }
@@ -162,4 +165,9 @@ class ParserTest extends AnyFunSpec with Matchers {
     val parser = Parser.create()
     parser.parse(scanner)
   }
+
+  private object posToId extends (Pos ~> Id) {
+    def apply[A](fa: Pos[A]): Id[A] = fa.value
+  }
+
 }
