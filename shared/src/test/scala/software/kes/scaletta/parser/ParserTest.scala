@@ -107,6 +107,24 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
             atIndex(1)(errorOfType[ParseError.UnexpectedToken])
         }
       }
+
+      it("should support soft failure check (ignoringAst)") {
+        ("f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5))
+          .ignoringAst()
+      }
+
+      it("should support multiple assertions with chaining") {
+        ("f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5))
+          .producing(call(ref("f"), lit(1), lit(2)))
+          .andNoFatalErrors()
+      }
+
+      it("should support withPartialAst for custom assertions") {
+        ("f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5))
+          .withPartialAst { ast =>
+            ast shouldBe call(ref("f"), lit(1), lit(2))
+          }
+      }
     }
   }
 
