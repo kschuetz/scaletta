@@ -3,7 +3,7 @@ package software.kes.scaletta.reporting
 import software.kes.scaletta.util.functional.Functor
 
 object Position {
-  val zero: Position = Position(LineIndex(0), ColumnIndex(0))
+  val first: Position = Position(LineIndex(1), ColumnIndex(1))
 }
 
 case class Position(line: LineIndex,
@@ -14,7 +14,7 @@ object LineIndex {
 }
 
 /**
- * 0-based
+ * 1-based
  */
 final class LineIndex(val value: Int) extends AnyVal {
   def next: LineIndex = new LineIndex(value + 1)
@@ -29,7 +29,7 @@ object ColumnIndex {
 }
 
 /**
- * 0-based
+ * 1-based
  */
 final class ColumnIndex(val value: Int) extends AnyVal {
   def +(rhs: Int): ColumnIndex = new ColumnIndex(value + rhs)

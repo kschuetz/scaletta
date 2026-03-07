@@ -10,8 +10,8 @@ object TestErrorFormatting {
     val lines = input.split("\n")
     val result = new StringBuilder()
 
-    val errorLineIdx = pos.line.value
-    val col = pos.column.value
+    val errorLineIdx = pos.line.value - 1
+    val col = pos.column.value - 1
 
     if (errorLineIdx >= 0 && errorLineIdx < lines.length) {
       val fullLabel = s"($pos) $label"

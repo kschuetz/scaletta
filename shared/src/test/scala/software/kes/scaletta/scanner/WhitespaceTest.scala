@@ -16,9 +16,9 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
         // Check LineMap
         val lineMap = reader.lineMap
-        lineMap.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(0), ColumnIndex(0))
-        lineMap.indexToPosition(CharIndex(2)) shouldBe Position(LineIndex(0), ColumnIndex(2))
-        lineMap.indexToPosition(CharIndex(3)) shouldBe Position(LineIndex(1), ColumnIndex(0))
+        lineMap.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(1), ColumnIndex(1))
+        lineMap.indexToPosition(CharIndex(2)) shouldBe Position(LineIndex(1), ColumnIndex(3))
+        lineMap.indexToPosition(CharIndex(3)) shouldBe Position(LineIndex(2), ColumnIndex(1))
       }
     }
 
@@ -33,8 +33,8 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
         // Check LineMap - next line should start at index 4 (after \n)
         val lineMap = reader.lineMap
-        lineMap.indexToPosition(CharIndex(3)) shouldBe Position(LineIndex(0), ColumnIndex(3))
-        lineMap.indexToPosition(CharIndex(4)) shouldBe Position(LineIndex(1), ColumnIndex(0))
+        lineMap.indexToPosition(CharIndex(3)) shouldBe Position(LineIndex(1), ColumnIndex(4))
+        lineMap.indexToPosition(CharIndex(4)) shouldBe Position(LineIndex(2), ColumnIndex(1))
       }
     }
 
@@ -48,9 +48,9 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
         // Check LineMap
         val lineMap = reader.lineMap
         // First \r at index 2, next line starts at 3
-        lineMap.indexToPosition(CharIndex(3)).line.value shouldBe 1
+        lineMap.indexToPosition(CharIndex(3)).line.value shouldBe 2
         // Second \r at index 4, next line starts at 5
-        lineMap.indexToPosition(CharIndex(5)).line.value shouldBe 2
+        lineMap.indexToPosition(CharIndex(5)).line.value shouldBe 3
       }
     }
 

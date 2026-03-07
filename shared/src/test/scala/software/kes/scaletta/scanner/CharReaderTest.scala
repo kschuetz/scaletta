@@ -170,7 +170,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
     it("should correctly manage LineMap highWater mark when re-reading lines") {
       val input = "line1\nline2"
       TestReaderFactory.fromString(input) { (reader, lineMap) =>
-        reader.lineMap.indexToPosition(CharIndex(0)).line.value shouldBe 0
+        reader.lineMap.indexToPosition(CharIndex(0)).line.value shouldBe 1
 
         // Consume "line1\n"
         "line1\n".foreach { ch =>
@@ -179,7 +179,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
           if (ch == '\n') reader.recordNewline(reader.currentIndex)
         }
         reader.currentIndex.value shouldBe 6 // after \n
-        reader.lineMap.indexToPosition(CharIndex(6)).line.value shouldBe 1
+        reader.lineMap.indexToPosition(CharIndex(6)).line.value shouldBe 2
 
         // unget across newline
         reader.unget('\n')
@@ -191,7 +191,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
         reader.currentIndex.value shouldBe 6
 
         // Check if LineMap has correct number of entries (implicit check by looking at positions)
-        reader.lineMap.indexToPosition(CharIndex(6)).line.value shouldBe 1
+        reader.lineMap.indexToPosition(CharIndex(6)).line.value shouldBe 2
       }
     }
 

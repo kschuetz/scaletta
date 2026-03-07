@@ -3,7 +3,7 @@ package software.kes.scaletta.reporting
 import scala.collection.immutable.TreeMap
 
 object LineMap {
-  def create(basePosition: Position = Position.zero): LineMap =
+  def create(basePosition: Position = Position.first): LineMap =
     new LineMap(basePosition.line, basePosition.column, TreeMap(0 -> basePosition.line))
 }
 
@@ -19,9 +19,9 @@ final class LineMap private(currentLine: LineIndex,
   def indexToPosition(index: CharIndex): Position = {
     indexToLineBegin.maxBefore(index.value + 1) match {
       case Some((idx, line)) =>
-        val colIndex = ColumnIndex(index.value - idx)
+        val colIndex = ColumnIndex(index.value - idx + 1)
         Position(line, colIndex)
-      case None => Position(LineIndex(0), ColumnIndex(index.value))
+      case None => Position(LineIndex(1), ColumnIndex(index.value + 1))
     }
   }
 

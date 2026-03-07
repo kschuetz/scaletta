@@ -116,11 +116,11 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
 
           // Verify LineMap
           val lineMap = reader.lineMap
-          lineMap.indexToPosition(CharIndex(0)).line shouldBe LineIndex(0)
-          lineMap.indexToPosition(CharIndex(12)).line.value shouldBe 1 // After \r\n (10, 11)
-          lineMap.indexToPosition(CharIndex(19)).line.value shouldBe 2 // After \r (18)
-          lineMap.indexToPosition(CharIndex(26)).line.value shouldBe 3 // After \n (25)
-          lineMap.indexToPosition(CharIndex(29)).line.value shouldBe 3 // After """
+          lineMap.indexToPosition(CharIndex(0)).line shouldBe LineIndex(1)
+          lineMap.indexToPosition(CharIndex(12)).line.value shouldBe 2 // After \r\n (10, 11)
+          lineMap.indexToPosition(CharIndex(19)).line.value shouldBe 3 // After \r (18)
+          lineMap.indexToPosition(CharIndex(26)).line.value shouldBe 4 // After \n (25)
+          lineMap.indexToPosition(CharIndex(29)).line.value shouldBe 4 // After """
         }
       }
     }
