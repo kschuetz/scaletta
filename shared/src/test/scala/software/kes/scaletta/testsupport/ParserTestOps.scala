@@ -4,7 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast.Expression
-import software.kes.scaletta.parser.ParseError
+import software.kes.scaletta.parser.{ParseError, ParseOptions}
 import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.util.functional.Id._
 
@@ -15,7 +15,13 @@ object ParserTestOps {
     def shouldParseTo(expected: Expression[Id])
                      (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
       import matchers._
-      support.parseValue(input) shouldBe expected
+      support.parseValue(input, ParseOptions(requireExhaustion = true)) shouldBe expected
+    }
+
+    def shouldParsePartiallyTo(expected: Expression[Id])
+                              (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
+      import matchers._
+      support.parseValue(input, ParseOptions(requireExhaustion = false)) shouldBe expected
     }
 
     def shouldFailWith(expected: ParseErrorMatchers.ErrorWithPosition)

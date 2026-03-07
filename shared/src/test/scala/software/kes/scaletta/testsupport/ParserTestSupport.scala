@@ -3,7 +3,7 @@ package software.kes.scaletta.testsupport
 import org.scalactic.source.Position
 import org.scalatest.Assertions
 import software.kes.scaletta.ast.Expression
-import software.kes.scaletta.parser.{ParseError, ParseResult, Parser}
+import software.kes.scaletta.parser.{ParseError, ParseOptions, ParseResult, Parser}
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner}
 import software.kes.scaletta.util.functional.Id._
@@ -25,11 +25,11 @@ class ParserTestSupport() {
   /**
    * Parses the input string and returns the full [[ParseResult]].
    */
-  def parse(input: String): ParseResult[Pos] = {
+  def parse(input: String, options: ParseOptions = ParseOptions()): ParseResult[Pos] = {
     val reader = CharReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
     val scanner = Scanner.create(reader, IdentifierPolicy.Default)
     val parser = Parser.create()
-    parser.parse(scanner)
+    parser.parse(scanner, options)
   }
 
   /**
@@ -37,9 +37,9 @@ class ParserTestSupport() {
    *
    * @throws org.scalatest.exceptions.TestFailedException if there are parse errors or if no value is returned.
    */
-  def parseValue(input: String)
+  def parseValue(input: String, options: ParseOptions = ParseOptions())
                 (implicit pos: Position): Expression[Id] = {
-    val result = parse(input)
+    val result = parse(input, options)
     if (result.errors.nonEmpty) {
       val errorMsg = result.errors.map(e => s"${e.value} at ${e.begin.value}").mkString(", ")
       fail(s"Parser errors for input '$input': $errorMsg")
@@ -53,8 +53,8 @@ class ParserTestSupport() {
   /**
    * Parses the input string and returns both the (partial) expression and any errors.
    */
-  def parseWithErrors(input: String): (Option[Expression[Id]], Vector[Pos[ParseError]]) = {
-    val result = parse(input)
+  def parseWithErrors(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]]) = {
+    val result = parse(input, options)
     (result.value.map(_.value.mapK(posToId)), result.errors)
   }
 }

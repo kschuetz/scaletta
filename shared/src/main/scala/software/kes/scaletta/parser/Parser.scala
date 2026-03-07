@@ -8,9 +8,20 @@ object Parser {
   def create(): Parser = new Parser()
 }
 
+case class ParseOptions(requireExhaustion: Boolean = true)
+
 final class Parser private() {
-  def parse(scanner: Scanner): ParseResult[Pos] = {
-    parseExpression(scanner, BindingPower.Minimum)
+  def parse(scanner: Scanner, options: ParseOptions = ParseOptions()): ParseResult[Pos] = {
+    val result = parseExpression(scanner, BindingPower.Minimum)
+    if (options.requireExhaustion) {
+      val next = scanner.peek(1)
+      next.value match {
+        case Token.EndOfInput => result
+        case _ => result.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+      }
+    } else {
+      result
+    }
   }
 
   private def parseExpression(scanner: Scanner, minBindingPower: BindingPower): ParseResult[Pos] = {
@@ -29,15 +40,26 @@ final class Parser private() {
     if (currentResult.hasErrors) {
       false
     } else {
-      val next = scanner.peek(1).value
-      next match {
+      scanner.peek(1).value match {
         case Token.LParen =>
           // ( always has high precedence when acting as a postfix call
           // Use AllOthers to match what a normal high-priority operator would have
-          BindingPower.AllOthers >= minBindingPower
+          BindingPower.AllOthers > minBindingPower
         case id: Token.Identifier =>
           val bp = Operators.bindingPower(id)
-          bp > minBindingPower
+          if (bp > minBindingPower) {
+            // If it's alphanumeric and we are at the top level,
+            // we check if it's followed by another expression.
+            // If it's not, then it's trailing garbage, not an infix operator.
+            if (minBindingPower == BindingPower.Minimum && !id.isInstanceOf[Token.Identifier.Operator]) {
+              // peek(2) to see if there is a RHS
+              val afterId = scanner.peek(2)
+              afterId.value match {
+                case Token.EndOfInput | Token.RParen | Token.Comma | Token.Semicolon | Token.RBrace => false
+                case _ => true
+              }
+            } else true
+          } else false
         case _ => false
       }
     }
@@ -104,11 +126,15 @@ final class Parser private() {
         (leftResult.value, rightResult.value) match {
           case (Some(left), Some(right)) =>
             val opId = Pos(Identifier(id.name), opToken.begin, opToken.end)
-            ParseResult.create(Pos(
-              Call.infix(left, opId, Vector.empty, right),
-              left.begin,
-              right.end
-            ))
+            ParseResult(
+              value = Some(Pos(
+                Call.infix(left, opId, Vector.empty, right),
+                left.begin,
+                right.end
+              )),
+              errors = leftResult.errors ++ rightResult.errors,
+              warnings = leftResult.warnings ++ rightResult.warnings
+            )
           case _ =>
             ParseResult(
               value = None,

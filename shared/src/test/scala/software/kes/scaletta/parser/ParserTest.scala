@@ -70,6 +70,22 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         it("should parse multiple argument groups (f(x)(y))") {
           "f(x)(y)" shouldParseTo multiCall(ref("f"), Vector(Vector(ref("x")), Vector(ref("y"))))
         }
+
+        it("should parse an alphanumeric infix operator (a plus b)") {
+          "a plus b" shouldParseTo infix(ref("a"), "plus", ref("b"))
+        }
+      }
+    }
+
+    describe("Scanner Exhaustion") {
+      it("should fail if there is trailing garbage") {
+        "123 garbage" shouldFailWith (ParseError.UnexpectedToken(Token.Identifier.Lower("garbage")) at 4) producing {
+          lit(123)
+        }
+      }
+
+      it("should allow trailing garbage when using shouldParsePartiallyTo") {
+        "123 garbage" shouldParsePartiallyTo lit(123)
       }
     }
   }
