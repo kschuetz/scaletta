@@ -29,6 +29,9 @@ object AstBuilders {
   def block(declarations: Vector[Declaration[Id]], result: Expression[Id]): Expression[Id] =
     Block[Id](declarations, result)
 
+  def block(result: Expression[Id], decls: Declaration[Id]*): Expression[Id] =
+    Block[Id](decls.toVector, result)
+
   def tuple(elements: Expression[Id]*): Expression[Id] =
     Tuple[Id](elements.toVector)
 
@@ -37,6 +40,12 @@ object AstBuilders {
 
   def valDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
     Declaration.val_[Id](pattern, rhs)
+
+  def valId(name: String, rhs: Expression[Id]): Declaration[Id] =
+    valDecl(pId(name), rhs)
+
+  def valTypedId(name: String, typeName: String, rhs: Expression[Id]): Declaration[Id] =
+    valDecl(pTypedId(name, typeName), rhs)
 
   def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
     Declaration.lazyVal[Id](pattern, rhs)
@@ -50,13 +59,28 @@ object AstBuilders {
     Declaration.def_[Id](Identifier(name), paramGroups, body)
   }
 
+  def defSimple(name: String, body: Expression[Id]): Declaration[Id] =
+    defDecl(name, Vector.empty, body)
+
+  def defUnary(name: String, param: (String, String), body: Expression[Id]): Declaration[Id] =
+    defDecl(name, Vector(Vector(param)), body)
+
   def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
 
   def pId(name: String): Pattern[Id] = Pattern.Identifier[Id](Identifier(name))
 
+  def pTypedId(name: String, typeName: String): Pattern[Id] =
+    pTyped(pId(name), typeName)
+
+  def pWildTyped(typeName: String): Pattern[Id] =
+    pTyped(pWild, typeName)
+
   def pLit(expr: Literal[Id]): Pattern[Id] = Pattern.Literal[Id](expr)
 
   def pAs(name: String, pattern: Pattern[Id]): Pattern[Id] = Pattern.As[Id](Identifier(name), pattern)
+
+  def pAsTyped(name: String, pattern: Pattern[Id], typeName: String): Pattern[Id] =
+    pTyped(pAs(name, pattern), typeName)
 
   def pTyped(pattern: Pattern[Id], typeName: String): Pattern[Id] =
     Pattern.Typed[Id](pattern, TypeIdentifier.name(Identifier(typeName)))
@@ -65,4 +89,10 @@ object AstBuilders {
 
   def pProduct(typeName: String, args: Pattern[Id]*): Pattern[Id] =
     Pattern.Product[Id](TypeIdentifier.name(Identifier(typeName)), args.toVector)
+
+  def matchExpr(expr: Expression[Id], cases: Case[Id]*): Expression[Id] =
+    Match[Id](expr, cases.toVector)
+
+  def caseExpr(pat: Pattern[Id], result: Expression[Id]): Case[Id] =
+    Case[Id](pat, None, result)
 }
