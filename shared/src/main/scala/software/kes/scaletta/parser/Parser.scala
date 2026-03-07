@@ -98,7 +98,7 @@ final class Parser private() {
       case Token.LParen =>
         val (argsOpt, end, errors, warnings) = parseArgumentGroup(opToken, scanner)
         argsOpt match {
-          case (Some(args)) =>
+          case Some(args) =>
             val group = Pos(args, opToken.begin, end)
             leftResult.value match {
               case Some(left) =>
@@ -181,6 +181,9 @@ final class Parser private() {
             sync = scanner.peek(1)
           }
           if (sync.value == Token.Comma) scanner.get()
+        case _ =>
+        // Handles Token.EndOfInput or any other state where continueParsing() is false.
+        // The loop will terminate on the next iteration check.
       }
     }
 
