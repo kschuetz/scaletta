@@ -45,6 +45,28 @@ object ParserTestOps {
       errors should matcher
       new ErrorResultVerifier(ast, errors)
     }
+
+    /**
+     * Asserts that parsing the input results in specific errors but still recovers
+     * to produce a partial AST.
+     *
+     * This is a semantic alias for [[shouldFailWith]] that highlights the recovery aspect.
+     */
+    def shouldRecoverWith(expectedErrors: ParseErrorMatchers.ErrorWithPosition*)
+                         (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ErrorResultVerifier = {
+      shouldFailWith(expectedErrors: _*)
+    }
+
+    /**
+     * Asserts that parsing the input results in specific errors but still recovers
+     * to produce a partial AST.
+     *
+     * This is a semantic alias for [[shouldFailWith]] that highlights the recovery aspect.
+     */
+    def shouldRecoverWith(matcher: Matcher[Vector[Pos[ParseError]]])
+                         (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ErrorResultVerifier = {
+      shouldFailWith(matcher)
+    }
   }
 
   class ErrorResultVerifier(val actualAst: Option[Expression[Id]], val actualErrors: Vector[Pos[ParseError]]) {

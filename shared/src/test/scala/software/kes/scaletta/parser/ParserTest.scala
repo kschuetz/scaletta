@@ -92,13 +92,13 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
   describe("Parser Error Recovery") {
     it("should recover from an unexpected token in a function call") {
-      "f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5) producing {
+      "f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5) producing {
         call(ref("f"), lit(1), lit(2))
       }
     }
 
     it("should collect multiple errors in a function call") {
-      "f(1, @, #, 2)" shouldFailWith(
+      "f(1, @, #, 2)" shouldRecoverWith(
         ParseError.UnexpectedToken(Token.At) at 5,
         ParseError.UnexpectedToken(Token.Hash) at 8
       ) producing {
@@ -107,36 +107,36 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
     }
 
     it("should handle an unexpected token at the start of an argument") {
-      "f(@, 1)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 2) producing {
+      "f(@, 1)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 2) producing {
         call(ref("f"), lit(1))
       }
     }
 
     describe("Flexible Error Matchers") {
       it("should support containErrorOfType") {
-        "f(1, @, 2)" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+        "f(1, @, 2)" shouldRecoverWith containErrorOfType[ParseError.UnexpectedToken]
       }
 
       it("should support atIndex with errorOfType") {
-        "f(1, @, #, 2)" shouldFailWith {
+        "f(1, @, #, 2)" shouldRecoverWith {
           atIndex(0)(errorOfType[ParseError.UnexpectedToken]) and
             atIndex(1)(errorOfType[ParseError.UnexpectedToken])
         }
       }
 
       it("should support soft failure check (ignoringAst)") {
-        ("f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5))
+        ("f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5))
           .ignoringAst()
       }
 
       it("should support multiple assertions with chaining") {
-        ("f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5))
+        ("f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5))
           .producing(call(ref("f"), lit(1), lit(2)))
           .andNoFatalErrors()
       }
 
       it("should support withPartialAst for custom assertions") {
-        ("f(1, @, 2)" shouldFailWith (ParseError.UnexpectedToken(Token.At) at 5))
+        ("f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5))
           .withPartialAst { ast =>
             ast shouldBe call(ref("f"), lit(1), lit(2))
           }
