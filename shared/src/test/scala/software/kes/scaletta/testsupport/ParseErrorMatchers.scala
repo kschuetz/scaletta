@@ -18,6 +18,51 @@ object ParseErrorMatchers {
     }
   }
 
+  class ContainErrorOfTypeMatcher[T <: ParseError](implicit classTag: scala.reflect.ClassTag[T]) extends Matcher[Vector[Pos[ParseError]]] {
+    override def apply(left: Vector[Pos[ParseError]]): MatchResult = {
+      val found = left.exists(p => classTag.runtimeClass.isInstance(p.value))
+      MatchResult(
+        found,
+        s"Vector did not contain error of type ${classTag.runtimeClass.getSimpleName}. Actual errors: $left",
+        s"Vector contained error of type ${classTag.runtimeClass.getSimpleName}"
+      )
+    }
+  }
+
+  class AtIndexMatcher(n: Int, inner: Matcher[Pos[ParseError]]) extends Matcher[Vector[Pos[ParseError]]] {
+    override def apply(left: Vector[Pos[ParseError]]): MatchResult = {
+      if (n < 0 || n >= left.length) {
+        MatchResult(
+          matches = false,
+          s"Index $n is out of bounds for Vector of length ${left.length}. Actual errors: $left",
+          ""
+        )
+      } else {
+        val result = inner(left(n))
+        MatchResult(
+          result.matches,
+          s"Error at index $n did not match: ${result.failureMessage}",
+          s"Error at index $n matched: ${result.negatedFailureMessage}"
+        )
+      }
+    }
+  }
+
+  class PosMatcher(inner: Matcher[ParseError]) extends Matcher[Pos[ParseError]] {
+    override def apply(left: Pos[ParseError]): MatchResult = inner(left.value)
+  }
+
+  class ErrorTypeMatcher[T <: ParseError](implicit classTag: scala.reflect.ClassTag[T]) extends Matcher[ParseError] {
+    override def apply(left: ParseError): MatchResult = {
+      val matches = classTag.runtimeClass.isInstance(left)
+      MatchResult(
+        matches,
+        s"Error $left was not of type ${classTag.runtimeClass.getSimpleName}",
+        s"Error $left was of type ${classTag.runtimeClass.getSimpleName}"
+      )
+    }
+  }
+
   class MatchExactlyErrorsMatcher(input: String, expected: Vector[ErrorWithPosition]) extends Matcher[Vector[Pos[ParseError]]] {
     override def apply(actual: Vector[Pos[ParseError]]): MatchResult = {
       val maxLength = Math.max(actual.length, expected.length)
@@ -57,6 +102,15 @@ object ParseErrorMatchers {
   def containError(expected: ErrorWithPosition): ContainErrorMatcher =
     new ContainErrorMatcher(expected.error, expected.index)
 
+  def containErrorOfType[T <: ParseError](implicit classTag: scala.reflect.ClassTag[T]): ContainErrorOfTypeMatcher[T] =
+    new ContainErrorOfTypeMatcher[T]
+
+  def errorOfType[T <: ParseError](implicit classTag: scala.reflect.ClassTag[T]): Matcher[Pos[ParseError]] =
+    new PosMatcher(new ErrorTypeMatcher[T])
+
+  def atIndex(n: Int)(inner: Matcher[Pos[ParseError]]): AtIndexMatcher =
+    new AtIndexMatcher(n, inner)
+
   def matchExactlyErrors(input: String, expected: Vector[ErrorWithPosition]): MatchExactlyErrorsMatcher =
     new MatchExactlyErrorsMatcher(input, expected)
 
@@ -75,5 +129,3 @@ object ParseErrorMatchers {
       )
     }
 }
-
-//object ParseErrorMatchers extends ParseErrorMatchers

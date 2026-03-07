@@ -95,6 +95,19 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         call(ref("f"), lit(1))
       }
     }
+
+    describe("Flexible Error Matchers") {
+      it("should support containErrorOfType") {
+        "f(1, @, 2)" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+      }
+
+      it("should support atIndex with errorOfType") {
+        "f(1, @, #, 2)" shouldFailWith {
+          atIndex(0)(errorOfType[ParseError.UnexpectedToken]) and
+            atIndex(1)(errorOfType[ParseError.UnexpectedToken])
+        }
+      }
+    }
   }
 
 }

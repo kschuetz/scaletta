@@ -1,8 +1,11 @@
 package software.kes.scaletta.testsupport
 
 import org.scalactic.source.Position
+import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast.Expression
+import software.kes.scaletta.parser.ParseError
+import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.util.functional.Id._
 
 object ParserTestOps {
@@ -26,6 +29,14 @@ object ParserTestOps {
       import matchers._
       val (ast, errors) = support.parseWithErrors(input)
       errors should matchExactlyErrors(input, expectedErrors.toVector)
+      new ErrorResultVerifier(ast)
+    }
+
+    def shouldFailWith(matcher: Matcher[Vector[Pos[ParseError]]])
+                      (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ErrorResultVerifier = {
+      import matchers._
+      val (ast, errors) = support.parseWithErrors(input)
+      errors should matcher
       new ErrorResultVerifier(ast)
     }
   }
