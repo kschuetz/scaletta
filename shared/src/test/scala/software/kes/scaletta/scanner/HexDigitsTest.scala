@@ -35,21 +35,21 @@ class HexDigitsTest extends AnyFunSpec with Matchers {
 
     describe("scanOne") {
       it("should scan a valid hex digit and return its value") {
-        TestReaderFactory.fromString("a") { reader =>
+        TestReaderFactory.fromString("a") { (reader, lineMap) =>
           HexDigits.scanOne(reader) shouldBe Some(('a', 10.toByte))
           reader.get() shouldBe None
         }
       }
 
       it("should not consume and return None for invalid hex digit") {
-        TestReaderFactory.fromString("g") { reader =>
+        TestReaderFactory.fromString("g") { (reader, lineMap) =>
           HexDigits.scanOne(reader) shouldBe None
           reader.get() shouldBe Some('g')
         }
       }
 
       it("should return None for empty input") {
-        TestReaderFactory.fromString("") { reader =>
+        TestReaderFactory.fromString("") { (reader, lineMap) =>
           HexDigits.scanOne(reader) shouldBe None
         }
       }
@@ -57,14 +57,14 @@ class HexDigitsTest extends AnyFunSpec with Matchers {
 
     describe("scanN") {
       it("should scan exactly N hex digits") {
-        TestReaderFactory.fromString("abcd") { reader =>
+        TestReaderFactory.fromString("abcd") { (reader, lineMap) =>
           HexDigits.scanN(4, reader) shouldBe Right(0xabcd)
           reader.get() shouldBe None
         }
       }
 
       it("should stop after N hex digits even if more follow (lowercase)") {
-        TestReaderFactory.fromString("abcdef") { reader =>
+        TestReaderFactory.fromString("abcdef") { (reader, lineMap) =>
           HexDigits.scanN(4, reader) shouldBe Right(0xabcd)
           reader.get() shouldBe Some('e')
           reader.get() shouldBe Some('f')
@@ -72,7 +72,7 @@ class HexDigitsTest extends AnyFunSpec with Matchers {
       }
 
       it("should stop after N hex digits even if more follow (mixed case)") {
-        TestReaderFactory.fromString("AbCdEf") { reader =>
+        TestReaderFactory.fromString("AbCdEf") { (reader, lineMap) =>
           HexDigits.scanN(4, reader) shouldBe Right(0xabcd)
           reader.get() shouldBe Some('E')
           reader.get() shouldBe Some('f')
@@ -80,7 +80,7 @@ class HexDigitsTest extends AnyFunSpec with Matchers {
       }
 
       it("should backtrack and return Left(Some(ch)) if N digits are not available") {
-        TestReaderFactory.fromString("abc") { reader =>
+        TestReaderFactory.fromString("abc") { (reader, lineMap) =>
           HexDigits.scanN(4, reader) shouldBe Left(None) // EOF reached
           reader.get() shouldBe Some('a')
           reader.get() shouldBe Some('b')
@@ -89,7 +89,7 @@ class HexDigitsTest extends AnyFunSpec with Matchers {
       }
 
       it("should backtrack if an invalid character is encountered before N digits") {
-        TestReaderFactory.fromString("ab g") { reader =>
+        TestReaderFactory.fromString("ab g") { (reader, lineMap) =>
           HexDigits.scanN(4, reader) shouldBe Left(Some(' '))
           reader.get() shouldBe Some('a')
           reader.get() shouldBe Some('b')
@@ -99,7 +99,7 @@ class HexDigitsTest extends AnyFunSpec with Matchers {
       }
 
       it("should backtrack if EOF is encountered before N digits") {
-        TestReaderFactory.fromString("ab") { reader =>
+        TestReaderFactory.fromString("ab") { (reader, lineMap) =>
           HexDigits.scanN(4, reader) shouldBe Left(None)
           reader.get() shouldBe Some('a')
           reader.get() shouldBe Some('b')
@@ -108,7 +108,7 @@ class HexDigitsTest extends AnyFunSpec with Matchers {
       }
 
       it("should handle large N correctly") {
-        TestReaderFactory.fromString("12345678") { reader =>
+        TestReaderFactory.fromString("12345678") { (reader, lineMap) =>
           HexDigits.scanN(8, reader) shouldBe Right(0x12345678)
         }
       }

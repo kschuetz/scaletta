@@ -14,7 +14,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
     describe("peek(n)") {
       it("should peek ahead without consuming") {
         val input = "val x = 1"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           scanner.peek(1).value shouldBe Token.Val
           scanner.peek(1).value shouldBe Token.Val
@@ -34,7 +34,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("should handle semicolon inference during peek") {
         val input = lf"1\n2"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           scanner.peek(1).value shouldBe Token.IntLiteral(1)
           scanner.peek(2).value shouldBe Token.Semicolon
@@ -50,7 +50,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("should return EndOfInput indefinitely when peeking beyond end") {
         val input = "1"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           scanner.peek(1).value shouldBe Token.IntLiteral(1)
           scanner.peek(2).value shouldBe Token.EndOfInput
@@ -62,7 +62,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("should maintain correct semicolon inference when interleaving peek and get") {
         val input = lf"1\n2\n3"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           // 1. Peek ahead across first newline
           scanner.peek(1).value shouldBe Token.IntLiteral(1)
@@ -91,7 +91,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("should throw exception for n < 1") {
         val input = "1"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           intercept[IllegalArgumentException] {
             scanner.peek(0)
@@ -105,7 +105,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
       it("should report correct positions for InvalidLiteralNumber during peek") {
         // Case A: invalid numeric literal '-.' followed by '(x)'
         val input = "-. (x)"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           // peek(2) triggers scanning of the error token and the '(' token
           scanner.peek(2).value shouldBe Token.LParen
@@ -124,7 +124,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         // Case B: invalid character '\u0000' (null) followed by '(x)'
         // Null is not a whitespace, digit, letter, or operator in CharacterClass.
         val input = "\u0000(x)"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           scanner.peek(2).value shouldBe Token.LParen
 
@@ -1155,7 +1155,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
     describe("EndOfInput") {
       it("saturates EndOfInput for empty input") {
         val input = ""
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           val first = scanner.get()
           first.value shouldBe Token.EndOfInput
@@ -1176,7 +1176,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("saturates EndOfInput for non-empty input") {
         val input = "abc"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           val first = scanner.get()
           first.value shouldBe Token.Identifier.Lower("abc")
@@ -1451,7 +1451,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
       it("should leave the reader positioned exactly after the closing brace") {
         val input = "x}tail"
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
           scanner.get().value shouldBe Token.Identifier.Lower("x")
           scanner.get().value shouldBe Token.EndOfInput
@@ -1541,14 +1541,14 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
                             portalMode: Boolean,
                             expectedTokens: Pos[Token]*)
                            (implicit pos: Position): Unit = {
-    TestReaderFactory.fromString(input) { reader =>
+    TestReaderFactory.fromString(input) { (reader, lineMap) =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = portalMode)
       val actualTokens = Iterator.continually {
         scanner.get()
       }.takeWhile(_.value != Token.EndOfInput).toVector
       val expectedPosList = expectedTokens.toVector
 
-      assertExpectedTokens(input, expectedPosList, actualTokens)
+      assertExpectedTokens(input, lineMap, expectedPosList, actualTokens)
     }
   }
 
@@ -1557,7 +1557,7 @@ class ScannerTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
                              (implicit pos: Position): Unit =
     inputs.foreach { input =>
       withClue(s"Input: $input") {
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
           val actual = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
           assertions(actual.map(_.value))

@@ -20,6 +20,8 @@ final class LineIndex(val value: Int) extends AnyVal {
   def next: LineIndex = new LineIndex(value + 1)
 
   def prev: LineIndex = new LineIndex(value - 1)
+
+  override def toString: String = value.toString
 }
 
 object ColumnIndex {
@@ -31,6 +33,8 @@ object ColumnIndex {
  */
 final class ColumnIndex(val value: Int) extends AnyVal {
   def +(rhs: Int): ColumnIndex = new ColumnIndex(value + rhs)
+
+  override def toString: String = value.toString
 }
 
 object CharIndex {

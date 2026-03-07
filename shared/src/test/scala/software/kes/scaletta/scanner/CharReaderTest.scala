@@ -15,7 +15,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
       // '\n': 2
       // 'b' : 3
       val input = "a\r\nb"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         // Read 'a'
         reader.get() shouldBe Some('a')
         reader.prevIndex.value shouldBe 0
@@ -36,7 +36,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should maintain correct indices after unget of CRLF") {
       val input = "a\r\nb"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.get() shouldBe Some('a') // index 0
         reader.get() shouldBe Some('\r') // index 1
         reader.get() shouldBe Some('\n') // index 2
@@ -56,7 +56,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should NOT normalize CRLF") {
       val input = "a\r\nb"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.get() shouldBe Some('a') // 0
         reader.get() shouldBe Some('\r') // 1
         reader.get() shouldBe Some('\n') // 2
@@ -66,7 +66,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly handle peek") {
       val input = "\r\n"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.peek() shouldBe Some('\r')
         reader.get() shouldBe Some('\r')
         reader.peek() shouldBe Some('\n')
@@ -76,7 +76,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly handle peek interactions without normalization") {
       val input = "\r\n"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.peek() shouldBe Some('\r')
         reader.currentIndex.value shouldBe 0 // peek should not advance index
         reader.get() shouldBe Some('\r')
@@ -88,7 +88,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
   describe("core methods") {
     it("should correctly handle tryGet") {
       val input = "abc"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.tryGet('a') shouldBe true
         reader.tryGet('x') shouldBe false
         reader.get() shouldBe Some('b')
@@ -99,7 +99,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly handle matchSequence") {
       val input = "abcdef"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.matchSequence("abc") shouldBe true
         reader.currentIndex.value shouldBe 3
 
@@ -112,7 +112,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly handle skipWhile") {
       val input = "   abc"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.skipWhile(_.isWhitespace)
         reader.get() shouldBe Some('a')
       }
@@ -120,7 +120,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly handle skipUntil") {
       val input = "abc   def"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.skipUntil(_.isWhitespace)
         reader.currentIndex.value shouldBe 3
         reader.get() shouldBe Some(' ')
@@ -129,7 +129,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly handle ungetString") {
       val input = "abc"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.get() shouldBe Some('a')
         reader.get() shouldBe Some('b')
         reader.ungetString("ab")
@@ -142,7 +142,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
   describe("edge cases and invariants") {
     it("should handle empty input") {
-      TestReaderFactory.fromString("") { reader =>
+      TestReaderFactory.fromString("") { (reader, lineMap) =>
         reader.get() shouldBe None
         reader.peek() shouldBe None
         reader.tryGet('a') shouldBe false
@@ -152,7 +152,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should handle multiple unget calls correctly") {
       val input = "a\r\nb"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.get() shouldBe Some('a') // index 0 -> 1
         reader.get() shouldBe Some('\r') // index 1 -> 2
         reader.get() shouldBe Some('\n') // index 2 -> 3
@@ -169,7 +169,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly manage LineMap highWater mark when re-reading lines") {
       val input = "line1\nline2"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.lineMap.indexToPosition(CharIndex(0)).line.value shouldBe 0
 
         // Consume "line1\n"
@@ -196,7 +196,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
     }
 
     it("should support nested settings") {
-      TestReaderFactory.fromString("") { reader =>
+      TestReaderFactory.fromString("") { (reader, lineMap) =>
         val s = reader.settings
         reader.pushSettings(identity)
         reader.settings shouldBe s
@@ -207,7 +207,7 @@ class CharReaderTest extends AnyFunSpec with Matchers {
 
     it("should correctly handle peek followed by unget interaction") {
       val input = "abc"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         reader.get() shouldBe Some('a')
         reader.peek() shouldBe Some('b')
         reader.unget('a')

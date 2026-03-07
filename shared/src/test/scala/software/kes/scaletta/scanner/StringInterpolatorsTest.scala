@@ -102,7 +102,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
         // 25: \n
         // 26-28: """
 
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
 
           val first = scanner.get()
@@ -191,7 +191,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
     describe("saturation") {
       it("saturates on EndOfInput after an unclosed interpolated string literal error") {
         val input = "s\""
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           val scanner = Scanner.create(reader, IdentifierPolicy.Default)
 
           // First call: BeginInterpolatedString
@@ -216,12 +216,12 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
   private def check(input: String,
                     expected: Pos[Token]*)
                    (implicit pos: Position): Unit = {
-    TestReaderFactory.fromString(input) { reader =>
+    TestReaderFactory.fromString(input) { (reader, lineMap) =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
       val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
       val expectedTokens = expected.toVector
 
-      assertExpectedTokens(input, expectedTokens, actualTokens)
+      assertExpectedTokens(input, lineMap, expectedTokens, actualTokens)
     }
   }
 }

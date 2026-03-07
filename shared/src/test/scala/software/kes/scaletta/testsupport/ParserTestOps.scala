@@ -33,15 +33,15 @@ object ParserTestOps {
                       (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ErrorResultVerifier = {
       import ParseErrorMatchers._
       import matchers._
-      val (ast, errors) = support.parseWithErrors(input)
-      errors should matchExactlyErrors(input, expectedErrors.toVector)
+      val (ast, errors, lineMap) = support.parseWithErrorsAndLineMap(input)
+      errors should matchExactlyErrors(input, lineMap, expectedErrors.toVector)
       new ErrorResultVerifier(ast, errors)
     }
 
     def shouldFailWith(matcher: Matcher[Vector[Pos[ParseError]]])
                       (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ErrorResultVerifier = {
       import matchers._
-      val (ast, errors) = support.parseWithErrors(input)
+      val (ast, errors, _) = support.parseWithErrorsAndLineMap(input)
       errors should matcher
       new ErrorResultVerifier(ast, errors)
     }
@@ -70,6 +70,7 @@ object ParserTestOps {
   }
 
   class ErrorResultVerifier(val actualAst: Option[Expression[Id]], val actualErrors: Vector[Pos[ParseError]]) {
+
     /**
      * Asserts that the parser produced the expected (partial) AST during error recovery.
      *
@@ -79,7 +80,16 @@ object ParserTestOps {
     def producing(expectedAst: Expression[Id])
                  (implicit matchers: Matchers, pos: Position): ErrorResultVerifier = {
       import matchers._
-      actualAst shouldBe Some(expectedAst)
+      actualAst match {
+        case Some(ast) =>
+          AstDiff.diff(ast, expectedAst) match {
+            case Some(mismatch) =>
+              fail(s"AST mismatch: $mismatch")
+            case None => // OK
+          }
+        case None =>
+          fail(s"Expected AST $expectedAst, but parser returned None")
+      }
       this
     }
 

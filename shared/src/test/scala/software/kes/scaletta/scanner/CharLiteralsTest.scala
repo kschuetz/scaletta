@@ -70,10 +70,10 @@ class CharLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedToken
   private def check(input: String,
                     expectedTokens: Pos[Token]*)
                    (implicit pos: Position): Unit = {
-    TestReaderFactory.fromString(input) { reader =>
+    TestReaderFactory.fromString(input) { (reader, lineMap) =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
       val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
-      assertExpectedTokens(input, expectedTokens.toVector, actualTokens)
+      assertExpectedTokens(input, lineMap, expectedTokens.toVector, actualTokens)
     }
   }
 }

@@ -452,7 +452,7 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
                     expected: Option[Pos[Token]],
                     checkRemainder: Boolean = true)
                    (implicit pos: Position): Unit = {
-    TestReaderFactory.fromString(input) { reader =>
+    TestReaderFactory.fromString(input) { (reader, lineMap) =>
       val result = Literals.tryNumericLiteral(reader, buffer)
       withClue(input) {
         result shouldBe expected
@@ -463,7 +463,7 @@ class NumericLiteralsTest extends AnyFunSpec with Matchers {
       expected match {
         case Some(Pos(Token.Error(_), _, _)) => ()
         case Some(_) =>
-          TestReaderFactory.fromString(input + " $") { reader =>
+          TestReaderFactory.fromString(input + " $") { (reader, lineMap) =>
             val result = Literals.tryNumericLiteral(reader, buffer)
             result shouldBe expected
             reader.get() shouldBe Some(' ')

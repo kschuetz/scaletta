@@ -12,7 +12,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("should report IdentifierTooLong for plain identifiers exceeding the limit") {
       val input = "abcdefghijklm" // 13 chars
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
         t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
@@ -23,7 +23,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("should allow identifiers exactly at the limit") {
       val input = "abcdefghij" // 10 chars
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
         t1.value shouldBe Token.Identifier.Lower("abcdefghij")
@@ -32,7 +32,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("should report IdentifierTooLong for operator identifiers exceeding the limit") {
       val input = "+++++++++++" // 11 chars
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
         t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
@@ -41,7 +41,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("should report IdentifierTooLong for quoted identifiers exceeding the limit") {
       val input = "`abcdefghijklm`" // 13 chars inside
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
         t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
@@ -51,7 +51,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
     it("should report IdentifierTooLong for interpolated string prefixes exceeding the limit") {
       // In Scala, 's' or 'f' are typical. But the scanner supports custom names too.
       val input = "thisisalongprefix\"hello\"" // prefix is 16 chars
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, smallLimit)
         val t1 = scanner.get()
         t1.value shouldBe Token.Error(ScanError.IdentifierTooLong)
@@ -66,7 +66,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
         override def maxIdentifierLength: Option[Int] = Some(2)
       }
       val input = "yield" // 5 chars
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, verySmallLimit)
         val t1 = scanner.get()
         t1.value shouldBe Token.Yield
@@ -75,7 +75,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("should handle extremely long numeric literals without crashing") {
       val longNumber = "1" + ("0" * 1000)
-      TestReaderFactory.fromString(longNumber) { reader =>
+      TestReaderFactory.fromString(longNumber) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default)
         val t1 = scanner.get()
         // It might be an error if it's too large for BigInt/BigDecimal, 
@@ -90,7 +90,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
 
     it("should handle extremely long string literals without crashing") {
       val longString = "\"" + ("a" * 10000) + "\""
-      TestReaderFactory.fromString(longString) { reader =>
+      TestReaderFactory.fromString(longString) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default)
         val t1 = scanner.get()
         t1.value shouldBe a[Token.StringLiteral]
@@ -100,7 +100,7 @@ class MaxLengthTest extends AnyFunSpec with Matchers with AssertExpectedTokens {
     it("should handle extremely long comments without crashing") {
       val longComment = "/*" + ("*" * 10000) + "*/"
       val input = s"$longComment 123"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default)
         val t1 = scanner.get()
         t1.value shouldBe Token.IntLiteral(123)

@@ -5,23 +5,16 @@ import software.kes.scaletta.scanner.Token
 
 object TestErrorFormatting {
 
-  def renderUnderline(input: String, index: Int, label: String): String = {
+  def renderUnderline(input: String, lineMap: software.kes.scaletta.reporting.LineMap, index: Int, label: String): String = {
+    val pos = lineMap.indexToPosition(software.kes.scaletta.reporting.CharIndex(index))
     val lines = input.split("\n")
-    var currentIdx = 0
     val result = new StringBuilder()
 
-    // Find the line containing the error index
-    val errorLineIdx = lines.indexWhere { line =>
-      val start = currentIdx
-      val end = currentIdx + line.length
-      currentIdx += line.length + 1 // +1 for newline
-      index >= start && index <= end
-    }
+    val errorLineIdx = pos.line.value
+    val col = pos.column.value
 
-    if (errorLineIdx != -1) {
-      // Recalculate start index of the target line to find column
-      val lineStartIdx = lines.take(errorLineIdx).map(_.length + 1).sum
-      val col = index - lineStartIdx
+    if (errorLineIdx >= 0 && errorLineIdx < lines.length) {
+      val fullLabel = s"($pos) $label"
 
       // Show context: previous, current, and next line
       val startLine = Math.max(0, errorLineIdx - 1)
@@ -32,7 +25,7 @@ object TestErrorFormatting {
         result.append(f"$lineNum%4d | ${lines(i)}\n")
         if (i == errorLineIdx) {
           val padding = " " * (col + 7) // 4 (fmt) + 3 (separator)
-          result.append(padding).append("^--- ").append(label).append("\n")
+          result.append(padding).append("^--- ").append(fullLabel).append("\n")
         }
       }
     }

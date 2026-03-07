@@ -15,21 +15,21 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
   describe("stringLiteral") {
     describe("single-line") {
       it("empty string") {
-        TestReaderFactory.fromString("\"") { reader =>
+        TestReaderFactory.fromString("\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(Token.StringLiteral(""), -1, 0)
           reader.get() shouldBe None
         }
       }
 
       it("simple string, no escapes") {
-        TestReaderFactory.fromString("this is a simple string\"") { reader =>
+        TestReaderFactory.fromString("this is a simple string\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(Token.StringLiteral("this is a simple string"), -1, 23)
           reader.get() shouldBe None
         }
       }
 
       it("string with escapes") {
-        TestReaderFactory.fromString(raw"this \n string \t has \f escapes \\ " + "\"") { reader =>
+        TestReaderFactory.fromString(raw"this \n string \t has \f escapes \\ " + "\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.StringLiteral("this \n string \t has \f escapes \\ "), -1, 36)
           reader.get() shouldBe None
@@ -37,7 +37,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("string with escaped quotes") {
-        TestReaderFactory.fromString("before \\\"quotes\\\" after\"") { reader =>
+        TestReaderFactory.fromString("before \\\"quotes\\\" after\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.StringLiteral("before \"quotes\" after"), -1, 23)
           reader.get() shouldBe None
@@ -45,7 +45,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("string with unicode sequences") {
-        TestReaderFactory.fromString("⇒ is the same as \\u21d2!\"") { reader =>
+        TestReaderFactory.fromString("⇒ is the same as \\u21d2!\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.StringLiteral("⇒ is the same as ⇒!"), -1, 24)
           reader.get() shouldBe None
@@ -53,7 +53,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("invalid escape sequence") {
-        TestReaderFactory.fromString("invalid \\z escape\"") { reader =>
+        TestReaderFactory.fromString("invalid \\z escape\"") { (reader, lineMap) =>
           val result = Literals.stringLiteral(reader, buffer)
           result.value shouldBe Token.Error(ScanError.InvalidEscapeCharacter)
           result.begin.value shouldBe 8
@@ -61,7 +61,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("incomplete unicode escape") {
-        TestReaderFactory.fromString("bad \\u12 escape\"") { reader =>
+        TestReaderFactory.fromString("bad \\u12 escape\"") { (reader, lineMap) =>
           val result = Literals.stringLiteral(reader, buffer)
           result.value shouldBe Token.Error(ScanError.InvalidEscapeCharacter)
           result.begin.value shouldBe 4
@@ -69,7 +69,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("unclosed string literal") {
-        TestReaderFactory.fromString("this string does not end") { reader =>
+        TestReaderFactory.fromString("this string does not end") { (reader, lineMap) =>
           val result = Literals.stringLiteral(reader, buffer)
           result.value shouldBe Token.Error(ScanError.UnclosedStringLiteral)
           result.begin.value shouldBe -1
@@ -78,7 +78,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("unclosed multi-line string literal") {
-        TestReaderFactory.fromString("\"\"this multi-line string does not end") { reader =>
+        TestReaderFactory.fromString("\"\"this multi-line string does not end") { (reader, lineMap) =>
           val result = Literals.stringLiteral(reader, buffer)
           result.value shouldBe Token.Error(ScanError.UnclosedMultiLineString)
           result.begin.value shouldBe -1
@@ -89,21 +89,21 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
 
     describe("multi-line") {
       it("empty string") {
-        TestReaderFactory.fromString("\"\"\"\"\"") { reader =>
+        TestReaderFactory.fromString("\"\"\"\"\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(Token.MultiLineString(""), -1, 4)
           reader.get() shouldBe None
         }
       }
 
       it("simple string, no new lines, no escapes") {
-        TestReaderFactory.fromString("\"\"this is a simple string\"\"\"") { reader =>
+        TestReaderFactory.fromString("\"\"this is a simple string\"\"\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(Token.MultiLineString("this is a simple string"), -1, 27)
           reader.get() shouldBe None
         }
       }
 
       it("string with new lines and escapes") {
-        TestReaderFactory.fromString(lf"\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\"") { reader =>
+        TestReaderFactory.fromString(lf"\"\"line 1\nline 2\nline 3\\nthis\\tline\\fhas\\\\escapes \"\"\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.MultiLineString("line 1\nline 2\nline 3\nthis\tline\fhas\\escapes "), -1, 51)
           reader.get() shouldBe None
@@ -111,7 +111,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("string with escaped quotes") {
-        TestReaderFactory.fromString("\"\"before \\\"quotes\\\" after\"\"\"") { reader =>
+        TestReaderFactory.fromString("\"\"before \\\"quotes\\\" after\"\"\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.MultiLineString("before \"quotes\" after"), -1, 27)
           reader.get() shouldBe None
@@ -119,7 +119,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("string with unescaped quotes") {
-        TestReaderFactory.fromString("\"\"before \"single\" \"\"double\"\" after\"\"\"") { reader =>
+        TestReaderFactory.fromString("\"\"before \"single\" \"\"double\"\" after\"\"\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.MultiLineString("before \"single\" \"\"double\"\" after"), -1, 36)
           reader.get() shouldBe None
@@ -127,7 +127,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
       }
 
       it("string with unicode sequences") {
-        TestReaderFactory.fromString("\"\"⇒ is the same as \\u21d2!\"\"\"") { reader =>
+        TestReaderFactory.fromString("\"\"⇒ is the same as \\u21d2!\"\"\"") { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.MultiLineString("⇒ is the same as ⇒!"), -1, 28)
           reader.get() shouldBe None
@@ -136,7 +136,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
 
       it("mixed line endings and LineMap accuracy") {
         val input = "\"\"line 1\r\nline 2\rline 3\n\"\"\""
-        TestReaderFactory.fromString(input) { reader =>
+        TestReaderFactory.fromString(input) { (reader, lineMap) =>
           Literals.stringLiteral(reader, buffer) shouldBe success(
             Token.MultiLineString("line 1\nline 2\nline 3\n"), -1, 26)
 
@@ -223,10 +223,10 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
   private def check(input: String,
                     expectedTokens: Pos[Token]*)
                    (implicit pos: Position): Unit = {
-    TestReaderFactory.fromString(input) { reader =>
+    TestReaderFactory.fromString(input) { (reader, lineMap) =>
       val scanner = Scanner.create(reader, IdentifierPolicy.Default)
       val actualTokens = Iterator.continually(scanner.get()).takeWhile(_.value != Token.EndOfInput).toVector
-      assertExpectedTokens(input, expectedTokens.toVector, actualTokens)
+      assertExpectedTokens(input, lineMap, expectedTokens.toVector, actualTokens)
     }
   }
 }

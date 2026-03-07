@@ -11,20 +11,20 @@ class CommentsTest extends AnyFunSpec with Matchers {
   describe("comments") {
     describe("not a comment") {
       it("case 1") {
-        TestReaderFactory.fromString("") { reader =>
+        TestReaderFactory.fromString("") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe NoComment
           reader.get() shouldBe None
         }
       }
       it("case 2") {
-        TestReaderFactory.fromString("not a comment") { reader =>
+        TestReaderFactory.fromString("not a comment") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe NoComment
           reader.get() shouldBe Some('n')
           reader.get() shouldBe Some('o')
         }
       }
       it("case 3") {
-        TestReaderFactory.fromString("/not a comment") { reader =>
+        TestReaderFactory.fromString("/not a comment") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe NoComment
           reader.get() shouldBe Some('/')
           reader.get() shouldBe Some('n')
@@ -33,28 +33,28 @@ class CommentsTest extends AnyFunSpec with Matchers {
     }
     describe("line comments") {
       it("case 1") {
-        TestReaderFactory.fromString("//\n$") { reader =>
+        TestReaderFactory.fromString("//\n$") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(2)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 2") {
-        TestReaderFactory.fromString("// line comment\n$") { reader =>
+        TestReaderFactory.fromString("// line comment\n$") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(15)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 3") {
-        TestReaderFactory.fromString("/// line comment\n$") { reader =>
+        TestReaderFactory.fromString("/// line comment\n$") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(16)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
         }
       }
       it("case 4") {
-        TestReaderFactory.fromString("/// /*line comment*/ \n$") { reader =>
+        TestReaderFactory.fromString("/// /*line comment*/ \n$") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(21)))
           reader.get() shouldBe Some('\n')
           reader.get() shouldBe Some('$')
@@ -63,7 +63,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
 
       describe("line ending invariance") {
         it("LF (\\n)") {
-          TestReaderFactory.fromString(lf"// comment\n$$") { reader =>
+          TestReaderFactory.fromString(lf"// comment\n$$") { (reader, lineMap) =>
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\n')
             reader.get() shouldBe Some('$')
@@ -71,7 +71,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
           }
         }
         it("CR (\\r)") {
-          TestReaderFactory.fromString(cr"// comment\n$$") { reader =>
+          TestReaderFactory.fromString(cr"// comment\n$$") { (reader, lineMap) =>
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\r')
             reader.get() shouldBe Some('$')
@@ -79,7 +79,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
           }
         }
         it("CRLF (\\r\\n)") {
-          TestReaderFactory.fromString(crlf"// comment\n$$") { reader =>
+          TestReaderFactory.fromString(crlf"// comment\n$$") { (reader, lineMap) =>
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\r')
             reader.get() shouldBe Some('\n')
@@ -90,7 +90,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
       }
 
       it("at EOF (no newline)") {
-        TestReaderFactory.fromString("// comment") { reader =>
+        TestReaderFactory.fromString("// comment") { (reader, lineMap) =>
           Comments.scanComments(reader) shouldBe LineComment(None)
           reader.get() shouldBe None
         }
@@ -99,28 +99,28 @@ class CommentsTest extends AnyFunSpec with Matchers {
     describe("block comments") {
       describe("single-line") {
         it("simple") {
-          TestReaderFactory.fromString("/* single-line * block comment */$") { reader =>
+          TestReaderFactory.fromString("/* single-line * block comment */$") { (reader, lineMap) =>
             Comments.scanComments(reader) shouldBe BlockComment.SingleLine
             reader.get() shouldBe Some('$')
           }
         }
 
         it("nested") {
-          TestReaderFactory.fromString("/* single-line * /* nested */ block comment */$ */") { reader =>
+          TestReaderFactory.fromString("/* single-line * /* nested */ block comment */$ */") { (reader, lineMap) =>
             Comments.scanComments(reader) shouldBe BlockComment.SingleLine
             reader.get() shouldBe Some('$')
           }
         }
 
         it("unterminated simple") {
-          TestReaderFactory.fromString("/* single-line * unterminated") { reader =>
+          TestReaderFactory.fromString("/* single-line * unterminated") { (reader, lineMap) =>
             Comments.scanComments(reader) shouldBe Unterminated
             reader.get() shouldBe None
           }
         }
 
         it("unterminated nested") {
-          TestReaderFactory.fromString("/* single-line * /* nested */ unterminated") { reader =>
+          TestReaderFactory.fromString("/* single-line * /* nested */ unterminated") { (reader, lineMap) =>
             Comments.scanComments(reader) shouldBe Unterminated
             reader.get() shouldBe None
           }
@@ -131,7 +131,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
         it("simple") {
           TestReaderFactory.fromString(
             lf"""/* multi-line
-                 block comment */$$""") { reader =>
+                 block comment */$$""") { (reader, _) =>
             Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(13))
             reader.get() shouldBe Some('$')
           }
@@ -141,7 +141,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
           TestReaderFactory.fromString(
             lf"""/* multi-line *
                  /* nested */
-                 block comment */$$ */""") { reader =>
+                 block comment */$$ */""") { (reader, _) =>
             Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(45))
             reader.get() shouldBe Some('$')
           }
@@ -149,21 +149,21 @@ class CommentsTest extends AnyFunSpec with Matchers {
 
         describe("line ending invariance") {
           it("LF (\\n)") {
-            TestReaderFactory.fromString(lf"/* line 1\nline 2 */$$") { reader =>
+            TestReaderFactory.fromString(lf"/* line 1\nline 2 */$$") { (reader, lineMap) =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
               reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(1), ColumnIndex(0))
             }
           }
           it("CR (\\r)") {
-            TestReaderFactory.fromString(cr"/* line 1\nline 2 */$$") { reader =>
+            TestReaderFactory.fromString(cr"/* line 1\nline 2 */$$") { (reader, lineMap) =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
               reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(1), ColumnIndex(0))
             }
           }
           it("CRLF (\\r\\n)") {
-            TestReaderFactory.fromString(crlf"/* line 1\nline 2 */$$") { reader =>
+            TestReaderFactory.fromString(crlf"/* line 1\nline 2 */$$") { (reader, lineMap) =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
               reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position(LineIndex(1), ColumnIndex(0))
@@ -174,7 +174,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
         it("unterminated simple") {
           TestReaderFactory.fromString(
             lf"""/* multi-line *
-                 block comment $$""") { reader =>
+                 block comment $$""") { (reader, _) =>
             Comments.scanComments(reader) shouldBe Unterminated
             reader.get() shouldBe None
           }
@@ -184,7 +184,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
           TestReaderFactory.fromString(
             lf"""/* multi-line *
                  /* nested */
-             block comment $$""") { reader =>
+             block comment $$""") { (reader, _) =>
             Comments.scanComments(reader) shouldBe Unterminated
             reader.get() shouldBe None
           }

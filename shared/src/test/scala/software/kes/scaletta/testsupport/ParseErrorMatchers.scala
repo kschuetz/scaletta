@@ -2,7 +2,7 @@ package software.kes.scaletta.testsupport
 
 import org.scalatest.matchers.{MatchResult, Matcher}
 import software.kes.scaletta.parser.ParseError
-import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.reporting.{LineMap, Pos}
 import software.kes.scaletta.testsupport.TestErrorFormatting.renderUnderline
 
 object ParseErrorMatchers {
@@ -63,7 +63,7 @@ object ParseErrorMatchers {
     }
   }
 
-  class MatchExactlyErrorsMatcher(input: String, expected: Vector[ErrorWithPosition]) extends Matcher[Vector[Pos[ParseError]]] {
+  class MatchExactlyErrorsMatcher(input: String, lineMap: LineMap, expected: Vector[ErrorWithPosition]) extends Matcher[Vector[Pos[ParseError]]] {
     override def apply(actual: Vector[Pos[ParseError]]): MatchResult = {
       val maxLength = Math.max(actual.length, expected.length)
       for (i <- 0 until maxLength) {
@@ -72,7 +72,7 @@ object ParseErrorMatchers {
           return MatchResult(
             matches = false,
             s"Unexpected extra error at index $i: ${act.value}\n" +
-              renderUnderline(input, act.begin.value, "EXTRA"),
+              renderUnderline(input, lineMap, act.begin.value, "EXTRA"),
             ""
           )
         } else if (i >= actual.length) {
@@ -80,7 +80,7 @@ object ParseErrorMatchers {
           return MatchResult(
             matches = false,
             s"Missing expected error at index $i: ${exp.error}\n" +
-              renderUnderline(input, exp.index, "MISSING"),
+              renderUnderline(input, lineMap, exp.index, "MISSING"),
             ""
           )
         } else {
@@ -90,11 +90,11 @@ object ParseErrorMatchers {
             val message =
               s"""|Error mismatch at index $i:
                   |EXPECTED: ${exp.error} at index ${exp.index}
-                  |${renderUnderline(input, exp.index, "EXPECTED")}
+                  |${renderUnderline(input, lineMap, exp.index, "EXPECTED")}
                   |ACTUAL:   ${act.value} at index ${act.begin.value}
-                  |${renderUnderline(input, act.begin.value, "ACTUAL")}
+                  |${renderUnderline(input, lineMap, act.begin.value, "ACTUAL")}
                   |""".stripMargin
-            return MatchResult(false, message, "")
+            return MatchResult(matches = false, message, "")
           }
         }
       }
@@ -114,8 +114,8 @@ object ParseErrorMatchers {
   def atIndex(n: Int)(inner: Matcher[Pos[ParseError]]): AtIndexMatcher =
     new AtIndexMatcher(n, inner)
 
-  def matchExactlyErrors(input: String, expected: Vector[ErrorWithPosition]): MatchExactlyErrorsMatcher =
-    new MatchExactlyErrorsMatcher(input, expected)
+  def matchExactlyErrors(input: String, lineMap: LineMap, expected: Vector[ErrorWithPosition]): MatchExactlyErrorsMatcher =
+    new MatchExactlyErrorsMatcher(input, lineMap, expected)
 
   case class ErrorWithPosition(error: ParseError, index: Int)
 

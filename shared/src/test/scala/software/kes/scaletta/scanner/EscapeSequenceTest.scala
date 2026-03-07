@@ -48,14 +48,14 @@ class EscapeSequenceTest extends AnyFunSpec with Matchers {
     }
 
     it("should return Error for empty input") {
-      TestReaderFactory.fromString("") { reader =>
+      TestReaderFactory.fromString("") { (reader, lineMap) =>
         EscapeSequence.scan(reader) shouldBe EscapeResult.Error(ScanError.InvalidEscapeCharacter)
       }
     }
   }
 
   private def testScan(input: String, expectedResult: EscapeResult, expectedRemainder: String = ""): Unit = {
-    TestReaderFactory.fromString(input) { reader =>
+    TestReaderFactory.fromString(input) { (reader, lineMap) =>
       val result = EscapeSequence.scan(reader)
       val actualRemainder = Iterator.continually(reader.get()).takeWhile(_.isDefined).map(_.get).mkString
       withClue(

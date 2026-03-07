@@ -9,7 +9,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
   describe("Scanner - portal exit boundaries") {
     it("should exit immediately at the closing brace when it's the next character") {
       val input = "}trailing"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         val t1 = scanner.get()
@@ -25,7 +25,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
     it("should handle portal exit after an identifier without space") {
       val input = "ident}next"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         val t1 = scanner.get()
@@ -45,7 +45,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
     it("should handle portal exit with preceding whitespace") {
       val input = "ident  }next"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         val t1 = scanner.get()
@@ -66,7 +66,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
     it("should handle portal exit with preceding newline") {
       val input = "ident\n}next"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         val t1 = scanner.get()
@@ -88,7 +88,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
     it("should NOT infer semicolon before portal exit even if there is a newline") {
       // Scala doesn't infer semicolon before '}'
       val input = "1\n}"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         scanner.get().value shouldBe Token.IntLiteral(1)
@@ -99,7 +99,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
     it("should handle nested braces correctly and only exit at the top-level portal brace") {
       val input = "{ { x } } }tail"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         scanner.get().value shouldBe Token.LBrace // index 0
@@ -121,7 +121,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
     it("should handle comments before portal exit") {
       val input = "x // comment\n}tail"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         scanner.get().value shouldBe Token.Identifier.Lower("x")
@@ -137,7 +137,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
     it("should handle block comments before portal exit") {
       val input = "x /* comment */ }tail"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         scanner.get().value shouldBe Token.Identifier.Lower("x")
@@ -157,7 +157,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
       // Input representing: s"${ x }" followed by portal exit '}'
       val input = "s\"${ x }\" }tail"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         scanner.get().value shouldBe Token.BeginInterpolatedString(Interpolator.Custom("s"))
@@ -177,7 +177,7 @@ class PortalExitTest extends AnyFunSpec with Matchers with AssertExpectedTokens 
 
     it("should report UnbalancedBraces at EOF if portal brace is missing") {
       val input = "{ x "
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val scanner = Scanner.create(reader, IdentifierPolicy.Default, portalMode = true)
 
         scanner.get().value shouldBe Token.LBrace

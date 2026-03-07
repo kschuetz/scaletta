@@ -51,10 +51,21 @@ class ParserTestSupport() {
   }
 
   /**
+   * Parses the input string and returns both the (partial) expression, any errors and the line map.
+   */
+  def parseWithErrorsAndLineMap(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], LineMap) = {
+    val reader = CharReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
+    val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+    val parser = Parser.create()
+    val result = parser.parse(scanner, options)
+    (result.value.map(_.value.mapK(posToId)), result.errors, reader.lineMap)
+  }
+
+  /**
    * Parses the input string and returns both the (partial) expression and any errors.
    */
   def parseWithErrors(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]]) = {
-    val result = parse(input, options)
-    (result.value.map(_.value.mapK(posToId)), result.errors)
+    val (ast, errors, _) = parseWithErrorsAndLineMap(input, options)
+    (ast, errors)
   }
 }

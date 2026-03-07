@@ -9,7 +9,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
   describe("Whitespace.scanWhitespace") {
     it("should handle LF (\\n) as a newline") {
       val input = "  \n  "
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         result shouldBe WhitespaceResult.Newlines(CharIndex(2), moreThanOne = false)
         reader.currentIndex.value shouldBe 5
@@ -24,7 +24,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
     it("should handle CRLF (\\r\\n) as a single logical newline") {
       val input = "  \r\n  "
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         // \r is at index 2, \n is at index 3.
         // WhitespaceResult.Newlines.lastIndex should be index of \r (start of sequence)
@@ -40,7 +40,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
     it("should handle lone CR (\\r) as a logical newline") {
       val input = "  \r \r "
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         result shouldBe WhitespaceResult.Newlines(CharIndex(4), moreThanOne = true)
         reader.currentIndex.value shouldBe 6
@@ -56,7 +56,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
     it("should detect more than one newline") {
       val input = "\n\n"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         result shouldBe WhitespaceResult.Newlines(CharIndex(1), moreThanOne = true)
       }
@@ -64,7 +64,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
     it("should detect more than one newline with mixed endings") {
       val input = "\r\n\r"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         result shouldBe WhitespaceResult.Newlines(CharIndex(2), moreThanOne = true)
       }
@@ -72,7 +72,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
     it("should handle horizontal whitespace without newlines") {
       val input = " \t "
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         result shouldBe WhitespaceResult.NoNewlines
         reader.currentIndex.value shouldBe 3
@@ -80,7 +80,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
     }
 
     it("should return NoWhitespace for empty input") {
-      TestReaderFactory.fromString("") { reader =>
+      TestReaderFactory.fromString("") { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         result shouldBe WhitespaceResult.NoWhitespace
       }
@@ -88,7 +88,7 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
     it("should stop at non-whitespace and unget it") {
       val input = "  x"
-      TestReaderFactory.fromString(input) { reader =>
+      TestReaderFactory.fromString(input) { (reader, lineMap) =>
         val result = Whitespace.scanWhitespace(reader)
         result shouldBe WhitespaceResult.NoNewlines
         reader.currentIndex.value shouldBe 2
