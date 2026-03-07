@@ -71,27 +71,30 @@ object ParseErrorMatchers {
           val act = actual(i)
           return MatchResult(
             matches = false,
-            s"Unexpected extra error at index $i: ${act.value} at ${act.begin.value}\n${renderUnderline(input, act.begin.value, "extra error")}",
+            s"Unexpected extra error at index $i: ${act.value}\n" +
+              renderUnderline(input, act.begin.value, "EXTRA"),
             ""
           )
         } else if (i >= actual.length) {
           val exp = expected(i)
           return MatchResult(
             matches = false,
-            s"Expected more errors, but got only ${actual.length}. Missing: ${exp.error} at ${exp.index}\n${renderUnderline(input, exp.index, "missing expected error")}",
+            s"Missing expected error at index $i: ${exp.error}\n" +
+              renderUnderline(input, exp.index, "MISSING"),
             ""
           )
         } else {
           val act = actual(i)
           val exp = expected(i)
           if (act.value != exp.error || act.begin.value != exp.index) {
-            return MatchResult(
-              matches = false,
-              s"Error mismatch at index $i:\nExpected: ${exp.error} at ${exp.index}\nActual:   ${act.value} at ${act.begin.value}\n" +
-                s"Context:\n${renderUnderline(input, exp.index, "expected " + exp.error)}\n" +
-                s"${renderUnderline(input, act.begin.value, "actual " + act.value)}",
-              ""
-            )
+            val message =
+              s"""|Error mismatch at index $i:
+                  |EXPECTED: ${exp.error} at index ${exp.index}
+                  |${renderUnderline(input, exp.index, "EXPECTED")}
+                  |ACTUAL:   ${act.value} at index ${act.begin.value}
+                  |${renderUnderline(input, act.begin.value, "ACTUAL")}
+                  |""".stripMargin
+            return MatchResult(false, message, "")
           }
         }
       }

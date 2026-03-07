@@ -9,15 +9,32 @@ object TestErrorFormatting {
     val lines = input.split("\n")
     var currentIdx = 0
     val result = new StringBuilder()
-    var found = false
-    lines.foreach { line =>
-      if (!found && index >= currentIdx && index <= currentIdx + line.length) {
-        result.append(line).append("\n")
-        val padding = " " * (index - currentIdx)
-        result.append(padding).append("^--- ").append(label).append("\n")
-        found = true
-      }
+
+    // Find the line containing the error index
+    val errorLineIdx = lines.indexWhere { line =>
+      val start = currentIdx
+      val end = currentIdx + line.length
       currentIdx += line.length + 1 // +1 for newline
+      index >= start && index <= end
+    }
+
+    if (errorLineIdx != -1) {
+      // Recalculate start index of the target line to find column
+      val lineStartIdx = lines.take(errorLineIdx).map(_.length + 1).sum
+      val col = index - lineStartIdx
+
+      // Show context: previous, current, and next line
+      val startLine = Math.max(0, errorLineIdx - 1)
+      val endLine = Math.min(lines.length - 1, errorLineIdx + 1)
+
+      for (i <- startLine to endLine) {
+        val lineNum = i + 1
+        result.append(f"$lineNum%4d | ${lines(i)}\n")
+        if (i == errorLineIdx) {
+          val padding = " " * (col + 7) // 4 (fmt) + 3 (separator)
+          result.append(padding).append("^--- ").append(label).append("\n")
+        }
+      }
     }
     result.toString()
   }
