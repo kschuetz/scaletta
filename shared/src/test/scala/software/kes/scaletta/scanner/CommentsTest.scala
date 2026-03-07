@@ -2,7 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.reporting.{CharIndex, ColumnIndex, LineIndex, Position}
+import software.kes.scaletta.reporting.{CharIndex, Position}
 import software.kes.scaletta.scanner.CommentResult.{BlockComment, LineComment, NoComment, Unterminated}
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.TestReaderFactory
@@ -67,7 +67,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\n')
             reader.get() shouldBe Some('$')
-            reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+            reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position.of(2, 1)
           }
         }
         it("CR (\\r)") {
@@ -75,7 +75,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
             Comments.scanComments(reader) shouldBe LineComment(Some(CharIndex(10)))
             reader.get() shouldBe Some('\r')
             reader.get() shouldBe Some('$')
-            reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+            reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position.of(2, 1)
           }
         }
         it("CRLF (\\r\\n)") {
@@ -84,7 +84,7 @@ class CommentsTest extends AnyFunSpec with Matchers {
             reader.get() shouldBe Some('\r')
             reader.get() shouldBe Some('\n')
             reader.get() shouldBe Some('$')
-            reader.lineMap.indexToPosition(CharIndex(12)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+            reader.lineMap.indexToPosition(CharIndex(12)) shouldBe Position.of(2, 1)
           }
         }
       }
@@ -152,21 +152,21 @@ class CommentsTest extends AnyFunSpec with Matchers {
             TestReaderFactory.fromString(lf"/* line 1\nline 2 */$$") { (reader, lineMap) =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
-              reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+              reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
             }
           }
           it("CR (\\r)") {
             TestReaderFactory.fromString(cr"/* line 1\nline 2 */$$") { (reader, lineMap) =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
-              reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+              reader.lineMap.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
             }
           }
           it("CRLF (\\r\\n)") {
             TestReaderFactory.fromString(crlf"/* line 1\nline 2 */$$") { (reader, lineMap) =>
               Comments.scanComments(reader) shouldBe BlockComment.MultiLine(CharIndex(9))
               reader.get() shouldBe Some('$')
-              reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+              reader.lineMap.indexToPosition(CharIndex(11)) shouldBe Position.of(2, 1)
             }
           }
         }

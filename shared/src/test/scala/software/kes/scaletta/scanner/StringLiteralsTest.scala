@@ -3,7 +3,7 @@ package software.kes.scaletta.scanner
 import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.reporting.{CharIndex, LineIndex, Pos}
+import software.kes.scaletta.reporting.{CharIndex, Pos, line}
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}
@@ -141,7 +141,7 @@ class StringLiteralsTest extends AnyFunSpec with Matchers with AssertExpectedTok
             Token.MultiLineString("line 1\nline 2\nline 3\n"), -1, 26)
 
           val lineMap = reader.lineMap
-          lineMap.indexToPosition(CharIndex(0)).line shouldBe LineIndex(1)
+          lineMap.indexToPosition(CharIndex(0)).line shouldBe line(1)
           lineMap.indexToPosition(CharIndex(10)).line.value shouldBe 2 // After \r\n (8, 9)
           lineMap.indexToPosition(CharIndex(17)).line.value shouldBe 3 // After \r (16)
           lineMap.indexToPosition(CharIndex(24)).line.value shouldBe 4 // After \n (23)

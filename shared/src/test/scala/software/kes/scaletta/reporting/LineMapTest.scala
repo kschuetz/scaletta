@@ -7,17 +7,17 @@ class LineMapTest extends AnyFunSpec with Matchers {
   describe("LineMap") {
     it("should create a LineMap with default base position (1, 1)") {
       val lm = LineMap.create()
-      lm.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(1), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(1), ColumnIndex(11))
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.first
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(1, 11)
     }
 
     it("should create a LineMap with a custom base position") {
-      val base = Position(LineIndex(11), ColumnIndex(6))
+      val base = Position.of(11, 6)
       val lm = LineMap.create(base)
       // Note: indexToPosition implementation currently ignores base column when calculating from base line.
       // Let's check how it handles index 0.
-      lm.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(11), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(5)) shouldBe Position(LineIndex(11), ColumnIndex(6))
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.of(11, 1)
+      lm.indexToPosition(CharIndex(5)) shouldBe Position.of(11, 6)
     }
 
     it("should correctly handle multiple lines") {
@@ -26,26 +26,26 @@ class LineMapTest extends AnyFunSpec with Matchers {
         .addLineBegin(CharIndex(20)) // Line 3 starts at index 20
 
       // Line 1: [0, 9]
-      lm.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(1), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(5)) shouldBe Position(LineIndex(1), ColumnIndex(6))
-      lm.indexToPosition(CharIndex(9)) shouldBe Position(LineIndex(1), ColumnIndex(10))
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.first
+      lm.indexToPosition(CharIndex(5)) shouldBe Position.of(1, 6)
+      lm.indexToPosition(CharIndex(9)) shouldBe Position.of(1, 10)
 
       // Line 2: [10, 19]
-      lm.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(2), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(15)) shouldBe Position(LineIndex(2), ColumnIndex(6))
-      lm.indexToPosition(CharIndex(19)) shouldBe Position(LineIndex(2), ColumnIndex(10))
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
+      lm.indexToPosition(CharIndex(15)) shouldBe Position.of(2, 6)
+      lm.indexToPosition(CharIndex(19)) shouldBe Position.of(2, 10)
 
       // Line 3: [20, ...]
-      lm.indexToPosition(CharIndex(20)) shouldBe Position(LineIndex(3), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(25)) shouldBe Position(LineIndex(3), ColumnIndex(6))
+      lm.indexToPosition(CharIndex(20)) shouldBe Position.of(3, 1)
+      lm.indexToPosition(CharIndex(25)) shouldBe Position.of(3, 6)
     }
 
     it("should handle large gaps between lines") {
       val lm = LineMap.create().addLineBegin(CharIndex(1000))
-      lm.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(1), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(999)) shouldBe Position(LineIndex(1), ColumnIndex(1000))
-      lm.indexToPosition(CharIndex(1000)) shouldBe Position(LineIndex(2), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(1500)) shouldBe Position(LineIndex(2), ColumnIndex(501))
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.first
+      lm.indexToPosition(CharIndex(999)) shouldBe Position.of(1, 1000)
+      lm.indexToPosition(CharIndex(1000)) shouldBe Position.of(2, 1)
+      lm.indexToPosition(CharIndex(1500)) shouldBe Position.of(2, 501)
     }
 
     it("should handle adding line begins at same index (should overwrite)") {
@@ -58,14 +58,14 @@ class LineMapTest extends AnyFunSpec with Matchers {
       // First call: currentLine=1 -> 2, TreeMap(0->1, 10->2)
       // Second call: currentLine=2 -> 3, TreeMap(0->1, 10->3)
 
-      lm.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(3), ColumnIndex(1))
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(3, 1)
     }
 
     it("should handle indices before the first explicitly added line begin") {
       val lm = LineMap.create().addLineBegin(CharIndex(5))
-      lm.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(1), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(4)) shouldBe Position(LineIndex(1), ColumnIndex(5))
-      lm.indexToPosition(CharIndex(5)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.first
+      lm.indexToPosition(CharIndex(4)) shouldBe Position.of(1, 5)
+      lm.indexToPosition(CharIndex(5)) shouldBe Position.of(2, 1)
     }
   }
 
@@ -76,9 +76,9 @@ class LineMapTest extends AnyFunSpec with Matchers {
       builder.addLineBegin(CharIndex(20))
 
       val lm = builder.result
-      lm.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(1), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(2), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(20)) shouldBe Position(LineIndex(3), ColumnIndex(1))
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.first
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
+      lm.indexToPosition(CharIndex(20)) shouldBe Position.of(3, 1)
     }
 
     it("should start from an existing LineMap") {
@@ -87,8 +87,8 @@ class LineMapTest extends AnyFunSpec with Matchers {
       builder.addLineBegin(CharIndex(20))
 
       val lm = builder.result
-      lm.indexToPosition(CharIndex(10)) shouldBe Position(LineIndex(2), ColumnIndex(1))
-      lm.indexToPosition(CharIndex(20)) shouldBe Position(LineIndex(3), ColumnIndex(1))
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
+      lm.indexToPosition(CharIndex(20)) shouldBe Position.of(3, 1)
     }
   }
 }

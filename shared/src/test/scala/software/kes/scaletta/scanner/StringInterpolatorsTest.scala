@@ -4,7 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.Interpolator
-import software.kes.scaletta.reporting.{CharIndex, LineIndex, Pos}
+import software.kes.scaletta.reporting.{CharIndex, Pos, line}
 import software.kes.scaletta.scanner.ScanError._
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
@@ -116,7 +116,7 @@ class StringInterpolatorsTest extends AnyFunSpec with Matchers with AssertExpect
 
           // Verify LineMap
           val lineMap = reader.lineMap
-          lineMap.indexToPosition(CharIndex(0)).line shouldBe LineIndex(1)
+          lineMap.indexToPosition(CharIndex(0)).line shouldBe line(1)
           lineMap.indexToPosition(CharIndex(12)).line.value shouldBe 2 // After \r\n (10, 11)
           lineMap.indexToPosition(CharIndex(19)).line.value shouldBe 3 // After \r (18)
           lineMap.indexToPosition(CharIndex(26)).line.value shouldBe 4 // After \n (25)

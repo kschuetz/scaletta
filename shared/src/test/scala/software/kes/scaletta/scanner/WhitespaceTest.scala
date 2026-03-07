@@ -2,7 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.reporting.{CharIndex, ColumnIndex, LineIndex, Position}
+import software.kes.scaletta.reporting.{CharIndex, Position}
 import software.kes.scaletta.testsupport.TestReaderFactory
 
 class WhitespaceTest extends AnyFunSpec with Matchers {
@@ -16,9 +16,9 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
         // Check LineMap
         val lineMap = reader.lineMap
-        lineMap.indexToPosition(CharIndex(0)) shouldBe Position(LineIndex(1), ColumnIndex(1))
-        lineMap.indexToPosition(CharIndex(2)) shouldBe Position(LineIndex(1), ColumnIndex(3))
-        lineMap.indexToPosition(CharIndex(3)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+        lineMap.indexToPosition(CharIndex(0)) shouldBe Position.first
+        lineMap.indexToPosition(CharIndex(2)) shouldBe Position.of(1, 3)
+        lineMap.indexToPosition(CharIndex(3)) shouldBe Position.of(2, 1)
       }
     }
 
@@ -33,8 +33,8 @@ class WhitespaceTest extends AnyFunSpec with Matchers {
 
         // Check LineMap - next line should start at index 4 (after \n)
         val lineMap = reader.lineMap
-        lineMap.indexToPosition(CharIndex(3)) shouldBe Position(LineIndex(1), ColumnIndex(4))
-        lineMap.indexToPosition(CharIndex(4)) shouldBe Position(LineIndex(2), ColumnIndex(1))
+        lineMap.indexToPosition(CharIndex(3)) shouldBe Position.of(1, 4)
+        lineMap.indexToPosition(CharIndex(4)) shouldBe Position.of(2, 1)
       }
     }
 
