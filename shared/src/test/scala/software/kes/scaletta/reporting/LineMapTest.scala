@@ -14,10 +14,22 @@ class LineMapTest extends AnyFunSpec with Matchers {
     it("should create a LineMap with a custom base position") {
       val base = Position.of(11, 6)
       val lm = LineMap.create(base)
-      // Note: indexToPosition implementation currently ignores base column when calculating from base line.
-      // Let's check how it handles index 0.
-      lm.indexToPosition(CharIndex(0)) shouldBe Position.of(11, 1)
-      lm.indexToPosition(CharIndex(5)) shouldBe Position.of(11, 6)
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.of(11, 6)
+      lm.indexToPosition(CharIndex(5)) shouldBe Position.of(11, 11)
+    }
+
+    it("should correctly handle multiple lines with custom base position") {
+      val base = Position.of(11, 6)
+      val lm = LineMap.create(base)
+        .addLineBegin(CharIndex(10)) // Line 12 starts at index 10
+
+      // Line 11: [0, 9], starts at column 6
+      lm.indexToPosition(CharIndex(0)) shouldBe Position.of(11, 6)
+      lm.indexToPosition(CharIndex(9)) shouldBe Position.of(11, 15)
+
+      // Line 12: [10, ...], starts at column 1
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(12, 1)
+      lm.indexToPosition(CharIndex(15)) shouldBe Position.of(12, 6)
     }
 
     it("should correctly handle multiple lines") {

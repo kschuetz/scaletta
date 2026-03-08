@@ -23,7 +23,8 @@ final class LineMap private(currentLine: LineIndex,
   def indexToPosition(index: CharIndex): Position = {
     indexToLineBegin.maxBefore(index.value + 1) match {
       case Some((idx, line)) =>
-        val colIndex = column(index.value - idx + 1)
+        val colOffset = if (idx == 0) baseColumn.value else 1
+        val colIndex = column(index.value - idx + colOffset)
         Position(line, colIndex)
       case None => Position(line(1), column(index.value + 1))
     }
