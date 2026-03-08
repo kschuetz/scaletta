@@ -5,7 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.reporting.CharIndex
 import software.kes.scaletta.testsupport.TestReaderFactory
 
-class CharReaderTest extends AnyFunSpec with Matchers {
+class SourceReaderTest extends AnyFunSpec with Matchers {
   describe("CRLF Handling") {
     it("should maintain correct character indices when encountering CRLF") {
       // The input has a Windows-style line ending (CRLF) between 'a' and 'b'.

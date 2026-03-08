@@ -20,7 +20,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
    *   - Reserved word
    *   - BeginInterpolatedString/BeginMultiLineInterpolatedString
    */
-  def tryScan(reader: CharReader,
+  def tryScan(reader: SourceReader,
               buffer: CharBuffer): Option[Result] =
     reader.get() match {
       case Some(ch) =>
@@ -45,7 +45,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
    *   - Reserved word
    *   - BeginInterpolatedString/BeginMultiLineInterpolatedString
    */
-  private def plain(reader: CharReader,
+  private def plain(reader: SourceReader,
                     buffer: CharBuffer): Result = {
     val begin = reader.prevIndex
     val firstChar = buffer.firstChar
@@ -143,7 +143,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
   /**
    * Assumes empty buffer
    */
-  private def quoted(reader: CharReader,
+  private def quoted(reader: SourceReader,
                      buffer: CharBuffer): Result = {
     val begin = reader.prevIndex
 
@@ -183,7 +183,7 @@ final class IdentifierScanner(policy: IdentifierPolicy) {
   }
 
   private def construct(fn: String => Token)
-                       (reader: CharReader,
+                       (reader: SourceReader,
                         buffer: CharBuffer,
                         begin: CharIndex): Result = {
     val length = buffer.size

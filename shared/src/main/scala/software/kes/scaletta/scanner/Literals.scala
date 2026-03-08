@@ -24,7 +24,7 @@ object Literals {
   /**
    * Assumes the opening ' has already been consumed
    */
-  def charLiteral(reader: CharReader): Result = {
+  def charLiteral(reader: SourceReader): Result = {
     val begin = reader.prevIndex
 
     def inChar: Result =
@@ -60,7 +60,7 @@ object Literals {
   /**
    * Assumes the opening " has already been consumed
    */
-  def stringLiteral(reader: CharReader,
+  def stringLiteral(reader: SourceReader,
                     buffer: CharBuffer): Result = {
     val begin = reader.prevIndex
     buffer.reset()
@@ -210,7 +210,7 @@ object Literals {
   /**
    * Assumes empty buffer
    */
-  def tryNumericLiteral(reader: CharReader,
+  def tryNumericLiteral(reader: SourceReader,
                         buffer: CharBuffer): Option[Result] = {
     val negative = reader.tryGet('-')
     val leadingDecimalPoint = reader.tryGet('.')
@@ -239,7 +239,7 @@ object Literals {
   private def numericLiteral(negative: Boolean,
                              leadingDecimalPoint: Boolean,
                              firstDigit: Char,
-                             reader: CharReader,
+                             reader: SourceReader,
                              buffer: CharBuffer): Result = {
     buffer.reset()
     var begin = reader.prevIndex

@@ -24,7 +24,7 @@ object CommentResult {
 
 object Comments {
 
-  def scanComments(reader: CharReader): CommentResult = {
+  def scanComments(reader: SourceReader): CommentResult = {
     if (reader.tryGet('/')) {
       reader.get() match {
         case Some(ch) =>
@@ -43,7 +43,7 @@ object Comments {
     } else CommentResult.NoComment
   }
 
-  private def scanLineComment(reader: CharReader): CommentResult = {
+  private def scanLineComment(reader: SourceReader): CommentResult = {
     var loop = true
     var indexOfNewLine: Option[CharIndex] = None
     while (loop) {
@@ -69,7 +69,7 @@ object Comments {
     CommentResult.LineComment(indexOfNewLine)
   }
 
-  private def scanBlockComment(reader: CharReader): CommentResult = {
+  private def scanBlockComment(reader: SourceReader): CommentResult = {
     var depth = 1
     var loop = true
     var lastNewLine: Option[CharIndex] = None

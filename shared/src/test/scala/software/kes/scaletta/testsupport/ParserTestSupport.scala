@@ -5,14 +5,14 @@ import org.scalatest.Assertions
 import software.kes.scaletta.ast.Expression
 import software.kes.scaletta.parser.{ParseError, ParseOptions, ParseResult, Parser}
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
-import software.kes.scaletta.scanner.{CharReader, IdentifierPolicy, Scanner}
+import software.kes.scaletta.scanner.{IdentifierPolicy, Scanner, SourceReader}
 import software.kes.scaletta.util.functional.Id._
 import software.kes.scaletta.util.functional.~>
 
 /**
  * Provides common functionality for parser tests.
  *
- * This class encapsulates the setup of [[CharReader]], [[Scanner]], and [[Parser]]
+ * This class encapsulates the setup of [[SourceReader]], [[Scanner]], and [[Parser]]
  * to ensure consistent environment configuration across tests.
  */
 class ParserTestSupport() {
@@ -26,7 +26,7 @@ class ParserTestSupport() {
    * Parses the input string and returns the full [[ParseResult]].
    */
   def parse(input: String, options: ParseOptions = ParseOptions()): ParseResult[Pos] = {
-    val reader = CharReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
+    val reader = SourceReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
     val scanner = Scanner.create(reader, IdentifierPolicy.Default)
     val parser = Parser.create()
     parser.parse(scanner, options)
@@ -54,7 +54,7 @@ class ParserTestSupport() {
    * Parses the input string and returns both the (partial) expression, any errors and the line map.
    */
   def parseWithErrorsAndLineMap(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], LineMap) = {
-    val reader = CharReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
+    val reader = SourceReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
     val scanner = Scanner.create(reader, IdentifierPolicy.Default)
     val parser = Parser.create()
     val result = parser.parse(scanner, options)

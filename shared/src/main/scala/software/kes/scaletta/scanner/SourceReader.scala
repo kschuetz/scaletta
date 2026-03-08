@@ -1,26 +1,26 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.reporting.{CharIndex, LineMap, LineMapBuilder}
-import software.kes.scaletta.scanner.CharReader.Settings
+import software.kes.scaletta.scanner.SourceReader.Settings
 import software.kes.scaletta.util.{CharPushback, SettingsStack}
 
-object CharReader {
+object SourceReader {
   def create(source: Iterator[Char],
              lineMapBuilder: LineMapBuilder,
              currentIndex: CharIndex = CharIndex(0),
-             settings: Settings = Settings()): CharReader = {
+             settings: Settings = Settings()): SourceReader = {
     val pushback = CharPushback.create()
-    new CharReader(source, pushback, currentIndex, lineMapBuilder, SettingsStack.create(settings))
+    new SourceReader(source, pushback, currentIndex, lineMapBuilder, SettingsStack.create(settings))
   }
 
   case class Settings()
 }
 
-final class CharReader private(source: Iterator[Char],
-                               pushback: CharPushback,
-                               private var _currentIndex: CharIndex,
-                               private val lineMapBuilder: LineMapBuilder,
-                               private val settingsStack: SettingsStack[Settings]) {
+final class SourceReader private(source: Iterator[Char],
+                                 pushback: CharPushback,
+                                 private var _currentIndex: CharIndex,
+                                 private val lineMapBuilder: LineMapBuilder,
+                                 private val settingsStack: SettingsStack[Settings]) {
 
   def get(): Option[Char] =
     fetchRaw() match {
@@ -109,7 +109,7 @@ final class CharReader private(source: Iterator[Char],
 
   def prevIndex: CharIndex = _currentIndex - 1
 
-  def settings: CharReader.Settings = settingsStack.current
+  def settings: SourceReader.Settings = settingsStack.current
 
   /**
    * Modifies the settings in place. Does not affect the settings stack.

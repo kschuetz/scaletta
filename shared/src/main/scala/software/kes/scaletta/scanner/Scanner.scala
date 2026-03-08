@@ -9,7 +9,7 @@ import software.kes.scaletta.util.CharBuffer
 import scala.annotation.{switch, tailrec}
 
 object Scanner {
-  def create(reader: CharReader,
+  def create(reader: SourceReader,
              identifierPolicy: IdentifierPolicy,
              portalMode: Boolean = false): Scanner = {
     val buffer = CharBuffer.create()
@@ -22,7 +22,7 @@ object Scanner {
   }
 }
 
-final class Scanner private(reader: CharReader,
+final class Scanner private(reader: SourceReader,
                             buffer: CharBuffer,
                             identifierScanner: IdentifierScanner,
                             private var lastConsumedToken: Token,

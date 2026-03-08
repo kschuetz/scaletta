@@ -11,7 +11,7 @@ import scala.annotation.{switch, tailrec}
 object InterpolatedStrings {
   type Result = Pos[Token]
 
-  def scanPart(reader: CharReader,
+  def scanPart(reader: SourceReader,
                buffer: CharBuffer,
                multiLine: Boolean,
                isRaw: Boolean): Result = {

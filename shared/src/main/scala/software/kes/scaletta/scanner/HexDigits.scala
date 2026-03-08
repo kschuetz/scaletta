@@ -17,7 +17,7 @@ object HexDigits {
   /**
    * @return the character, and the value of the digit (0..15)
    */
-  def scanOne(reader: CharReader): Option[(Char, Byte)] =
+  def scanOne(reader: SourceReader): Option[(Char, Byte)] =
     reader.get() match {
       case Some(ch) =>
         val value = digitValue(ch)
@@ -37,7 +37,7 @@ object HexDigits {
    *         Left(None) if end-of-input was reached.
    *         In all failure cases, the reader is backtracked to its original state.
    */
-  def scanN(n: Int, reader: CharReader): Either[Option[Char], Int] = {
+  def scanN(n: Int, reader: SourceReader): Either[Option[Char], Int] = {
     var result = 0
     var digits = List.empty[Char]
     var need = n

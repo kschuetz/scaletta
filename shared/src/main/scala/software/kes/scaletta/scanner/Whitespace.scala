@@ -25,7 +25,7 @@ object Whitespace {
 
   import WhitespaceResult._
 
-  def scanWhitespace(reader: CharReader): WhitespaceResult = {
+  def scanWhitespace(reader: SourceReader): WhitespaceResult = {
     var result: WhitespaceResult = NoWhitespace
     var loop = true
 

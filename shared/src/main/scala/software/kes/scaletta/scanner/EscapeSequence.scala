@@ -3,7 +3,7 @@ package software.kes.scaletta.scanner
 import scala.annotation.switch
 
 object EscapeSequence {
-  def scan(reader: CharReader): EscapeResult =
+  def scan(reader: SourceReader): EscapeResult =
     reader.get() match {
       case Some(ch) =>
         (ch: @switch) match {
@@ -26,7 +26,7 @@ object EscapeSequence {
       case None => EscapeResult.Error(ScanError.InvalidEscapeCharacter)
     }
 
-  private def scanUnicodeSequence(reader: CharReader): EscapeResult = {
+  private def scanUnicodeSequence(reader: SourceReader): EscapeResult = {
     HexDigits.scanN(4, reader) match {
       case Right(value) => EscapeResult.Success(value.toChar)
       case Left(Some(ch)) if ch == '\n' || ch == '\r' =>
