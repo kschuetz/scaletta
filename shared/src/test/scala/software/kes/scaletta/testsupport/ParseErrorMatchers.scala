@@ -7,13 +7,14 @@ import software.kes.scaletta.testsupport.TestErrorFormatting.renderUnderline
 
 object ParseErrorMatchers {
 
-  class ContainErrorMatcher(expectedError: ParseError, expectedBegin: Int) extends Matcher[Vector[Pos[ParseError]]] {
+  class ContainErrorMatcher(expectedError: ParseError, expectedBegin: Int, expectedEnd: Option[Int] = None) extends Matcher[Vector[Pos[ParseError]]] {
     override def apply(left: Vector[Pos[ParseError]]): MatchResult = {
-      val found = left.exists(p => p.value == expectedError && p.begin.value == expectedBegin)
+      val found = left.exists(p => p.value == expectedError && p.begin.value == expectedBegin && expectedEnd.forall(_ == p.end.value))
+      val expectedStr = expectedEnd.fold(s"at index $expectedBegin")(end => s"spanning ($expectedBegin, $end)")
       MatchResult(
         found,
-        s"Vector did not contain error $expectedError at index $expectedBegin. Actual errors: $left",
-        s"Vector contained error $expectedError at index $expectedBegin"
+        s"Vector did not contain error $expectedError $expectedStr. Actual errors: $left",
+        s"Vector contained error $expectedError $expectedStr"
       )
     }
   }
@@ -72,7 +73,7 @@ object ParseErrorMatchers {
           return MatchResult(
             matches = false,
             s"Unexpected extra error at index $i: ${act.value}\n" +
-              renderUnderline(input, lineMap, act.begin.value, "EXTRA"),
+              renderUnderline(input, lineMap, act.begin.value, Some(act.end.value), "EXTRA"),
             ""
           )
         } else if (i >= actual.length) {
@@ -80,19 +81,20 @@ object ParseErrorMatchers {
           return MatchResult(
             matches = false,
             s"Missing expected error at index $i: ${exp.error}\n" +
-              renderUnderline(input, lineMap, exp.index, "MISSING"),
+              renderUnderline(input, lineMap, exp.index, exp.endIndex, "MISSING"),
             ""
           )
         } else {
           val act = actual(i)
           val exp = expected(i)
-          if (act.value != exp.error || act.begin.value != exp.index) {
+          if (act.value != exp.error || act.begin.value != exp.index || exp.endIndex.exists(_ != act.end.value)) {
+            val expEndStr = exp.endIndex.fold("")(e => s" to $e")
             val message =
               s"""|Error mismatch at index $i:
-                  |EXPECTED: ${exp.error} at index ${exp.index}
-                  |${renderUnderline(input, lineMap, exp.index, "EXPECTED")}
-                  |ACTUAL:   ${act.value} at index ${act.begin.value}
-                  |${renderUnderline(input, lineMap, act.begin.value, "ACTUAL")}
+                  |EXPECTED: ${exp.error} at index ${exp.index}$expEndStr
+                  |${renderUnderline(input, lineMap, exp.index, exp.endIndex, "EXPECTED")}
+                  |ACTUAL:   ${act.value} at index ${act.begin.value} to ${act.end.value}
+                  |${renderUnderline(input, lineMap, act.begin.value, Some(act.end.value), "ACTUAL")}
                   |""".stripMargin
             return MatchResult(matches = false, message, "")
           }
@@ -103,7 +105,7 @@ object ParseErrorMatchers {
   }
 
   def containError(expected: ErrorWithPosition): ContainErrorMatcher =
-    new ContainErrorMatcher(expected.error, expected.index)
+    new ContainErrorMatcher(expected.error, expected.index, expected.endIndex)
 
   def containErrorOfType[T <: ParseError](implicit classTag: scala.reflect.ClassTag[T]): ContainErrorOfTypeMatcher[T] =
     new ContainErrorOfTypeMatcher[T]
@@ -117,10 +119,20 @@ object ParseErrorMatchers {
   def matchExactlyErrors(input: String, lineMap: LineMap, expected: Vector[ErrorWithPosition]): MatchExactlyErrorsMatcher =
     new MatchExactlyErrorsMatcher(input, lineMap, expected)
 
-  case class ErrorWithPosition(error: ParseError, index: Int)
+  def range[A](begin: Int, end: Int): Matcher[Pos[A]] = (left: Pos[A]) => {
+    MatchResult(
+      left.begin.value == begin && left.end.value == end,
+      s"Pos range (${left.begin.value}, ${left.end.value}) did not match expected ($begin, $end)",
+      s"Pos range matched expected ($begin, $end)"
+    )
+  }
+
+  case class ErrorWithPosition(error: ParseError, index: Int, endIndex: Option[Int] = None)
 
   implicit class ParseErrorOps(error: ParseError) {
     def at(index: Int): ErrorWithPosition = ErrorWithPosition(error, index)
+
+    def spanning(begin: Int, end: Int): ErrorWithPosition = ErrorWithPosition(error, begin, Some(end))
   }
 
   def matchErrors(expected: Vector[Pos[ParseError]]): Matcher[Vector[Pos[ParseError]]] =

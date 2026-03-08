@@ -7,13 +7,14 @@ import software.kes.scaletta.testsupport.TestErrorFormatting.renderUnderline
 
 object ParseWarningMatchers {
 
-  class ContainWarningMatcher(expectedWarning: ParseWarning, expectedBegin: Int) extends Matcher[Vector[Pos[ParseWarning]]] {
+  class ContainWarningMatcher(expectedWarning: ParseWarning, expectedBegin: Int, expectedEnd: Option[Int] = None) extends Matcher[Vector[Pos[ParseWarning]]] {
     override def apply(left: Vector[Pos[ParseWarning]]): MatchResult = {
-      val found = left.exists(p => p.value == expectedWarning && p.begin.value == expectedBegin)
+      val found = left.exists(p => p.value == expectedWarning && p.begin.value == expectedBegin && expectedEnd.forall(_ == p.end.value))
+      val expectedStr = expectedEnd.fold(s"at index $expectedBegin")(end => s"spanning ($expectedBegin, $end)")
       MatchResult(
         found,
-        s"Vector did not contain warning $expectedWarning at index $expectedBegin. Actual warnings: $left",
-        s"Vector contained warning $expectedWarning at index $expectedBegin"
+        s"Vector did not contain warning $expectedWarning $expectedStr. Actual warnings: $left",
+        s"Vector contained warning $expectedWarning $expectedStr"
       )
     }
   }
@@ -72,7 +73,7 @@ object ParseWarningMatchers {
           return MatchResult(
             matches = false,
             s"Unexpected extra warning at index $i: ${act.value}\n" +
-              renderUnderline(input, lineMap, act.begin.value, "EXTRA"),
+              renderUnderline(input, lineMap, act.begin.value, Some(act.end.value), "EXTRA"),
             ""
           )
         } else if (i >= actual.length) {
@@ -80,19 +81,20 @@ object ParseWarningMatchers {
           return MatchResult(
             matches = false,
             s"Missing expected warning at index $i: ${exp.warning}\n" +
-              renderUnderline(input, lineMap, exp.index, "MISSING"),
+              renderUnderline(input, lineMap, exp.index, exp.endIndex, "MISSING"),
             ""
           )
         } else {
           val act = actual(i)
           val exp = expected(i)
-          if (act.value != exp.warning || act.begin.value != exp.index) {
+          if (act.value != exp.warning || act.begin.value != exp.index || exp.endIndex.exists(_ != act.end.value)) {
+            val expEndStr = exp.endIndex.fold("")(e => s" to $e")
             val message =
               s"""|Warning mismatch at index $i:
-                  |EXPECTED: ${exp.warning} at index ${exp.index}
-                  |${renderUnderline(input, lineMap, exp.index, "EXPECTED")}
-                  |ACTUAL:   ${act.value} at index ${act.begin.value}
-                  |${renderUnderline(input, lineMap, act.begin.value, "ACTUAL")}
+                  |EXPECTED: ${exp.warning} at index ${exp.index}$expEndStr
+                  |${renderUnderline(input, lineMap, exp.index, exp.endIndex, "EXPECTED")}
+                  |ACTUAL:   ${act.value} at index ${act.begin.value} to ${act.end.value}
+                  |${renderUnderline(input, lineMap, act.begin.value, Some(act.end.value), "ACTUAL")}
                   |""".stripMargin
             return MatchResult(matches = false, message, "")
           }
@@ -103,7 +105,7 @@ object ParseWarningMatchers {
   }
 
   def containWarning(expected: WarningWithPosition): ContainWarningMatcher =
-    new ContainWarningMatcher(expected.warning, expected.index)
+    new ContainWarningMatcher(expected.warning, expected.index, expected.endIndex)
 
   def containWarningOfType[T <: ParseWarning](implicit classTag: scala.reflect.ClassTag[T]): ContainWarningOfTypeMatcher[T] =
     new ContainWarningOfTypeMatcher[T]
@@ -117,10 +119,20 @@ object ParseWarningMatchers {
   def matchExactlyWarnings(input: String, lineMap: LineMap, expected: Vector[WarningWithPosition]): MatchExactlyWarningsMatcher =
     new MatchExactlyWarningsMatcher(input, lineMap, expected)
 
-  case class WarningWithPosition(warning: ParseWarning, index: Int)
+  def range[A](begin: Int, end: Int): Matcher[Pos[A]] = (left: Pos[A]) => {
+    MatchResult(
+      left.begin.value == begin && left.end.value == end,
+      s"Pos range (${left.begin.value}, ${left.end.value}) did not match expected ($begin, $end)",
+      s"Pos range matched expected ($begin, $end)"
+    )
+  }
+
+  case class WarningWithPosition(warning: ParseWarning, index: Int, endIndex: Option[Int] = None)
 
   implicit class ParseWarningOps(warning: ParseWarning) {
     def at(index: Int): WarningWithPosition = WarningWithPosition(warning, index)
+
+    def spanning(begin: Int, end: Int): WarningWithPosition = WarningWithPosition(warning, begin, Some(end))
   }
 
   def matchWarnings(expected: Vector[Pos[ParseWarning]]): Matcher[Vector[Pos[ParseWarning]]] =
