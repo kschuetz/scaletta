@@ -75,5 +75,9 @@ case class Pos[A](value: A,
   def as[B](value: B): Pos[B] =
     Pos(value, begin, end)
 
+  def toPosition(implicit lineMap: LineMap): Position = lineMap.indexToPosition(begin)
+
+  def toEndPosition(implicit lineMap: LineMap): Position = lineMap.indexToPosition(end)
+
   def positionTuple: (Int, Int) = (begin.value, end.value)
 }
