@@ -37,15 +37,17 @@ object BindingPower {
 
   case object LogicalAnd extends BindingPower
 
-  case object Comparison extends BindingPower
-
   case object Equality extends BindingPower
+
+  case object Comparison extends BindingPower
 
   case object Colon extends BindingPower
 
   case object Addition extends BindingPower
 
   case object Multiplication extends BindingPower
+
+  case object Alphanumeric extends BindingPower
 
   case object AllOthers extends BindingPower
 
@@ -66,12 +68,13 @@ object BindingPower {
         case LogicalOr => 2
         case LogicalXor => 3
         case LogicalAnd => 4
-        case Comparison => 5
-        case Equality => 6
+        case Equality => 5
+        case Comparison => 6
         case Colon => 7
         case Addition => 8
         case Multiplication => 9
-        case AllOthers => 10
+        case Alphanumeric => 10
+        case AllOthers => 11
         case Nudge(bp, _) => major(bp)
       }
 

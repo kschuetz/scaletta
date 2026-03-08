@@ -1,14 +1,27 @@
 package software.kes.scaletta.parser
 
-import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.scanner.{CharacterClass, Token}
 
 object Operators {
   def bindingPower(identifier: Token.Identifier): BindingPower = {
-    val name = identifier.name
+    identifier match {
+      case _: Token.Identifier.Operator => bindingPowerByName(identifier.name)
+      case _ => BindingPower.Alphanumeric
+    }
+  }
+
+  def bindingPower(reservedWord: Token.ReservedWord): BindingPower = {
+    reservedWord match {
+      case Token.Colon => BindingPower.Colon
+      case _ => bindingPowerByName(reservedWord.name)
+    }
+  }
+
+  private def bindingPowerByName(name: String): BindingPower = {
     if (name.isEmpty) {
-      BindingPower.AllOthers
+      BindingPower.Alphanumeric
     } else {
-      name.head match {
+      (name.head: @scala.annotation.switch) match {
         case '|' => BindingPower.LogicalOr
         case '^' => BindingPower.LogicalXor
         case '&' => BindingPower.LogicalAnd
@@ -17,7 +30,8 @@ object Operators {
         case ':' => BindingPower.Colon
         case '+' | '-' => BindingPower.Addition
         case '*' | '/' | '%' => BindingPower.Multiplication
-        case _ => BindingPower.AllOthers
+        case ch if CharacterClass.isOperator(ch) => BindingPower.AllOthers
+        case _ => BindingPower.Alphanumeric
       }
     }
   }

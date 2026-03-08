@@ -45,21 +45,24 @@ final class Parser private() {
           // ( always has high precedence when acting as a postfix call
           // Use AllOthers to match what a normal high-priority operator would have
           BindingPower.AllOthers > minBindingPower
-        case id: Token.Identifier =>
-          val bp = Operators.bindingPower(id)
+        case idToken: Token.Identifier =>
+          val bp = Operators.bindingPower(idToken)
           if (bp > minBindingPower) {
             // If it's alphanumeric and we are at the top level,
             // we check if it's followed by another expression.
             // If it's not, then it's trailing garbage, not an infix operator.
-            if (minBindingPower == BindingPower.Minimum && !id.isInstanceOf[Token.Identifier.Operator]) {
+            if (minBindingPower == BindingPower.Minimum && !idToken.isInstanceOf[Token.Identifier.Operator]) {
               // peek(2) to see if there is a RHS
-              val afterId = scanner.peek(2)
-              afterId.value match {
+              val afterId = scanner.peek(2).value
+              afterId match {
                 case Token.EndOfInput | Token.RParen | Token.Comma | Token.Semicolon | Token.RBrace => false
                 case _ => true
               }
             } else true
           } else false
+        case rw: Token.ReservedWord =>
+          val bp = Operators.bindingPower(rw)
+          bp > minBindingPower
         case _ => false
       }
     }
@@ -121,11 +124,38 @@ final class Parser private() {
         }
       case id: Token.Identifier =>
         val bp = Operators.bindingPower(id)
-        val rightResult = parseExpression(scanner, bp)
+        val isRightAssoc = id.name.endsWith(":")
+        val rightResult = if (isRightAssoc) parseExpression(scanner, bp.nudge(-1))
+        else parseExpression(scanner, bp)
 
         (leftResult.value, rightResult.value) match {
           case (Some(left), Some(right)) =>
             val opId = Pos(Identifier(id.name), opToken.begin, opToken.end)
+            ParseResult(
+              value = Some(Pos(
+                Call.infix(left, opId, Vector.empty, right),
+                left.begin,
+                right.end
+              )),
+              errors = leftResult.errors ++ rightResult.errors,
+              warnings = leftResult.warnings ++ rightResult.warnings
+            )
+          case _ =>
+            ParseResult(
+              value = None,
+              errors = leftResult.errors ++ rightResult.errors,
+              warnings = leftResult.warnings ++ rightResult.warnings
+            )
+        }
+      case rw: Token.ReservedWord =>
+        val bp = Operators.bindingPower(rw)
+        val isRightAssoc = rw.name.endsWith(":")
+        val rightResult = if (isRightAssoc) parseExpression(scanner, bp.nudge(-1))
+        else parseExpression(scanner, bp)
+
+        (leftResult.value, rightResult.value) match {
+          case (Some(left), Some(right)) =>
+            val opId = Pos(Identifier(rw.name), opToken.begin, opToken.end)
             ParseResult(
               value = Some(Pos(
                 Call.infix(left, opId, Vector.empty, right),

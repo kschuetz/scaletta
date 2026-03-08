@@ -10,6 +10,11 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
     def check(name: String, expected: BindingPower): Unit = {
       it(s"should return $expected for '$name'") {
         Operators.bindingPower(Token.Identifier.Operator(name)) shouldBe expected
+      }
+    }
+
+    def checkId(name: String, expected: BindingPower): Unit = {
+      it(s"should return $expected for '$name' (identifier)") {
         Operators.bindingPower(Token.Identifier.Lower(name)) shouldBe expected
         Operators.bindingPower(Token.Identifier.Upper(name)) shouldBe expected
         Operators.bindingPower(Token.Identifier.Quoted(name)) shouldBe expected
@@ -36,8 +41,8 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
     check("*", BindingPower.Multiplication)
     check("/", BindingPower.Multiplication)
     check("%", BindingPower.Multiplication)
-    check("foo", BindingPower.AllOthers)
-    check("Bar", BindingPower.AllOthers)
+    checkId("foo", BindingPower.Alphanumeric)
+    checkId("Bar", BindingPower.Alphanumeric)
   }
 
   describe("BindingPower ordering") {
@@ -48,11 +53,12 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
         LogicalOr,
         LogicalXor,
         LogicalAnd,
-        Comparison,
         Equality,
+        Comparison,
         Colon,
         Addition,
         Multiplication,
+        Alphanumeric,
         AllOthers
       )
 
