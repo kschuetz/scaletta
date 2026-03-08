@@ -4,17 +4,21 @@ import scala.collection.immutable.TreeMap
 
 object LineMap {
   def create(basePosition: Position = Position.first): LineMap =
-    new LineMap(basePosition.line, basePosition.column, TreeMap(0 -> basePosition.line))
+    new LineMap(basePosition.line, basePosition.column, TreeMap(0 -> basePosition.line), CharIndex(0))
 }
 
 final class LineMap private(currentLine: LineIndex,
                             baseColumn: ColumnIndex,
-                            indexToLineBegin: TreeMap[Int, LineIndex]) {
+                            indexToLineBegin: TreeMap[Int, LineIndex],
+                            lastIndex: CharIndex) {
 
-  def addLineBegin(index: CharIndex): LineMap = {
-    val nextLine = currentLine.next
-    new LineMap(nextLine, baseColumn, indexToLineBegin.updated(index.value, nextLine))
-  }
+  def addLineBegin(index: CharIndex): LineMap =
+    if (index.value <= lastIndex.value) {
+      this
+    } else {
+      val nextLine = currentLine.next
+      new LineMap(nextLine, baseColumn, indexToLineBegin.updated(index.value, nextLine), index)
+    }
 
   def indexToPosition(index: CharIndex): Position = {
     indexToLineBegin.maxBefore(index.value + 1) match {
@@ -25,5 +29,6 @@ final class LineMap private(currentLine: LineIndex,
     }
   }
 
-  def builder: LineMapBuilder = LineMapBuilder.create(this)
+  def builder: LineMapBuilder =
+    LineMapBuilder.create(this)
 }

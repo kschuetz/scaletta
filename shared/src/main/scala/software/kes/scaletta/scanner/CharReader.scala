@@ -10,7 +10,7 @@ object CharReader {
              currentIndex: CharIndex = CharIndex(0),
              settings: Settings = Settings()): CharReader = {
     val pushback = CharPushback.create()
-    new CharReader(source, pushback, currentIndex, currentIndex, lineMapBuilder, SettingsStack.create(settings))
+    new CharReader(source, pushback, currentIndex, lineMapBuilder, SettingsStack.create(settings))
   }
 
   case class Settings()
@@ -19,7 +19,6 @@ object CharReader {
 final class CharReader private(source: Iterator[Char],
                                pushback: CharPushback,
                                private var _currentIndex: CharIndex,
-                               private var highWater: CharIndex,
                                private val lineMapBuilder: LineMapBuilder,
                                private val settingsStack: SettingsStack[Settings]) {
 
@@ -144,8 +143,5 @@ final class CharReader private(source: Iterator[Char],
     } else None
 
   private[scanner] def recordNewline(atIndex: CharIndex): Unit =
-    if (highWater < atIndex) {
-      lineMapBuilder.addLineBegin(atIndex)
-      highWater = atIndex
-    }
+    lineMapBuilder.addLineBegin(atIndex)
 }

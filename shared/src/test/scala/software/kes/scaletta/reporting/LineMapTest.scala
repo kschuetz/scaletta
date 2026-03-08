@@ -48,17 +48,21 @@ class LineMapTest extends AnyFunSpec with Matchers {
       lm.indexToPosition(CharIndex(1500)) shouldBe Position.of(2, 501)
     }
 
-    it("should handle adding line begins at same index (should overwrite)") {
-      // While unlikely in normal usage, it's good to know behavior.
-      // TreeMap.updated will overwrite.
+    it("should handle adding line begins at same index (should be idempotent)") {
       val lm = LineMap.create()
         .addLineBegin(CharIndex(10)) // Line 2 starts at 10
-        .addLineBegin(CharIndex(10)) // Line 3 starts at 10? Actually currentLine incremented twice.
+        .addLineBegin(CharIndex(10)) // Should be ignored
 
-      // First call: currentLine=1 -> 2, TreeMap(0->1, 10->2)
-      // Second call: currentLine=2 -> 3, TreeMap(0->1, 10->3)
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
+    }
 
-      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(3, 1)
+    it("should ignore out-of-order line begins") {
+      val lm = LineMap.create()
+        .addLineBegin(CharIndex(20))
+        .addLineBegin(CharIndex(10))
+
+      lm.indexToPosition(CharIndex(20)) shouldBe Position.of(2, 1)
+      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(1, 11)
     }
 
     it("should handle indices before the first explicitly added line begin") {
@@ -81,14 +85,36 @@ class LineMapTest extends AnyFunSpec with Matchers {
       lm.indexToPosition(CharIndex(20)) shouldBe Position.of(3, 1)
     }
 
-    it("should start from an existing LineMap") {
-      val initial = LineMap.create().addLineBegin(CharIndex(10))
-      val builder = LineMapBuilder.create(initial)
-      builder.addLineBegin(CharIndex(20))
+    it("should enforce monotonicity") {
+      val builder = LineMap.create().builder
+      builder.addLineBegin(CharIndex(10))
+      val lm1 = builder.result
+      lm1.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
 
-      val lm = builder.result
-      lm.indexToPosition(CharIndex(10)) shouldBe Position.of(2, 1)
-      lm.indexToPosition(CharIndex(20)) shouldBe Position.of(3, 1)
+      // Should ignore out-of-order or duplicate indices
+      builder.addLineBegin(CharIndex(10))
+      builder.addLineBegin(CharIndex(5))
+      builder.result shouldBe lm1
+
+      builder.addLineBegin(CharIndex(20))
+      builder.result.indexToPosition(CharIndex(20)) shouldBe Position.of(3, 1)
+    }
+
+    it("should initialize monotonicity tracking from an existing LineMap") {
+      val initial = LineMap.create().addLineBegin(CharIndex(10))
+      val builder = initial.builder
+
+      // Should ignore index 10 since lastIndex should be 10
+      builder.addLineBegin(CharIndex(10))
+      builder.result shouldBe initial
+
+      // Should ignore index 5
+      builder.addLineBegin(CharIndex(5))
+      builder.result shouldBe initial
+
+      // Should accept index 11
+      builder.addLineBegin(CharIndex(11))
+      builder.result.indexToPosition(CharIndex(11)) shouldBe Position.of(3, 1)
     }
   }
 }

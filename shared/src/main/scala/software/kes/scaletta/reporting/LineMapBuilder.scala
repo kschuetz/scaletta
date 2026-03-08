@@ -5,9 +5,10 @@ object LineMapBuilder {
     new LineMapBuilder(initial)
 }
 
-final class LineMapBuilder(private var state: LineMap) {
-  def addLineBegin(index: CharIndex): Unit =
+final class LineMapBuilder private(private var state: LineMap) {
+  def addLineBegin(index: CharIndex): Unit = {
     state = state.addLineBegin(index)
+  }
 
   def result: LineMap = state
 }
