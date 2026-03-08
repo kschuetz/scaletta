@@ -34,12 +34,10 @@ object Whitespace {
       reader.get() match {
         case Some('\n') =>
           val index = reader.prevIndex
-          reader.recordNewline(reader.currentIndex)
           result = updateResultWithNewline(result, index)
         case Some('\r') =>
           val index = reader.prevIndex
           reader.tryGet('\n')
-          reader.recordNewline(reader.currentIndex)
           result = updateResultWithNewline(result, index)
         case Some(ch) if isHorizontalWhitespace(ch) =>
           if (result == NoWhitespace) result = NoNewlines

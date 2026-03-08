@@ -51,14 +51,12 @@ object Comments {
       reader.get() match {
         case Some('\n') =>
           val index = reader.prevIndex
-          reader.recordNewline(reader.currentIndex)
           indexOfNewLine = Some(index)
           reader.unget('\n')
           loop = false
         case Some('\r') =>
           val index = reader.prevIndex
           val hasLF = reader.tryGet('\n')
-          reader.recordNewline(reader.currentIndex)
           indexOfNewLine = Some(index)
           if (hasLF) reader.unget('\n')
           reader.unget('\r')
@@ -88,12 +86,10 @@ object Comments {
               }
             case '\n' =>
               val index = reader.prevIndex
-              reader.recordNewline(reader.currentIndex)
               lastNewLine = Some(index)
             case '\r' =>
               val index = reader.prevIndex
               reader.tryGet('\n')
-              reader.recordNewline(reader.currentIndex)
               lastNewLine = Some(index)
             case '/' =>
               reader.get() match {

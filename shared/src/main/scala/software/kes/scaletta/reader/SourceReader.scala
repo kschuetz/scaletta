@@ -139,13 +139,26 @@ final class SourceReader private(source: Iterator[Char],
     if (pushback.nonEmpty) {
       Some(pushback.pop())
     } else if (source.hasNext) {
-      Some(source.next())
+      val ch = source.next()
+      if (ch == '\n') {
+        recordNewline(_currentIndex + 1)
+      } else if (ch == '\r') {
+        if (source.hasNext) {
+          val next = source.next()
+          if (next == '\n') {
+            recordNewline(_currentIndex + 2)
+            pushback.push(next)
+          } else {
+            recordNewline(_currentIndex + 1)
+            pushback.push(next)
+          }
+        } else {
+          recordNewline(_currentIndex + 1)
+        }
+      }
+      Some(ch)
     } else None
 
-  /**
-   * Since SourceReader does not do any newline normalization, the consumer of the SourceReader
-   * is responsible for calling this method to record the beginning of a new line.
-   */
-  def recordNewline(atIndex: CharIndex): Unit =
+  private def recordNewline(atIndex: CharIndex): Unit =
     lineMapBuilder.addLineBegin(atIndex)
 }

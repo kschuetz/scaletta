@@ -2,7 +2,7 @@ package software.kes.scaletta.reader
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.reporting.CharIndex
+import software.kes.scaletta.reporting.Position
 import software.kes.scaletta.testsupport.TestReaderFactory
 
 class SourceReaderTest extends AnyFunSpec with Matchers {
@@ -167,31 +167,31 @@ class SourceReaderTest extends AnyFunSpec with Matchers {
       }
     }
 
-    it("should correctly manage LineMap highWater mark when re-reading lines") {
-      val input = "line1\nline2"
-      TestReaderFactory.fromString(input) { (reader, lineMap) =>
-        reader.lineMap.indexToPosition(CharIndex(0)).line.value shouldBe 1
+    it("should correctly track line and column positions") {
+      val input = "line1\nline2\r\nline3"
+      TestReaderFactory.fromString(input) { (reader, _) =>
+        reader.lineMap.indexToPosition(reader.currentIndex) shouldBe Position.of(1, 1)
 
         // Consume "line1\n"
-        "line1\n".foreach { ch =>
-          val current = reader.currentIndex
-          reader.get() shouldBe Some(ch)
-          if (ch == '\n') reader.recordNewline(reader.currentIndex)
-        }
-        reader.currentIndex.value shouldBe 6 // after \n
-        reader.lineMap.indexToPosition(CharIndex(6)).line.value shouldBe 2
-
-        // unget across newline
-        reader.unget('\n')
-        reader.currentIndex.value shouldBe 5
-
-        // Read it again. recordNewline should NOT add a duplicate entry if highWater works.
-        reader.get() shouldBe Some('\n')
-        reader.recordNewline(reader.currentIndex)
+        "line1\n".foreach(_ => reader.get())
         reader.currentIndex.value shouldBe 6
+        reader.lineMap.indexToPosition(reader.currentIndex) shouldBe Position.of(2, 1)
 
-        // Check if LineMap has correct number of entries (implicit check by looking at positions)
-        reader.lineMap.indexToPosition(CharIndex(6)).line.value shouldBe 2
+        // Consume "line2\r\n"
+        "line2\r\n".foreach(_ => reader.get())
+        reader.currentIndex.value shouldBe 13
+        reader.lineMap.indexToPosition(reader.currentIndex) shouldBe Position.of(3, 1)
+
+        // Go back across CRLF
+        reader.unget('\n')
+        reader.unget('\r')
+        reader.currentIndex.value shouldBe 11
+        reader.lineMap.indexToPosition(reader.currentIndex) shouldBe Position.of(2, 6)
+
+        // Read CRLF again
+        reader.get() shouldBe Some('\r')
+        reader.get() shouldBe Some('\n')
+        reader.lineMap.indexToPosition(reader.currentIndex) shouldBe Position.of(3, 1)
       }
     }
 
