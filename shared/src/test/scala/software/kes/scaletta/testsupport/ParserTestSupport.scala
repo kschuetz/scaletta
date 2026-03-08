@@ -3,7 +3,7 @@ package software.kes.scaletta.testsupport
 import org.scalactic.source.Position
 import org.scalatest.Assertions
 import software.kes.scaletta.ast.Expression
-import software.kes.scaletta.parser.{ParseError, ParseOptions, ParseResult, Parser}
+import software.kes.scaletta.parser._
 import software.kes.scaletta.reader.SourceReader
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.scanner.{IdentifierPolicy, Scanner}
@@ -19,9 +19,14 @@ import software.kes.scaletta.util.functional.~>
 class ParserTestSupport() {
   self: Assertions =>
 
-  private object posToId extends (Pos ~> Id) {
+  object posToId extends (Pos ~> Id) {
     def apply[A](fa: Pos[A]): Id[A] = fa.value
   }
+
+  case class ParseDiagnostics(ast: Option[Expression[Id]],
+                              errors: Vector[Pos[ParseError]],
+                              warnings: Vector[Pos[ParseWarning]],
+                              lineMap: LineMap)
 
   /**
    * Parses the input string and returns the full [[ParseResult]].
@@ -52,21 +57,34 @@ class ParserTestSupport() {
   }
 
   /**
-   * Parses the input string and returns both the (partial) expression, any errors and the line map.
+   * Parses the input string and returns the expression, any errors, warnings, and the line map.
    */
-  def parseWithErrorsAndLineMap(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], LineMap) = {
+  def parseWithDiagnostics(input: String, options: ParseOptions = ParseOptions()): ParseDiagnostics = {
     val reader = SourceReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
     val scanner = Scanner.create(reader, IdentifierPolicy.Default)
     val parser = Parser.create()
     val result = parser.parse(scanner, options)
-    (result.value.map(_.value.mapK(posToId)), result.errors, reader.lineMap)
+    ParseDiagnostics(
+      result.value.map(_.value.mapK(posToId)),
+      result.errors,
+      result.warnings,
+      reader.lineMap
+    )
   }
 
   /**
-   * Parses the input string and returns both the (partial) expression and any errors.
+   * Parses the input string and returns the (partial) expression, any errors, any warnings and the line map.
    */
-  def parseWithErrors(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]]) = {
-    val (ast, errors, _) = parseWithErrorsAndLineMap(input, options)
-    (ast, errors)
+  def parseWithErrorsAndLineMap(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]], LineMap) = {
+    val diag = parseWithDiagnostics(input, options)
+    (diag.ast, diag.errors, diag.warnings, diag.lineMap)
+  }
+
+  /**
+   * Parses the input string and returns both the (partial) expression, any errors, and any warnings.
+   */
+  def parseWithErrors(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
+    val diag = parseWithDiagnostics(input, options)
+    (diag.ast, diag.errors, diag.warnings)
   }
 }
