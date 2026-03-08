@@ -1,5 +1,7 @@
 package software.kes.scaletta.scanner
 
+import software.kes.scaletta.reader.SourceReader
+
 object HexDigits {
 
   /**

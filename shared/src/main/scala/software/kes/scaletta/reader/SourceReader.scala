@@ -1,7 +1,7 @@
-package software.kes.scaletta.scanner
+package software.kes.scaletta.reader
 
+import software.kes.scaletta.reader.SourceReader.Settings
 import software.kes.scaletta.reporting.{CharIndex, LineMap, LineMapBuilder}
-import software.kes.scaletta.scanner.SourceReader.Settings
 import software.kes.scaletta.util.{CharPushback, SettingsStack}
 
 object SourceReader {
@@ -142,6 +142,10 @@ final class SourceReader private(source: Iterator[Char],
       Some(source.next())
     } else None
 
-  private[scanner] def recordNewline(atIndex: CharIndex): Unit =
+  /**
+   * Since SourceReader does not do any newline normalization, the consumer of the SourceReader
+   * is responsible for calling this method to record the beginning of a new line.
+   */
+  def recordNewline(atIndex: CharIndex): Unit =
     lineMapBuilder.addLineBegin(atIndex)
 }

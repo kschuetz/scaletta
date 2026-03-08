@@ -4,8 +4,9 @@ import org.scalactic.source.Position
 import org.scalatest.Assertions
 import software.kes.scaletta.ast.Expression
 import software.kes.scaletta.parser.{ParseError, ParseOptions, ParseResult, Parser}
+import software.kes.scaletta.reader.SourceReader
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
-import software.kes.scaletta.scanner.{IdentifierPolicy, Scanner, SourceReader}
+import software.kes.scaletta.scanner.{IdentifierPolicy, Scanner}
 import software.kes.scaletta.util.functional.Id._
 import software.kes.scaletta.util.functional.~>
 
