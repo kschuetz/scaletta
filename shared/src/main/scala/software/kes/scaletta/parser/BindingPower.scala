@@ -55,6 +55,24 @@ object BindingPower {
 
   case class Nudge(bp: BindingPower, amount: Int) extends BindingPower
 
+  /**
+   * All base precedence levels in increasing order of precedence.
+   */
+  val allBaseLevels: Vector[BindingPower] = Vector(
+    Minimum,
+    Alphanumeric,
+    LogicalOr,
+    LogicalXor,
+    LogicalAnd,
+    Equality,
+    Comparison,
+    Colon,
+    Addition,
+    Multiplication,
+    OtherSymbolicOperators,
+    PostfixCall
+  )
+
   implicit object BindingPowerOrdering extends Ordering[BindingPower] {
     override def compare(x: BindingPower, y: BindingPower): Int = {
       val x1 = major(x)
@@ -67,6 +85,7 @@ object BindingPower {
     private def major(bindingPower: BindingPower): Int =
       bindingPower match {
         case Minimum => 0
+        case Alphanumeric => 1
         case LogicalOr => 2
         case LogicalXor => 3
         case LogicalAnd => 4
@@ -75,9 +94,8 @@ object BindingPower {
         case Colon => 7
         case Addition => 8
         case Multiplication => 9
-        case Alphanumeric => 10
-        case OtherSymbolicOperators => 11
-        case PostfixCall => 12
+        case OtherSymbolicOperators => 10
+        case PostfixCall => 11
         case Nudge(bp, _) => major(bp)
       }
 

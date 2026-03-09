@@ -4,26 +4,9 @@ import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import software.kes.scaletta.parser.BindingPower._
 
 class BindingPowerPropertyTest extends AnyFunSpec with Matchers with ScalaCheckPropertyChecks {
-
-  val baseLevels: Vector[BindingPower] = Vector(
-    Minimum,
-    LogicalOr,
-    LogicalXor,
-    LogicalAnd,
-    Equality,
-    Comparison,
-    Colon,
-    Addition,
-    Multiplication,
-    Alphanumeric,
-    OtherSymbolicOperators,
-    PostfixCall
-  )
-
-  val genBaseLevel: Gen[BindingPower] = Gen.oneOf(baseLevels)
+  val genBaseLevel: Gen[BindingPower] = Gen.oneOf(BindingPower.allBaseLevels)
 
   val genNudgeAmount: Gen[Int] = Gen.choose(-1000, 1000)
 
@@ -74,17 +57,17 @@ class BindingPowerPropertyTest extends AnyFunSpec with Matchers with ScalaCheckP
     it("should isolate nudges within major level boundaries") {
       forAll(genBaseLevel, genNudgeAmount) { (base, amount) =>
         val nudged = base.nudge(amount)
-        val baseIdx = baseLevels.indexOf(base)
+        val baseIdx = BindingPower.allBaseLevels.indexOf(base)
 
         // Check against previous base level
         if (baseIdx > 0) {
-          val prevBase = baseLevels(baseIdx - 1)
+          val prevBase = BindingPower.allBaseLevels(baseIdx - 1)
           BindingPower.BindingPowerOrdering.compare(nudged, prevBase) shouldBe >(0)
         }
 
         // Check against next base level
-        if (baseIdx < baseLevels.size - 1) {
-          val nextBase = baseLevels(baseIdx + 1)
+        if (baseIdx < BindingPower.allBaseLevels.size - 1) {
+          val nextBase = BindingPower.allBaseLevels(baseIdx + 1)
           BindingPower.BindingPowerOrdering.compare(nudged, nextBase) shouldBe <(0)
         }
       }

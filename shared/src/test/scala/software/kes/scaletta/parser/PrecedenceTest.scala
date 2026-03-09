@@ -29,9 +29,9 @@ class PrecedenceTest extends AnyFunSpec with Matchers with TableDrivenPropertyCh
         // Addition < Multiplication
         ("a + b * c", infix(ref("a"), "+", infix(ref("b"), "*", ref("c")))),
 
-        // Alphanumeric (10) > Arithmetic (8, 9)
-        ("a + b plus c", infix(ref("a"), "+", infix(ref("b"), "plus", ref("c")))),
-        ("a plus b * c", infix(infix(ref("a"), "plus", ref("b")), "*", ref("c"))),
+        // Alphanumeric (1) < Arithmetic (8, 9)
+        ("a + b plus c", infix(infix(ref("a"), "+", ref("b")), "plus", ref("c"))),
+        ("a plus b * c", infix(ref("a"), "plus", infix(ref("b"), "*", ref("c")))),
 
         // Deeply nested
         ("a || b && c == d + e * f",
@@ -81,8 +81,8 @@ class PrecedenceTest extends AnyFunSpec with Matchers with TableDrivenPropertyCh
     }
 
     it("should correctly distinguish symbolic vs alphanumeric precedence") {
-      // Alphanumeric is 10, Comparison is (6)
-      "a < b lt c" shouldParseTo infix(ref("a"), "<", infix(ref("b"), "lt", ref("c")))
+      // Alphanumeric is 1, Comparison is (6)
+      "a < b lt c" shouldParseTo infix(infix(ref("a"), "<", ref("b")), "lt", ref("c"))
     }
   }
 }

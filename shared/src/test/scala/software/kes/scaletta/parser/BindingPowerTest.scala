@@ -60,23 +60,7 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
 
   describe("BindingPower ordering") {
     it("should correctly order base levels") {
-      import BindingPower._
-      val levels = Vector(
-        Minimum,
-        LogicalOr,
-        LogicalXor,
-        LogicalAnd,
-        Equality,
-        Comparison,
-        Colon,
-        Addition,
-        Multiplication,
-        Alphanumeric,
-        OtherSymbolicOperators,
-        PostfixCall
-      )
-
-      levels.sliding(2).foreach {
+      BindingPower.allBaseLevels.sliding(2).foreach {
         case Vector(low, high) =>
           withClue(s"$low should be less than $high") {
             BindingPower.BindingPowerOrdering.compare(low, high) should be < 0
