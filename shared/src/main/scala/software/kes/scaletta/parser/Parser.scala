@@ -192,6 +192,21 @@ final class Parser private() {
     }
   }
 
+  private def isSynchronizationBoundary(token: Token): Boolean = {
+    token match {
+      case Token.Comma | Token.RParen | Token.EndOfInput | Token.Val | Token.Def |
+           Token.If | Token.Case | Token.Semicolon | Token.RBrace => true
+      case _ => false
+    }
+  }
+
+  private def isStructuralBoundary(token: Token): Boolean = {
+    token match {
+      case Token.Val | Token.Def | Token.If | Token.Case | Token.Semicolon | Token.RBrace | Token.EndOfInput => true
+      case _ => false
+    }
+  }
+
   private def parseArgumentGroup(lParenToken: Pos[Token], scanner: Scanner): (Option[ArgumentGroup[Pos]], CharIndex, Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
     var args = Vector.empty[Pos[Argument[Pos]]]
     var errors = Vector.empty[Pos[ParseError]]
@@ -202,7 +217,8 @@ final class Parser private() {
       next != Token.RParen && next != Token.EndOfInput
     }
 
-    while (continueParsing()) {
+    var shouldStop = false
+    while (!shouldStop && continueParsing()) {
       val nextToken = scanner.peek(1)
       if (nextToken.value == Token.Comma) {
         errors :+= Pos(ParseError.MissingExpression("argument"), nextToken.begin, nextToken.end)
@@ -231,29 +247,31 @@ final class Parser private() {
             scanner.get() // consume comma
           case Token.RParen => // will exit loop
           case _ if continueParsing() =>
-            errors :+= Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
+            if (!isStructuralBoundary(next.value)) {
+              errors :+= Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
+            }
             // Synchronize to next comma or RParen
             var sync = scanner.peek(1)
-            while (sync.value != Token.Comma && sync.value != Token.RParen && sync.value != Token.EndOfInput) {
+            while (!isSynchronizationBoundary(sync.value)) {
               scanner.get()
               sync = scanner.peek(1)
             }
-            if (sync.value == Token.Comma) scanner.get()
+            if (sync.value == Token.Comma) {
+              scanner.get()
+            } else if (isStructuralBoundary(sync.value) && sync.value != Token.RParen) {
+              shouldStop = true
+            }
           case _ =>
-          // Handles Token.EndOfInput or any other state where continueParsing() is false.
-          // The loop will terminate on the next iteration check.
         }
       }
     }
 
-    val rParenToken = scanner.get()
-    rParenToken.value match {
-      case Token.RParen =>
-        (Some(ArgumentGroup[Pos](args)), rParenToken.end, errors, warnings)
-      case Token.EndOfInput =>
-        (Some(ArgumentGroup[Pos](args)), rParenToken.end, errors :+ Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParenToken.begin, lParenToken.end), warnings)
-      case _ =>
-        (None, rParenToken.end, errors :+ Pos(ParseError.UnexpectedToken(rParenToken.value), rParenToken.begin, rParenToken.end), warnings)
+    val rParenToken = scanner.peek(1)
+    if (rParenToken.value == Token.RParen) {
+      scanner.get()
+      (Some(ArgumentGroup[Pos](args)), rParenToken.end, errors, warnings)
+    } else {
+      (Some(ArgumentGroup[Pos](args)), lParenToken.end, errors :+ Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParenToken.begin, lParenToken.end), warnings)
     }
   }
 }

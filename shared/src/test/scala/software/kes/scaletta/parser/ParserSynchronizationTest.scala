@@ -66,14 +66,30 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
       }
     }
 
-    describe("Structural Boundaries (Negative Tests / Documenting Over-consumption)") {
-      it("should document that current synchronization skips structural boundaries (like val)") {
+    describe("Structural Boundaries") {
+      it("should recover at structural boundaries (like val)") {
         "f(1, val x = 2, 3)" shouldRecoverWith (
-          // TODO: change this once we recognize val
-          containErrorOfType[ParseError.UnexpectedToken]
+          ParseError.UnexpectedToken(Token.Val) at 5,
+          ParseError.UnexpectedToken(Token.Identifier.Lower("x")) at 9
           ) producing {
           call(ref("f"), lit(1), lit(3))
         }
+      }
+
+      it("should recover at structural boundaries (like def)") {
+        "f(1, def f(x), 3)" shouldFailWith(
+          ParseError.UnexpectedToken(Token.Def) at 5,
+          ParseError.UnexpectedToken(Token.Identifier.Lower("f")) at 9,
+          ParseError.ExtraToken(Token.Comma, "end of input") at 13
+        )
+      }
+
+      it("should recover at structural boundaries (like if)") {
+        "f(1, if (x), 3)" shouldFailWith(
+          ParseError.UnexpectedToken(Token.If) at 5,
+          ParseError.UnexpectedToken(Token.LParen) at 8,
+          ParseError.ExtraToken(Token.Comma, "end of input") at 11
+        )
       }
     }
   }
