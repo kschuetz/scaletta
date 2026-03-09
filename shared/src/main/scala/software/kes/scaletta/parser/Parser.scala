@@ -43,8 +43,7 @@ final class Parser private() {
       scanner.peek(1).value match {
         case Token.LParen =>
           // ( always has high precedence when acting as a postfix call
-          // Use AllOthers to match what a normal high-priority operator would have
-          BindingPower.AllOthers > minBindingPower
+          BindingPower.PostfixCall > minBindingPower
         case idToken: Token.Identifier =>
           val bp = Operators.bindingPower(idToken)
           if (bp > minBindingPower) {

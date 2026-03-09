@@ -30,7 +30,7 @@ object Operators {
         case ':' => BindingPower.Colon
         case '+' | '-' => BindingPower.Addition
         case '*' | '/' | '%' => BindingPower.Multiplication
-        case ch if CharacterClass.isOperator(ch) => BindingPower.AllOthers
+        case ch if CharacterClass.isOperator(ch) => BindingPower.OtherSymbolicOperators
         case _ => BindingPower.Alphanumeric
       }
     }

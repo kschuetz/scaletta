@@ -49,7 +49,9 @@ object BindingPower {
 
   case object Alphanumeric extends BindingPower
 
-  case object AllOthers extends BindingPower
+  case object OtherSymbolicOperators extends BindingPower
+
+  case object PostfixCall extends BindingPower
 
   case class Nudge(bp: BindingPower, amount: Int) extends BindingPower
 
@@ -74,7 +76,8 @@ object BindingPower {
         case Addition => 8
         case Multiplication => 9
         case Alphanumeric => 10
-        case AllOthers => 11
+        case OtherSymbolicOperators => 11
+        case PostfixCall => 12
         case Nudge(bp, _) => major(bp)
       }
 

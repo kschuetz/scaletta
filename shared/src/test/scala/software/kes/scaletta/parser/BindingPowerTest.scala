@@ -72,7 +72,8 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
         Addition,
         Multiplication,
         Alphanumeric,
-        AllOthers
+        OtherSymbolicOperators,
+        PostfixCall
       )
 
       levels.sliding(2).foreach {
