@@ -30,6 +30,20 @@ object ParserTestOps {
       }
     }
 
+    def shouldParseIgnoringWarnings(expected: Expression[Id])
+                                   (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
+      import matchers._
+      val result = support.parse(input, ParseOptions(requireExhaustion = true))
+      if (result.errors.nonEmpty) {
+        val errorMsg = result.errors.map(e => s"${e.value} at ${e.begin.value}").mkString(", ")
+        fail(s"Parser errors for input '$input': $errorMsg")
+      }
+      result.value match {
+        case Some(v) => v.value.mapK(support.posToId) shouldBe expected
+        case None => fail(s"Parser returned no value for input: $input")
+      }
+    }
+
     def shouldParsePartiallyTo(expected: Expression[Id])
                               (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
       import matchers._

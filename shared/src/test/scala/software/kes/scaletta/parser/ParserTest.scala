@@ -5,7 +5,6 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import software.kes.scaletta.ast.AstBuilders._
 import software.kes.scaletta.scanner.Token
-import software.kes.scaletta.testsupport.ParseErrorMatchers._
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 
 class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks {
@@ -13,6 +12,8 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
   private implicit val matchers: Matchers = Matchers
 
   import ParserTestOps._
+  import software.kes.scaletta.testsupport.ParseErrorMatchers.{atIndex => errorAtIndex, _}
+  import software.kes.scaletta.testsupport.ParseWarningMatchers._
 
   describe("Parser") {
     describe("Simple Expressions") {
@@ -72,7 +73,9 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         }
 
         it("should parse an alphanumeric infix operator (a plus b)") {
-          "a plus b" shouldParseTo infix(ref("a"), "plus", ref("b"))
+          "a plus b" shouldParseWithWarnings (ParseWarning.SuspiciousInfixExpression("plus") at 2) producing {
+            infix(ref("a"), "plus", ref("b"))
+          }
         }
       }
     }
@@ -137,8 +140,8 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
       it("should support atIndex with errorOfType") {
         "f(1, @, #, 2)" shouldRecoverWith {
-          atIndex(0)(errorOfType[ParseError.UnexpectedToken]) and
-            atIndex(1)(errorOfType[ParseError.UnexpectedToken])
+          errorAtIndex(0)(errorOfType[ParseError.UnexpectedToken]) and
+            errorAtIndex(1)(errorOfType[ParseError.UnexpectedToken])
         }
       }
 

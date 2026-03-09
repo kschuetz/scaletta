@@ -140,10 +140,12 @@ final class Parser private() {
         val rightResult = if (isRightAssoc) parseExpression(scanner, bp.nudge(-1))
         else parseExpression(scanner, bp)
 
+        val isSuspicious = !id.isInstanceOf[Token.Identifier.Operator] && !isRightAssoc
+
         (leftResult.value, rightResult.value) match {
           case (Some(left), Some(right)) =>
             val opId = Pos(Identifier(id.name), opToken.begin, opToken.end)
-            ParseResult(
+            var res = ParseResult[Pos](
               value = Some(Pos(
                 Call.infix(left, opId, Vector.empty, right),
                 left.begin,
@@ -152,8 +154,10 @@ final class Parser private() {
               errors = leftResult.errors ++ rightResult.errors,
               warnings = leftResult.warnings ++ rightResult.warnings
             )
+            if (isSuspicious) res = res.addWarning(Pos(ParseWarning.SuspiciousInfixExpression(id.name), opToken.begin, opToken.end))
+            res
           case _ =>
-            ParseResult(
+            ParseResult[Pos](
               value = None,
               errors = leftResult.errors ++ rightResult.errors,
               warnings = leftResult.warnings ++ rightResult.warnings

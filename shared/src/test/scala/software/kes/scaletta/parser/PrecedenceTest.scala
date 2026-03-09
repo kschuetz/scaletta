@@ -46,7 +46,7 @@ class PrecedenceTest extends AnyFunSpec with Matchers with TableDrivenPropertyCh
           )
         )
       )
-      forAll(matrix) { (input, expected) => input shouldParseTo expected }
+      forAll(matrix) { (input, expected) => input shouldParseIgnoringWarnings expected }
     }
 
     it("should handle left-associativity by default") {
@@ -56,7 +56,7 @@ class PrecedenceTest extends AnyFunSpec with Matchers with TableDrivenPropertyCh
         ("a / b / c", infix(infix(ref("a"), "/", ref("b")), "/", ref("c"))),
         ("a plus b plus c", infix(infix(ref("a"), "plus", ref("b")), "plus", ref("c")))
       )
-      forAll(matrix) { (input, expected) => input shouldParseTo expected }
+      forAll(matrix) { (input, expected) => input shouldParseIgnoringWarnings expected }
     }
 
     it("should handle right-associativity for colon-ending operators") {
@@ -82,7 +82,7 @@ class PrecedenceTest extends AnyFunSpec with Matchers with TableDrivenPropertyCh
 
     it("should correctly distinguish symbolic vs alphanumeric precedence") {
       // Alphanumeric is 1, Comparison is (6)
-      "a < b lt c" shouldParseTo infix(infix(ref("a"), "<", ref("b")), "lt", ref("c"))
+      "a < b lt c" shouldParseIgnoringWarnings infix(infix(ref("a"), "<", ref("b")), "lt", ref("c"))
     }
   }
 }
