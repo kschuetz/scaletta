@@ -17,7 +17,7 @@ final class Parser private() {
       val next = scanner.peek(1)
       next.value match {
         case Token.EndOfInput => result
-        case _ => result.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+        case _ => result.addError(Pos(ParseError.ExtraToken(next.value, "end of input"), next.begin, next.end))
       }
     } else {
       result
@@ -87,6 +87,8 @@ final class Parser private() {
                 ParseResult.create(Pos(inner.value, token.begin, next.end))
               case None => result
             }
+          case Token.EndOfInput =>
+            result.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), token.begin, token.end))
           case _ =>
             result.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
         }
@@ -186,33 +188,46 @@ final class Parser private() {
     }
 
     while (continueParsing()) {
-      val argExprResult = parseExpression(scanner, BindingPower.Minimum)
-      errors ++= argExprResult.errors
-      warnings ++= argExprResult.warnings
+      val nextToken = scanner.peek(1)
+      if (nextToken.value == Token.Comma) {
+        errors :+= Pos(ParseError.MissingExpression("argument"), nextToken.begin, nextToken.end)
+        scanner.get() // consume comma
+      } else {
+        val argExprResult = parseExpression(scanner, BindingPower.Minimum)
 
-      argExprResult.value match {
-        case Some(expr) =>
-          args :+= expr.as(Argument(expr))
-        case None => // Error already collected
-      }
+        argExprResult.value match {
+          case Some(expr) =>
+            args :+= expr.as(Argument(expr))
+            errors ++= argExprResult.errors
+            warnings ++= argExprResult.warnings
+          case None =>
+            if (argExprResult.errors.isEmpty) {
+              val next = scanner.peek(1)
+              errors :+= Pos(ParseError.MissingExpression("argument"), next.begin, next.end)
+            } else {
+              errors ++= argExprResult.errors
+              warnings ++= argExprResult.warnings
+            }
+        }
 
-      val next = scanner.peek(1)
-      next.value match {
-        case Token.Comma =>
-          scanner.get() // consume comma
-        case Token.RParen => // will exit loop
-        case _ if continueParsing() =>
-          errors :+= Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
-          // Synchronize to next comma or RParen
-          var sync = scanner.peek(1)
-          while (sync.value != Token.Comma && sync.value != Token.RParen && sync.value != Token.EndOfInput) {
-            scanner.get()
-            sync = scanner.peek(1)
-          }
-          if (sync.value == Token.Comma) scanner.get()
-        case _ =>
-        // Handles Token.EndOfInput or any other state where continueParsing() is false.
-        // The loop will terminate on the next iteration check.
+        val next = scanner.peek(1)
+        next.value match {
+          case Token.Comma =>
+            scanner.get() // consume comma
+          case Token.RParen => // will exit loop
+          case _ if continueParsing() =>
+            errors :+= Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
+            // Synchronize to next comma or RParen
+            var sync = scanner.peek(1)
+            while (sync.value != Token.Comma && sync.value != Token.RParen && sync.value != Token.EndOfInput) {
+              scanner.get()
+              sync = scanner.peek(1)
+            }
+            if (sync.value == Token.Comma) scanner.get()
+          case _ =>
+          // Handles Token.EndOfInput or any other state where continueParsing() is false.
+          // The loop will terminate on the next iteration check.
+        }
       }
     }
 
@@ -220,6 +235,8 @@ final class Parser private() {
     rParenToken.value match {
       case Token.RParen =>
         (Some(ArgumentGroup[Pos](args)), rParenToken.end, errors, warnings)
+      case Token.EndOfInput =>
+        (Some(ArgumentGroup[Pos](args)), rParenToken.end, errors :+ Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParenToken.begin, lParenToken.end), warnings)
       case _ =>
         (None, rParenToken.end, errors :+ Pos(ParseError.UnexpectedToken(rParenToken.value), rParenToken.begin, rParenToken.end), warnings)
     }

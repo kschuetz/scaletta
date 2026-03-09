@@ -79,7 +79,7 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
     describe("Scanner Exhaustion") {
       it("should fail if there is trailing garbage") {
-        "123 garbage" shouldFailWith (ParseError.UnexpectedToken(Token.Identifier.Lower("garbage")) at 4) producing {
+        "123 garbage" shouldFailWith (ParseError.ExtraToken(Token.Identifier.Lower("garbage"), "end of input") at 4) producing {
           lit(123)
         }
       }
@@ -91,6 +91,24 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
   }
 
   describe("Parser Error Recovery") {
+    it("should handle an unclosed parenthesis in an expression") {
+      "(1 + 2" shouldRecoverWith (ParseError.UnclosedDelimiter(Token.LParen, Token.RParen) at 0) producing {
+        infix(lit(1), "+", lit(2))
+      }
+    }
+
+    it("should handle an unclosed parenthesis in a function call") {
+      "f(1, 2" shouldRecoverWith (ParseError.UnclosedDelimiter(Token.LParen, Token.RParen) at 1) producing {
+        call(ref("f"), lit(1), lit(2))
+      }
+    }
+
+    it("should handle a missing expression in an argument list") {
+      "f(1, , 2)" shouldRecoverWith (ParseError.MissingExpression("argument") at 5) producing {
+        call(ref("f"), lit(1), lit(2))
+      }
+    }
+
     it("should recover from an unexpected token in a function call") {
       "f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5) producing {
         call(ref("f"), lit(1), lit(2))
