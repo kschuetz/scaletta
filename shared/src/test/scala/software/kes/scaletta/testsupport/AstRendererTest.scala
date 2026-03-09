@@ -30,13 +30,50 @@ class AstRendererTest extends AnyFunSuite with Matchers {
 
   test("render block") {
     val block = Block[Id](Vector.empty, Literal.int(1))
-    AstRenderer.render(block) shouldBe "{ 1 }"
+    AstRenderer.render(block) shouldBe "{\n  1\n}"
 
     val blockWithDecls = Block[Id](
       Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier("x")), Literal.int(1))),
       Reference.single[Id](Identifier("x"))
     )
     AstRenderer.render(blockWithDecls) shouldBe "{\n  val x = 1\n  x\n}"
+  }
+
+  test("render settings: compact mode") {
+    val settings = AstRenderer.Settings(compact = true)
+    val block = Block[Id](
+      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier("x")), Literal.int(1))),
+      Reference.single[Id](Identifier("x"))
+    )
+    AstRenderer.render(block, settings) shouldBe "{ val x = 1 x }"
+
+    val m = Match[Id](
+      Literal.int(1),
+      Vector(
+        Case[Id](Pattern.Literal[Id](Literal.int(1)), None, Literal.string("one")),
+        Case[Id](Pattern.Wildcard[Id](), None, Literal.string("other"))
+      )
+    )
+    AstRenderer.render(m, settings) shouldBe "1 match { case 1 => \"one\" case _ => \"other\" }"
+  }
+
+  test("render settings: indent size") {
+    val settings = AstRenderer.Settings(indentSize = 4)
+    val block = Block[Id](
+      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier("x")), Literal.int(1))),
+      Reference.single[Id](Identifier("x"))
+    )
+    AstRenderer.render(block, settings) shouldBe "{\n    val x = 1\n    x\n}"
+  }
+
+  test("render settings: parenthesize all calls") {
+    val settings = AstRenderer.Settings(parenthesizeAllCalls = true)
+    val call = Call.standard[Id](
+      Reference.single[Id](Identifier("foo")),
+      Vector.empty,
+      Vector(ArgumentGroup[Id](Vector(Argument[Id](Literal.int(1)))))
+    )
+    AstRenderer.render(call, settings) shouldBe "(foo)(1)"
   }
 
   test("render infix call with precedence") {

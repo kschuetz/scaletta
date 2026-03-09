@@ -16,11 +16,47 @@ object AstRenderer {
     output.result()
   }
 
-  case class Settings()
+  /**
+   * Configuration settings for the [[AstRenderer]].
+   *
+   * @param indentSize           The number of spaces to use for each indentation level. Defaults to 2.
+   *                             Only used when `compact` is false.
+   * @param compact              If true, the output will be rendered on a single line with minimal spacing.
+   *                             If false, the output will be pretty-printed with newlines and indentation.
+   * @param parenthesizeAllCalls If true, all standard function calls will be wrapped in parentheses for clarity,
+   *                             even when not strictly required by operator precedence.
+   */
+  case class Settings(indentSize: Int = 2,
+                      compact: Boolean = false,
+                      parenthesizeAllCalls: Boolean = false)
 }
 
 private class AstRenderer(settings: Settings,
                           write: String => Unit) {
+
+  private var currentIndent: Int = 0
+
+  private def indent(): Unit = {
+    currentIndent += settings.indentSize
+  }
+
+  private def dedent(): Unit = {
+    currentIndent -= settings.indentSize
+  }
+
+  private def writeIndent(): Unit = {
+    if (!settings.compact) {
+      write(" " * currentIndent)
+    }
+  }
+
+  private def newline(): Unit = {
+    if (!settings.compact) {
+      write("\n")
+    } else {
+      write(" ")
+    }
+  }
 
   def render(expression: Expression[Id]): Unit = {
     renderWithPrecedence(expression, BindingPower.Minimum)
@@ -53,7 +89,9 @@ private class AstRenderer(settings: Settings,
         write(" else ")
         render(elseBranch)
       case Call.Standard(target, typeArgs, args) =>
+        if (settings.parenthesizeAllCalls) write("(")
         renderWithPrecedence(target, BindingPower.PostfixCall)
+        if (settings.parenthesizeAllCalls) write(")")
         if (typeArgs.nonEmpty) {
           write("[")
           renderCommaSeparated(typeArgs.map(_.typ), renderType)
@@ -94,8 +132,11 @@ private class AstRenderer(settings: Settings,
       case Match(expression, cases) =>
         renderWithPrecedence(expression, BindingPower.Minimum)
         write(" match {")
+        indent()
         cases.foreach { c =>
-          write("\n  case ")
+          newline()
+          writeIndent()
+          write("case ")
           renderPattern(c.pattern)
           c.guard.foreach { g =>
             write(" if ")
@@ -104,26 +145,42 @@ private class AstRenderer(settings: Settings,
           write(" => ")
           render(c.body)
         }
-        write("\n}")
+        dedent()
+        newline()
+        writeIndent()
+        write("}")
     }
   }
 
   private def renderBlock(block: Block[Id]): Unit = {
     write("{")
     if (block.declarations.nonEmpty) {
-      write("\n")
+      indent()
       block.declarations.foreach { decl =>
-        write("  ")
+        newline()
+        writeIndent()
         renderDeclaration(decl)
-        write("\n")
       }
-      write("  ")
+      newline()
+      writeIndent()
       render(block.result)
-      write("\n")
+      dedent()
+      newline()
+      writeIndent()
     } else {
-      write(" ")
-      render(block.result)
-      write(" ")
+      if (settings.compact) {
+        write(" ")
+        render(block.result)
+        write(" ")
+      } else {
+        indent()
+        newline()
+        writeIndent()
+        render(block.result)
+        dedent()
+        newline()
+        writeIndent()
+      }
     }
     write("}")
   }
