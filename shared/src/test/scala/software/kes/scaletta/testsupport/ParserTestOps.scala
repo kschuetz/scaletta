@@ -4,7 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast.Expression
-import software.kes.scaletta.parser.{ParseError, ParseOptions, ParseWarning}
+import software.kes.scaletta.parser.{ParseError, ParseHint, ParseOptions, ParseWarning}
 import software.kes.scaletta.reporting.{LineMap, Pos}
 import software.kes.scaletta.util.functional.Id._
 
@@ -46,7 +46,20 @@ object ParserTestOps {
         fail(s"Unexpected parser errors for input '$input': $errorMsg")
       }
       diag.warnings should matchExactlyWarnings(input, diag.lineMap, expected.toVector)
-      new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.lineMap)
+      new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.hints, diag.lineMap)
+    }
+
+    def shouldParseWithHints(expected: ParseHintMatchers.HintWithPosition*)
+                            (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ParseResultVerifier = {
+      import ParseHintMatchers._
+      import matchers._
+      val diag = support.parseWithDiagnostics(input, ParseOptions(requireExhaustion = true))
+      if (diag.errors.nonEmpty) {
+        val errorMsg = diag.errors.map(e => s"${e.value} at ${e.begin.value}").mkString(", ")
+        fail(s"Unexpected parser errors for input '$input': $errorMsg")
+      }
+      diag.hints should matchExactlyHints(input, diag.lineMap, expected.toVector)
+      new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.hints, diag.lineMap)
     }
 
     def shouldFailWith(expected: ParseErrorMatchers.ErrorWithPosition)
@@ -60,7 +73,7 @@ object ParserTestOps {
       import matchers._
       val diag = support.parseWithDiagnostics(input)
       diag.errors should matchExactlyErrors(input, diag.lineMap, expectedErrors.toVector)
-      new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.lineMap)
+      new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.hints, diag.lineMap)
     }
 
     def shouldFailWith(matcher: Matcher[Vector[Pos[ParseError]]])
@@ -68,7 +81,7 @@ object ParserTestOps {
       import matchers._
       val diag = support.parseWithDiagnostics(input)
       diag.errors should matcher
-      new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.lineMap)
+      new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.hints, diag.lineMap)
     }
 
     /**
@@ -98,6 +111,7 @@ object ParserTestOps {
                             val actualAst: Option[Expression[Id]],
                             val actualErrors: Vector[Pos[ParseError]],
                             val actualWarnings: Vector[Pos[ParseWarning]],
+                            val actualHints: Vector[Pos[ParseHint]],
                             val lineMap: LineMap) {
 
     /**
@@ -133,6 +147,14 @@ object ParserTestOps {
       import ParseWarningMatchers._
       import matchers._
       actualWarnings should matchExactlyWarnings(input, lineMap, expectedWarnings.toVector)
+      this
+    }
+
+    def withHints(expectedHints: ParseHintMatchers.HintWithPosition*)
+                 (implicit matchers: Matchers, pos: Position): ParseResultVerifier = {
+      import ParseHintMatchers._
+      import matchers._
+      actualHints should matchExactlyHints(input, lineMap, expectedHints.toVector)
       this
     }
 

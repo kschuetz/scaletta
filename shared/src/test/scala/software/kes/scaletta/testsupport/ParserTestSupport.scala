@@ -26,6 +26,7 @@ class ParserTestSupport() {
   case class ParseDiagnostics(ast: Option[Expression[Id]],
                               errors: Vector[Pos[ParseError]],
                               warnings: Vector[Pos[ParseWarning]],
+                              hints: Vector[Pos[ParseHint]],
                               lineMap: LineMap)
 
   /**
@@ -68,6 +69,7 @@ class ParserTestSupport() {
       result.value.map(_.value.mapK(posToId)),
       result.errors,
       result.warnings,
+      result.hints,
       reader.lineMap
     )
   }
@@ -75,16 +77,16 @@ class ParserTestSupport() {
   /**
    * Parses the input string and returns the (partial) expression, any errors, any warnings and the line map.
    */
-  def parseWithErrorsAndLineMap(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]], LineMap) = {
+  def parseWithErrorsAndLineMap(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]], Vector[Pos[ParseHint]], LineMap) = {
     val diag = parseWithDiagnostics(input, options)
-    (diag.ast, diag.errors, diag.warnings, diag.lineMap)
+    (diag.ast, diag.errors, diag.warnings, diag.hints, diag.lineMap)
   }
 
   /**
    * Parses the input string and returns both the (partial) expression, any errors, and any warnings.
    */
-  def parseWithErrors(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
+  def parseWithErrors(input: String, options: ParseOptions = ParseOptions()): (Option[Expression[Id]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]], Vector[Pos[ParseHint]]) = {
     val diag = parseWithDiagnostics(input, options)
-    (diag.ast, diag.errors, diag.warnings)
+    (diag.ast, diag.errors, diag.warnings, diag.hints)
   }
 }

@@ -13,7 +13,8 @@ object ParseResult {
 
 case class ParseResult[F[_]](value: Option[F[Expression[F]]] = None,
                              errors: Vector[Pos[ParseError]] = Vector.empty,
-                             warnings: Vector[Pos[ParseWarning]] = Vector.empty) {
+                             warnings: Vector[Pos[ParseWarning]] = Vector.empty,
+                             hints: Vector[Pos[ParseHint]] = Vector.empty) {
   def isSuccess: Boolean = value.isDefined && !hasErrors
 
   def hasErrors: Boolean = errors.nonEmpty
@@ -26,4 +27,7 @@ case class ParseResult[F[_]](value: Option[F[Expression[F]]] = None,
 
   def addWarning(warning: Pos[ParseWarning]): ParseResult[F] =
     copy(warnings = warnings :+ warning)
+
+  def addHint(hint: Pos[ParseHint]): ParseResult[F] =
+    copy(hints = hints :+ hint)
 }

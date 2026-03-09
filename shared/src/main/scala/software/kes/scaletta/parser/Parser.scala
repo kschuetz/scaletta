@@ -84,7 +84,18 @@ final class Parser private() {
           case Token.RParen =>
             result.value match {
               case Some(inner) =>
-                ParseResult.create(Pos(inner.value, token.begin, next.end))
+                val finalResult = ParseResult.create(Pos(inner.value, token.begin, next.end))
+                  .copy(errors = result.errors, warnings = result.warnings, hints = result.hints)
+                val isUnnecessary = inner.value.getClass match {
+                  case c if classOf[Literal[Pos]].isAssignableFrom(c) => true
+                  case c if classOf[Reference[Pos]].isAssignableFrom(c) => true
+                  case _ => false
+                }
+                if (isUnnecessary) {
+                  finalResult.addHint(Pos(ParseHint.UnnecessaryParentheses, token.begin, next.end))
+                } else {
+                  finalResult
+                }
               case None => result
             }
           case Token.EndOfInput =>
@@ -106,11 +117,11 @@ final class Parser private() {
             val group = Pos(args, opToken.begin, end)
             leftResult.value match {
               case Some(left) =>
-                val call: Expression[Pos] = left.value match {
-                  case sc: Call.Standard[Pos @unchecked] =>
-                    sc.copy(args = sc.args :+ group)
-                  case _ =>
-                    Call.standard(left, Vector.empty, Vector(group))
+                val call: Expression[Pos] = if (left.value.getClass == classOf[Call.Standard[Pos]]) {
+                  val sc = left.value.asInstanceOf[Call.Standard[Pos]]
+                  sc.copy(args = sc.args :+ group)
+                } else {
+                  Call.standard(left, Vector.empty, Vector(group))
                 }
                 ParseResult.create(Pos(
                   call,
