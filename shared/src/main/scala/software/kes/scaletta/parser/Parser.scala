@@ -12,282 +12,288 @@ case class ParseOptions(requireExhaustion: Boolean = true)
 
 final class Parser private() {
   def parse(scanner: Scanner, options: ParseOptions = ParseOptions()): ParseResult[Pos] = {
-    val result = parseExpression(scanner, BindingPower.Minimum)
-    if (options.requireExhaustion) {
-      val next = scanner.peek(1)
-      next.value match {
-        case Token.EndOfInput => result
-        case _ => result.addError(Pos(ParseError.ExtraToken(next.value, "end of input"), next.begin, next.end))
+    new Session(scanner, options).run
+  }
+
+  private class Session(scanner: Scanner, options: ParseOptions) {
+    def run: ParseResult[Pos] = {
+      val result = parseExpression(BindingPower.Minimum)
+      if (options.requireExhaustion) {
+        val next = scanner.peek(1)
+        next.value match {
+          case Token.EndOfInput => result
+          case _ => result.addError(Pos(ParseError.ExtraToken(next.value, "end of input"), next.begin, next.end))
+        }
+      } else {
+        result
       }
-    } else {
-      result
-    }
-  }
-
-  private def parseExpression(scanner: Scanner, minBindingPower: BindingPower): ParseResult[Pos] = {
-    val firstToken = scanner.get()
-    var currentResult = nud(firstToken, scanner)
-
-    while (shouldContinue(scanner, minBindingPower, currentResult)) {
-      val nextToken = scanner.get()
-      currentResult = led(currentResult, nextToken, scanner)
     }
 
-    currentResult
-  }
+    private def parseExpression(minBindingPower: BindingPower): ParseResult[Pos] = {
+      val firstToken = scanner.get()
+      var currentResult = nud(firstToken)
 
-  private def isFollowedByExpression(scanner: Scanner): Boolean = {
-    val afterId = scanner.peek(2).value
-    afterId match {
-      case Token.EndOfInput | Token.RParen | Token.Comma | Token.Semicolon | Token.RBrace => false
-      case _ => true
+      while (shouldContinue(minBindingPower, currentResult)) {
+        val nextToken = scanner.get()
+        currentResult = led(currentResult, nextToken)
+      }
+
+      currentResult
     }
-  }
 
-  private def shouldContinue(scanner: Scanner, minBindingPower: BindingPower, currentResult: ParseResult[Pos]): Boolean = {
-    if (currentResult.hasErrors) {
-      false
-    } else {
-      scanner.peek(1).value match {
-        case Token.LParen =>
-          // ( always has high precedence when acting as a postfix call
-          BindingPower.PostfixCall > minBindingPower
+    private def isFollowedByExpression: Boolean = {
+      val afterId = scanner.peek(2).value
+      afterId match {
+        case Token.EndOfInput | Token.RParen | Token.Comma | Token.Semicolon | Token.RBrace => false
+        case _ => true
+      }
+    }
+
+    private def shouldContinue(minBindingPower: BindingPower, currentResult: ParseResult[Pos]): Boolean = {
+      if (currentResult.hasErrors) {
+        false
+      } else {
+        scanner.peek(1).value match {
+          case Token.LParen =>
+            // ( always has high precedence when acting as a postfix call
+            BindingPower.PostfixCall > minBindingPower
+          case idToken: Token.Identifier =>
+            val bp = Operators.bindingPower(idToken)
+            if (bp > minBindingPower) {
+              // If it's alphanumeric and we are at the top level,
+              // we check if it's followed by another expression.
+              // If it's not, then it's trailing garbage, not an infix operator.
+              if (minBindingPower == BindingPower.Minimum && !idToken.isInstanceOf[Token.Identifier.Operator]) {
+                isFollowedByExpression
+              } else true
+            } else false
+          case rw: Token.ReservedWord =>
+            val bp = Operators.bindingPower(rw)
+            bp > minBindingPower
+          case _ => false
+        }
+      }
+    }
+
+    private def nud(token: Pos[Token]): ParseResult[Pos] = {
+      token.value match {
+        case Token.IntLiteral(v) => ParseResult.create(token.as(Literal.int(v)))
+        case Token.StringLiteral(v) => ParseResult.create(token.as(Literal.string(v)))
+        case Token.True => ParseResult.create(token.as(Literal.true_()))
+        case Token.False => ParseResult.create(token.as(Literal.false_()))
+        case Token.Null => ParseResult.create(token.as(Literal.null_()))
         case idToken: Token.Identifier =>
-          val bp = Operators.bindingPower(idToken)
-          if (bp > minBindingPower) {
-            // If it's alphanumeric and we are at the top level,
-            // we check if it's followed by another expression.
-            // If it's not, then it's trailing garbage, not an infix operator.
-            if (minBindingPower == BindingPower.Minimum && !idToken.isInstanceOf[Token.Identifier.Operator]) {
-              isFollowedByExpression(scanner)
-            } else true
-          } else false
+          val id = token.as(Identifier(idToken.name))
+          ParseResult.create(token.as(Reference.single(id)))
+        case Token.LParen =>
+          parseParenthesizedExpression(token)
+        case _ =>
+          ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+      }
+    }
+
+    private def parseParenthesizedExpression(token: Pos[Token]): ParseResult[Pos] = {
+      val result = parseExpression(BindingPower.Minimum)
+      val next = scanner.get()
+      next.value match {
+        case Token.RParen =>
+          processParenthesizedResult(token, result, next)
+        case Token.EndOfInput =>
+          result.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), token.begin, token.end))
+        case _ =>
+          result.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+      }
+    }
+
+    private def processParenthesizedResult(token: Pos[Token], result: ParseResult[Pos], next: Pos[Token]): ParseResult[Pos] = {
+      result.value match {
+        case Some(inner) =>
+          val finalResult = ParseResult.create(Pos(inner.value, token.begin, next.end))
+            .copy(errors = result.errors, warnings = result.warnings, hints = result.hints)
+          val isUnnecessary = inner.value.getClass match {
+            case c if classOf[Literal[Pos]].isAssignableFrom(c) => true
+            case c if classOf[Reference[Pos]].isAssignableFrom(c) => true
+            case _ => false
+          }
+          if (isUnnecessary) {
+            finalResult.addHint(Pos(ParseHint.UnnecessaryParentheses, token.begin, next.end))
+          } else {
+            finalResult
+          }
+        case None => result
+      }
+    }
+
+    private def led(leftResult: ParseResult[Pos], opToken: Pos[Token]): ParseResult[Pos] = {
+      opToken.value match {
+        case Token.LParen =>
+          parseFunctionCall(leftResult, opToken)
+        case id: Token.Identifier =>
+          parseInfixExpression(leftResult, opToken, id.name)
         case rw: Token.ReservedWord =>
-          val bp = Operators.bindingPower(rw)
-          bp > minBindingPower
+          parseInfixExpression(leftResult, opToken, rw.name)
+        case _ => leftResult
+      }
+    }
+
+    private def parseFunctionCall(leftResult: ParseResult[Pos], opToken: Pos[Token]): ParseResult[Pos] = {
+      val (argsOpt, end, errors, warnings) = parseArgumentGroup(opToken)
+      argsOpt match {
+        case Some(args) =>
+          val group = Pos(args, opToken.begin, end)
+          leftResult.value match {
+            case Some(left) =>
+              val call: Expression[Pos] = if (left.value.getClass == classOf[Call.Standard[Pos]]) {
+                val sc = left.value.asInstanceOf[Call.Standard[Pos]]
+                sc.copy(args = sc.args :+ group)
+              } else {
+                Call.standard(left, Vector.empty, Vector(group))
+              }
+              ParseResult.create(Pos(
+                call,
+                left.begin,
+                end
+              )).copy(errors = leftResult.errors ++ errors, warnings = leftResult.warnings ++ warnings)
+            case None =>
+              ParseResult(None, leftResult.errors ++ errors, leftResult.warnings ++ warnings)
+          }
+        case None =>
+          ParseResult(None, leftResult.errors ++ errors, leftResult.warnings ++ warnings)
+      }
+    }
+
+    private def parseInfixExpression(leftResult: ParseResult[Pos], opToken: Pos[Token], opName: String): ParseResult[Pos] = {
+      val bp = opToken.value match {
+        case id: Token.Identifier => Operators.bindingPower(id)
+        case rw: Token.ReservedWord => Operators.bindingPower(rw)
+        case _ => BindingPower.Minimum
+      }
+      val isRightAssoc = opName.endsWith(":")
+      val rightResult = if (isRightAssoc) parseExpression(bp.nudge(-1))
+      else parseExpression(bp)
+
+      val isSuspicious = opToken.value.isInstanceOf[Token.Identifier] &&
+        !opToken.value.isInstanceOf[Token.Identifier.Operator] &&
+        !isRightAssoc
+
+      (leftResult.value, rightResult.value) match {
+        case (Some(left), Some(right)) =>
+          val opId = Pos(Identifier(opName), opToken.begin, opToken.end)
+          var res = ParseResult[Pos](
+            value = Some(Pos(
+              Call.infix(left, opId, Vector.empty, right),
+              left.begin,
+              right.end
+            )),
+            errors = leftResult.errors ++ rightResult.errors,
+            warnings = leftResult.warnings ++ rightResult.warnings
+          )
+          if (isSuspicious) res = res.addWarning(Pos(ParseWarning.SuspiciousInfixExpression(opName), opToken.begin, opToken.end))
+          res
+        case _ =>
+          ParseResult[Pos](
+            value = None,
+            errors = leftResult.errors ++ rightResult.errors,
+            warnings = leftResult.warnings ++ rightResult.warnings
+          )
+      }
+    }
+
+    private def isSynchronizationBoundary(token: Token): Boolean = {
+      token match {
+        case Token.Comma | Token.RParen | Token.EndOfInput | Token.Val | Token.Def |
+             Token.If | Token.Case | Token.Semicolon | Token.RBrace => true
         case _ => false
       }
     }
-  }
 
-  private def nud(token: Pos[Token], scanner: Scanner): ParseResult[Pos] = {
-    token.value match {
-      case Token.IntLiteral(v) => ParseResult.create(token.as(Literal.int(v)))
-      case Token.StringLiteral(v) => ParseResult.create(token.as(Literal.string(v)))
-      case Token.True => ParseResult.create(token.as(Literal.true_()))
-      case Token.False => ParseResult.create(token.as(Literal.false_()))
-      case Token.Null => ParseResult.create(token.as(Literal.null_()))
-      case idToken: Token.Identifier =>
-        val id = token.as(Identifier(idToken.name))
-        ParseResult.create(token.as(Reference.single(id)))
-      case Token.LParen =>
-        parseParenthesizedExpression(token, scanner)
-      case _ =>
-        ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
-    }
-  }
-
-  private def parseParenthesizedExpression(token: Pos[Token], scanner: Scanner): ParseResult[Pos] = {
-    val result = parseExpression(scanner, BindingPower.Minimum)
-    val next = scanner.get()
-    next.value match {
-      case Token.RParen =>
-        processParenthesizedResult(token, result, next)
-      case Token.EndOfInput =>
-        result.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), token.begin, token.end))
-      case _ =>
-        result.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
-    }
-  }
-
-  private def processParenthesizedResult(token: Pos[Token], result: ParseResult[Pos], next: Pos[Token]): ParseResult[Pos] = {
-    result.value match {
-      case Some(inner) =>
-        val finalResult = ParseResult.create(Pos(inner.value, token.begin, next.end))
-          .copy(errors = result.errors, warnings = result.warnings, hints = result.hints)
-        val isUnnecessary = inner.value.getClass match {
-          case c if classOf[Literal[Pos]].isAssignableFrom(c) => true
-          case c if classOf[Reference[Pos]].isAssignableFrom(c) => true
-          case _ => false
-        }
-        if (isUnnecessary) {
-          finalResult.addHint(Pos(ParseHint.UnnecessaryParentheses, token.begin, next.end))
-        } else {
-          finalResult
-        }
-      case None => result
-    }
-  }
-
-  private def led(leftResult: ParseResult[Pos], opToken: Pos[Token], scanner: Scanner): ParseResult[Pos] = {
-    opToken.value match {
-      case Token.LParen =>
-        parseFunctionCall(leftResult, opToken, scanner)
-      case id: Token.Identifier =>
-        parseInfixExpression(leftResult, opToken, id.name, scanner)
-      case rw: Token.ReservedWord =>
-        parseInfixExpression(leftResult, opToken, rw.name, scanner)
-      case _ => leftResult
-    }
-  }
-
-  private def parseFunctionCall(leftResult: ParseResult[Pos], opToken: Pos[Token], scanner: Scanner): ParseResult[Pos] = {
-    val (argsOpt, end, errors, warnings) = parseArgumentGroup(opToken, scanner)
-    argsOpt match {
-      case Some(args) =>
-        val group = Pos(args, opToken.begin, end)
-        leftResult.value match {
-          case Some(left) =>
-            val call: Expression[Pos] = if (left.value.getClass == classOf[Call.Standard[Pos]]) {
-              val sc = left.value.asInstanceOf[Call.Standard[Pos]]
-              sc.copy(args = sc.args :+ group)
-            } else {
-              Call.standard(left, Vector.empty, Vector(group))
-            }
-            ParseResult.create(Pos(
-              call,
-              left.begin,
-              end
-            )).copy(errors = leftResult.errors ++ errors, warnings = leftResult.warnings ++ warnings)
-          case None =>
-            ParseResult(None, leftResult.errors ++ errors, leftResult.warnings ++ warnings)
-        }
-      case None =>
-        ParseResult(None, leftResult.errors ++ errors, leftResult.warnings ++ warnings)
-    }
-  }
-
-  private def parseInfixExpression(leftResult: ParseResult[Pos], opToken: Pos[Token], opName: String, scanner: Scanner): ParseResult[Pos] = {
-    val bp = opToken.value match {
-      case id: Token.Identifier => Operators.bindingPower(id)
-      case rw: Token.ReservedWord => Operators.bindingPower(rw)
-      case _ => BindingPower.Minimum
-    }
-    val isRightAssoc = opName.endsWith(":")
-    val rightResult = if (isRightAssoc) parseExpression(scanner, bp.nudge(-1))
-    else parseExpression(scanner, bp)
-
-    val isSuspicious = opToken.value.isInstanceOf[Token.Identifier] &&
-      !opToken.value.isInstanceOf[Token.Identifier.Operator] &&
-      !isRightAssoc
-
-    (leftResult.value, rightResult.value) match {
-      case (Some(left), Some(right)) =>
-        val opId = Pos(Identifier(opName), opToken.begin, opToken.end)
-        var res = ParseResult[Pos](
-          value = Some(Pos(
-            Call.infix(left, opId, Vector.empty, right),
-            left.begin,
-            right.end
-          )),
-          errors = leftResult.errors ++ rightResult.errors,
-          warnings = leftResult.warnings ++ rightResult.warnings
-        )
-        if (isSuspicious) res = res.addWarning(Pos(ParseWarning.SuspiciousInfixExpression(opName), opToken.begin, opToken.end))
-        res
-      case _ =>
-        ParseResult[Pos](
-          value = None,
-          errors = leftResult.errors ++ rightResult.errors,
-          warnings = leftResult.warnings ++ rightResult.warnings
-        )
-    }
-  }
-
-  private def isSynchronizationBoundary(token: Token): Boolean = {
-    token match {
-      case Token.Comma | Token.RParen | Token.EndOfInput | Token.Val | Token.Def |
-           Token.If | Token.Case | Token.Semicolon | Token.RBrace => true
-      case _ => false
-    }
-  }
-
-  private def isStructuralBoundary(token: Token): Boolean = {
-    token match {
-      case Token.Val | Token.Def | Token.If | Token.Case | Token.Semicolon | Token.RBrace | Token.EndOfInput => true
-      case _ => false
-    }
-  }
-
-  private def parseArgumentGroup(lParenToken: Pos[Token], scanner: Scanner): (Option[ArgumentGroup[Pos]], CharIndex, Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
-    var args = Vector.empty[Pos[Argument[Pos]]]
-    var errors = Vector.empty[Pos[ParseError]]
-    var warnings = Vector.empty[Pos[ParseWarning]]
-
-    def continueParsing(): Boolean = {
-      val next = scanner.peek(1).value
-      next != Token.RParen && next != Token.EndOfInput
-    }
-
-    var shouldStop = false
-    while (!shouldStop && continueParsing()) {
-      val nextToken = scanner.peek(1)
-      if (nextToken.value == Token.Comma) {
-        errors :+= Pos(ParseError.MissingExpression("argument"), nextToken.begin, nextToken.end)
-        scanner.get() // consume comma
-      } else {
-        val argExprResult = parseExpression(scanner, BindingPower.Minimum)
-        val (argOpt, argErrors, argWarnings) = parseSingleArgument(argExprResult, scanner)
-        argOpt.foreach(args :+= _)
-        errors ++= argErrors
-        warnings ++= argWarnings
-
-        val next = scanner.peek(1)
-        next.value match {
-          case Token.Comma =>
-            scanner.get() // consume comma
-          case Token.RParen => // will exit loop
-          case _ if continueParsing() =>
-            val (stop, syncErrors) = synchronizeToNextArgument(scanner)
-            shouldStop = stop
-            errors ++= syncErrors
-          case _ =>
-        }
+    private def isStructuralBoundary(token: Token): Boolean = {
+      token match {
+        case Token.Val | Token.Def | Token.If | Token.Case | Token.Semicolon | Token.RBrace | Token.EndOfInput => true
+        case _ => false
       }
     }
 
-    val rParenToken = scanner.peek(1)
-    if (rParenToken.value == Token.RParen) {
-      scanner.get()
-      (Some(ArgumentGroup[Pos](args)), rParenToken.end, errors, warnings)
-    } else {
-      (Some(ArgumentGroup[Pos](args)), lParenToken.end, errors :+ Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParenToken.begin, lParenToken.end), warnings)
-    }
-  }
+    private def parseArgumentGroup(lParenToken: Pos[Token]): (Option[ArgumentGroup[Pos]], CharIndex, Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
+      var args = Vector.empty[Pos[Argument[Pos]]]
+      var errors = Vector.empty[Pos[ParseError]]
+      var warnings = Vector.empty[Pos[ParseWarning]]
 
-  private def parseSingleArgument(argExprResult: ParseResult[Pos], scanner: Scanner): (Option[Pos[Argument[Pos]]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
-    argExprResult.value match {
-      case Some(expr) =>
-        (Some(expr.as(Argument(expr))), argExprResult.errors, argExprResult.warnings)
-      case None =>
-        if (argExprResult.errors.isEmpty) {
-          val next = scanner.peek(1)
-          (None, Vector(Pos(ParseError.MissingExpression("argument"), next.begin, next.end)), argExprResult.warnings)
+      def continueParsing(): Boolean = {
+        val next = scanner.peek(1).value
+        next != Token.RParen && next != Token.EndOfInput
+      }
+
+      var shouldStop = false
+      while (!shouldStop && continueParsing()) {
+        val nextToken = scanner.peek(1)
+        if (nextToken.value == Token.Comma) {
+          errors :+= Pos(ParseError.MissingExpression("argument"), nextToken.begin, nextToken.end)
+          scanner.get() // consume comma
         } else {
-          (None, argExprResult.errors, argExprResult.warnings)
-        }
-    }
-  }
+          val argExprResult = parseExpression(BindingPower.Minimum)
+          val (argOpt, argErrors, argWarnings) = parseSingleArgument(argExprResult)
+          argOpt.foreach(args :+= _)
+          errors ++= argErrors
+          warnings ++= argWarnings
 
-  private def synchronizeToNextArgument(scanner: Scanner): (Boolean, Vector[Pos[ParseError]]) = {
-    var errors = Vector.empty[Pos[ParseError]]
-    val next = scanner.peek(1)
-    if (!isStructuralBoundary(next.value)) {
-      errors :+= Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
+          val next = scanner.peek(1)
+          next.value match {
+            case Token.Comma =>
+              scanner.get() // consume comma
+            case Token.RParen => // will exit loop
+            case _ if continueParsing() =>
+              val (stop, syncErrors) = synchronizeToNextArgument()
+              shouldStop = stop
+              errors ++= syncErrors
+            case _ =>
+          }
+        }
+      }
+
+      val rParenToken = scanner.peek(1)
+      if (rParenToken.value == Token.RParen) {
+        scanner.get()
+        (Some(ArgumentGroup[Pos](args)), rParenToken.end, errors, warnings)
+      } else {
+        (Some(ArgumentGroup[Pos](args)), lParenToken.end, errors :+ Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParenToken.begin, lParenToken.end), warnings)
+      }
     }
-    // Synchronize to next comma or RParen
-    var sync = scanner.peek(1)
-    while (!isSynchronizationBoundary(sync.value)) {
-      scanner.get()
-      sync = scanner.peek(1)
+
+    private def parseSingleArgument(argExprResult: ParseResult[Pos]): (Option[Pos[Argument[Pos]]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
+      argExprResult.value match {
+        case Some(expr) =>
+          (Some(expr.as(Argument(expr))), argExprResult.errors, argExprResult.warnings)
+        case None =>
+          if (argExprResult.errors.isEmpty) {
+            val next = scanner.peek(1)
+            (None, Vector(Pos(ParseError.MissingExpression("argument"), next.begin, next.end)), argExprResult.warnings)
+          } else {
+            (None, argExprResult.errors, argExprResult.warnings)
+          }
+      }
     }
-    if (sync.value == Token.Comma) {
-      scanner.get()
-      (false, errors)
-    } else if (isStructuralBoundary(sync.value) && sync.value != Token.RParen) {
-      (true, errors)
-    } else {
-      (false, errors)
+
+    private def synchronizeToNextArgument(): (Boolean, Vector[Pos[ParseError]]) = {
+      var errors = Vector.empty[Pos[ParseError]]
+      val next = scanner.peek(1)
+      if (!isStructuralBoundary(next.value)) {
+        errors :+= Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
+      }
+      // Synchronize to next comma or RParen
+      var sync = scanner.peek(1)
+      while (!isSynchronizationBoundary(sync.value)) {
+        scanner.get()
+        sync = scanner.peek(1)
+      }
+      if (sync.value == Token.Comma) {
+        scanner.get()
+        (false, errors)
+      } else if (isStructuralBoundary(sync.value) && sync.value != Token.RParen) {
+        (true, errors)
+      } else {
+        (false, errors)
+      }
     }
   }
 }
