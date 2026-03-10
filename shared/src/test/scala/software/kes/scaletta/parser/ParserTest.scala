@@ -206,4 +206,39 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
     }
   }
 
+  describe("Conditionals") {
+    it("should parse a standard if-else expression with parentheses") {
+      "if (x > 0) a else b" shouldParseTo cond(infix(ref("x"), ">", lit(0)), ref("a"), ref("b"))
+    }
+
+    it("should parse an if-else expression with then keyword and no parentheses") {
+      "if x > 0 then a else b" shouldParseTo cond(infix(ref("x"), ">", lit(0)), ref("a"), ref("b"))
+    }
+
+    it("should parse an if-else expression with both parentheses and then keyword") {
+      "if (x > 0) then a else b" shouldParseTo cond(infix(ref("x"), ">", lit(0)), ref("a"), ref("b"))
+    }
+
+    it("should parse nested if-else expressions") {
+      "if (c1) if (c2) a else b else c" shouldParseTo cond(ref("c1"), cond(ref("c2"), ref("a"), ref("b")), ref("c"))
+    }
+
+    it("should parse if-else with block branches") {
+      """if (c) {
+        |  val x = 1
+        |  x
+        |} else {
+        |  0
+        |}""".stripMargin shouldParseTo cond(ref("c"), block(ref("x"), valId("x", lit(1))), block(lit(0)))
+    }
+
+    it("should fail if then/parens are missing") {
+      "if x > 0 a else b" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+    }
+
+    it("should fail if else is missing") {
+      "if (c) a" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+    }
+  }
+
 }

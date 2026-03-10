@@ -86,9 +86,9 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
 
       it("should recover at structural boundaries (like if)") {
         "f(1, if (x), 3)" shouldFailWith(
-          ParseError.UnexpectedToken(Token.If) at 5,
-          ParseError.UnexpectedToken(Token.LParen) at 8,
-          ParseError.ExtraToken(Token.Comma, "end of input") at 11
+          ParseError.UnexpectedToken(Token.Comma) at 11,
+          ParseError.UnexpectedToken(Token.IntLiteral(3)) at 13,
+          ParseError.UnexpectedToken(Token.IntLiteral(3)) at 13
         )
       }
     }

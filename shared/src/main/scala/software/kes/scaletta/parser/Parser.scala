@@ -95,6 +95,8 @@ final class Parser private() {
           parseParenthesizedExpression(token)
         case Token.LBrace =>
           parseBlock(token)
+        case Token.If =>
+          parseConditional(token)
         case _ =>
           ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
       }
@@ -357,8 +359,53 @@ final class Parser private() {
 
     private def isStructuralBoundary(token: Token): Boolean = {
       token match {
-        case Token.Val | Token.Def | Token.If | Token.Case | Token.Semicolon | Token.RBrace | Token.EndOfInput => true
+        case Token.Val | Token.Def | Token.Else | Token.Then | Token.Case | Token.Semicolon | Token.RBrace | Token.EndOfInput => true
         case _ => false
+      }
+    }
+
+    private def parseConditional(ifToken: Pos[Token]): ExprResult[Pos] = {
+      val next = scanner.peek(1)
+      val conditionResult = if (next.value == Token.LParen) {
+        scanner.get()
+        val cond = parseExpression(BindingPower.Minimum)
+        val closeParen = scanner.get()
+        val finalCond = if (closeParen.value != Token.RParen) {
+          cond.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), next.begin, next.end))
+        } else {
+          cond
+        }
+        if (scanner.peek(1).value == Token.Then) {
+          scanner.get()
+        }
+        finalCond
+      } else {
+        val cond = parseExpression(BindingPower.Minimum)
+        if (scanner.peek(1).value == Token.Then) {
+          scanner.get()
+          cond
+        } else {
+          cond.addError(Pos(ParseError.UnexpectedToken(scanner.peek(1).value), scanner.peek(1).begin, scanner.peek(1).end))
+        }
+      }
+
+      val thenResult = parseExpression(BindingPower.Minimum)
+      val nextAfterThen = scanner.peek(1)
+      val elseResult = if (nextAfterThen.value == Token.Else) {
+        scanner.get()
+        parseExpression(BindingPower.Minimum)
+      } else {
+        ParseResult.error[Pos, Pos[Expression[Pos]]](Pos(ParseError.UnexpectedToken(nextAfterThen.value), nextAfterThen.begin, nextAfterThen.end))
+      }
+
+      val allErrors = conditionResult.errors ++ thenResult.errors ++ elseResult.errors
+      val allWarnings = conditionResult.warnings ++ thenResult.warnings ++ elseResult.warnings
+
+      (conditionResult.value, thenResult.value, elseResult.value) match {
+        case (Some(c), Some(t), Some(e)) =>
+          ParseResult(Some(Pos(Conditional(c, t, e), ifToken.begin, e.end)), allErrors, allWarnings)
+        case _ =>
+          ParseResult(None, allErrors, allWarnings)
       }
     }
 
