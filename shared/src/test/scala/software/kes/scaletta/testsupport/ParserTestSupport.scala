@@ -32,7 +32,7 @@ class ParserTestSupport() {
   /**
    * Parses the input string and returns the full [[ParseResult]].
    */
-  def parse(input: String, options: ParseOptions = ParseOptions()): ParseResult[Pos] = {
+  def parse(input: String, options: ParseOptions = ParseOptions()): ExprResult[Pos] = {
     val reader = SourceReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
     val scanner = Scanner.create(reader, IdentifierPolicy.Default)
     val parser = Parser.create()

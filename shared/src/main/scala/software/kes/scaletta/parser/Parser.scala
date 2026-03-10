@@ -11,20 +11,13 @@ object Parser {
 case class ParseOptions(requireExhaustion: Boolean = true)
 
 final class Parser private() {
-  def parse(scanner: Scanner, options: ParseOptions = ParseOptions()): ParseResult[Pos] = {
+  def parse(scanner: Scanner, options: ParseOptions = ParseOptions()): ExprResult[Pos] = {
     new Session(scanner, options).run
   }
 
   private class Session(scanner: Scanner, options: ParseOptions) {
-    private case class Result[+A](value: Option[A],
-                                  errors: Vector[Pos[ParseError]] = Vector.empty,
-                                  warnings: Vector[Pos[ParseWarning]] = Vector.empty)
 
-    private object Result {
-      def error[A](error: Pos[ParseError]): Result[A] = Result(None, Vector(error))
-    }
-
-    def run: ParseResult[Pos] = {
+    def run: ExprResult[Pos] = {
       val result = parseExpression(BindingPower.Minimum)
       if (options.requireExhaustion) {
         val next = scanner.peek(1)
@@ -37,7 +30,7 @@ final class Parser private() {
       }
     }
 
-    private def parseExpression(minBindingPower: BindingPower): ParseResult[Pos] = {
+    private def parseExpression(minBindingPower: BindingPower): ExprResult[Pos] = {
       val firstToken = scanner.get()
       var currentResult = nud(firstToken)
 
@@ -57,7 +50,7 @@ final class Parser private() {
       }
     }
 
-    private def shouldContinue(minBindingPower: BindingPower, currentResult: ParseResult[Pos]): Boolean = {
+    private def shouldContinue(minBindingPower: BindingPower, currentResult: ExprResult[Pos]): Boolean = {
       if (currentResult.hasErrors) {
         false
       } else {
@@ -88,7 +81,7 @@ final class Parser private() {
       }
     }
 
-    private def nud(token: Pos[Token]): ParseResult[Pos] = {
+    private def nud(token: Pos[Token]): ExprResult[Pos] = {
       token.value match {
         case Token.IntLiteral(v) => ParseResult.create(token.as(Literal.int(v)))
         case Token.StringLiteral(v) => ParseResult.create(token.as(Literal.string(v)))
@@ -107,7 +100,7 @@ final class Parser private() {
       }
     }
 
-    private def parseParenthesizedExpression(token: Pos[Token]): ParseResult[Pos] = {
+    private def parseParenthesizedExpression(token: Pos[Token]): ExprResult[Pos] = {
       val result = parseExpression(BindingPower.Minimum)
       val next = scanner.get()
       next.value match {
@@ -120,10 +113,10 @@ final class Parser private() {
       }
     }
 
-    private def processParenthesizedResult(token: Pos[Token], result: ParseResult[Pos], next: Pos[Token]): ParseResult[Pos] = {
+    private def processParenthesizedResult(token: Pos[Token], result: ExprResult[Pos], next: Pos[Token]): ExprResult[Pos] = {
       result.value match {
         case Some(inner) =>
-          val finalResult = ParseResult.create(Pos(inner.value, token.begin, next.end))
+          val finalResult: ExprResult[Pos] = ParseResult.create(Pos(inner.value, token.begin, next.end))
             .copy(errors = result.errors, warnings = result.warnings, hints = result.hints)
           val isUnnecessary = inner.value.getClass match {
             case c if classOf[Literal[Pos]].isAssignableFrom(c) => true
@@ -139,7 +132,7 @@ final class Parser private() {
       }
     }
 
-    private def parseBlock(token: Pos[Token]): ParseResult[Pos] = {
+    private def parseBlock(token: Pos[Token]): ExprResult[Pos] = {
       var declarations = Vector.empty[Pos[Declaration[Pos]]]
       var errors = Vector.empty[Pos[ParseError]]
       var warnings = Vector.empty[Pos[ParseWarning]]
@@ -180,18 +173,18 @@ final class Parser private() {
         case Token.RBrace =>
           resultExpr.value match {
             case Some(res) =>
-              ParseResult[Pos](Some(Pos(Block(declarations, res), token.begin, next.end)), errors, warnings)
+              ParseResult(Some(Pos(Block(declarations, res), token.begin, next.end)), errors, warnings)
             case None =>
-              ParseResult[Pos](None, errors :+ Pos(ParseError.MissingExpression("block result"), next.begin, next.end), warnings)
+              ParseResult(None, errors :+ Pos(ParseError.MissingExpression("block result"), next.begin, next.end), warnings)
           }
         case Token.EndOfInput =>
-          ParseResult[Pos](None, errors :+ Pos(ParseError.UnclosedDelimiter(Token.LBrace, Token.RBrace), token.begin, token.end), warnings)
+          ParseResult(None, errors :+ Pos(ParseError.UnclosedDelimiter(Token.LBrace, Token.RBrace), token.begin, token.end), warnings)
         case _ =>
-          ParseResult[Pos](None, errors :+ Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end), warnings)
+          ParseResult(None, errors :+ Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end), warnings)
       }
     }
 
-    private def parseDeclaration(): Result[Pos[Declaration[Pos]]] = {
+    private def parseDeclaration(): DeclResult[Pos] = {
       val firstToken = scanner.get()
       firstToken.value match {
         case Token.Val =>
@@ -202,48 +195,48 @@ final class Parser private() {
             case Token.Val =>
               parseLazyValDeclaration(firstToken, next)
             case _ =>
-              Result.error(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+              ParseResult.error(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
           }
         case Token.Def =>
           parseDefDeclaration(firstToken)
         case _ =>
-          Result.error(Pos(ParseError.UnexpectedToken(firstToken.value), firstToken.begin, firstToken.end))
+          ParseResult.error(Pos(ParseError.UnexpectedToken(firstToken.value), firstToken.begin, firstToken.end))
       }
     }
 
-    private def parseValDeclaration(valToken: Pos[Token]): Result[Pos[Declaration[Pos]]] = {
+    private def parseValDeclaration(valToken: Pos[Token]): DeclResult[Pos] = {
       val patternResult = parsePattern()
       val eqToken = scanner.get()
       if (eqToken.value == Token.Eq) {
         val rhsResult = parseExpression(BindingPower.Minimum)
         (patternResult.value, rhsResult.value) match {
           case (Some(pat), Some(rhs)) =>
-            Result(Some(Pos(Declaration.val_(pat, rhs), valToken.begin, rhs.end)), patternResult.errors ++ rhsResult.errors, patternResult.warnings ++ rhsResult.warnings)
+            ParseResult(Some(Pos(Declaration.val_(pat, rhs), valToken.begin, rhs.end)), patternResult.errors ++ rhsResult.errors, patternResult.warnings ++ rhsResult.warnings)
           case _ =>
-            Result(None, patternResult.errors ++ rhsResult.errors :+ Pos(ParseError.MissingExpression("val rhs"), eqToken.begin, eqToken.end), patternResult.warnings ++ rhsResult.warnings)
+            ParseResult(None, patternResult.errors ++ rhsResult.errors :+ Pos(ParseError.MissingExpression("val rhs"), eqToken.begin, eqToken.end), patternResult.warnings ++ rhsResult.warnings)
         }
       } else {
-        Result(None, patternResult.errors :+ Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end), patternResult.warnings)
+        ParseResult(None, patternResult.errors :+ Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end), patternResult.warnings)
       }
     }
 
-    private def parseLazyValDeclaration(lazyToken: Pos[Token], valToken: Pos[Token]): Result[Pos[Declaration[Pos]]] = {
+    private def parseLazyValDeclaration(lazyToken: Pos[Token], valToken: Pos[Token]): DeclResult[Pos] = {
       val patternResult = parsePattern()
       val eqToken = scanner.get()
       if (eqToken.value == Token.Eq) {
         val rhsResult = parseExpression(BindingPower.Minimum)
         (patternResult.value, rhsResult.value) match {
           case (Some(pat), Some(rhs)) =>
-            Result(Some(Pos(Declaration.lazyVal(pat, rhs), lazyToken.begin, rhs.end)), patternResult.errors ++ rhsResult.errors, patternResult.warnings ++ rhsResult.warnings)
+            ParseResult(Some(Pos(Declaration.lazyVal(pat, rhs), lazyToken.begin, rhs.end)), patternResult.errors ++ rhsResult.errors, patternResult.warnings ++ rhsResult.warnings)
           case _ =>
-            Result(None, patternResult.errors ++ rhsResult.errors :+ Pos(ParseError.MissingExpression("lazy val rhs"), eqToken.begin, eqToken.end), patternResult.warnings ++ rhsResult.warnings)
+            ParseResult(None, patternResult.errors ++ rhsResult.errors :+ Pos(ParseError.MissingExpression("lazy val rhs"), eqToken.begin, eqToken.end), patternResult.warnings ++ rhsResult.warnings)
         }
       } else {
-        Result(None, patternResult.errors :+ Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end), patternResult.warnings)
+        ParseResult(None, patternResult.errors :+ Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end), patternResult.warnings)
       }
     }
 
-    private def parseDefDeclaration(defToken: Pos[Token]): Result[Pos[Declaration[Pos]]] = {
+    private def parseDefDeclaration(defToken: Pos[Token]): DeclResult[Pos] = {
       val nameToken = scanner.get()
       nameToken.value match {
         case idToken: Token.Identifier =>
@@ -254,32 +247,32 @@ final class Parser private() {
             val rhsResult = parseExpression(BindingPower.Minimum)
             rhsResult.value match {
               case Some(rhs) =>
-                Result(Some(Pos(Declaration.def_(name, Vector.empty, rhs), defToken.begin, rhs.end)), rhsResult.errors, rhsResult.warnings)
+                ParseResult(Some(Pos(Declaration.def_(name, Vector.empty, rhs), defToken.begin, rhs.end)), rhsResult.errors, rhsResult.warnings)
               case None =>
-                Result(None, rhsResult.errors :+ Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end), rhsResult.warnings)
+                ParseResult(None, rhsResult.errors :+ Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end), rhsResult.warnings)
             }
           } else {
-            Result.error(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
+            ParseResult.error(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
           }
         case _ =>
-          Result.error(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))
+          ParseResult.error(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))
       }
     }
 
-    private def parsePattern(): Result[Pos[Pattern[Pos]]] = {
+    private def parsePattern(): PatResult[Pos] = {
       val token = scanner.get()
       token.value match {
         case idToken: Token.Identifier =>
           val id = token.as(Identifier(idToken.name))
-          Result(Some(token.as(Pattern.Identifier(id))))
+          ParseResult(Some(token.as(Pattern.Identifier(id))))
         case Token.Underscore =>
-          Result(Some(token.as(Pattern.Wildcard())))
+          ParseResult(Some(token.as(Pattern.Wildcard())))
         case _ =>
-          Result.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+          ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
       }
     }
 
-    private def led(leftResult: ParseResult[Pos], opToken: Pos[Token]): ParseResult[Pos] = {
+    private def led(leftResult: ExprResult[Pos], opToken: Pos[Token]): ExprResult[Pos] = {
       opToken.value match {
         case Token.LParen =>
           parseFunctionCall(leftResult, opToken)
@@ -291,7 +284,7 @@ final class Parser private() {
       }
     }
 
-    private def parseFunctionCall(leftResult: ParseResult[Pos], opToken: Pos[Token]): ParseResult[Pos] = {
+    private def parseFunctionCall(leftResult: ExprResult[Pos], opToken: Pos[Token]): ExprResult[Pos] = {
       val (argsOpt, end, errors, warnings) = parseArgumentGroup(opToken)
       argsOpt match {
         case Some(args) =>
@@ -317,7 +310,7 @@ final class Parser private() {
       }
     }
 
-    private def parseInfixExpression(leftResult: ParseResult[Pos], opToken: Pos[Token], opName: String): ParseResult[Pos] = {
+    private def parseInfixExpression(leftResult: ExprResult[Pos], opToken: Pos[Token], opName: String): ExprResult[Pos] = {
       val bp = opToken.value match {
         case id: Token.Identifier => Operators.bindingPower(id)
         case rw: Token.ReservedWord => Operators.bindingPower(rw)
@@ -334,7 +327,7 @@ final class Parser private() {
       (leftResult.value, rightResult.value) match {
         case (Some(left), Some(right)) =>
           val opId = Pos(Identifier(opName), opToken.begin, opToken.end)
-          var res = ParseResult[Pos](
+          var res: ExprResult[Pos] = ParseResult(
             value = Some(Pos(
               Call.infix(left, opId, Vector.empty, right),
               left.begin,
@@ -346,7 +339,7 @@ final class Parser private() {
           if (isSuspicious) res = res.addWarning(Pos(ParseWarning.SuspiciousInfixExpression(opName), opToken.begin, opToken.end))
           res
         case _ =>
-          ParseResult[Pos](
+          ParseResult(
             value = None,
             errors = leftResult.errors ++ rightResult.errors,
             warnings = leftResult.warnings ++ rightResult.warnings
@@ -415,7 +408,7 @@ final class Parser private() {
       }
     }
 
-    private def parseSingleArgument(argExprResult: ParseResult[Pos]): (Option[Pos[Argument[Pos]]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
+    private def parseSingleArgument(argExprResult: ExprResult[Pos]): (Option[Pos[Argument[Pos]]], Vector[Pos[ParseError]], Vector[Pos[ParseWarning]]) = {
       argExprResult.value match {
         case Some(expr) =>
           (Some(expr.as(Argument(expr))), argExprResult.errors, argExprResult.warnings)
