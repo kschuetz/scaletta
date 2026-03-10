@@ -91,6 +91,47 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         "123 garbage" shouldParsePartiallyTo lit(123)
       }
     }
+
+    describe("Blocks") {
+      it("should parse a simple block with only a result expression") {
+        "{ 123 }" shouldParseTo block(lit(123))
+      }
+
+      it("should parse a block with one val declaration") {
+        """{
+          |  val x = 1
+          |  x
+          |}""".stripMargin shouldParseTo block(ref("x"), valId("x", lit(1)))
+      }
+
+      it("should parse a block with multiple val declarations") {
+        """{
+          |  val x = 1
+          |  val y = 2
+          |  x + y
+          |}""".stripMargin shouldParseTo block(
+          infix(ref("x"), "+", ref("y")),
+          valId("x", lit(1)),
+          valId("y", lit(2))
+        )
+      }
+
+      it("should parse a block with lazy val and def") {
+        """{
+          |  lazy val x = 1
+          |  def f = x
+          |  f
+          |}""".stripMargin shouldParseTo block(
+          ref("f"),
+          lazyValDecl(pId("x"), lit(1)),
+          defSimple("f", ref("x"))
+        )
+      }
+
+      it("should require a separator between declarations") {
+        "{ val x = 1 val y = 2; x + y }" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+      }
+    }
   }
 
   describe("Parser Error Recovery") {
