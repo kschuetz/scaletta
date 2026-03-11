@@ -50,14 +50,18 @@ object AstBuilders {
   def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
     Declaration.lazyVal[Id](pattern, rhs)
 
-  def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] = {
+  def defDecl(name: String, params: Vector[Vector[(String, String)]], returnType: Option[String], body: Expression[Id]): Declaration[Id] = {
     val paramGroups = params.map { group =>
       FormalParameterGroup[Id](group.map { case (n, t) =>
         FormalParameter[Id](Identifier[Id](n), TypeIdentifier.name[Id](Identifier[Id](t)), None)
       })
     }
-    Declaration.def_[Id](Identifier(name), paramGroups, body)
+    val rt = returnType.map(t => TypeIdentifier.name[Id](Identifier[Id](t)))
+    Declaration.def_[Id](Identifier(name), paramGroups, rt, body)
   }
+
+  def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] =
+    defDecl(name, params, None, body)
 
   def defSimple(name: String, body: Expression[Id]): Declaration[Id] =
     defDecl(name, Vector.empty, body)

@@ -161,11 +161,12 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
 
     it("should transform Def") {
       val paramGroup = FormalParameterGroup[Id](Vector(FormalParameter[Id](Identifier[Id]("p"), TypeIdentifier.name[Id](Identifier[Id]("Int")), None)))
-      val expr = Declaration.def_[Id](Identifier[Id]("f"), Vector(paramGroup), Literal.Null[Id]())
+      val expr = Declaration.def_[Id](Identifier[Id]("f"), Vector(paramGroup), None, Literal.Null[Id]())
       val result = expr.mapK(idToOption)
       result shouldBe Declaration.Def[Option](
         Some(Identifier[Option]("f")),
         Vector(Some(paramGroup.mapK(idToOption))),
+        None,
         Some(Literal.Null[Option]())
       )
     }

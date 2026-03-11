@@ -132,7 +132,8 @@ object AstGenerators {
           } yield FormalParameter[Id](Identifier[Id](pName), TypeIdentifier.name[Id](Identifier[Id](pType)), None))
         } yield FormalParameterGroup[Id](group.toVector))
         body <- genExpression(depth)
-      } yield Declaration.def_[Id](Identifier[Id](name), params.toVector, body)
+        returnType <- Gen.option(genTypeIdentifier.map(t => TypeIdentifier.name[Id](Identifier[Id](t))))
+      } yield Declaration.def_[Id](Identifier[Id](name), params.toVector, returnType, body)
     )
   }
 

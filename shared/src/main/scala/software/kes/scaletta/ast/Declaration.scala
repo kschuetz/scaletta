@@ -15,8 +15,9 @@ object Declaration {
 
   def def_[F[_]](name: F[Identifier[F]],
                  params: Vector[F[FormalParameterGroup[F]]],
+                 returnType: Option[F[TypeIdentifier[F]]],
                  body: F[Expression[F]]): Declaration[F] =
-    Def(name, params, body)
+    Def(name, params, returnType, body)
 
   case class Val[F[_]](pattern: F[Pattern[F]],
                        rhs: F[Expression[F]]) extends Declaration[F] {
@@ -29,11 +30,13 @@ object Declaration {
 
   case class Def[F[_]](name: F[Identifier[F]],
                        params: Vector[F[FormalParameterGroup[F]]],
+                       returnType: Option[F[TypeIdentifier[F]]],
                        body: F[Expression[F]]) extends Declaration[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Def[G] =
       Def(
         phi(F.map(name)(_.mapK(phi))),
         params.map(p => phi(F.map(p)(_.mapK(phi)))),
+        returnType.map(rt => phi(F.map(rt)(_.mapK(phi)))),
         phi(F.map(body)(_.mapK(phi)))
       )
   }

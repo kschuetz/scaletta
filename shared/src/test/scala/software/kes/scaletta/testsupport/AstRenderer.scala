@@ -246,10 +246,14 @@ private class AstRenderer(settings: Settings,
       renderPattern(pat.asInstanceOf[Pattern[Id]])
       write(" = ")
       render(rhs.asInstanceOf[Expression[Id]])
-    case Declaration.Def(name, params, body) =>
+    case Declaration.Def(name, params, returnType, body) =>
       write("def ")
       write(name.asInstanceOf[Identifier[Id]].name)
       params.foreach(p => renderFormalParameterGroup(p.asInstanceOf[FormalParameterGroup[Id]]))
+      returnType.foreach { rt =>
+        write(": ")
+        renderType(rt.asInstanceOf[TypeIdentifier[Id]])
+      }
       write(" = ")
       render(body.asInstanceOf[Expression[Id]])
   }

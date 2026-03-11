@@ -261,7 +261,7 @@ final class Parser private() {
             val rhsResult = parseExpression(BindingPower.Minimum)
             rhsResult.value match {
               case Some(rhs) =>
-                ParseResult(Some(Pos(Declaration.def_(name, Vector.empty, rhs), defToken.begin, rhs.end)), rhsResult.errors, rhsResult.warnings)
+                ParseResult(Some(Pos(Declaration.def_(name, Vector.empty, None, rhs), defToken.begin, rhs.end)), rhsResult.errors, rhsResult.warnings)
               case None =>
                 ParseResult(None, rhsResult.errors :+ Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end), rhsResult.warnings)
             }
