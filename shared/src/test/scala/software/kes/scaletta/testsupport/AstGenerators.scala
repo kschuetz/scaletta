@@ -2,7 +2,6 @@ package software.kes.scaletta.testsupport
 
 import org.scalacheck.{Arbitrary, Gen}
 import software.kes.scaletta.ast._
-import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.util.functional.Id._
 
 object AstGenerators {
@@ -50,7 +49,7 @@ object AstGenerators {
         (1, for {
           p <- genPattern(depth - 1)
           t <- genTypeIdentifier
-        } yield Pattern.Typed[Id](p, TypeIdentifier.name(Identifier[Pos](t)))),
+        } yield Pattern.Typed[Id](p, TypeIdentifier.name[Id](Identifier[Id](t)))),
         (1, for {
           n <- Gen.choose(2, 4)
           elements <- Gen.listOfN(n, genPattern(depth - 1))
@@ -59,7 +58,7 @@ object AstGenerators {
           t <- genTypeIdentifier
           n <- Gen.choose(0, 3)
           args <- Gen.listOfN(n, genPattern(depth - 1))
-        } yield Pattern.Product[Id](TypeIdentifier.name(Identifier[Pos](t)), args.toVector))
+        } yield Pattern.Product[Id](TypeIdentifier.name[Id](Identifier[Id](t)), args.toVector))
       )
     }
   }
@@ -130,7 +129,7 @@ object AstGenerators {
           group <- Gen.listOfN(nP, for {
             pName <- genIdentifier
             pType <- genTypeIdentifier
-          } yield FormalParameter[Id](Identifier[Id](pName), TypeIdentifier.name(Identifier[Pos](pType)), None))
+          } yield FormalParameter[Id](Identifier[Id](pName), TypeIdentifier.name[Id](Identifier[Id](pType)), None))
         } yield FormalParameterGroup[Id](group.toVector))
         body <- genExpression(depth)
       } yield Declaration.def_[Id](Identifier[Id](name), params.toVector, body)

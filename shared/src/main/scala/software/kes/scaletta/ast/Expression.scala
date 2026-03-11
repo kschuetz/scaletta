@@ -27,11 +27,11 @@ case class Reference[F[_]](path: ::[F[Identifier[F]]]) extends Expression[F] {
 }
 
 case class Typed[F[_]](expression: F[Expression[F]],
-                       ascription: F[TypeIdentifier]) extends Expression[F] {
+                       ascription: F[TypeIdentifier[F]]) extends Expression[F] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Typed[G] =
     Typed(
       phi(F.map(expression)(_.mapK(phi))),
-      phi(ascription)
+      phi(F.map(ascription)(_.mapK(phi)))
     )
 }
 

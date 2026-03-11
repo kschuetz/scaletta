@@ -53,7 +53,7 @@ object AstBuilders {
   def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] = {
     val paramGroups = params.map { group =>
       FormalParameterGroup[Id](group.map { case (n, t) =>
-        FormalParameter[Id](Identifier(n), TypeIdentifier.name(Identifier(t)), None)
+        FormalParameter[Id](Identifier[Id](n), TypeIdentifier.name[Id](Identifier[Id](t)), None)
       })
     }
     Declaration.def_[Id](Identifier(name), paramGroups, body)
@@ -83,12 +83,12 @@ object AstBuilders {
     pTyped(pAs(name, pattern), typeName)
 
   def pTyped(pattern: Pattern[Id], typeName: String): Pattern[Id] =
-    Pattern.Typed[Id](pattern, TypeIdentifier.name(Identifier(typeName)))
+    Pattern.Typed[Id](pattern, TypeIdentifier.name[Id](Identifier[Id](typeName)))
 
   def pTuple(elements: Pattern[Id]*): Pattern[Id] = Pattern.Tuple[Id](elements.toVector)
 
   def pProduct(typeName: String, args: Pattern[Id]*): Pattern[Id] =
-    Pattern.Product[Id](TypeIdentifier.name(Identifier(typeName)), args.toVector)
+    Pattern.Product[Id](TypeIdentifier.name[Id](Identifier[Id](typeName)), args.toVector)
 
   def matchExpr(expr: Expression[Id], cases: Case[Id]*): Expression[Id] =
     Match[Id](expr, cases.toVector)

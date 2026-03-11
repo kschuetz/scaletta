@@ -1,8 +1,8 @@
 package software.kes.scaletta.ast
 
-import software.kes.scaletta.util.functional.~>
+import software.kes.scaletta.util.functional.{Functor, ~>}
 
-case class TypeArgument[F[_]](typ: F[TypeIdentifier]) {
-  def mapK[G[_]](phi: F ~> G): TypeArgument[G] =
-    TypeArgument(phi(typ))
+case class TypeArgument[F[_]](typ: F[TypeIdentifier[F]]) {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): TypeArgument[G] =
+    TypeArgument(phi(F.map(typ)(_.mapK(phi))))
 }

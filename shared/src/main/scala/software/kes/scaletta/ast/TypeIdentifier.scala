@@ -1,62 +1,87 @@
 package software.kes.scaletta.ast
 
-import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.types.ConjunctionType
+import software.kes.scaletta.util.functional.{Functor, ~>}
 
-sealed trait TypeIdentifier
+sealed trait TypeIdentifier[F[_]] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): TypeIdentifier[G]
+}
 
 object TypeIdentifier {
-  def name(name: Identifier[Pos]): TypeIdentifier = Name(name)
+  def name[F[_]](name: F[Identifier[F]]): TypeIdentifier[F] = Name(name)
 
-  def applied(name: Identifier[Pos],
-              args: TypeIdentifier*): TypeIdentifier = {
+  def applied[F[_]](name: F[Identifier[F]],
+                    args: F[TypeIdentifier[F]]*)(implicit F: Functor[F]): TypeIdentifier[F] = {
     args.toList match {
       case Nil => Name(name)
       case x :: xs => Applied(name, ::(x, xs))
     }
   }
 
-  def union(first: TypeIdentifier,
-            second: TypeIdentifier,
-            rest: TypeIdentifier*): TypeIdentifier =
+  def union[F[_]](first: F[TypeIdentifier[F]],
+                  second: F[TypeIdentifier[F]],
+                  rest: F[TypeIdentifier[F]]*): TypeIdentifier[F] =
     conjunction(ConjunctionType.Union, first, second, rest: _*)
 
-  def intersection(first: TypeIdentifier,
-                   second: TypeIdentifier,
-                   rest: TypeIdentifier*): TypeIdentifier =
+  def intersection[F[_]](first: F[TypeIdentifier[F]],
+                         second: F[TypeIdentifier[F]],
+                         rest: F[TypeIdentifier[F]]*): TypeIdentifier[F] =
     conjunction(ConjunctionType.Intersection, first, second, rest: _*)
 
-  def function(params: Vector[TypeIdentifier],
-               result: TypeIdentifier): TypeIdentifier =
+  def function[F[_]](params: Vector[F[TypeIdentifier[F]]],
+                     result: F[TypeIdentifier[F]]): TypeIdentifier[F] =
     Function(params, result)
 
   /** A simple type referred to by name (e.g., `Int`, `String`). */
-  case class Name(name: Identifier[Pos]) extends TypeIdentifier
+  case class Name[F[_]](name: F[Identifier[F]]) extends TypeIdentifier[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Name[G] =
+      Name(phi(F.map(name)(_.mapK(phi))))
+  }
 
   /**
    * A type with arguments (e.g., `List[Int]`).
    */
-  case class Applied(name: Identifier[Pos], args: ::[TypeIdentifier]) extends TypeIdentifier
+  case class Applied[F[_]](name: F[Identifier[F]], args: ::[F[TypeIdentifier[F]]]) extends TypeIdentifier[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Applied[G] = {
+      val newArgs = args.map(a => phi(F.map(a)(_.mapK(phi))))
+      Applied(
+        phi(F.map(name)(_.mapK(phi))),
+        ::(newArgs.head, newArgs.tail)
+      )
+    }
+  }
 
   /**
    * A function type (e.g., `(Int, String) => Boolean`).
    */
-  case class Function(params: Vector[TypeIdentifier],
-                      result: TypeIdentifier) extends TypeIdentifier
+  case class Function[F[_]](params: Vector[F[TypeIdentifier[F]]],
+                            result: F[TypeIdentifier[F]]) extends TypeIdentifier[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Function[G] =
+      Function(
+        params.map(p => phi(F.map(p)(_.mapK(phi)))),
+        phi(F.map(result)(_.mapK(phi)))
+      )
+  }
 
   /**
    * A union or intersection type (e.g., `A | B` or `A & B`).
    * Components are stored in a Vector to preserve order and duplicates as written in source.
    */
-  case class Conjunction(conjunctionType: ConjunctionType,
-                         components: Vector[TypeIdentifier]) extends TypeIdentifier {
+  case class Conjunction[F[_]](conjunctionType: ConjunctionType,
+                               components: Vector[F[TypeIdentifier[F]]]) extends TypeIdentifier[F] {
     override def toString: String = components.mkString(s" ${conjunctionType.operator} ")
+
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Conjunction[G] =
+      Conjunction(
+        conjunctionType,
+        components.map(c => phi(F.map(c)(_.mapK(phi))))
+      )
   }
 
-  private def conjunction(conjunctionType: ConjunctionType,
-                          first: TypeIdentifier,
-                          second: TypeIdentifier,
-                          rest: TypeIdentifier*): TypeIdentifier = {
+  private def conjunction[F[_]](conjunctionType: ConjunctionType,
+                                first: F[TypeIdentifier[F]],
+                                second: F[TypeIdentifier[F]],
+                                rest: F[TypeIdentifier[F]]*): TypeIdentifier[F] = {
     Conjunction(conjunctionType, first +: second +: rest.toVector)
   }
 }

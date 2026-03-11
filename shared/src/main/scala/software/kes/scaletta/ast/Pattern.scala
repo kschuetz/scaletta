@@ -32,9 +32,9 @@ object Pattern {
   }
 
   /** Matches if the value satisfies a type test: `pattern: Type`. */
-  case class Typed[F[_]](pattern: F[Pattern[F]], ascription: F[TypeIdentifier]) extends Pattern[F] {
+  case class Typed[F[_]](pattern: F[Pattern[F]], ascription: F[TypeIdentifier[F]]) extends Pattern[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Typed[G] =
-      Typed(phi(F.map(pattern)(_.mapK(phi))), phi(ascription))
+      Typed(phi(F.map(pattern)(_.mapK(phi))), phi(F.map(ascription)(_.mapK(phi))))
   }
 
   /** Positional destructuring of tuples: `(p1, p2, ...)`. */
@@ -47,8 +47,8 @@ object Pattern {
    * Constructor-like pattern for host-provided product types: `Some(p1)`.
    * This is necessary to support matching on `Option` types.
    */
-  case class Product[F[_]](typeId: F[TypeIdentifier], args: Vector[F[Pattern[F]]]) extends Pattern[F] {
+  case class Product[F[_]](typeId: F[TypeIdentifier[F]], args: Vector[F[Pattern[F]]]) extends Pattern[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Product[G] =
-      Product(phi(typeId), args.map(a => phi(F.map(a)(_.mapK(phi)))))
+      Product(phi(F.map(typeId)(_.mapK(phi))), args.map(a => phi(F.map(a)(_.mapK(phi)))))
   }
 }

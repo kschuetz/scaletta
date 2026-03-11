@@ -3,7 +3,6 @@ package software.kes.scaletta.testsupport
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast._
-import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.util.functional.Id.Id
 
 class AstRendererTest extends AnyFunSuite with Matchers {
@@ -102,7 +101,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
 
   test("render lambda") {
     val lambda = Lambda[Id](
-      Vector(LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name(Identifier[Pos]("Int"))))),
+      Vector(LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name[Id](Identifier[Id]("Int"))))),
       Call.infix[Id](Reference.single[Id](Identifier[Id]("x")), Identifier[Id]("+"), Vector.empty, Literal.int(1))
     )
     AstRenderer.render(lambda) shouldBe "(x: Int) => x + 1"
@@ -120,23 +119,23 @@ class AstRendererTest extends AnyFunSuite with Matchers {
   }
 
   test("render conjunction types") {
-    val typeA = TypeIdentifier.name(Identifier[Pos]("A"))
-    val typeB = TypeIdentifier.name(Identifier[Pos]("B"))
-    val typeC = TypeIdentifier.name(Identifier[Pos]("C"))
-    val union = TypeIdentifier.union(typeA, typeB)
+    val typeA = TypeIdentifier.name[Id](Identifier[Id]("A"))
+    val typeB = TypeIdentifier.name[Id](Identifier[Id]("B"))
+    val typeC = TypeIdentifier.name[Id](Identifier[Id]("C"))
+    val union = TypeIdentifier.union[Id](typeA, typeB)
 
     // Simple union
     AstRenderer.render(Typed[Id](Literal.int(1), union)) shouldBe "(1: A | B)"
 
     // Nested union/intersection (should be parenthesized by renderType)
-    val intersection = TypeIdentifier.intersection(union, typeC)
+    val intersection = TypeIdentifier.intersection[Id](union, typeC)
     // Note: Conjunction flattening might occur depending on implementation, 
     // but TypeIdentifier.intersection(union, typeC) with different types won't flatten across Union/Intersection.
     AstRenderer.render(Typed[Id](Literal.int(1), intersection)) shouldBe "(1: (A | B) & C)"
 
     // Function type in conjunction
-    val funcType = TypeIdentifier.function(Vector(typeA), typeB)
-    val combined = TypeIdentifier.union(funcType, typeC)
+    val funcType = TypeIdentifier.function[Id](Vector(typeA), typeB)
+    val combined = TypeIdentifier.union[Id](funcType, typeC)
     AstRenderer.render(Typed[Id](Literal.int(1), combined)) shouldBe "(1: (A => B) | C)"
   }
 }
