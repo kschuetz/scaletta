@@ -13,6 +13,8 @@ object Operators {
   def bindingPower(reservedWord: Token.ReservedWord): BindingPower = {
     reservedWord match {
       case Token.Colon => BindingPower.Colon
+      case Token.Pipe => BindingPower.LogicalOr
+      case Token.Ampersand => BindingPower.LogicalAnd
       case _ => bindingPowerByName(reservedWord.name)
     }
   }

@@ -190,6 +190,14 @@ object Token {
 
   case object Newline extends Token
 
+  case object Pipe extends ReservedWord {
+    def name: String = "|"
+  }
+
+  case object Ampersand extends ReservedWord {
+    def name: String = "&"
+  }
+
   case object Underscore extends ReservedWord {
     def name: String = "_"
 
@@ -392,9 +400,9 @@ object Token {
 
   val allReservedWords: Vector[ReservedWord] =
     Vector(
-      Abstract, At, Case, Catch, Class, Colon, Def, Do, Else, Enum, Eq, Export, Extends,
+      Abstract, Ampersand, At, Case, Catch, Class, Colon, Def, Do, Else, Enum, Eq, Export, Extends,
       False, Final, Finally, For, Given, Hash, If, Implicit, Import, LArrow, Lazy,
-      LowerBound, Match, New, Null, Object, Override, Package, Private, Protected,
+      LowerBound, Match, New, Null, Object, Override, Package, Pipe, Private, Protected,
       RDoubleArrow, Return, Sealed, Super, Then, This, Throw, Trait, True, Try, Type,
       UpperBound, Using, Underscore, Val, Var, ViewBound, While, With, Yield
     )
