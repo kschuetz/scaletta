@@ -198,27 +198,27 @@ private class AstRenderer(settings: Settings,
   }
 
   private def renderType(ti: TypeIdentifier[Id]): Unit = ti match {
-    case TypeIdentifier.Name(id) => write(id.asInstanceOf[Identifier[Id]].name)
+    case TypeIdentifier.Name(id) => write(id.name)
     case TypeIdentifier.Applied(id, args) =>
-      write(id.asInstanceOf[Identifier[Id]].name)
+      write(id.name)
       write("[")
-      renderCommaSeparated(args.toList.map(_.asInstanceOf[TypeIdentifier[Id]]), renderType)
+      renderCommaSeparated(args, renderType)
       write("]")
     case TypeIdentifier.Function(params, result) =>
       if (params.size == 1) {
-        renderType(params.head.asInstanceOf[TypeIdentifier[Id]])
+        renderType(params.head)
       } else {
         write("(")
-        renderCommaSeparated(params.map(_.asInstanceOf[TypeIdentifier[Id]]), renderType)
+        renderCommaSeparated(params, renderType)
         write(")")
       }
       write(" => ")
-      renderType(result.asInstanceOf[TypeIdentifier[Id]])
+      renderType(result)
     case c: TypeIdentifier.Conjunction[Id] =>
       var first = true
       c.components.foreach { component =>
         if (!first) write(s" ${c.conjunctionType.operator} ")
-        val comp = component.asInstanceOf[TypeIdentifier[Id]]
+        val comp = component
         comp match {
           case f: TypeIdentifier.Function[Id] =>
             write("(")
@@ -238,46 +238,46 @@ private class AstRenderer(settings: Settings,
   private def renderDeclaration(decl: Declaration[Id]): Unit = decl match {
     case Declaration.Val(pat, rhs) =>
       write("val ")
-      renderPattern(pat.asInstanceOf[Pattern[Id]])
+      renderPattern(pat)
       write(" = ")
-      render(rhs.asInstanceOf[Expression[Id]])
+      render(rhs)
     case Declaration.LazyVal(pat, rhs) =>
       write("lazy val ")
-      renderPattern(pat.asInstanceOf[Pattern[Id]])
+      renderPattern(pat)
       write(" = ")
-      render(rhs.asInstanceOf[Expression[Id]])
+      render(rhs)
     case Declaration.Def(name, params, returnType, body) =>
       write("def ")
-      write(name.asInstanceOf[Identifier[Id]].name)
-      params.foreach(p => renderFormalParameterGroup(p.asInstanceOf[FormalParameterGroup[Id]]))
+      write(name.name)
+      params.foreach(p => renderFormalParameterGroup(p))
       returnType.foreach { rt =>
         write(": ")
-        renderType(rt.asInstanceOf[TypeIdentifier[Id]])
+        renderType(rt)
       }
       write(" = ")
-      render(body.asInstanceOf[Expression[Id]])
+      render(body)
   }
 
   private def renderPattern(pat: Pattern[Id]): Unit = pat match {
-    case Pattern.Identifier(name) => write(name.asInstanceOf[Identifier[Id]].name)
+    case Pattern.Identifier(name) => write(name.name)
     case _: Pattern.Wildcard[Id] => write("_")
-    case Pattern.Literal(lit) => renderLiteral(lit.asInstanceOf[Literal[Id]])
+    case Pattern.Literal(lit) => renderLiteral(lit)
     case Pattern.As(name, p) =>
-      write(name.asInstanceOf[Identifier[Id]].name)
+      write(name.name)
       write(" @ ")
-      renderPattern(p.asInstanceOf[Pattern[Id]])
+      renderPattern(p)
     case Pattern.Typed(p, ascription) =>
-      renderPattern(p.asInstanceOf[Pattern[Id]])
+      renderPattern(p)
       write(": ")
-      renderType(ascription.asInstanceOf[TypeIdentifier[Id]])
+      renderType(ascription)
     case Pattern.Tuple(elements) =>
       write("(")
-      renderCommaSeparated(elements.map(_.asInstanceOf[Pattern[Id]]), renderPattern)
+      renderCommaSeparated(elements, renderPattern)
       write(")")
     case Pattern.Product(typeId, args) =>
-      renderType(typeId.asInstanceOf[TypeIdentifier[Id]])
+      renderType(typeId)
       write("(")
-      renderCommaSeparated(args.map(_.asInstanceOf[Pattern[Id]]), renderPattern)
+      renderCommaSeparated(args, renderPattern)
       write(")")
   }
 
