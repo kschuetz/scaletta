@@ -30,52 +30,46 @@ class TypeIdentifierTest extends AnyFunSpec with Matchers {
     }
 
     describe("union") {
-      it("should simplify A | A to A") {
+      it("should NOT simplify A | A to A") {
         val ti = TypeIdentifier.union(typeA, typeA)
-        ti shouldBe typeA
+        ti shouldBe TypeIdentifier.Conjunction(ConjunctionType.Union, Vector(typeA, typeA))
       }
 
-      it("should be order-insensitive (A | B == B | A)") {
+      it("should be order-sensitive (A | B != B | A)") {
         val ti1 = TypeIdentifier.union(typeA, typeB)
         val ti2 = TypeIdentifier.union(typeB, typeA)
-        ti1 shouldBe ti2
+        ti1 shouldNot be(ti2)
       }
 
-      it("should flatten nested unions (A | (B | C) == A | B | C)") {
+      it("should NOT flatten nested unions (A | (B | C) != A | B | C)") {
         val nested = TypeIdentifier.union(typeB, typeC)
         val ti = TypeIdentifier.union(typeA, nested)
-        ti should matchPattern {
-          case TypeIdentifier.Conjunction(ConjunctionType.Union, components) if components == Set(typeA, typeB, typeC) =>
-        }
+        ti shouldBe TypeIdentifier.Conjunction(ConjunctionType.Union, Vector(typeA, nested))
       }
 
       it("should NOT flatten different conjunction types (A | (B & C))") {
         val nested = TypeIdentifier.intersection(typeB, typeC)
         val ti = TypeIdentifier.union(typeA, nested)
-        ti should matchPattern {
-          case TypeIdentifier.Conjunction(ConjunctionType.Union, components) if components == Set(typeA, nested) =>
-        }
+        ti shouldBe TypeIdentifier.Conjunction(ConjunctionType.Union, Vector(typeA, nested))
       }
     }
 
     describe("intersection") {
-      it("should simplify A & A to A") {
+      it("should NOT simplify A & A to A") {
         val ti = TypeIdentifier.intersection(typeA, typeA)
-        ti shouldBe typeA
+        ti shouldBe TypeIdentifier.Conjunction(ConjunctionType.Intersection, Vector(typeA, typeA))
       }
 
-      it("should be order-insensitive (A & B == B & A)") {
+      it("should be order-sensitive (A & B != B & A)") {
         val ti1 = TypeIdentifier.intersection(typeA, typeB)
         val ti2 = TypeIdentifier.intersection(typeB, typeA)
-        ti1 shouldBe ti2
+        ti1 shouldNot be(ti2)
       }
 
-      it("should flatten nested intersections (A & (B & C) == A & B & C)") {
+      it("should NOT flatten nested intersections (A & (B & C) != A & B & C)") {
         val nested = TypeIdentifier.intersection(typeB, typeC)
         val ti = TypeIdentifier.intersection(typeA, nested)
-        ti should matchPattern {
-          case TypeIdentifier.Conjunction(ConjunctionType.Intersection, components) if components == Set(typeA, typeB, typeC) =>
-        }
+        ti shouldBe TypeIdentifier.Conjunction(ConjunctionType.Intersection, Vector(typeA, nested))
       }
     }
 
@@ -101,19 +95,17 @@ class TypeIdentifierTest extends AnyFunSpec with Matchers {
       }
     }
 
-    describe("Conjunction equality and hashCode") {
-      it("should have consistent equals and hashCode for Unions") {
+    describe("Conjunction equality") {
+      it("should have consistent equals for Unions") {
         val ti1 = TypeIdentifier.union(typeA, typeB, typeC)
-        val ti2 = TypeIdentifier.union(typeC, typeB, typeA)
+        val ti2 = TypeIdentifier.union(typeA, typeB, typeC)
         ti1 shouldBe ti2
-        ti1.hashCode() shouldBe ti2.hashCode()
       }
 
       it("should distinguish between Union and Intersection with same components") {
         val u = TypeIdentifier.union(typeA, typeB)
         val i = TypeIdentifier.intersection(typeA, typeB)
         u shouldNot be(i)
-        u.hashCode() shouldNot be(i.hashCode())
       }
     }
 
@@ -123,7 +115,7 @@ class TypeIdentifierTest extends AnyFunSpec with Matchers {
         ti match {
           case TypeIdentifier.Conjunction(ct, components) =>
             ct shouldBe ConjunctionType.Union
-            components shouldBe Set(typeA, typeB)
+            components shouldBe Vector(typeA, typeB)
           case _ => fail("Extractor failed")
         }
       }

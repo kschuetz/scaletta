@@ -45,29 +45,11 @@ object TypeIdentifier {
                       result: TypeIdentifier) extends TypeIdentifier
 
   /**
-   * A union type (e.g., `A | B`).
-   * Components are stored in a Set to ensure order-insensitivity and uniqueness.
-   * Logic should ensure the set contains at least two elements.
+   * A union or intersection type (e.g., `A | B` or `A & B`).
+   * Components are stored in a Vector to preserve order and duplicates as written in source.
    */
-  object Conjunction {
-    def unapply(arg: Conjunction): Option[(ConjunctionType, Set[TypeIdentifier])] =
-      Some((arg.conjunctionType, arg.components))
-  }
-
-  final class Conjunction private[TypeIdentifier](val conjunctionType: ConjunctionType,
-                                                  val components: Set[TypeIdentifier]) extends TypeIdentifier {
-    override def equals(other: Any): Boolean = other match {
-      case that: Conjunction =>
-        conjunctionType == that.conjunctionType &&
-          components == that.components
-      case _ => false
-    }
-
-    override def hashCode(): Int = {
-      Seq(conjunctionType.hashCode(), components.hashCode())
-        .foldLeft(0)((a, b) => 31 * a + b)
-    }
-
+  case class Conjunction(conjunctionType: ConjunctionType,
+                         components: Vector[TypeIdentifier]) extends TypeIdentifier {
     override def toString: String = components.mkString(s" ${conjunctionType.operator} ")
   }
 
@@ -75,21 +57,6 @@ object TypeIdentifier {
                           first: TypeIdentifier,
                           second: TypeIdentifier,
                           rest: TypeIdentifier*): TypeIdentifier = {
-    def combine(acc: Set[TypeIdentifier], ti: TypeIdentifier): Set[TypeIdentifier] =
-      ti match {
-        case Conjunction(ct, identifiers) if ct == conjunctionType =>
-          identifiers.foldLeft(acc) {
-            case (acc1, identifier) => combine(acc1, identifier)
-          }
-        case other => acc + other
-      }
-
-
-    val step1 = combine(Set.empty, first)
-    val step2 = combine(step1, second)
-    val components = rest.foldLeft(step2) {
-      case (acc, ti) => combine(acc, ti)
-    }
-    if (components.size >= 2) new Conjunction(conjunctionType, components) else components.head
+    Conjunction(conjunctionType, first +: second +: rest.toVector)
   }
 }
