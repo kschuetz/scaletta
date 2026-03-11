@@ -63,9 +63,9 @@ class PrecedenceTest extends AnyFunSpec with Matchers with TableDrivenPropertyCh
       val matrix = Table(
         ("input", "expectedAst"),
         ("a :: b :: c", infix(ref("a"), "::", infix(ref("b"), "::", ref("c")))),
-        ("a +: b +: c", infix(ref("a"), "+:", infix(ref("b"), "+:", ref("c")))),
+        ("a +: b +: c", infix(ref("a"), "+:", infix(ref("b"), "+:", ref("c"))))
         // Mixed with same precedence
-        ("a : b :: c", infix(ref("a"), ":", infix(ref("b"), "::", ref("c"))))
+        // ("a : b :: c", infix(ref("a"), ":", infix(ref("b"), "::", ref("c"))))
       )
       forAll(matrix) { (input, expected) => input shouldParseTo expected }
     }

@@ -287,11 +287,38 @@ final class Parser private() {
       opToken.value match {
         case Token.LParen =>
           parseFunctionCall(leftResult, opToken)
+        case Token.Colon =>
+          parseTypeAscription(leftResult, opToken)
         case id: Token.Identifier =>
           parseInfixExpression(leftResult, opToken, id.name)
-        case rw: Token.ReservedWord =>
+        case rw: Token.ReservedWord if rw != Token.Colon =>
           parseInfixExpression(leftResult, opToken, rw.name)
         case _ => leftResult
+      }
+    }
+
+    private def parseTypeAscription(leftResult: ExprResult[Pos], colonToken: Pos[Token]): ExprResult[Pos] = {
+      val typeResult: TypeResult[Pos] = TypeIdentifierParser.parse(scanner)
+
+      (leftResult.value, typeResult.value) match {
+        case (Some(leftExpr), Some(ascription)) =>
+          val typedNode: Expression[Pos] = Typed[Pos](leftExpr, ascription)
+          ParseResult.create(Pos(
+            typedNode,
+            leftExpr.begin,
+            ascription.end
+          )).addDiagnostics(leftResult.diagnostics ++ typeResult.diagnostics)
+
+        case _ =>
+          val result: ExprResult[Pos] = ParseResult(leftResult.value, leftResult.diagnostics ++ typeResult.diagnostics)
+          // Synchronize if we failed to parse a type
+          while (!isSynchronizationBoundary(scanner.peek(1).value)) {
+            scanner.get()
+          }
+          if (scanner.peek(1).value == Token.Semicolon) {
+            scanner.get()
+          }
+          result
       }
     }
 

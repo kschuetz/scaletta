@@ -26,6 +26,23 @@ object AstBuilders {
     Call.standard[Id](target, Vector.empty, groups)
   }
 
+  def typed(expr: Expression[Id], typeName: String): Expression[Id] =
+    Typed[Id](expr, TypeIdentifier.name[Id](Identifier[Id](typeName)))
+
+  def typed(expr: Expression[Id], ascription: TypeIdentifier[Id]): Expression[Id] =
+    Typed[Id](expr, ascription)
+
+  def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier[Id](name))
+
+  def tApplied(name: String, args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.applied[Id](Identifier[Id](name), args: _*)
+
+  def tFunc(params: Vector[TypeIdentifier[Id]], result: TypeIdentifier[Id]): TypeIdentifier[Id] =
+    TypeIdentifier.function[Id](params, result)
+
+  def tTuple(elements: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.tuple[Id](elements.toVector)
+
   def block(declarations: Vector[Declaration[Id]], result: Expression[Id]): Expression[Id] =
     Block[Id](declarations, result)
 

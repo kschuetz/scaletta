@@ -78,6 +78,33 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
           }
         }
       }
+
+      describe("Type Ascriptions") {
+        it("should parse a simple type ascription (1: Int)") {
+          "1: Int" shouldParseTo typed(lit(1), "Int")
+        }
+
+        it("should parse complex types (x: (Int, String) => Boolean)") {
+          val complexType = tFunc(Vector(tName("Int"), tName("String")), tName("Boolean"))
+          "x: (Int, String) => Boolean" shouldParseTo typed(ref("x"), complexType)
+        }
+
+        it("should respect precedence (1 + 2 : Int)") {
+          "1 + 2 : Int" shouldParseTo typed(infix(lit(1), "+", lit(2)), "Int")
+        }
+
+        it("should handle missing type (1: ;)") {
+          "1: ;" shouldFailWith (ParseError.UnexpectedToken(Token.Semicolon) at 3) producing {
+            lit(1)
+          }
+        }
+
+        it("should handle invalid type identifier (1: 2 + 3)") {
+          "1: 2 + 3" shouldFailWith (ParseError.UnexpectedToken(Token.IntLiteral(2)) at 3) producing {
+            lit(1)
+          }
+        }
+      }
     }
 
     describe("Scanner Exhaustion") {

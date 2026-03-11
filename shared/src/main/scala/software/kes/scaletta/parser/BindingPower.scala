@@ -60,13 +60,13 @@ object BindingPower {
    */
   val allBaseLevels: Vector[BindingPower] = Vector(
     Minimum,
+    Colon,
     Alphanumeric,
     LogicalOr,
     LogicalXor,
     LogicalAnd,
     Equality,
     Comparison,
-    Colon,
     Addition,
     Multiplication,
     OtherSymbolicOperators,
@@ -85,13 +85,13 @@ object BindingPower {
     private def major(bindingPower: BindingPower): Int =
       bindingPower match {
         case Minimum => 0
-        case Alphanumeric => 1
-        case LogicalOr => 2
-        case LogicalXor => 3
-        case LogicalAnd => 4
-        case Equality => 5
-        case Comparison => 6
-        case Colon => 7
+        case Colon => 1
+        case Alphanumeric => 2
+        case LogicalOr => 3
+        case LogicalXor => 4
+        case LogicalAnd => 5
+        case Equality => 6
+        case Comparison => 7
         case Addition => 8
         case Multiplication => 9
         case OtherSymbolicOperators => 10
