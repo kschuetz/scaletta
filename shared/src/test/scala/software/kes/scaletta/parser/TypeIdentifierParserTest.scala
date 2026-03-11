@@ -60,6 +60,13 @@ class TypeIdentifierParserTest extends AnyFunSpec with Matchers {
       "((A))".shouldParseTypeTo(tName("A"))
     }
 
+    it("should parse tuple types") {
+      "(Int, String)".shouldParseTypeTo(tTuple(tName("Int"), tName("String")))
+      "(Int, String, Boolean)".shouldParseTypeTo(tTuple(tName("Int"), tName("String"), tName("Boolean")))
+      "()".shouldParseTypeTo(tTuple())
+      "((Int, String), Boolean)".shouldParseTypeTo(tTuple(tTuple(tName("Int"), tName("String")), tName("Boolean")))
+    }
+
     it("should parse complex nested types") {
       "(A | B) & C => List[D]".shouldParseTypeTo(tFunction(
         Vector(tIntersection(tUnion(tName("A"), tName("B")), tName("C"))),
@@ -94,5 +101,8 @@ class TypeIdentifierParserTest extends AnyFunSpec with Matchers {
 
   private def tFunction(params: Vector[TypeIdentifier[Id]], result: TypeIdentifier[Id]): TypeIdentifier[Id] =
     TypeIdentifier.Function[Id](params, result)
+
+  private def tTuple(elements: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.Tuple[Id](elements.toVector)
 
 }

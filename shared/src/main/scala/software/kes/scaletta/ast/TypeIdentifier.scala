@@ -32,6 +32,9 @@ object TypeIdentifier {
                      result: F[TypeIdentifier[F]]): TypeIdentifier[F] =
     Function(params, result)
 
+  def tuple[F[_]](elements: Vector[F[TypeIdentifier[F]]]): TypeIdentifier[F] =
+    Tuple(elements)
+
   /** A simple type referred to by name (e.g., `Int`, `String`). */
   case class Name[F[_]](name: F[Identifier[F]]) extends TypeIdentifier[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Name[G] =
@@ -76,6 +79,14 @@ object TypeIdentifier {
         conjunctionType,
         components.map(c => phi(F.map(c)(_.mapK(phi))))
       )
+  }
+
+  /**
+   * A tuple type (e.g., `(Int, String)`).
+   */
+  case class Tuple[F[_]](elements: Vector[F[TypeIdentifier[F]]]) extends TypeIdentifier[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Tuple[G] =
+      Tuple(elements.map(e => phi(F.map(e)(_.mapK(phi)))))
   }
 
   private def conjunction[F[_]](conjunctionType: ConjunctionType,

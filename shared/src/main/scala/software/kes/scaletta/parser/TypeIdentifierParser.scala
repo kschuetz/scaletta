@@ -45,7 +45,7 @@ object TypeIdentifierParser {
       next.value match {
         case id: Token.Identifier =>
           scanner.get()
-          ParseResult.create(Pos(TypeIdentifier.Name(Pos(Identifier(id.name), next.begin, next.end)), next.begin, next.end))
+          ParseResult.create(Pos(TypeIdentifier.name(Pos(Identifier(id.name), next.begin, next.end)), next.begin, next.end))
 
         case Token.LParen =>
           parseParenthesizedOrFunctionStart()
@@ -68,13 +68,13 @@ object TypeIdentifierParser {
               val rbracket = scanner.peek(1)
               if (rbracket.value == Token.RBracket) {
                 scanner.get()
-                ParseResult(Some(Pos(TypeIdentifier.Applied(idPos, ::(args.head, args.tail.toList)), begin, rbracket.end)),
+                ParseResult(Some(Pos(TypeIdentifier.applied(idPos, args: _*), begin, rbracket.end)),
                   nameResult.errors ++ argsResult.errors,
                   nameResult.warnings ++ argsResult.warnings,
                   nameResult.hints ++ argsResult.hints)
               } else {
                 val err: Pos[ParseError] = Pos(ParseError.UnclosedDelimiter(Token.LBracket, Token.RBracket), begin + idPos.value.name.length, begin + idPos.value.name.length + 1)
-                ParseResult(Some(Pos(TypeIdentifier.Applied(idPos, ::(args.head, args.tail.toList)), begin, rbracket.begin)),
+                ParseResult(Some(Pos(TypeIdentifier.applied(idPos, args: _*), begin, rbracket.begin)),
                   nameResult.errors ++ argsResult.errors :+ err)
               }
             case _ =>
@@ -113,7 +113,7 @@ object TypeIdentifierParser {
       (left.value, right.value) match {
         case (Some(l), Some(r)) =>
           val params = Vector(l)
-          ParseResult(Some(Pos(TypeIdentifier.Function(params, r), l.begin, r.end)),
+          ParseResult(Some(Pos(TypeIdentifier.function(params, r), l.begin, r.end)),
             left.errors ++ right.errors,
             left.warnings ++ right.warnings,
             left.hints ++ right.hints)
@@ -140,21 +140,20 @@ object TypeIdentifierParser {
         resultType.value match {
           case Some(rt) =>
             val params = typesResult.value.getOrElse(Vector.empty)
-            ParseResult.create[Pos, Pos[TypeIdentifier[Pos]]](Pos(TypeIdentifier.Function(params, rt), lparen.begin, rt.end))
+            ParseResult.create[Pos, Pos[TypeIdentifier[Pos]]](Pos(TypeIdentifier.function(params, rt), lparen.begin, rt.end))
               .copy(errors = typesResult.errors ++ resultType.errors)
           case None =>
             ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.errors ++ resultType.errors)
         }
       } else {
-        // Parenthesized type
+        // Parenthesized or tuple type
         typesResult.value match {
           case Some(Vector(t)) =>
             ParseResult.create[Pos, Pos[TypeIdentifier[Pos]]](Pos(t.value, lparen.begin, rparen.end))
               .copy(errors = typesResult.errors)
-          case Some(_) =>
-            // Multiple types but no =>
-            val err: Pos[ParseError] = Pos(ParseError.UnexpectedToken(rparen.value), rparen.begin, rparen.end)
-            ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.errors :+ err)
+          case Some(elements) =>
+            ParseResult.create[Pos, Pos[TypeIdentifier[Pos]]](Pos(TypeIdentifier.tuple(elements), lparen.begin, rparen.end))
+              .copy(errors = typesResult.errors)
           case None =>
             ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.errors)
         }
