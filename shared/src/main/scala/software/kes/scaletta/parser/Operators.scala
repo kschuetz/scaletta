@@ -12,7 +12,7 @@ object Operators {
 
   def bindingPower(reservedWord: Token.ReservedWord): BindingPower = {
     reservedWord match {
-      case Token.Colon => BindingPower.Colon
+      case Token.Colon => BindingPower.Ascription
       case Token.Pipe => BindingPower.LogicalOr
       case Token.Ampersand => BindingPower.LogicalAnd
       case _ => bindingPowerByName(reservedWord.name)
@@ -29,7 +29,7 @@ object Operators {
         case '&' => BindingPower.LogicalAnd
         case '<' | '>' => BindingPower.Comparison
         case '!' | '=' => BindingPower.Equality
-        case ':' => BindingPower.Colon
+        case ':' => BindingPower.ColonOperator
         case '+' | '-' => BindingPower.Addition
         case '*' | '/' | '%' => BindingPower.Multiplication
         case ch if CharacterClass.isOperator(ch) => BindingPower.OtherSymbolicOperators

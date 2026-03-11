@@ -34,8 +34,8 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
     check("!=", BindingPower.Equality)
     check("!", BindingPower.Equality)
     check("=", BindingPower.Equality)
-    check(":", BindingPower.Colon)
-    check("::", BindingPower.Colon)
+    check(":", BindingPower.ColonOperator)
+    check("::", BindingPower.ColonOperator)
     check("+", BindingPower.Addition)
     check("-", BindingPower.Addition)
     check("*", BindingPower.Multiplication)
@@ -80,7 +80,7 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
       BindingPower.BindingPowerOrdering.compare(before, after) should be < 0
 
       // Nudge vs adjacent base levels
-      BindingPower.BindingPowerOrdering.compare(before, Colon) should be > 0
+      BindingPower.BindingPowerOrdering.compare(before, Comparison) should be > 0
       BindingPower.BindingPowerOrdering.compare(after, Multiplication) should be < 0
     }
   }
