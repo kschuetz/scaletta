@@ -51,34 +51,46 @@ final class Parser private() {
     }
 
     private def shouldContinue(minBindingPower: BindingPower, currentResult: ExprResult[Pos]): Boolean = {
-      if (currentResult.hasErrors) {
-        false
-      } else {
-        val nextToken = scanner.peek(1)
-        if (isStructuralBoundary(nextToken.value) && minBindingPower == BindingPower.Minimum) {
-          false
-        } else {
-          nextToken.value match {
-            case Token.LParen =>
-              // ( always has high precedence when acting as a postfix call
-              BindingPower.PostfixCall > minBindingPower
-            case idToken: Token.Identifier =>
-              val bp = Operators.bindingPower(idToken)
-              if (bp > minBindingPower) {
-                // If it's alphanumeric and we are at the top level,
-                // we check if it's followed by another expression.
-                // If it's not, then it's trailing garbage, not an infix operator.
-                if (minBindingPower == BindingPower.Minimum && !idToken.isInstanceOf[Token.Identifier.Operator]) {
-                  isFollowedByExpression
-                } else true
-              } else false
-            case rw: Token.ReservedWord =>
-              val bp = Operators.bindingPower(rw)
-              bp > minBindingPower
-            case _ => false
-          }
-        }
+      if (currentResult.hasErrors) return false
+
+      val nextPos = scanner.peek(1)
+      val nextToken = nextPos.value
+
+      // Check for structural boundaries at the top level (minBindingPower == Minimum)
+      if (minBindingPower == BindingPower.Minimum && isStructuralBoundary(nextToken)) {
+        return false
       }
+
+      nextToken match {
+        case Token.LParen => shouldContinueWithCall(minBindingPower)
+        case idToken: Token.Identifier => shouldContinueWithIdentifier(minBindingPower, idToken)
+        case rw: Token.ReservedWord => shouldContinueWithReservedWord(minBindingPower, rw)
+        case _ => false
+      }
+    }
+
+    private def shouldContinueWithCall(minBindingPower: BindingPower): Boolean = {
+      // ( acts as a postfix call with very high precedence
+      BindingPower.PostfixCall > minBindingPower
+    }
+
+    private def shouldContinueWithIdentifier(minBindingPower: BindingPower, idToken: Token.Identifier): Boolean = {
+      val bp = Operators.bindingPower(idToken)
+      if (bp > minBindingPower) {
+        // Alphanumeric infix check: if we are at the top level and it's not a symbolic operator,
+        // ensure it's actually followed by an expression to avoid consuming trailing garbage.
+        if (minBindingPower == BindingPower.Minimum && !idToken.isInstanceOf[Token.Identifier.Operator]) {
+          isFollowedByExpression
+        } else {
+          true
+        }
+      } else {
+        false
+      }
+    }
+
+    private def shouldContinueWithReservedWord(minBindingPower: BindingPower, rw: Token.ReservedWord): Boolean = {
+      Operators.bindingPower(rw) > minBindingPower
     }
 
     private def nud(token: Pos[Token]): ExprResult[Pos] = {
