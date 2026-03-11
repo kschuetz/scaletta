@@ -101,7 +101,7 @@ final class Parser private() {
         case Token.False => ParseResult.create(token.as(Literal.false_()))
         case Token.Null => ParseResult.create(token.as(Literal.null_()))
         case idToken: Token.Identifier =>
-          val id = token.as(Identifier(idToken.name))
+          val id = token.as(Identifier[Pos](idToken.name))
           ParseResult.create(token.as(Reference.single(id)))
         case Token.LParen =>
           parseParenthesizedExpression(token)
@@ -254,7 +254,7 @@ final class Parser private() {
       val nameToken = scanner.get()
       nameToken.value match {
         case idToken: Token.Identifier =>
-          val name = nameToken.as(Identifier(idToken.name))
+          val name = nameToken.as(Identifier[Pos](idToken.name))
           // For now, support simple 'def name = expr' without params
           val eqToken = scanner.get()
           if (eqToken.value == Token.Eq) {
@@ -277,7 +277,7 @@ final class Parser private() {
       val token = scanner.get()
       token.value match {
         case idToken: Token.Identifier =>
-          val id = token.as(Identifier(idToken.name))
+          val id = token.as(Identifier[Pos](idToken.name))
           ParseResult(Some(token.as(Pattern.Identifier(id))))
         case Token.Underscore =>
           ParseResult(Some(token.as(Pattern.Wildcard())))
@@ -340,7 +340,7 @@ final class Parser private() {
 
       (leftResult.value, rightResult.value) match {
         case (Some(left), Some(right)) =>
-          val opId = Pos(Identifier(opName), opToken.begin, opToken.end)
+          val opId = Pos(Identifier[Pos](opName), opToken.begin, opToken.end)
           var res: ExprResult[Pos] = ParseResult(
             value = Some(Pos(
               Call.infix(left, opId, Vector.empty, right),

@@ -2,12 +2,12 @@ package software.kes.scaletta.ast
 
 import software.kes.scaletta.util.functional.{Functor, ~>}
 
-case class FormalParameter[F[_]](name: F[Identifier],
+case class FormalParameter[F[_]](name: F[Identifier[F]],
                                  typ: F[TypeIdentifier],
                                  default: Option[F[Expression[F]]] = None) {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): FormalParameter[G] =
     FormalParameter(
-      phi(name),
+      phi(F.map(name)(_.mapK(phi))),
       phi(typ),
       default.map(d => phi(F.map(d)(_.mapK(phi))))
     )

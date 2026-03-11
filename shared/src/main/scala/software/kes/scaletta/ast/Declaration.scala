@@ -13,7 +13,7 @@ object Declaration {
   def lazyVal[F[_]](pattern: F[Pattern[F]], rhs: F[Expression[F]]): Declaration[F] =
     LazyVal(pattern, rhs)
 
-  def def_[F[_]](name: F[Identifier],
+  def def_[F[_]](name: F[Identifier[F]],
                  params: Vector[F[FormalParameterGroup[F]]],
                  body: F[Expression[F]]): Declaration[F] =
     Def(name, params, body)
@@ -27,12 +27,12 @@ object Declaration {
       )
   }
 
-  case class Def[F[_]](name: F[Identifier],
+  case class Def[F[_]](name: F[Identifier[F]],
                        params: Vector[F[FormalParameterGroup[F]]],
                        body: F[Expression[F]]) extends Declaration[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Def[G] =
       Def(
-        phi(name),
+        phi(F.map(name)(_.mapK(phi))),
         params.map(p => phi(F.map(p)(_.mapK(phi)))),
         phi(F.map(body)(_.mapK(phi)))
       )

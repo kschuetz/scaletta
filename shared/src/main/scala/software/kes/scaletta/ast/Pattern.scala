@@ -9,9 +9,9 @@ sealed trait Pattern[F[_]] {
 
 object Pattern {
   /** Matches any value and binds it to a name. */
-  case class Identifier[F[_]](name: F[ast.Identifier]) extends Pattern[F] {
+  case class Identifier[F[_]](name: F[ast.Identifier[F]]) extends Pattern[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Identifier[G] =
-      Identifier(phi(name))
+      Identifier(phi(F.map(name)(_.mapK(phi))))
   }
 
   /** Wildcard pattern `_` that matches anything without binding. */
@@ -26,9 +26,9 @@ object Pattern {
   }
 
   /** Binds a name to a value if it matches another pattern: `name @ pattern`. */
-  case class As[F[_]](name: F[ast.Identifier], pattern: F[Pattern[F]]) extends Pattern[F] {
+  case class As[F[_]](name: F[ast.Identifier[F]], pattern: F[Pattern[F]]) extends Pattern[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): As[G] =
-      As(phi(name), phi(F.map(pattern)(_.mapK(phi))))
+      As(phi(F.map(name)(_.mapK(phi))), phi(F.map(pattern)(_.mapK(phi))))
   }
 
   /** Matches if the value satisfies a type test: `pattern: Type`. */

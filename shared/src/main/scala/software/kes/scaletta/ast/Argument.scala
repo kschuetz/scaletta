@@ -3,9 +3,9 @@ package software.kes.scaletta.ast
 import software.kes.scaletta.util.functional.{Functor, ~>}
 
 case class Argument[F[_]](value: F[Expression[F]],
-                          name: Option[F[Identifier]] = None) {
+                          name: Option[F[Identifier[F]]] = None) {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Argument[G] =
-    Argument(phi(F.map(value)(_.mapK(phi))), name.map(phi.apply))
+    Argument(phi(F.map(value)(_.mapK(phi))), name.map(n => phi(F.map(n)(_.mapK(phi)))))
 }
 
 case class ArgumentGroup[F[_]](arguments: Vector[F[Argument[F]]],

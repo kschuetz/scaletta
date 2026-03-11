@@ -2,6 +2,7 @@ package software.kes.scaletta.testsupport
 
 import org.scalacheck.{Arbitrary, Gen}
 import software.kes.scaletta.ast._
+import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.util.functional.Id._
 
 object AstGenerators {
@@ -26,7 +27,7 @@ object AstGenerators {
   def genReference: Gen[Reference[Id]] = for {
     parts <- Gen.nonEmptyListOf(genIdentifier)
   } yield {
-    val idents = parts.map(Identifier(_))
+    val idents = parts.map(Identifier[Id](_))
     Reference[Id](::(idents.head, idents.tail))
   }
 
@@ -34,22 +35,22 @@ object AstGenerators {
     if (depth <= 0) {
       Gen.oneOf(
         Gen.const(Pattern.Wildcard[Id]()),
-        genIdentifier.map(n => Pattern.Identifier[Id](Identifier(n))),
+        genIdentifier.map(n => Pattern.Identifier[Id](Identifier[Id](n))),
         genLiteral.map(l => Pattern.Literal[Id](l))
       )
     } else {
       Gen.frequency(
         (3, Gen.const(Pattern.Wildcard[Id]())),
-        (3, genIdentifier.map(n => Pattern.Identifier[Id](Identifier(n)))),
+        (3, genIdentifier.map(n => Pattern.Identifier[Id](Identifier[Id](n)))),
         (2, genLiteral.map(l => Pattern.Literal[Id](l))),
         (1, for {
           name <- genIdentifier
           p <- genPattern(depth - 1)
-        } yield Pattern.As[Id](Identifier(name), p)),
+        } yield Pattern.As[Id](Identifier[Id](name), p)),
         (1, for {
           p <- genPattern(depth - 1)
           t <- genTypeIdentifier
-        } yield Pattern.Typed[Id](p, TypeIdentifier.name(Identifier(t)))),
+        } yield Pattern.Typed[Id](p, TypeIdentifier.name(Identifier[Pos](t)))),
         (1, for {
           n <- Gen.choose(2, 4)
           elements <- Gen.listOfN(n, genPattern(depth - 1))
@@ -58,7 +59,7 @@ object AstGenerators {
           t <- genTypeIdentifier
           n <- Gen.choose(0, 3)
           args <- Gen.listOfN(n, genPattern(depth - 1))
-        } yield Pattern.Product[Id](TypeIdentifier.name(Identifier(t)), args.toVector))
+        } yield Pattern.Product[Id](TypeIdentifier.name(Identifier[Pos](t)), args.toVector))
       )
     }
   }
@@ -86,7 +87,7 @@ object AstGenerators {
           left <- genExpression(depth - 1)
           op <- Gen.oneOf("+", "-", "*", "/", "==", "!=", "<", ">", "&&", "||")
           right <- genExpression(depth - 1)
-        } yield Call.infix[Id](left, Identifier(op), Vector.empty, right)),
+        } yield Call.infix[Id](left, Identifier[Id](op), Vector.empty, right)),
         (1, for {
           cond <- genExpression(depth - 1)
           thenB <- genExpression(depth - 1)
@@ -129,10 +130,10 @@ object AstGenerators {
           group <- Gen.listOfN(nP, for {
             pName <- genIdentifier
             pType <- genTypeIdentifier
-          } yield FormalParameter[Id](Identifier(pName), TypeIdentifier.name(Identifier(pType)), None))
+          } yield FormalParameter[Id](Identifier[Id](pName), TypeIdentifier.name(Identifier[Pos](pType)), None))
         } yield FormalParameterGroup[Id](group.toVector))
         body <- genExpression(depth)
-      } yield Declaration.def_[Id](Identifier(name), params.toVector, body)
+      } yield Declaration.def_[Id](Identifier[Id](name), params.toVector, body)
     )
   }
 

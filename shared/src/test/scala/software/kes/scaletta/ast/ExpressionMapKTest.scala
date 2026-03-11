@@ -3,6 +3,7 @@ package software.kes.scaletta.ast
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.Interpolator
+import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.util.functional.Id._
 import software.kes.scaletta.util.functional.~>
 
@@ -27,15 +28,15 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     }
 
     it("should transform Reference") {
-      val expr = Reference[Id](::(Identifier("a"), List(Identifier("b"))))
+      val expr = Reference[Id](::(Identifier[Id]("a"), List(Identifier[Id]("b"))))
       val result = expr.mapK(idToOption)
-      result shouldBe Reference[Option](::(Some(Identifier("a")), List(Some(Identifier("b")))))
+      result shouldBe Reference[Option](::(Some(Identifier[Option]("a")), List(Some(Identifier[Option]("b")))))
     }
 
     it("should transform Typed") {
-      val expr = Typed[Id](Literal.Null[Id](), TypeIdentifier.name(Identifier("Int")))
+      val expr = Typed[Id](Literal.Null[Id](), TypeIdentifier.name(Identifier[Pos]("Int")))
       val result = expr.mapK(idToOption)
-      result shouldBe Typed[Option](Some(Literal.Null[Option]()), Some(TypeIdentifier.name(Identifier("Int"))))
+      result shouldBe Typed[Option](Some(Literal.Null[Option]()), Some(TypeIdentifier.name(Identifier[Pos]("Int"))))
     }
 
     it("should transform all Literal types") {
@@ -67,8 +68,8 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     }
 
     it("should transform Call.Standard") {
-      val target = Reference[Id](::(Identifier("f"), Nil))
-      val typeArg = TypeArgument[Id](TypeIdentifier.name(Identifier("T")))
+      val target = Reference[Id](::(Identifier[Id]("f"), Nil))
+      val typeArg = TypeArgument[Id](TypeIdentifier.name(Identifier[Pos]("T")))
       val argGroup = ArgumentGroup[Id](Vector(Argument[Id](Literal.IntLiteral[Id](1))))
       val expr = Call.Standard[Id](target, Vector(typeArg), Vector(argGroup))
 
@@ -83,13 +84,13 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     it("should transform Call.Infix") {
       val left = Literal.IntLiteral[Id](1)
       val right = Literal.IntLiteral[Id](2)
-      val op = Identifier("+")
+      val op = Identifier[Id]("+")
       val expr = Call.Infix[Id](left, op, Vector.empty, right)
 
       val result = expr.mapK(idToOption)
       result shouldBe Call.Infix[Option](
         Some(left.mapK(idToOption)),
-        Some(op),
+        Some(op.mapK(idToOption)),
         Vector.empty,
         Some(right.mapK(idToOption))
       )
@@ -97,19 +98,19 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
 
     it("should transform Call.Postfix") {
       val target = Literal.IntLiteral[Id](1)
-      val op = Identifier("++")
+      val op = Identifier[Id]("++")
       val expr = Call.Postfix[Id](target, op)
 
       val result = expr.mapK(idToOption)
       result shouldBe Call.Postfix[Option](
         Some(target.mapK(idToOption)),
-        Some(op)
+        Some(op.mapK(idToOption))
       )
     }
 
     it("should transform Lambda") {
-      val param = LambdaParameter[Id](Identifier("x"), Some(TypeIdentifier.name(Identifier("Int"))))
-      val body = Reference[Id](::(Identifier("x"), Nil))
+      val param = LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name(Identifier[Pos]("Int"))))
+      val body = Reference[Id](::(Identifier[Id]("x"), Nil))
       val expr = Lambda[Id](Vector(param), body)
 
       val result = expr.mapK(idToOption)

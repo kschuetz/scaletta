@@ -1,8 +1,8 @@
 package software.kes.scaletta.ast
 
-import software.kes.scaletta.util.functional.~>
+import software.kes.scaletta.util.functional.{Functor, ~>}
 
-case class LambdaParameter[F[_]](name: F[Identifier], typ: Option[F[TypeIdentifier]]) {
-  def mapK[G[_]](phi: F ~> G): LambdaParameter[G] =
-    LambdaParameter(phi(name), typ.map(phi.apply))
+case class LambdaParameter[F[_]](name: F[Identifier[F]], typ: Option[F[TypeIdentifier]]) {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): LambdaParameter[G] =
+    LambdaParameter(phi(F.map(name)(_.mapK(phi))), typ.map(phi.apply))
 }

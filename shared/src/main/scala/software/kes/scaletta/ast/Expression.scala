@@ -17,13 +17,13 @@ case class Block[F[_]](declarations: Vector[F[Declaration[F]]],
 }
 
 object Reference {
-  def single[F[_]](id: F[Identifier]): Reference[F] =
+  def single[F[_]](id: F[Identifier[F]]): Reference[F] =
     Reference(::(id, Nil))
 }
 
-case class Reference[F[_]](path: ::[F[Identifier]]) extends Expression[F] {
+case class Reference[F[_]](path: ::[F[Identifier[F]]]) extends Expression[F] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Reference[G] =
-    Reference(::(phi(path.head), path.tail.map(phi.apply)))
+    Reference(::(phi(F.map(path.head)(_.mapK(phi))), path.tail.map(id => phi(F.map(id)(_.mapK(phi))))))
 }
 
 case class Typed[F[_]](expression: F[Expression[F]],
@@ -130,13 +130,13 @@ object Call {
     Standard(target, typeArgs, args)
 
   def infix[F[_]](left: F[Expression[F]],
-                  operation: F[Identifier],
+                  operation: F[Identifier[F]],
                   typeArgs: Vector[F[TypeArgument[F]]],
                   right: F[Expression[F]]): Call[F] =
     Infix(left, operation, typeArgs, right)
 
   def postfix[F[_]](target: F[Expression[F]],
-                    operation: F[Identifier]): Call[F] =
+                    operation: F[Identifier[F]]): Call[F] =
     Postfix(target, operation)
 
   case class Standard[F[_]](target: F[Expression[F]],
@@ -151,7 +151,7 @@ object Call {
   }
 
   case class Infix[F[_]](left: F[Expression[F]],
-                         operation: F[Identifier],
+                         operation: F[Identifier[F]],
                          typeArgs: Vector[F[TypeArgument[F]]],
                          right: F[Expression[F]]) extends Call[F] {
     def target: F[Expression[F]] = left
@@ -159,18 +159,18 @@ object Call {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Infix[G] =
       Infix(
         phi(F.map(left)(_.mapK(phi))),
-        phi(operation),
+        phi(F.map(operation)(_.mapK(phi))),
         typeArgs.map(ta => phi(F.map(ta)(_.mapK(phi)))),
         phi(F.map(right)(_.mapK(phi)))
       )
   }
 
   case class Postfix[F[_]](target: F[Expression[F]],
-                           operation: F[Identifier]) extends Call[F] {
+                           operation: F[Identifier[F]]) extends Call[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Postfix[G] =
       Postfix(
         phi(F.map(target)(_.mapK(phi))),
-        phi(operation)
+        phi(F.map(operation)(_.mapK(phi)))
       )
   }
 }

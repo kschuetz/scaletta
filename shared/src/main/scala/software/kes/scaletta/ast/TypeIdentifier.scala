@@ -1,13 +1,14 @@
 package software.kes.scaletta.ast
 
+import software.kes.scaletta.reporting.Pos
 import software.kes.scaletta.types.ConjunctionType
 
 sealed trait TypeIdentifier
 
 object TypeIdentifier {
-  def name(name: Identifier): TypeIdentifier = Name(name)
+  def name(name: Identifier[Pos]): TypeIdentifier = Name(name)
 
-  def applied(name: Identifier,
+  def applied(name: Identifier[Pos],
               args: TypeIdentifier*): TypeIdentifier = {
     args.toList match {
       case Nil => Name(name)
@@ -30,12 +31,12 @@ object TypeIdentifier {
     Function(params, result)
 
   /** A simple type referred to by name (e.g., `Int`, `String`). */
-  case class Name(name: Identifier) extends TypeIdentifier
+  case class Name(name: Identifier[Pos]) extends TypeIdentifier
 
   /**
    * A type with arguments (e.g., `List[Int]`).
    */
-  case class Applied(name: Identifier, args: ::[TypeIdentifier]) extends TypeIdentifier
+  case class Applied(name: Identifier[Pos], args: ::[TypeIdentifier]) extends TypeIdentifier
 
   /**
    * A function type (e.g., `(Int, String) => Boolean`).
