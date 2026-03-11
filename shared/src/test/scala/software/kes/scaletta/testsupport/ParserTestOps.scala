@@ -3,7 +3,7 @@ package software.kes.scaletta.testsupport
 import org.scalactic.source.Position
 import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.ast.Expression
+import software.kes.scaletta.ast.{Expression, TypeIdentifier}
 import software.kes.scaletta.parser.{ParseError, ParseHint, ParseOptions, ParseWarning}
 import software.kes.scaletta.reporting.{LineMap, Pos}
 import software.kes.scaletta.util.functional.Id._
@@ -11,6 +11,28 @@ import software.kes.scaletta.util.functional.Id._
 object ParserTestOps {
 
   implicit class ParserStringOps(val input: String) extends AnyVal {
+
+    def shouldParseTypeTo(expected: TypeIdentifier[Id])
+                         (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
+      import matchers._
+      val result = support.parseType(input)
+      if (result.errors.nonEmpty) {
+        val errorMsg = result.errors.map(e => s"${e.value} at ${e.begin.value}").mkString(", ")
+        fail(s"Type parser errors for input '$input': $errorMsg")
+      }
+      result.value match {
+        case Some(v) => v.value.mapK(support.posToId) shouldBe expected
+        case None => fail(s"Type parser returned no value for input: $input")
+      }
+    }
+
+    def shouldFailToParseTypeWith(expectedErrors: ParseErrorMatchers.ErrorWithPosition*)
+                                 (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {
+      import ParseErrorMatchers._
+      import matchers._
+      val diag = support.parseTypeWithDiagnostics(input)
+      diag.errors should matchExactlyErrors(input, diag.lineMap, expectedErrors.toVector)
+    }
 
     def shouldParseTo(expected: Expression[Id])
                      (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): Unit = {

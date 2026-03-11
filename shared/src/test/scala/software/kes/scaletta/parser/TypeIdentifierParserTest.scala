@@ -1,0 +1,98 @@
+package software.kes.scaletta.parser
+
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.ast.{Identifier, TypeIdentifier}
+import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.testsupport.{ParseErrorMatchers, ParserTestSupport}
+import software.kes.scaletta.types.ConjunctionType
+import software.kes.scaletta.util.functional.Id.Id
+
+class TypeIdentifierParserTest extends AnyFunSpec with Matchers {
+  private implicit val support: ParserTestSupport = new ParserTestSupport() with Matchers
+  private implicit val matchers: Matchers = Matchers
+
+  import ParseErrorMatchers._
+  import software.kes.scaletta.testsupport.ParserTestOps._
+
+  describe("TypeIdentifierParser") {
+    it("should parse simple names") {
+      "Int".shouldParseTypeTo(tName("Int"))
+      "String".shouldParseTypeTo(tName("String"))
+      "MyType".shouldParseTypeTo(tName("MyType"))
+    }
+
+    it("should parse applied types") {
+      "List[Int]".shouldParseTypeTo(tApplied("List", tName("Int")))
+      "Map[String, Int]".shouldParseTypeTo(tApplied("Map", tName("String"), tName("Int")))
+      "Option[Option[Int]]".shouldParseTypeTo(tApplied("Option", tApplied("Option", tName("Int"))))
+    }
+
+    it("should parse union types") {
+      "Int | String".shouldParseTypeTo(tUnion(tName("Int"), tName("String")))
+      "Int | String | Boolean".shouldParseTypeTo(tUnion(tName("Int"), tName("String"), tName("Boolean")))
+    }
+
+    it("should parse intersection types") {
+      "A & B".shouldParseTypeTo(tIntersection(tName("A"), tName("B")))
+      "A & B & C".shouldParseTypeTo(tIntersection(tName("A"), tName("B"), tName("C")))
+    }
+
+    it("should respect precedence between & and |") {
+      // & binds tighter than |
+      "A | B & C".shouldParseTypeTo(tUnion(tName("A"), tIntersection(tName("B"), tName("C"))))
+      "A & B | C".shouldParseTypeTo(tUnion(tIntersection(tName("A"), tName("B")), tName("C")))
+    }
+
+    it("should parse function types") {
+      "Int => String".shouldParseTypeTo(tFunction(Vector(tName("Int")), tName("String")))
+      "(Int, String) => Boolean".shouldParseTypeTo(tFunction(Vector(tName("Int"), tName("String")), tName("Boolean")))
+      "() => Unit".shouldParseTypeTo(tFunction(Vector.empty, tName("Unit")))
+    }
+
+    it("should parse right-associative function types") {
+      "A => B => C".shouldParseTypeTo(tFunction(Vector(tName("A")), tFunction(Vector(tName("B")), tName("C"))))
+    }
+
+    it("should parse parenthesized types") {
+      "(Int)".shouldParseTypeTo(tName("Int"))
+      "(Int | String)".shouldParseTypeTo(tUnion(tName("Int"), tName("String")))
+      "((A))".shouldParseTypeTo(tName("A"))
+    }
+
+    it("should parse complex nested types") {
+      "(A | B) & C => List[D]".shouldParseTypeTo(tFunction(
+        Vector(tIntersection(tUnion(tName("A"), tName("B")), tName("C"))),
+        tApplied("List", tName("D"))
+      ))
+    }
+
+    it("should parse function types with complex parameters") {
+      "(A | B, C & D) => E".shouldParseTypeTo(tFunction(
+        Vector(tUnion(tName("A"), tName("B")), tIntersection(tName("C"), tName("D"))),
+        tName("E")
+      ))
+    }
+
+    it("should fail on unclosed brackets") {
+      "List[Int".shouldFailToParseTypeWith(ParseError.UnclosedDelimiter(Token.LBracket, Token.RBracket).at(4))
+    }
+  }
+
+  private def id(name: String): Id[Identifier[Id]] = Identifier[Id](name)
+
+  private def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.Name[Id](id(name))
+
+  private def tApplied(name: String, args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.Applied[Id](id(name), ::(args.head, args.tail.toList))
+
+  private def tUnion(components: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.Conjunction[Id](ConjunctionType.Union, components.toVector)
+
+  private def tIntersection(components: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.Conjunction[Id](ConjunctionType.Intersection, components.toVector)
+
+  private def tFunction(params: Vector[TypeIdentifier[Id]], result: TypeIdentifier[Id]): TypeIdentifier[Id] =
+    TypeIdentifier.Function[Id](params, result)
+
+}

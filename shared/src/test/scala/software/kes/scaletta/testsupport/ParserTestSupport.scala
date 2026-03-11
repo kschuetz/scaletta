@@ -2,7 +2,7 @@ package software.kes.scaletta.testsupport
 
 import org.scalactic.source.Position
 import org.scalatest.Assertions
-import software.kes.scaletta.ast.Expression
+import software.kes.scaletta.ast.{Expression, TypeIdentifier}
 import software.kes.scaletta.parser._
 import software.kes.scaletta.reader.SourceReader
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}
@@ -17,7 +17,9 @@ import software.kes.scaletta.util.functional.~>
  * to ensure consistent environment configuration across tests.
  */
 class ParserTestSupport() {
-  self: Assertions =>
+  private object assertions extends Assertions
+
+  import assertions._
 
   object posToId extends (Pos ~> Id) {
     def apply[A](fa: Pos[A]): Id[A] = fa.value
@@ -28,6 +30,52 @@ class ParserTestSupport() {
                               warnings: Vector[Pos[ParseWarning]],
                               hints: Vector[Pos[ParseHint]],
                               lineMap: LineMap)
+
+  case class TypeDiagnostics(ast: Option[TypeIdentifier[Id]],
+                             errors: Vector[Pos[ParseError]],
+                             warnings: Vector[Pos[ParseWarning]],
+                             hints: Vector[Pos[ParseHint]],
+                             lineMap: LineMap)
+
+  /**
+   * Parses the input string as a type identifier and returns the full [[ParseResult]].
+   */
+  def parseType(input: String): TypeResult[Pos] = {
+    val reader = SourceReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
+    val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+    TypeIdentifierParser.parse(scanner)
+  }
+
+  /**
+   * Parses the input string as a type identifier and returns the AST with positional information stripped.
+   */
+  def parseTypeValue(input: String)(implicit pos: Position): TypeIdentifier[Id] = {
+    val result = parseType(input)
+    if (result.errors.nonEmpty) {
+      val errorMsg = result.errors.map(e => s"${e.value} at ${e.begin.value}").mkString(", ")
+      fail(s"Type parser errors for input '$input': $errorMsg")
+    }
+    result.value match {
+      case Some(p) => p.value.mapK(posToId)
+      case None => fail(s"Type parser returned no value for input: $input")
+    }
+  }
+
+  /**
+   * Parses the input string as a type identifier and returns the AST, any errors, warnings, and the line map.
+   */
+  def parseTypeWithDiagnostics(input: String): TypeDiagnostics = {
+    val reader = SourceReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
+    val scanner = Scanner.create(reader, IdentifierPolicy.Default)
+    val result = TypeIdentifierParser.parse(scanner)
+    TypeDiagnostics(
+      result.value.map(_.value.mapK(posToId)),
+      result.errors,
+      result.warnings,
+      result.hints,
+      reader.lineMap
+    )
+  }
 
   /**
    * Parses the input string and returns the full [[ParseResult]].
