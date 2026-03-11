@@ -3,21 +3,34 @@ package software.kes.scaletta.parser
 import software.kes.scaletta.reporting.Pos
 
 case class ParseResult[F[_], +A](value: Option[A] = None,
-                                 errors: Vector[Pos[ParseError]] = Vector.empty,
-                                 warnings: Vector[Pos[ParseWarning]] = Vector.empty,
-                                 hints: Vector[Pos[ParseHint]] = Vector.empty) {
+                                 diagnostics: ParseDiagnostics = ParseDiagnostics.empty) {
+  def errors: Vector[Pos[ParseError]] = diagnostics.errors
+
+  def warnings: Vector[Pos[ParseWarning]] = diagnostics.warnings
+
+  def hints: Vector[Pos[ParseHint]] = diagnostics.hints
+
   def isSuccess: Boolean = value.isDefined && !hasErrors
 
-  def hasErrors: Boolean = errors.nonEmpty
+  def hasErrors: Boolean = diagnostics.hasErrors
 
   def addError(error: Pos[ParseError]): ParseResult[F, A] =
-    copy(errors = errors :+ error)
+    modifyDiagnostics(_.addError(error))
 
   def addWarning(warning: Pos[ParseWarning]): ParseResult[F, A] =
-    copy(warnings = warnings :+ warning)
+    modifyDiagnostics(_.addWarning(warning))
 
   def addHint(hint: Pos[ParseHint]): ParseResult[F, A] =
-    copy(hints = hints :+ hint)
+    modifyDiagnostics(_.addHint(hint))
+
+  /**
+   * Combines diagnostics from another result into this one.
+   */
+  def addDiagnostics(other: ParseDiagnostics): ParseResult[F, A] =
+    modifyDiagnostics(_ ++ other)
+
+  private def modifyDiagnostics(fn: ParseDiagnostics => ParseDiagnostics): ParseResult[F, A] =
+    copy(diagnostics = fn(diagnostics))
 }
 
 object ParseResult {
@@ -25,5 +38,11 @@ object ParseResult {
 
   def create[F[_], A](value: A): ParseResult[F, A] = ParseResult(Some(value))
 
-  def error[F[_], A](error: Pos[ParseError]): ParseResult[F, A] = ParseResult(errors = Vector(error))
+  def error[F[_], A](error: Pos[ParseError]): ParseResult[F, A] = ParseResult(diagnostics = ParseDiagnostics.empty.addError(error))
+
+  /**
+   * Aggregates diagnostics from multiple results into a single Diagnostics object.
+   */
+  def combineDiagnostics[F[_]](results: Iterable[ParseResult[F, _]]): ParseDiagnostics =
+    results.foldLeft(ParseDiagnostics.empty)(_ ++ _.diagnostics)
 }

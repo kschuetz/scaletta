@@ -25,17 +25,25 @@ class ParserTestSupport() {
     def apply[A](fa: Pos[A]): Id[A] = fa.value
   }
 
-  case class ParseDiagnostics(ast: Option[Expression[Id]],
-                              errors: Vector[Pos[ParseError]],
-                              warnings: Vector[Pos[ParseWarning]],
-                              hints: Vector[Pos[ParseHint]],
-                              lineMap: LineMap)
+  case class ExprDiagnostics(ast: Option[Expression[Id]],
+                             diagnostics: ParseDiagnostics,
+                             lineMap: LineMap) {
+    def errors: Vector[Pos[ParseError]] = diagnostics.errors
+
+    def warnings: Vector[Pos[ParseWarning]] = diagnostics.warnings
+
+    def hints: Vector[Pos[ParseHint]] = diagnostics.hints
+  }
 
   case class TypeDiagnostics(ast: Option[TypeIdentifier[Id]],
-                             errors: Vector[Pos[ParseError]],
-                             warnings: Vector[Pos[ParseWarning]],
-                             hints: Vector[Pos[ParseHint]],
-                             lineMap: LineMap)
+                             diagnostics: ParseDiagnostics,
+                             lineMap: LineMap) {
+    def errors: Vector[Pos[ParseError]] = diagnostics.errors
+
+    def warnings: Vector[Pos[ParseWarning]] = diagnostics.warnings
+
+    def hints: Vector[Pos[ParseHint]] = diagnostics.hints
+  }
 
   /**
    * Parses the input string as a type identifier and returns the full [[ParseResult]].
@@ -70,9 +78,7 @@ class ParserTestSupport() {
     val result = TypeIdentifierParser.parse(scanner)
     TypeDiagnostics(
       result.value.map(_.value.mapK(posToId)),
-      result.errors,
-      result.warnings,
-      result.hints,
+      result.diagnostics,
       reader.lineMap
     )
   }
@@ -108,16 +114,14 @@ class ParserTestSupport() {
   /**
    * Parses the input string and returns the expression, any errors, warnings, and the line map.
    */
-  def parseWithDiagnostics(input: String, options: ParseOptions = ParseOptions()): ParseDiagnostics = {
+  def parseWithDiagnostics(input: String, options: ParseOptions = ParseOptions()): ExprDiagnostics = {
     val reader = SourceReader.create(input.iterator, LineMapBuilder.create(LineMap.create()))
     val scanner = Scanner.create(reader, IdentifierPolicy.Default)
     val parser = Parser.create()
     val result = parser.parse(scanner, options)
-    ParseDiagnostics(
+    ExprDiagnostics(
       result.value.map(_.value.mapK(posToId)),
-      result.errors,
-      result.warnings,
-      result.hints,
+      result.diagnostics,
       reader.lineMap
     )
   }

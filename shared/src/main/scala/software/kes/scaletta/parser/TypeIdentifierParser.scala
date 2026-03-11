@@ -69,19 +69,17 @@ object TypeIdentifierParser {
               if (rbracket.value == Token.RBracket) {
                 scanner.get()
                 ParseResult(Some(Pos(TypeIdentifier.applied(idPos, args: _*), begin, rbracket.end)),
-                  nameResult.errors ++ argsResult.errors,
-                  nameResult.warnings ++ argsResult.warnings,
-                  nameResult.hints ++ argsResult.hints)
+                  nameResult.diagnostics ++ argsResult.diagnostics)
               } else {
                 val err: Pos[ParseError] = Pos(ParseError.UnclosedDelimiter(Token.LBracket, Token.RBracket), begin + idPos.value.name.length, begin + idPos.value.name.length + 1)
                 ParseResult(Some(Pos(TypeIdentifier.applied(idPos, args: _*), begin, rbracket.begin)),
-                  nameResult.errors ++ argsResult.errors :+ err)
+                  (nameResult.diagnostics ++ argsResult.diagnostics).addError(err))
               }
             case _ =>
               // Empty brackets or error in args
               val rbracket = scanner.get()
               val err: Pos[ParseError] = Pos(ParseError.UnexpectedToken(rbracket.value), rbracket.begin, rbracket.end)
-              ParseResult(None, nameResult.errors ++ argsResult.errors :+ err)
+              ParseResult(None, (nameResult.diagnostics ++ argsResult.diagnostics).addError(err))
           }
         case _ =>
           // Should not happen if called correctly
@@ -99,11 +97,9 @@ object TypeIdentifierParser {
             case _ => Vector(l, r)
           }
           ParseResult(Some(Pos(TypeIdentifier.Conjunction(cType, components), l.begin, r.end)),
-            left.errors ++ right.errors,
-            left.warnings ++ right.warnings,
-            left.hints ++ right.hints)
+            left.diagnostics ++ right.diagnostics)
         case _ =>
-          ParseResult(None, left.errors ++ right.errors)
+          ParseResult(None, left.diagnostics ++ right.diagnostics)
       }
     }
 
@@ -114,11 +110,9 @@ object TypeIdentifierParser {
         case (Some(l), Some(r)) =>
           val params = Vector(l)
           ParseResult(Some(Pos(TypeIdentifier.function(params, r), l.begin, r.end)),
-            left.errors ++ right.errors,
-            left.warnings ++ right.warnings,
-            left.hints ++ right.hints)
+            left.diagnostics ++ right.diagnostics)
         case _ =>
-          ParseResult(None, left.errors ++ right.errors)
+          ParseResult(None, left.diagnostics ++ right.diagnostics)
       }
     }
 
@@ -129,7 +123,7 @@ object TypeIdentifierParser {
 
       if (rparen.value != Token.RParen) {
         val err: Pos[ParseError] = Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lparen.begin, lparen.end)
-        return ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.errors :+ err)
+        return ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.diagnostics.addError(err))
       }
       scanner.get() // consume ')'
 
@@ -141,28 +135,28 @@ object TypeIdentifierParser {
           case Some(rt) =>
             val params = typesResult.value.getOrElse(Vector.empty)
             ParseResult.create[Pos, Pos[TypeIdentifier[Pos]]](Pos(TypeIdentifier.function(params, rt), lparen.begin, rt.end))
-              .copy(errors = typesResult.errors ++ resultType.errors)
+              .addDiagnostics(typesResult.diagnostics ++ resultType.diagnostics)
           case None =>
-            ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.errors ++ resultType.errors)
+            ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.diagnostics ++ resultType.diagnostics)
         }
       } else {
         // Parenthesized or tuple type
         typesResult.value match {
           case Some(Vector(t)) =>
             ParseResult.create[Pos, Pos[TypeIdentifier[Pos]]](Pos(t.value, lparen.begin, rparen.end))
-              .copy(errors = typesResult.errors)
+              .addDiagnostics(typesResult.diagnostics)
           case Some(elements) =>
             ParseResult.create[Pos, Pos[TypeIdentifier[Pos]]](Pos(TypeIdentifier.tuple(elements), lparen.begin, rparen.end))
-              .copy(errors = typesResult.errors)
+              .addDiagnostics(typesResult.diagnostics)
           case None =>
-            ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.errors)
+            ParseResult[Pos, Pos[TypeIdentifier[Pos]]](None, typesResult.diagnostics)
         }
       }
     }
 
     private def parseCommaSeparatedTypes(terminal: Token): ParseResult[Pos, Vector[Pos[TypeIdentifier[Pos]]]] = {
       var results = Vector.empty[Pos[TypeIdentifier[Pos]]]
-      var errors = Vector.empty[Pos[ParseError]]
+      var diagnostics = ParseDiagnostics.empty
 
       if (scanner.peek(1).value == terminal) {
         return ParseResult(Some(results))
@@ -173,9 +167,9 @@ object TypeIdentifierParser {
         val t = parseTypeIdentifier(BindingPower.Minimum)
         t.value match {
           case Some(v) => results = results :+ v
-          case None => // error already in t.errors
+          case None => // error already in t.diagnostics
         }
-        errors = errors ++ t.errors
+        diagnostics = diagnostics ++ t.diagnostics
 
         val next = scanner.peek(1)
         if (next.value == Token.Comma) {
@@ -184,7 +178,7 @@ object TypeIdentifierParser {
         } else if (next.value != terminal && !isSynchronizationBoundary(next.value)) {
           // Unexpected token, try to recover
           val err: Pos[ParseError] = Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
-          errors = errors :+ err
+          diagnostics = diagnostics.addError(err)
           synchronize()
           if (scanner.peek(1).value == Token.Comma) {
             scanner.get()
@@ -194,7 +188,7 @@ object TypeIdentifierParser {
       }
 
       go()
-      ParseResult(Some(results), errors)
+      ParseResult(Some(results), diagnostics)
     }
 
     private def isSynchronizationBoundary(token: Token): Boolean = {
