@@ -23,9 +23,29 @@ class TypeIdentifierParserTest extends AnyFunSpec with Matchers {
     }
 
     it("should parse applied types") {
-      "List[Int]".shouldParseTypeTo(tApplied("List", tName("Int")))
-      "Map[String, Int]".shouldParseTypeTo(tApplied("Map", tName("String"), tName("Int")))
-      "Option[Option[Int]]".shouldParseTypeTo(tApplied("Option", tApplied("Option", tName("Int"))))
+      "List[Int]".shouldParseTypeTo(tApplied(tName("List"), tName("Int")))
+      "Map[String, Int]".shouldParseTypeTo(tApplied(tName("Map"), tName("String"), tName("Int")))
+      "Option[Option[Int]]".shouldParseTypeTo(tApplied(tName("Option"), tApplied(tName("Option"), tName("Int"))))
+    }
+
+    it("should parse qualified types") {
+      "foo.Bar".shouldParseTypeTo(tSelect(tName("foo"), "Bar"))
+      "foo.bar.Baz".shouldParseTypeTo(tSelect(tSelect(tName("foo"), "bar"), "Baz"))
+    }
+
+    it("should parse qualified applied types") {
+      "pkg.Type[Int]".shouldParseTypeTo(tApplied(tSelect(tName("pkg"), "Type"), tName("Int")))
+      "pkg.sub.Type[A, B]".shouldParseTypeTo(tApplied(tSelect(tSelect(tName("pkg"), "sub"), "Type"), tName("A"), tName("B")))
+    }
+
+    it("should parse qualified type parameters") {
+      "List[foo.Bar]".shouldParseTypeTo(tApplied(tName("List"), tSelect(tName("foo"), "Bar")))
+      "List[(foo.Bar, Baz)]".shouldParseTypeTo(
+        tApplied(tName("List"), tTuple(tSelect(tName("foo"), "Bar"), tName("Baz")))
+      )
+      "Map[pkg.Key, pkg.sub.Value]".shouldParseTypeTo(
+        tApplied(tName("Map"), tSelect(tName("pkg"), "Key"), tSelect(tSelect(tName("pkg"), "sub"), "Value"))
+      )
     }
 
     it("should parse union types") {
@@ -70,7 +90,7 @@ class TypeIdentifierParserTest extends AnyFunSpec with Matchers {
     it("should parse complex nested types") {
       "(A | B) & C => List[D]".shouldParseTypeTo(tFunction(
         Vector(tIntersection(tUnion(tName("A"), tName("B")), tName("C"))),
-        tApplied("List", tName("D"))
+        tApplied(tName("List"), tName("D"))
       ))
     }
 
@@ -90,8 +110,11 @@ class TypeIdentifierParserTest extends AnyFunSpec with Matchers {
 
   private def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.Name[Id](id(name))
 
-  private def tApplied(name: String, args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
-    TypeIdentifier.Applied[Id](id(name), ::(args.head, args.tail.toList))
+  private def tSelect(qualifier: TypeIdentifier[Id], name: String): TypeIdentifier[Id] =
+    TypeIdentifier.Select[Id](qualifier, id(name))
+
+  private def tApplied(qualifier: TypeIdentifier[Id], args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.Applied[Id](qualifier, ::(args.head, args.tail.toList))
 
   private def tUnion(components: TypeIdentifier[Id]*): TypeIdentifier[Id] =
     TypeIdentifier.Conjunction[Id](ConjunctionType.Union, components.toVector)

@@ -195,8 +195,12 @@ private class AstRenderer(settings: Settings,
 
   private def renderType(ti: TypeIdentifier[Id]): Unit = ti match {
     case TypeIdentifier.Name(id) => write(id.name)
-    case TypeIdentifier.Applied(id, args) =>
+    case TypeIdentifier.Select(qualifier, id) =>
+      renderType(qualifier)
+      write(".")
       write(id.name)
+    case TypeIdentifier.Applied(qualifier, args) =>
+      renderType(qualifier)
       write("[")
       renderCommaSeparated(args, renderType)
       write("]")

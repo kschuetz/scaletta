@@ -23,6 +23,8 @@ object TypeIdentifierParser {
       while (continue && result.value.isDefined) {
         val next = scanner.peek(1)
         next.value match {
+          case Token.Dot if BindingPower.MemberAccess > minPower =>
+            result = parseSelect(result)
           case Token.LBracket =>
             result = parseApplied(result)
           case Token.Ampersand if BindingPower.LogicalAnd > minPower =>
@@ -56,11 +58,9 @@ object TypeIdentifierParser {
       }
     }
 
-    private def parseApplied(nameResult: TypeResult[Pos]): TypeResult[Pos] = {
-      // nameResult is already a TypeIdentifier.Name
-      // We need to extract the identifier from it.
-      nameResult.value match {
-        case Some(Pos(TypeIdentifier.Name(idPos), begin, _)) =>
+    private def parseApplied(qualifierResult: TypeResult[Pos]): TypeResult[Pos] = {
+      qualifierResult.value match {
+        case Some(qualifierPos) =>
           scanner.get() // consume '['
           val argsResult = parseCommaSeparatedTypes(Token.RBracket)
           argsResult.value match {
@@ -68,22 +68,41 @@ object TypeIdentifierParser {
               val rbracket = scanner.peek(1)
               if (rbracket.value == Token.RBracket) {
                 scanner.get()
-                ParseResult(Some(Pos(TypeIdentifier.applied(idPos, args: _*), begin, rbracket.end)),
-                  nameResult.diagnostics ++ argsResult.diagnostics)
+                ParseResult(Some(Pos(TypeIdentifier.Applied(qualifierPos, ::(args.head, args.tail.toList)), qualifierPos.begin, rbracket.end)),
+                  qualifierResult.diagnostics ++ argsResult.diagnostics)
               } else {
-                val err: Pos[ParseError] = Pos(ParseError.UnclosedDelimiter(Token.LBracket, Token.RBracket), begin + idPos.value.name.length, begin + idPos.value.name.length + 1)
-                ParseResult(Some(Pos(TypeIdentifier.applied(idPos, args: _*), begin, rbracket.begin)),
-                  (nameResult.diagnostics ++ argsResult.diagnostics).addError(err))
+                val err: Pos[ParseError] = Pos(ParseError.UnclosedDelimiter(Token.LBracket, Token.RBracket), qualifierPos.end + 1, qualifierPos.end + 2)
+                ParseResult(Some(Pos(TypeIdentifier.Applied(qualifierPos, ::(args.head, args.tail.toList)), qualifierPos.begin, rbracket.begin)),
+                  (qualifierResult.diagnostics ++ argsResult.diagnostics).addError(err))
               }
             case _ =>
               // Empty brackets or error in args
               val rbracket = scanner.get()
               val err: Pos[ParseError] = Pos(ParseError.UnexpectedToken(rbracket.value), rbracket.begin, rbracket.end)
-              ParseResult(None, (nameResult.diagnostics ++ argsResult.diagnostics).addError(err))
+              ParseResult(None, (qualifierResult.diagnostics ++ argsResult.diagnostics).addError(err))
           }
         case _ =>
           // Should not happen if called correctly
-          nameResult.addError(Pos(ParseError.UnexpectedToken(scanner.peek(1).value), scanner.peek(1).begin, scanner.peek(1).end))
+          qualifierResult.addError(Pos(ParseError.UnexpectedToken(scanner.peek(1).value), scanner.peek(1).begin, scanner.peek(1).end))
+      }
+    }
+
+    private def parseSelect(qualifierResult: TypeResult[Pos]): TypeResult[Pos] = {
+      qualifierResult.value match {
+        case Some(qualifierPos) =>
+          scanner.get() // consume '.'
+          val next = scanner.peek(1)
+          next.value match {
+            case id: Token.Identifier =>
+              scanner.get()
+              val idPos: Pos[Identifier[Pos]] = Pos(Identifier(id.name), next.begin, next.end)
+              val selectPos: Pos[TypeIdentifier[Pos]] = Pos(TypeIdentifier.Select(qualifierPos, idPos), qualifierPos.begin, next.end)
+              ParseResult(Some(selectPos), qualifierResult.diagnostics)
+            case _ =>
+              val err: Pos[ParseError] = Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
+              ParseResult(None, qualifierResult.diagnostics.addError(err))
+          }
+        case None => qualifierResult
       }
     }
 
@@ -92,8 +111,8 @@ object TypeIdentifierParser {
       val right = parseTypeIdentifier(power)
       (left.value, right.value) match {
         case (Some(l), Some(r)) =>
-          val components = l.value match {
-            case TypeIdentifier.Conjunction(ct, comps) if ct == cType => comps :+ r
+          val components: Vector[Pos[TypeIdentifier[Pos]]] = l.value match {
+            case TypeIdentifier.Conjunction(ct, comps) if ct == cType => comps.asInstanceOf[Vector[Pos[TypeIdentifier[Pos]]]] :+ r
             case _ => Vector(l, r)
           }
           ParseResult(Some(Pos(TypeIdentifier.Conjunction(cType, components), l.begin, r.end)),

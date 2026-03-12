@@ -26,13 +26,15 @@ class TypeIdentifierTest extends AnyFunSpec with Matchers {
 
     describe("applied") {
       it("should create an Applied node with arguments") {
-        val ti = TypeIdentifier.applied(id(Identifier[Id]("List")), id(typeA))
-        ti shouldBe TypeIdentifier.Applied(id(Identifier[Id]("List")), ::(id(typeA), Nil))
+        val ti = TypeIdentifier.applied(id(TypeIdentifier.name(id(Identifier[Id]("List")))), id(typeA))
+        ti shouldBe TypeIdentifier.Applied(id(TypeIdentifier.name(id(Identifier[Id]("List")))), ::(id(typeA), Nil))
       }
 
-      it("should fall back to Name for zero arguments") {
-        val ti = TypeIdentifier.applied(id(Identifier[Id]("Int")))
-        ti shouldBe TypeIdentifier.Name(id(Identifier[Id]("Int")))
+      it("should fall back to Name for zero arguments when possible") {
+        val nameId = id(Identifier[Id]("Int"))
+        val qualifier: TypeIdentifier[Id] = TypeIdentifier.name(nameId)
+        val ti = TypeIdentifier.applied[Id](qualifier)
+        ti shouldBe TypeIdentifier.Name(nameId)
       }
     }
 
@@ -146,7 +148,7 @@ class TypeIdentifierTest extends AnyFunSpec with Matchers {
       }
 
       it("should transform Applied") {
-        val ti: TypeIdentifier[Id] = TypeIdentifier.applied(id(Identifier[Id]("List")), id(typeA))
+        val ti: TypeIdentifier[Id] = TypeIdentifier.applied(id(TypeIdentifier.name(id(Identifier[Id]("List")))), id(typeA))
         val mapped = ti.mapK(toId)
         mapped shouldBe ti
       }

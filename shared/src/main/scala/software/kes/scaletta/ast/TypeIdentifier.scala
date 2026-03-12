@@ -10,13 +10,23 @@ sealed trait TypeIdentifier[F[_]] {
 object TypeIdentifier {
   def name[F[_]](name: F[Identifier[F]]): TypeIdentifier[F] = Name(name)
 
-  def applied[F[_]](name: F[Identifier[F]],
-                    args: F[TypeIdentifier[F]]*)(implicit F: Functor[F]): TypeIdentifier[F] = {
+  def select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier[F]]): TypeIdentifier[F] =
+    Select(qualifier, name)
+
+  def applied[F[_]](qualifier: F[TypeIdentifier[F]],
+                    args: F[TypeIdentifier[F]]*)(implicit F: Functor[F]): TypeIdentifier[F] =
     args.toList match {
-      case Nil => Name(name)
-      case x :: xs => Applied(name, ::(x, xs))
+      case Nil =>
+        qualifier match {
+          case q: TypeIdentifier[F] => q
+          case _ =>
+            // This case handles when F[TypeIdentifier[F]] is not TypeIdentifier[F] (e.g. Pos[TypeIdentifier[Pos]])
+            // In that case, we can't easily extract the value without knowing F.
+            // But for the sake of the factory method's traditional behavior:
+            throw new IllegalArgumentException("applied with zero arguments called on a wrapped qualifier")
+        }
+      case x :: xs => Applied(qualifier, ::(x, xs))
     }
-  }
 
   def union[F[_]](first: F[TypeIdentifier[F]],
                   second: F[TypeIdentifier[F]],
@@ -41,14 +51,20 @@ object TypeIdentifier {
       Name(phi(F.map(name)(_.mapK(phi))))
   }
 
+  /** A qualified type (e.g., `foo.Bar`). */
+  case class Select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier[F]]) extends TypeIdentifier[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Select[G] =
+      Select(phi(F.map(qualifier)(_.mapK(phi))), phi(F.map(name)(_.mapK(phi))))
+  }
+
   /**
    * A type with arguments (e.g., `List[Int]`).
    */
-  case class Applied[F[_]](name: F[Identifier[F]], args: ::[F[TypeIdentifier[F]]]) extends TypeIdentifier[F] {
+  case class Applied[F[_]](qualifier: F[TypeIdentifier[F]], args: ::[F[TypeIdentifier[F]]]) extends TypeIdentifier[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Applied[G] = {
       val newArgs = args.map(a => phi(F.map(a)(_.mapK(phi))))
       Applied(
-        phi(F.map(name)(_.mapK(phi))),
+        phi(F.map(qualifier)(_.mapK(phi))),
         ::(newArgs.head, newArgs.tail)
       )
     }

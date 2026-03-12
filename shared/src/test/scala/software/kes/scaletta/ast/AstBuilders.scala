@@ -38,7 +38,7 @@ object AstBuilders {
   def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier[Id](name))
 
   def tApplied(name: String, args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
-    TypeIdentifier.applied[Id](Identifier[Id](name), args: _*)
+    TypeIdentifier.applied[Id](tName(name), args: _*)
 
   def tFunc(params: Vector[TypeIdentifier[Id]], result: TypeIdentifier[Id]): TypeIdentifier[Id] =
     TypeIdentifier.function[Id](params, result)
