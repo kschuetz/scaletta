@@ -27,7 +27,7 @@ object AstGenerators {
     parts <- Gen.nonEmptyListOf(genIdentifier)
   } yield {
     val idents = parts.map(Identifier[Id].apply)
-    var acc: Expression[Id] = Reference.single[Id](idents.head)
+    var acc: Expression[Id] = Reference[Id](idents.head)
     for (name <- idents.tail) {
       acc = Select[Id](acc, name)
     }

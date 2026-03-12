@@ -11,7 +11,7 @@ object AstBuilders {
 
   def litNull: Expression[Id] = Literal.null_()
 
-  def ref(name: String): Expression[Id] = Reference.single[Id](Identifier(name))
+  def ref(name: String): Expression[Id] = Reference[Id](Identifier(name))
 
   def select(qualifier: Expression[Id], name: String): Expression[Id] =
     Select[Id](qualifier, Identifier(name))

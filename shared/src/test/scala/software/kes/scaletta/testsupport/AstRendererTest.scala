@@ -15,7 +15,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
   }
 
   test("render reference") {
-    val ref = Select[Id](Reference.single[Id](Identifier[Id]("foo")), Identifier[Id]("bar"))
+    val ref = Select[Id](Reference[Id](Identifier[Id]("foo")), Identifier[Id]("bar"))
     AstRenderer.render(ref) shouldBe "foo.bar"
   }
 
@@ -35,7 +35,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
 
     val blockWithDecls = Block[Id](
       Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier[Id]("x")), Literal.int(1))),
-      Reference.single[Id](Identifier[Id]("x"))
+      Reference[Id](Identifier[Id]("x"))
     )
     AstRenderer.render(blockWithDecls) shouldBe "{\n  val x = 1\n  x\n}"
   }
@@ -44,7 +44,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
     val settings = AstRenderer.Settings(compact = true)
     val block = Block[Id](
       Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier[Id]("x")), Literal.int(1))),
-      Reference.single[Id](Identifier[Id]("x"))
+      Reference[Id](Identifier[Id]("x"))
     )
     AstRenderer.render(block, settings) shouldBe "{ val x = 1 x }"
 
@@ -62,7 +62,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
     val settings = AstRenderer.Settings(indentSize = 4)
     val block = Block[Id](
       Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier[Id]("x")), Literal.int(1))),
-      Reference.single[Id](Identifier[Id]("x"))
+      Reference[Id](Identifier[Id]("x"))
     )
     AstRenderer.render(block, settings) shouldBe "{\n    val x = 1\n    x\n}"
   }
@@ -70,7 +70,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
   test("render settings: parenthesize all calls") {
     val settings = AstRenderer.Settings(parenthesizeAllCalls = true)
     val call = Call.standard[Id](
-      Reference.single[Id](Identifier[Id]("foo")),
+      Reference[Id](Identifier[Id]("foo")),
       Vector.empty,
       Vector(ArgumentGroup[Id](Vector(Argument[Id](Literal.int(1)))))
     )
@@ -103,7 +103,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
   test("render lambda") {
     val lambda = Lambda[Id](
       Vector(LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name[Id](Identifier[Id]("Int"))))),
-      Call.infix[Id](Reference.single[Id](Identifier[Id]("x")), Identifier[Id]("+"), Vector.empty, Literal.int(1))
+      Call.infix[Id](Reference[Id](Identifier[Id]("x")), Identifier[Id]("+"), Vector.empty, Literal.int(1))
     )
     AstRenderer.render(lambda) shouldBe "(x: Int) => x + 1"
   }

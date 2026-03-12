@@ -107,7 +107,7 @@ final class Parser private() {
         case Token.Null => ParseResult.create(token.as(Literal.null_()))
         case idToken: Token.Identifier =>
           val id = token.as(Identifier[Pos](idToken.name))
-          ParseResult.create(token.as(Reference.single(id)))
+          ParseResult.create(token.as(Reference(id)))
         case Token.LParen =>
           parseParenthesizedExpression(token)
         case Token.LBrace =>
