@@ -15,7 +15,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
   }
 
   test("render reference") {
-    val ref = Reference[Id](Identifier[Id]("foo"), Identifier[Id]("bar"))
+    val ref = Select[Id](Reference.single[Id](Identifier[Id]("foo")), Identifier[Id]("bar"))
     AstRenderer.render(ref) shouldBe "foo.bar"
   }
 
