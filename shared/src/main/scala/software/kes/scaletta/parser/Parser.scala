@@ -251,14 +251,98 @@ final class Parser private() {
       }
     }
 
+    private def parseFormalParameterGroup(): ParseResult[Pos, Pos[FormalParameterGroup[Pos]]] = {
+      val lParen = scanner.get()
+      if (lParen.value != Token.LParen) {
+        return ParseResult.error(Pos(ParseError.UnexpectedToken(lParen.value), lParen.begin, lParen.end))
+      }
+
+      var params = Vector.empty[Pos[FormalParameter[Pos]]]
+      var variadic: Option[Pos[FormalParameter[Pos]]] = None
+      var diagnostics = ParseDiagnostics.empty
+
+      def continue(): Boolean = {
+        val next = scanner.peek(1).value
+        next != Token.RParen && next != Token.EndOfInput && !isStructuralBoundary(next)
+      }
+
+      while (continue() && variadic.isEmpty) {
+        val nameToken = scanner.get()
+        nameToken.value match {
+          case idToken: Token.Identifier =>
+            val name = nameToken.as(Identifier[Pos](idToken.name))
+            val colon = scanner.get()
+            if (colon.value == Token.Colon) {
+              val typeResult = TypeIdentifierParser.parse(scanner)
+              diagnostics ++= typeResult.diagnostics
+
+              typeResult.value match {
+                case Some(t) =>
+                  // Check for variadic asterisk
+                  val pEnd = scanner.peek(1).value match {
+                    case id: Token.Identifier if id.name == "*" =>
+                      scanner.get().end
+                    case _ => t.end
+                  }
+
+                  // Note: FormalParameter AST doesn't explicitly store variadic property,
+                  // but FormalParameterGroup does.
+                  val param = Pos(FormalParameter(name, t), nameToken.begin, pEnd)
+
+                  if (pEnd > t.end) {
+                    variadic = Some(param)
+                  } else {
+                    params :+= param
+                  }
+                case None =>
+                // Error already in diagnostics from TypeIdentifierParser
+              }
+            } else {
+              diagnostics = diagnostics.addError(Pos(ParseError.UnexpectedToken(colon.value), colon.begin, colon.end))
+            }
+          case _ =>
+            diagnostics = diagnostics.addError(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))
+        }
+
+        val next = scanner.peek(1)
+        if (next.value == Token.Comma) {
+          scanner.get()
+          if (variadic.isDefined) {
+            diagnostics = diagnostics.addError(Pos(ParseError.VariadicParameterMustBeLast, next.begin, next.end))
+          }
+        } else if (next.value != Token.RParen && continue()) {
+          // Basic synchronization
+          while (continue() && scanner.peek(1).value != Token.Comma && scanner.peek(1).value != Token.RParen) {
+            scanner.get()
+          }
+          if (scanner.peek(1).value == Token.Comma) scanner.get()
+        }
+      }
+
+      val rParen = scanner.get()
+      val groupEnd = if (rParen.value == Token.RParen) rParen.end else scanner.peek(1).end
+      if (rParen.value != Token.RParen) {
+        diagnostics = diagnostics.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParen.begin, lParen.end))
+      }
+
+      ParseResult(Some(Pos(FormalParameterGroup(params, variadic), lParen.begin, groupEnd)), diagnostics)
+    }
+
     private def parseDefDeclaration(defToken: Pos[Token]): DeclResult[Pos] = {
       val nameToken = scanner.get()
       nameToken.value match {
         case idToken: Token.Identifier =>
           val name = nameToken.as(Identifier[Pos](idToken.name))
 
-          // Step 4 (Future): Parse parameters here
-          val params = Vector.empty // Placeholder for now
+          // Step 4: Parse multiple parameter groups (currying support)
+          var paramGroups = Vector.empty[Pos[FormalParameterGroup[Pos]]]
+          var allDiagnostics = ParseDiagnostics.empty
+
+          while (scanner.peek(1).value == Token.LParen) {
+            val groupResult = parseFormalParameterGroup()
+            allDiagnostics ++= groupResult.diagnostics
+            groupResult.value.foreach(paramGroups :+= _)
+          }
 
           // Step 3: Optional Return Type
           val returnTypeResult: ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]] = if (scanner.peek(1).value == Token.Colon) {
@@ -268,27 +352,30 @@ final class Parser private() {
           } else {
             ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]](Some(None))
           }
+          allDiagnostics ++= returnTypeResult.diagnostics
 
           val eqToken = scanner.get()
           if (eqToken.value == Token.Eq) {
             val rhsResult = parseExpression(BindingPower.Minimum)
+            allDiagnostics ++= rhsResult.diagnostics
+
             (returnTypeResult.value, rhsResult.value) match {
               case (Some(returnType), Some(rhs)) =>
                 ParseResult(
-                  Some(Pos(Declaration.def_(name, params, returnType, rhs), defToken.begin, rhs.end)),
-                  returnTypeResult.diagnostics ++ rhsResult.diagnostics
+                  Some(Pos(Declaration.def_(name, paramGroups, returnType, rhs), defToken.begin, rhs.end)),
+                  allDiagnostics
                 )
               case (None, Some(rhs)) =>
                 ParseResult(
-                  Some(Pos(Declaration.def_(name, params, None, rhs), defToken.begin, rhs.end)),
-                  returnTypeResult.diagnostics ++ rhsResult.diagnostics
+                  Some(Pos(Declaration.def_(name, paramGroups, None, rhs), defToken.begin, rhs.end)),
+                  allDiagnostics
                 )
               case (_, _) =>
-                ParseResult(None, (returnTypeResult.diagnostics ++ rhsResult.diagnostics).addError(Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end)))
+                ParseResult(None, allDiagnostics.addError(Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end)))
             }
           } else {
             ParseResult.error(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
-              .addDiagnostics(returnTypeResult.diagnostics)
+              .addDiagnostics(allDiagnostics)
           }
         case _ =>
           ParseResult.error(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))

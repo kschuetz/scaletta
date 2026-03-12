@@ -54,6 +54,12 @@ final class CharIndex(val value: Int) extends AnyVal {
 
   def <(rhs: CharIndex): Boolean = value < rhs.value
 
+  def >(rhs: CharIndex): Boolean = value > rhs.value
+
+  def <=(rhs: CharIndex): Boolean = value <= rhs.value
+
+  def >=(rhs: CharIndex): Boolean = value >= rhs.value
+
   override def toString: String = value.toString
 }
 

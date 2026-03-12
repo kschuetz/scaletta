@@ -12,4 +12,8 @@ object ParseError {
   case class UnclosedDelimiter(open: Token, expectedClose: Token) extends ParseError
 
   case class ExtraToken(token: Token, expected: String) extends ParseError
+
+  case object VariadicParameterMustBeLast extends ParseError
+
+  case class Message(message: String) extends ParseError
 }
