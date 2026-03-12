@@ -256,18 +256,39 @@ final class Parser private() {
       nameToken.value match {
         case idToken: Token.Identifier =>
           val name = nameToken.as(Identifier[Pos](idToken.name))
-          // For now, support simple 'def name = expr' without params
+
+          // Step 4 (Future): Parse parameters here
+          val params = Vector.empty // Placeholder for now
+
+          // Step 3: Optional Return Type
+          val returnTypeResult: ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]] = if (scanner.peek(1).value == Token.Colon) {
+            scanner.get() // Consume ':'
+            val tr = TypeIdentifierParser.parse(scanner)
+            ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]](tr.value.map(Some(_)), tr.diagnostics)
+          } else {
+            ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]](Some(None))
+          }
+
           val eqToken = scanner.get()
           if (eqToken.value == Token.Eq) {
             val rhsResult = parseExpression(BindingPower.Minimum)
-            rhsResult.value match {
-              case Some(rhs) =>
-                ParseResult(Some(Pos(Declaration.def_(name, Vector.empty, None, rhs), defToken.begin, rhs.end)), rhsResult.diagnostics)
-              case None =>
-                ParseResult(None, rhsResult.diagnostics.addError(Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end)))
+            (returnTypeResult.value, rhsResult.value) match {
+              case (Some(returnType), Some(rhs)) =>
+                ParseResult(
+                  Some(Pos(Declaration.def_(name, params, returnType, rhs), defToken.begin, rhs.end)),
+                  returnTypeResult.diagnostics ++ rhsResult.diagnostics
+                )
+              case (None, Some(rhs)) =>
+                ParseResult(
+                  Some(Pos(Declaration.def_(name, params, None, rhs), defToken.begin, rhs.end)),
+                  returnTypeResult.diagnostics ++ rhsResult.diagnostics
+                )
+              case (_, _) =>
+                ParseResult(None, (returnTypeResult.diagnostics ++ rhsResult.diagnostics).addError(Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end)))
             }
           } else {
             ParseResult.error(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
+              .addDiagnostics(returnTypeResult.diagnostics)
           }
         case _ =>
           ParseResult.error(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))

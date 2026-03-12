@@ -141,7 +141,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
   }
 
   test("render def with return type") {
-    val d = defDecl("f", Vector(Vector(("x", "Int"))), Some("String"), lit(1))
+    val d = defDecl("f", Vector(Vector(("x", "Int"))), Some(tName("String")), lit(1))
     AstRenderer.render(block(lit(0), d)) shouldBe "{\n  def f(x: Int): String = 1\n  0\n}"
   }
 

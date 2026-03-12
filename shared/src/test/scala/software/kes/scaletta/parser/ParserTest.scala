@@ -137,6 +137,40 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       }
     }
 
+    describe("Declarations") {
+      it("should parse a simple val declaration") {
+        "{ val x = 1; x }" shouldParseTo block(ref("x"), valId("x", lit(1)))
+      }
+
+      it("should parse a typed val declaration") {
+        "{ val x: Int = 1; x }" shouldParseTo block(ref("x"), valTypedId("x", "Int", lit(1)))
+      }
+
+      it("should parse a lazy val declaration") {
+        "{ lazy val x = 1; x }" shouldParseTo block(ref("x"), lazyValDecl(pId("x"), lit(1)))
+      }
+
+      it("should parse a simple def declaration") {
+        "{ def f = 1; f }" shouldParseTo block(ref("f"), defSimple("f", lit(1)))
+      }
+
+      it("should parse a def declaration with a return type") {
+        "{ def f: Int = 1; f }" shouldParseTo block(ref("f"), defDecl("f", Vector.empty, "Int", lit(1)))
+      }
+
+      it("should parse a def declaration with a function return type") {
+        "{ def g: Int => String = s; g }" shouldParseTo {
+          block(ref("g"), defDecl("g", Vector.empty, Some(tFunc(Vector(tName("Int")), tName("String"))), ref("s")))
+        }
+      }
+
+      it("should recover from a malformed return type in a def declaration") {
+        "{ def f: = 1; f }" shouldRecoverWith (ParseError.UnexpectedToken(Token.Eq) at 9) producing {
+          block(ref("f"), defDecl("f", Vector.empty, None, lit(1)))
+        }
+      }
+    }
+
     describe("Blocks") {
       it("should parse a simple block with only a result expression") {
         "{ 123 }" shouldParseTo block(lit(123))
