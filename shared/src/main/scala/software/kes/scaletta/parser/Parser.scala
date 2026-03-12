@@ -279,17 +279,37 @@ final class Parser private() {
               typeResult.value match {
                 case Some(t) =>
                   // Check for variadic asterisk
-                  val pEnd = scanner.peek(1).value match {
+                  val nextToken = scanner.peek(1)
+                  var asteriskPos: Option[Pos[Token]] = None
+                  val hasAsterisk = nextToken.value match {
                     case id: Token.Identifier if id.name == "*" =>
-                      scanner.get().end
-                    case _ => t.end
+                      asteriskPos = Some(scanner.get())
+                      true
+                    case _ => false
                   }
 
-                  // Note: FormalParameter AST doesn't explicitly store variadic property,
-                  // but FormalParameterGroup does.
-                  val param = Pos(FormalParameter(name, t), nameToken.begin, pEnd)
+                  // Parse default value
+                  var default: Option[Pos[Expression[Pos]]] = None
+                  if (scanner.peek(1).value == Token.Eq) {
+                    val eqToken = scanner.get()
+                    val defaultResult = parseExpression(BindingPower.Minimum)
+                    diagnostics ++= defaultResult.diagnostics
+                    defaultResult.value match {
+                      case Some(expr) =>
+                        default = Some(expr)
+                      case None =>
+                        diagnostics = diagnostics.addError(Pos(ParseError.MissingExpression("parameter default value"), eqToken.begin, eqToken.end))
+                    }
+                  }
 
-                  if (pEnd > t.end) {
+                  val pEnd = default.map(_.end).getOrElse(asteriskPos.map(_.end).getOrElse(t.end))
+                  val param = Pos(FormalParameter(name, t, default), nameToken.begin, pEnd)
+
+                  if (hasAsterisk) {
+                    if (default.isDefined) {
+                      val errPos = asteriskPos.getOrElse(Pos(Token.EndOfInput, t.end, t.end))
+                      diagnostics = diagnostics.addError(Pos(ParseError.Message("Variadic parameter cannot have a default value"), errPos.begin, errPos.end))
+                    }
                     variadic = Some(param)
                   } else {
                     params :+= param

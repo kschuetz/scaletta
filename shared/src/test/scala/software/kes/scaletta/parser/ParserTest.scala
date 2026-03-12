@@ -200,6 +200,46 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         ("{ def f(x: Int*, y: Int): Int = 1; f }" shouldRecoverWith containErrorOfType[ParseError.VariadicParameterMustBeLast.type])
           .ignoringAst()
       }
+
+      describe("Default Parameter Values") {
+        it("should parse a parameter with a default value") {
+          "{ def f(x: Int = 1): Int = x; f() }" shouldParseTo {
+            block(call(ref("f")),
+              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1))))), "Int", ref("x")))
+          }
+        }
+
+        it("should parse multiple parameters with default values") {
+          "{ def f(x: Int = 1, y: Int = 41): Int = x + y; f() }" shouldParseTo {
+            block(call(ref("f")),
+              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1))), ("y", "Int", Some(lit(41))))), "Int", infix(ref("x"), "+", ref("y"))))
+          }
+        }
+
+        it("should parse a default value in the middle of a parameter list") {
+          "{ def f(x: Int = 1, y: Int): Int = x + y; f(y = 2) }" shouldParseTo {
+            block(call(ref("f"), Argument(ref("y"), Some(Identifier("y")))),
+              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1))), ("y", "Int", None))), "Int", infix(ref("x"), "+", ref("y"))))
+          }
+        }
+
+        it("should parse default values in multiple parameter groups") {
+          "{ def f(x: Int = 1)(y: Int = 43): Int = x + y; f()() }" shouldParseTo {
+            block(multiCall(ref("f"), Vector(Vector.empty, Vector.empty)),
+              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1)))), Vector(("y", "Int", Some(lit(43))))), "Int", infix(ref("x"), "+", ref("y"))))
+          }
+        }
+
+        it("should report an error for variadic parameter with a default value") {
+          ("{ def f(x: Int* = 1): Int = 1; f }" shouldRecoverWith containErrorWithMessage("Variadic parameter cannot have a default value"))
+            .ignoringAst()
+        }
+
+        it("should report an error for missing expression after =") {
+          ("{ def f(x: Int = ): Int = 1; f }" shouldRecoverWith containErrorOfType[ParseError.MissingExpression])
+            .ignoringAst()
+        }
+      }
     }
 
     describe("Blocks") {

@@ -70,20 +70,26 @@ object AstBuilders {
   def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
     Declaration.lazyVal[Id](pattern, rhs)
 
-  def defDecl(name: String, params: Vector[Vector[(String, String)]], returnType: Option[TypeIdentifier[Id]], body: Expression[Id]): Declaration[Id] = {
+  def defDecl(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], returnType: Option[TypeIdentifier[Id]], body: Expression[Id]): Declaration[Id] = {
     val paramGroups = params.map { group =>
-      FormalParameterGroup[Id](group.map { case (n, t) =>
-        FormalParameter[Id](Identifier[Id](n), TypeIdentifier.name[Id](Identifier[Id](t)), None)
+      FormalParameterGroup[Id](group.map { case (n, t, d) =>
+        FormalParameter[Id](Identifier[Id](n), TypeIdentifier.name[Id](Identifier[Id](t)), d)
       })
     }
     Declaration.def_[Id](Identifier(name), paramGroups, returnType, body)
   }
 
-  def defDecl(name: String, params: Vector[Vector[(String, String)]], returnType: String, body: Expression[Id]): Declaration[Id] =
+  def defDecl(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], returnType: String, body: Expression[Id]): Declaration[Id] =
     defDecl(name, params, Some(tName(returnType)), body)
 
-  def defDecl(name: String, params: Vector[Vector[(String, String)]], body: Expression[Id]): Declaration[Id] =
+  def defDecl(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], body: Expression[Id]): Declaration[Id] =
     defDecl(name, params, None: Option[TypeIdentifier[Id]], body)
+
+  private implicit def toTripleVector(v: Vector[Vector[(String, String)]]): Vector[Vector[(String, String, Option[Expression[Id]])]] =
+    v.map(_.map { case (n, t) => (n, t, None) })
+
+  def defWithDefaults(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], body: Expression[Id]): Declaration[Id] =
+    defDecl(name, params, body)
 
   def defSimple(name: String, body: Expression[Id]): Declaration[Id] =
     defDecl(name, Vector.empty, body)
