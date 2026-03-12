@@ -16,14 +16,27 @@ case class Block[F[_]](declarations: Vector[F[Declaration[F]]],
     )
 }
 
-object Reference {
-  def single[F[_]](id: F[Identifier[F]]): Reference[F] =
-    Reference(::(id, Nil))
+case class Select[F[_]](qualifier: F[Expression[F]], name: F[Identifier[F]]) extends Expression[F] {
+  def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Select[G] =
+    Select(phi(F.map(qualifier)(_.mapK(phi))), phi(F.map(name)(_.mapK(phi))))
 }
 
-case class Reference[F[_]](path: ::[F[Identifier[F]]]) extends Expression[F] {
+object Reference {
+  def apply[F[_]](head: F[Identifier[F]], tail: F[Identifier[F]]*)(implicit F: Functor[F]): Expression[F] = {
+    var acc: Expression[F] = Reference(head)
+    for (name <- tail) {
+      acc = Select(F.map(head)(_ => acc), name)
+    }
+    acc
+  }
+
+  def single[F[_]](id: F[Identifier[F]]): Reference[F] =
+    Reference(id)
+}
+
+case class Reference[F[_]](id: F[Identifier[F]]) extends Expression[F] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Reference[G] =
-    Reference(::(phi(F.map(path.head)(_.mapK(phi))), path.tail.map(id => phi(F.map(id)(_.mapK(phi))))))
+    Reference(phi(F.map(id)(_.mapK(phi))))
 }
 
 case class Typed[F[_]](expression: F[Expression[F]],

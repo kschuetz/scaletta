@@ -67,8 +67,12 @@ private class AstRenderer(settings: Settings,
     expression match {
       case b: Block[Id] =>
         renderBlock(b)
-      case Reference(path) =>
-        write(path.map(_.name).mkString("."))
+      case Reference(id) =>
+        write(id.name)
+      case Select(qualifier, name) =>
+        renderWithPrecedence(qualifier, BindingPower.PostfixCall)
+        write(".")
+        write(name.name)
       case Typed(expr, ascription) =>
         write("(")
         render(expr)

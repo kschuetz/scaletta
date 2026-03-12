@@ -4,7 +4,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.ast.AstBuilders._
 import software.kes.scaletta.ast._
-import software.kes.scaletta.util.functional.Id.Id
+import software.kes.scaletta.util.functional.Id._
 
 class AstRendererTest extends AnyFunSuite with Matchers {
 
@@ -15,7 +15,7 @@ class AstRendererTest extends AnyFunSuite with Matchers {
   }
 
   test("render reference") {
-    val ref = Reference[Id](::(Identifier[Id]("foo"), List(Identifier[Id]("bar"))))
+    val ref = Reference[Id](Identifier[Id]("foo"), Identifier[Id]("bar"))
     AstRenderer.render(ref) shouldBe "foo.bar"
   }
 

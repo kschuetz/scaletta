@@ -27,9 +27,15 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     }
 
     it("should transform Reference") {
-      val expr = Reference[Id](::(Identifier[Id]("a"), List(Identifier[Id]("b"))))
+      val expr = Reference[Id](Identifier[Id]("a"))
       val result = expr.mapK(idToOption)
-      result shouldBe Reference[Option](::(Some(Identifier[Option]("a")), List(Some(Identifier[Option]("b")))))
+      result shouldBe Reference[Option](Some(Identifier[Option]("a")))
+    }
+
+    it("should transform Select") {
+      val expr = Select[Id](Reference[Id](Identifier[Id]("a")), Identifier[Id]("b"))
+      val result = expr.mapK(idToOption)
+      result shouldBe Select[Option](Some(Reference[Option](Some(Identifier[Option]("a")))), Some(Identifier[Option]("b")))
     }
 
     it("should transform Typed") {
@@ -67,7 +73,7 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
     }
 
     it("should transform Call.Standard") {
-      val target = Reference[Id](::(Identifier[Id]("f"), Nil))
+      val target = Reference[Id](Identifier[Id]("f"))
       val typeArg = TypeArgument[Id](TypeIdentifier.name[Id](Identifier[Id]("T")))
       val argGroup = ArgumentGroup[Id](Vector(Argument[Id](Literal.IntLiteral[Id](1))))
       val expr = Call.Standard[Id](target, Vector(typeArg), Vector(argGroup))
@@ -109,7 +115,7 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
 
     it("should transform Lambda") {
       val param = LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name[Id](Identifier[Id]("Int"))))
-      val body = Reference[Id](::(Identifier[Id]("x"), Nil))
+      val body = Reference[Id](Identifier[Id]("x"))
       val expr = Lambda[Id](Vector(param), body)
 
       val result = expr.mapK(idToOption)

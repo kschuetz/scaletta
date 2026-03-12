@@ -13,6 +13,9 @@ object AstBuilders {
 
   def ref(name: String): Expression[Id] = Reference.single[Id](Identifier(name))
 
+  def select(qualifier: Expression[Id], name: String): Expression[Id] =
+    Select[Id](qualifier, Identifier(name))
+
   def infix(left: Expression[Id], op: String, right: Expression[Id]): Expression[Id] =
     Call.infix[Id](left, Identifier(op), Vector.empty, right)
 

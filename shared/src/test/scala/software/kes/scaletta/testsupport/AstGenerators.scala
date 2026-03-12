@@ -23,11 +23,11 @@ object AstGenerators {
     Gen.alphaStr.map(Literal.string[Id])
   )
 
-  def genReference: Gen[Reference[Id]] = for {
+  def genReference: Gen[Expression[Id]] = for {
     parts <- Gen.nonEmptyListOf(genIdentifier)
   } yield {
     val idents = parts.map(Identifier[Id](_))
-    Reference[Id](::(idents.head, idents.tail))
+    Reference[Id](idents.head, idents.tail: _*)
   }
 
   def genPattern(depth: Int): Gen[Pattern[Id]] = {

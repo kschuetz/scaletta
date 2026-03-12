@@ -44,9 +44,9 @@ object AstDiff {
             if (a.value != e.value) Some(s"$path: value mismatch (actual: ${a.value}, expected: ${e.value})")
             else None
           case (a: Reference[_], e: Reference[_]) =>
-            val actualPath = a.path.asInstanceOf[::[Id[software.kes.scaletta.ast.Identifier[Id]]]]
-            val expectedPath = e.path.asInstanceOf[::[Id[software.kes.scaletta.ast.Identifier[Id]]]]
-            if (actualPath.map(_.name) != expectedPath.map(_.name)) Some(s"$path: path mismatch (actual: $actualPath, expected: $expectedPath)")
+            val actualId = a.id.asInstanceOf[Id[software.kes.scaletta.ast.Identifier[Id]]]
+            val expectedId = e.id.asInstanceOf[Id[software.kes.scaletta.ast.Identifier[Id]]]
+            if (actualId.name != expectedId.name) Some(s"$path: name mismatch (actual: ${actualId.name}, expected: ${expectedId.name})")
             else None
           case _ => Some(s"$path: mismatch\n  Actual:   $actual\n  Expected: $expected")
         }
