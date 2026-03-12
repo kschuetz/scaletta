@@ -275,15 +275,30 @@ final class Parser private() {
     }
 
     private def parsePattern(): PatResult[Pos] = {
-      val token = scanner.get()
-      token.value match {
+      val firstToken = scanner.get()
+      val baseResult: PatResult[Pos] = firstToken.value match {
         case idToken: Token.Identifier =>
-          val id = token.as(Identifier[Pos](idToken.name))
-          ParseResult(Some(token.as(Pattern.Identifier(id))))
+          val id = firstToken.as(Identifier[Pos](idToken.name))
+          ParseResult(Some(firstToken.as(Pattern.Identifier(id))))
         case Token.Underscore =>
-          ParseResult(Some(token.as(Pattern.Wildcard())))
+          ParseResult(Some(firstToken.as(Pattern.Wildcard())))
         case _ =>
-          ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+          ParseResult.error(Pos(ParseError.UnexpectedToken(firstToken.value), firstToken.begin, firstToken.end))
+      }
+
+      baseResult.value match {
+        case Some(basePat) if scanner.peek(1).value == Token.Colon =>
+          scanner.get() // consume ':'
+          val typeResult = TypeIdentifierParser.parse(scanner)
+          typeResult.value match {
+            case Some(ascription) =>
+              val typedPat: Pattern[Pos] = Pattern.Typed(basePat, ascription)
+              ParseResult(Some(Pos(typedPat, basePat.begin, ascription.end)), baseResult.diagnostics ++ typeResult.diagnostics)
+            case None =>
+              baseResult.addDiagnostics(typeResult.diagnostics)
+          }
+        case _ =>
+          baseResult
       }
     }
 

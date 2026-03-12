@@ -149,6 +149,29 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
           |}""".stripMargin shouldParseTo block(ref("x"), valId("x", lit(1)))
       }
 
+      it("should parse a block with one typed val declaration") {
+        """{
+          |  val x: Int = 1
+          |  x
+          |}""".stripMargin shouldParseTo block(ref("x"), valTypedId("x", "Int", lit(1)))
+      }
+
+      it("should parse a block with a typed wildcard val declaration") {
+        """{
+          |  val _: String = "hello"
+          |  123
+          |}""".stripMargin shouldParseTo block(lit(123), valDecl(pWildTyped("String"), lit("hello")))
+      }
+
+      it("should handle malformed type in pattern (val x: = 1)") {
+        """{
+          |  val x: = 1
+          |  x
+          |}""".stripMargin shouldFailWith containErrorOfType[ParseError.UnexpectedToken] producing {
+          block(ref("x"), valId("x", lit(1)))
+        }
+      }
+
       it("should parse a block with multiple val declarations") {
         """{
           |  val x = 1
