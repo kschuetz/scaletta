@@ -12,6 +12,8 @@ case class ParseResult[F[_], +A](value: Option[A] = None,
 
   def isSuccess: Boolean = value.isDefined && !hasErrors
 
+  def hasValue: Boolean = value.isDefined
+
   def hasErrors: Boolean = diagnostics.hasErrors
 
   def addError(error: Pos[ParseError]): ParseResult[F, A] =

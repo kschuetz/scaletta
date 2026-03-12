@@ -101,18 +101,6 @@ class ExpressionMapKTest extends AnyFunSpec with Matchers {
       )
     }
 
-    it("should transform Call.Postfix") {
-      val target = Literal.IntLiteral[Id](1)
-      val op = Identifier[Id]("++")
-      val expr = Call.Postfix[Id](target, op)
-
-      val result = expr.mapK(idToOption)
-      result shouldBe Call.Postfix[Option](
-        Some(target.mapK(idToOption)),
-        Some(op.mapK(idToOption))
-      )
-    }
-
     it("should transform Lambda") {
       val param = LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name[Id](Identifier[Id]("Int"))))
       val body = Reference[Id](Identifier[Id]("x"))

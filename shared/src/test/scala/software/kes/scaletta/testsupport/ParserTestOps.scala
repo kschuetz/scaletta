@@ -107,7 +107,7 @@ object ParserTestOps {
                       (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ParseResultVerifier = {
       import ParseErrorMatchers._
       import matchers._
-      val diag = support.parseWithDiagnostics(input)
+      val diag = support.parseWithDiagnostics(input, ParseOptions(requireExhaustion = true))
       diag.errors should matchExactlyErrors(input, diag.lineMap, expectedErrors.toVector)
       new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.hints, diag.lineMap)
     }
@@ -115,7 +115,7 @@ object ParserTestOps {
     def shouldFailWith(matcher: Matcher[Vector[Pos[ParseError]]])
                       (implicit support: ParserTestSupport, matchers: Matchers, pos: Position): ParseResultVerifier = {
       import matchers._
-      val diag = support.parseWithDiagnostics(input)
+      val diag = support.parseWithDiagnostics(input, ParseOptions(requireExhaustion = true))
       diag.errors should matcher
       new ParseResultVerifier(input, diag.ast, diag.errors, diag.warnings, diag.hints, diag.lineMap)
     }

@@ -70,7 +70,7 @@ private class AstRenderer(settings: Settings,
       case Reference(id) =>
         write(id.name)
       case Select(qualifier, name) =>
-        renderWithPrecedence(qualifier, BindingPower.PostfixCall)
+        renderWithPrecedence(qualifier, BindingPower.MemberAccess)
         write(".")
         write(name.name)
       case Typed(expr, ascription) =>
@@ -94,7 +94,7 @@ private class AstRenderer(settings: Settings,
         render(elseBranch)
       case Call.Standard(target, typeArgs, args) =>
         if (settings.parenthesizeAllCalls) write("(")
-        renderWithPrecedence(target, BindingPower.PostfixCall)
+        renderWithPrecedence(target, BindingPower.MemberAccess)
         if (settings.parenthesizeAllCalls) write(")")
         if (typeArgs.nonEmpty) {
           write("[")
@@ -117,14 +117,6 @@ private class AstRenderer(settings: Settings,
         }
         write(" ")
         renderWithPrecedence(right, opPrecedence.nudge(1))
-        if (needsParens) write(")")
-      case Call.Postfix(target, operation) =>
-        val opPrecedence = BindingPower.PostfixCall
-        val needsParens = opPrecedence < parentPrecedence
-        if (needsParens) write("(")
-        renderWithPrecedence(target, opPrecedence)
-        write(" ")
-        write(operation.name)
         if (needsParens) write(")")
       case Lambda(params, body) =>
         write("(")

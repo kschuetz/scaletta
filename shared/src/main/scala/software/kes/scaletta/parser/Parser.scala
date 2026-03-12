@@ -34,7 +34,7 @@ final class Parser private() {
       val firstToken = scanner.get()
       var currentResult = nud(firstToken)
 
-      while (shouldContinue(minBindingPower, currentResult)) {
+      while (currentResult.hasValue && !currentResult.hasErrors && shouldContinueAtInfix(minBindingPower, scanner.peek(1).value)) {
         val nextToken = scanner.get()
         currentResult = led(currentResult, nextToken)
       }
@@ -45,28 +45,24 @@ final class Parser private() {
     private def isFollowedByExpression: Boolean = {
       val afterId = scanner.peek(2).value
       afterId match {
-        case Token.EndOfInput | Token.RParen | Token.Comma | Token.Semicolon | Token.RBrace => false
+        case Token.EndOfInput | Token.RParen | Token.Comma | Token.Semicolon | Token.RBrace | Token.Newline => false
         case _ => true
       }
     }
 
-    private def shouldContinue(minBindingPower: BindingPower, currentResult: ExprResult[Pos]): Boolean = {
-      if (currentResult.hasErrors) return false
-
-      val nextPos = scanner.peek(1)
-      val nextToken = nextPos.value
-
-      // Check for structural boundaries at the top level (minBindingPower == Minimum)
-      if (minBindingPower == BindingPower.Minimum && isStructuralBoundary(nextToken)) {
-        return false
-      }
-
-      nextToken match {
-        case Token.LParen => shouldContinueWithCall(minBindingPower)
-        case Token.Dot => shouldContinueWithSelection(minBindingPower)
-        case idToken: Token.Identifier => shouldContinueWithIdentifier(minBindingPower, idToken)
-        case rw: Token.ReservedWord => shouldContinueWithReservedWord(minBindingPower, rw)
-        case _ => false
+    private def shouldContinueAtInfix(minBindingPower: BindingPower, token: Token): Boolean = {
+      if (isStructuralBoundary(token)) {
+        false
+      } else {
+        token match {
+          case Token.LParen => shouldContinueWithCall(minBindingPower)
+          case Token.Dot => shouldContinueWithSelection(minBindingPower)
+          case id: Token.Identifier =>
+            shouldContinueWithIdentifier(minBindingPower, id)
+          case rw: Token.ReservedWord =>
+            shouldContinueWithReservedWord(minBindingPower, rw)
+          case _ => false
+        }
       }
     }
 
@@ -99,6 +95,9 @@ final class Parser private() {
     }
 
     private def nud(token: Pos[Token]): ExprResult[Pos] = {
+      if (isStructuralBoundary(token.value)) {
+        return ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+      }
       token.value match {
         case Token.IntLiteral(v) => ParseResult.create(token.as(Literal.int(v)))
         case Token.StringLiteral(v) => ParseResult.create(token.as(Literal.string(v)))
@@ -407,6 +406,8 @@ final class Parser private() {
           )
           if (isSuspicious) res = res.addWarning(Pos(ParseWarning.SuspiciousInfixExpression(opName), opToken.begin, opToken.end))
           res
+        case (Some(left), None) =>
+          ParseResult(Some(left), leftResult.diagnostics ++ rightResult.diagnostics)
         case _ =>
           ParseResult(
             value = None,

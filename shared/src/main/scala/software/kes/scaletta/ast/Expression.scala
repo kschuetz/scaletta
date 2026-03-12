@@ -135,10 +135,6 @@ object Call {
                   right: F[Expression[F]]): Call[F] =
     Infix(left, operation, typeArgs, right)
 
-  def postfix[F[_]](target: F[Expression[F]],
-                    operation: F[Identifier[F]]): Call[F] =
-    Postfix(target, operation)
-
   case class Standard[F[_]](target: F[Expression[F]],
                             typeArgs: Vector[F[TypeArgument[F]]],
                             args: Vector[F[ArgumentGroup[F]]]) extends Call[F] {
@@ -162,15 +158,6 @@ object Call {
         phi(F.map(operation)(_.mapK(phi))),
         typeArgs.map(ta => phi(F.map(ta)(_.mapK(phi)))),
         phi(F.map(right)(_.mapK(phi)))
-      )
-  }
-
-  case class Postfix[F[_]](target: F[Expression[F]],
-                           operation: F[Identifier[F]]) extends Call[F] {
-    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Postfix[G] =
-      Postfix(
-        phi(F.map(target)(_.mapK(phi))),
-        phi(F.map(operation)(_.mapK(phi)))
       )
   }
 }
