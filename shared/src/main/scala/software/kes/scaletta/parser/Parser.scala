@@ -63,10 +63,15 @@ final class Parser private() {
 
       nextToken match {
         case Token.LParen => shouldContinueWithCall(minBindingPower)
+        case Token.Dot => shouldContinueWithSelection(minBindingPower)
         case idToken: Token.Identifier => shouldContinueWithIdentifier(minBindingPower, idToken)
         case rw: Token.ReservedWord => shouldContinueWithReservedWord(minBindingPower, rw)
         case _ => false
       }
+    }
+
+    private def shouldContinueWithSelection(minBindingPower: BindingPower): Boolean = {
+      BindingPower.Selection > minBindingPower
     }
 
     private def shouldContinueWithCall(minBindingPower: BindingPower): Boolean = {
@@ -287,6 +292,8 @@ final class Parser private() {
       opToken.value match {
         case Token.LParen =>
           parseFunctionCall(leftResult, opToken)
+        case Token.Dot =>
+          parseSelection(leftResult, opToken)
         case Token.Colon =>
           parseTypeAscription(leftResult, opToken)
         case id: Token.Identifier =>
@@ -294,6 +301,31 @@ final class Parser private() {
         case rw: Token.ReservedWord if rw != Token.Colon =>
           parseInfixExpression(leftResult, opToken, rw.name)
         case _ => leftResult
+      }
+    }
+
+    private def parseSelection(leftResult: ExprResult[Pos], dotToken: Pos[Token]): ExprResult[Pos] = {
+      val next = scanner.get()
+      next.value match {
+        case idToken: Token.Identifier =>
+          val name = next.as(Identifier[Pos](idToken.name))
+          leftResult.value match {
+            case Some(qualifier) =>
+              val selection: Expression[Pos] = Select[Pos](qualifier, name)
+              ParseResult.create(Pos(selection, qualifier.begin, next.end))
+                .addDiagnostics(leftResult.diagnostics)
+            case None =>
+              // This should ideally not happen in a correctly functioning Pratt parser
+              // if leftResult.value is None, it should have diagnostics already.
+              ParseResult(None, leftResult.diagnostics.addError(Pos(ParseError.MissingExpression("selection qualifier"), dotToken.begin, dotToken.end)))
+          }
+        case _ =>
+          val result = leftResult.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+          // Synchronize to avoid cascading errors
+          while (!isSynchronizationBoundary(scanner.peek(1).value)) {
+            scanner.get()
+          }
+          result
       }
     }
 

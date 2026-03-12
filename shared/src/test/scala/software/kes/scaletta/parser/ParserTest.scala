@@ -77,6 +77,24 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
             infix(ref("a"), "plus", ref("b"))
           }
         }
+
+        it("should parse member selection (a.b)") {
+          "a.b" shouldParseTo select(ref("a"), "b")
+        }
+
+        it("should parse nested member selection (a.b.c)") {
+          "a.b.c" shouldParseTo select(select(ref("a"), "b"), "c")
+        }
+
+        it("should parse mixed selection and calls (a.b(c).d)") {
+          "a.b(c).d" shouldParseTo select(call(select(ref("a"), "b"), ref("c")), "d")
+        }
+
+        it("should report an error for trailing dot (a.)") {
+          "a." shouldFailWith (ParseError.UnexpectedToken(Token.EndOfInput) at 2) producing {
+            ref("a")
+          }
+        }
       }
 
       describe("Type Ascriptions") {
