@@ -71,12 +71,12 @@ final class Parser private() {
     }
 
     private def shouldContinueWithSelection(minBindingPower: BindingPower): Boolean = {
-      BindingPower.Selection > minBindingPower
+      BindingPower.MemberAccess > minBindingPower
     }
 
     private def shouldContinueWithCall(minBindingPower: BindingPower): Boolean = {
-      // ( acts as a postfix call with very high precedence
-      BindingPower.PostfixCall > minBindingPower
+      // ( acts as a function call with very high precedence
+      BindingPower.MemberAccess > minBindingPower
     }
 
     private def shouldContinueWithIdentifier(minBindingPower: BindingPower, idToken: Token.Identifier): Boolean = {

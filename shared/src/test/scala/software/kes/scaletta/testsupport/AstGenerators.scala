@@ -26,7 +26,7 @@ object AstGenerators {
   def genReference: Gen[Expression[Id]] = for {
     parts <- Gen.nonEmptyListOf(genIdentifier)
   } yield {
-    val idents = parts.map(Identifier[Id].apply)
+    val idents = parts.map(name => Identifier[Id](name))
     var acc: Expression[Id] = Reference[Id](idents.head)
     for (name <- idents.tail) {
       acc = Select[Id](acc, name)
