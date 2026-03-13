@@ -73,9 +73,9 @@ class PrecedenceTest extends AnyFunSpec with Matchers with TableDrivenPropertyCh
     it("should handle postfix call priority") {
       val matrix = Table(
         ("input", "expectedAst"),
-        ("f(x) + g(y)", infix(call(ref("f"), ref("x")), "+", call(ref("g"), ref("y")))),
-        ("f(x) :: g(y)", infix(call(ref("f"), ref("x")), "::", call(ref("g"), ref("y")))),
-        ("f(x)(y) * z", infix(multiCall(ref("f"), Vector(Vector(ref("x")), Vector(ref("y")))), "*", ref("z")))
+        ("f(x) + g(y)", infix(callSimple(ref("f"), ref("x")), "+", callSimple(ref("g"), ref("y")))),
+        ("f(x) :: g(y)", infix(callSimple(ref("f"), ref("x")), "::", callSimple(ref("g"), ref("y")))),
+        ("f(x)(y) * z", infix(call(ref("f")).group(ref("x")).group(ref("y")).build(), "*", ref("z")))
       )
       forAll(matrix) { (input, expected) => input shouldParseTo expected }
     }

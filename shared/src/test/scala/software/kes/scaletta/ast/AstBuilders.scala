@@ -3,6 +3,8 @@ package software.kes.scaletta.ast
 import software.kes.scaletta.ast.Declaration.Def
 import software.kes.scaletta.util.functional.Id._
 
+import scala.language.implicitConversions
+
 object AstBuilders {
   def lit(n: Int): Expression[Id] = Literal.int(n)
 
@@ -20,28 +22,14 @@ object AstBuilders {
   def infix(left: Expression[Id], op: String, right: Expression[Id]): Expression[Id] =
     Call.infix[Id](left, Identifier(op), Vector.empty, right)
 
-  def call(target: Expression[Id], args: Any*): Expression[Id] = {
-    if (args.isEmpty) {
-      Call.standard[Id](target, Vector.empty, Vector(ArgumentGroup[Id](Vector.empty)))
-    } else if (args.forall(_.isInstanceOf[ArgumentGroup[Id]])) {
-      Call.standard[Id](target, Vector.empty, args.toVector.asInstanceOf[Vector[ArgumentGroup[Id]]])
-    } else {
-      val argGroup = ArgumentGroup[Id](args.toVector.map {
-        case a: Argument[Id] => a
-        case e: Expression[Id] => Argument[Id](e)
-        case other => throw new IllegalArgumentException(s"Expected Expression or Argument, but got ${other.getClass.getSimpleName}")
-      })
-      Call.standard[Id](target, Vector.empty, Vector(argGroup))
-    }
-  }
+  def call(target: Expression[Id]): CallBuilder =
+    new CallBuilder(target, Vector.empty, Vector.empty)
 
-  def multiCall(target: Expression[Id], argGroups: Vector[Vector[Expression[Id]]]): Expression[Id] = {
-    val groups = argGroups.map(group => ArgumentGroup[Id](group.map(a => Argument[Id](a))))
-    Call.standard[Id](target, Vector.empty, groups)
-  }
-
-  def typed(expr: Expression[Id], typeName: String): Expression[Id] =
-    Typed[Id](expr, TypeIdentifier.name[Id](Identifier[Id](typeName)))
+  /**
+   * Calls with 1 or more arguments in a single group, with no type arguments.
+   */
+  def callSimple(target: Expression[Id], first: Argument[Id], rest: Argument[Id]*): Expression[Id] =
+    call(target).group(ArgumentGroup[Id](Vector(first) ++ rest.toVector)).build()
 
   def typed(expr: Expression[Id], ascription: TypeIdentifier[Id]): Expression[Id] =
     Typed[Id](expr, ascription)
@@ -129,12 +117,15 @@ object AstBuilders {
   def paramGroup(params: FormalParameter[Id]*): FormalParameterGroup[Id] =
     FormalParameterGroup[Id](params.toVector)
 
+  implicit def arg(expression: Expression[Id]): Argument[Id] = Argument[Id](expression)
+
+  implicit def typeId(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier[Id](name))
+
+  implicit def identifier(name: String): Identifier[Id] = Identifier[Id](name)
+
   final class DefDeclBuilder(private val result: Def[Id]) {
     def group(params: FormalParameter[Id]*): DefDeclBuilder =
       modify(_.copy(params = result.params :+ paramGroup(params: _*)))
-
-    def returnType(typ: String): DefDeclBuilder =
-      returnType(TypeIdentifier.name[Id](Identifier[Id](typ)))
 
     def returnType(typ: TypeIdentifier[Id]): DefDeclBuilder =
       modify(_.copy[Id](returnType = Some(typ)))
@@ -144,5 +135,26 @@ object AstBuilders {
 
     private def modify(fn: Def[Id] => Def[Id]): DefDeclBuilder =
       new DefDeclBuilder(fn(result))
+  }
+
+  final class CallBuilder(private val target: Expression[Id],
+                          private val typeArgs: Vector[TypeArgument[Id]],
+                          private val argGroups: Vector[ArgumentGroup[Id]]) {
+
+    def typeArg(args: TypeIdentifier[Id]*): CallBuilder =
+      new CallBuilder(target, typeArgs ++ args.map(t => TypeArgument[Id](t)), argGroups)
+
+    def group(args: Argument[Id]*): CallBuilder = {
+      val newGroup = ArgumentGroup[Id](args.toVector)
+      new CallBuilder(target, typeArgs, argGroups :+ newGroup)
+    }
+
+    def group(group: ArgumentGroup[Id]): CallBuilder =
+      new CallBuilder(target, typeArgs, argGroups :+ group)
+
+    def build(): Expression[Id] = {
+      val finalGroups = if (argGroups.isEmpty) Vector(ArgumentGroup[Id](Vector.empty)) else argGroups
+      Call.standard[Id](target, typeArgs, finalGroups)
+    }
   }
 }

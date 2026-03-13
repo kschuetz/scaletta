@@ -55,23 +55,23 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
       describe("Function Calls") {
         it("should parse a standard function call (f(x, y))") {
-          "f(x, y)" shouldParseTo call(ref("f"), ref("x"), ref("y"))
+          "f(x, y)" shouldParseTo callSimple(ref("f"), ref("x"), ref("y"))
         }
 
         it("should parse a function call with no arguments (f())") {
-          "f()" shouldParseTo call(ref("f"))
+          "f()" shouldParseTo call(ref("f")).build()
         }
 
         it("should parse a nested function call (f(g(x)))") {
-          "f(g(x))" shouldParseTo call(ref("f"), call(ref("g"), ref("x")))
+          "f(g(x))" shouldParseTo callSimple(ref("f"), callSimple(ref("g"), ref("x")))
         }
 
         it("should parse a call on an expression target ((f + g)(x))") {
-          "(f + g)(x)" shouldParseTo call(infix(ref("f"), "+", ref("g")), ref("x"))
+          "(f + g)(x)" shouldParseTo callSimple(infix(ref("f"), "+", ref("g")), ref("x"))
         }
 
         it("should parse multiple argument groups (f(x)(y))") {
-          "f(x)(y)" shouldParseTo multiCall(ref("f"), Vector(Vector(ref("x")), Vector(ref("y"))))
+          "f(x)(y)" shouldParseTo call(ref("f")).group(ref("x")).group(ref("y")).build()
         }
 
         it("should parse an alphanumeric infix operator (a plus b)") {
@@ -89,7 +89,7 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         }
 
         it("should parse mixed selection and calls (a.b(c).d)") {
-          "a.b(c).d" shouldParseTo select(call(select(ref("a"), "b"), ref("c")), "d")
+          "a.b(c).d" shouldParseTo select(callSimple(select(ref("a"), "b"), ref("c")), "d")
         }
 
         it("should report an error for trailing dot (a.)") {
@@ -174,19 +174,19 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
       it("should parse a def declaration with a single parameter group") {
         "{ def f(x: Int): Int = x; f(1) }" shouldParseTo {
-          block(call(ref("f"), lit(1)), defDecl("f").group(param("x", "Int")).returnType("Int").body(ref("x")))
+          block(callSimple(ref("f"), lit(1)), defDecl("f").group(param("x", "Int")).returnType("Int").body(ref("x")))
         }
       }
 
       it("should parse a def declaration with multiple parameters") {
         "{ def add(x: Int, y: Int): Int = x + y; add(1, 2) }" shouldParseTo {
-          block(call(ref("add"), lit(1), lit(2)), defDecl("add").group(param("x", "Int"), param("y", "Int")).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
+          block(callSimple(ref("add"), lit(1), lit(2)), defDecl("add").group(param("x", "Int"), param("y", "Int")).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
         }
       }
 
       it("should parse a def declaration with multiple parameter groups (currying)") {
         "{ def g(x: Int)(y: String): Boolean = true; g(1)(\"hi\") }" shouldParseTo {
-          block(multiCall(ref("g"), Vector(Vector(lit(1)), Vector(lit("hi")))),
+          block(call(ref("g")).group(lit(1)).group(lit("hi")).build(),
             defDecl("g").group(param("x", "Int")).group(param("y", "String")).returnType("Boolean").body(lit(true)))
         }
       }
@@ -206,28 +206,28 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       describe("Default Parameter Values") {
         it("should parse a parameter with a default value") {
           "{ def f(x: Int = 1): Int = x; f() }" shouldParseTo {
-            block(call(ref("f")),
+            block(call(ref("f")).build(),
               defDecl("f").group(param("x", "Int", lit(1))).returnType("Int").body(ref("x")))
           }
         }
 
         it("should parse multiple parameters with default values") {
           "{ def f(x: Int = 1, y: Int = 41): Int = x + y; f() }" shouldParseTo {
-            block(call(ref("f")),
+            block(call(ref("f")).build(),
               defDecl("f").group(param("x", "Int", lit(1)), param("y", "Int", lit(41))).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }
 
         it("should parse a default value in the middle of a parameter list") {
           "{ def f(x: Int = 1, y: Int): Int = x + y; f(y = 2) }" shouldParseTo {
-            block(call(ref("f"), infix(ref("y"), "=", lit(2))),
+            block(callSimple(ref("f"), infix(ref("y"), "=", lit(2))),
               defDecl("f").group(param("x", "Int", lit(1)), param("y", "Int")).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }
 
         it("should parse default values in multiple parameter groups") {
           "{ def f(x: Int = 1)(y: Int = 43): Int = x + y; f()() }" shouldParseTo {
-            block(multiCall(ref("f"), Vector(Vector.empty, Vector.empty)),
+            block(call(ref("f")).group().group().build(),
               defDecl("f").group(param("x", "Int", lit(1))).group(param("y", "Int", lit(43))).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }
@@ -318,19 +318,19 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
     it("should handle an unclosed parenthesis in a function call") {
       "f(1, 2" shouldRecoverWith (ParseError.UnclosedDelimiter(Token.LParen, Token.RParen) at 1) producing {
-        call(ref("f"), lit(1), lit(2))
+        callSimple(ref("f"), lit(1), lit(2))
       }
     }
 
     it("should handle a missing expression in an argument list") {
       "f(1, , 2)" shouldRecoverWith (ParseError.MissingExpression("argument") at 5) producing {
-        call(ref("f"), lit(1), lit(2))
+        callSimple(ref("f"), lit(1), lit(2))
       }
     }
 
     it("should recover from an unexpected token in a function call") {
       "f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5) producing {
-        call(ref("f"), lit(1), lit(2))
+        callSimple(ref("f"), lit(1), lit(2))
       }
     }
 
@@ -339,13 +339,13 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         ParseError.UnexpectedToken(Token.At) at 5,
         ParseError.UnexpectedToken(Token.Hash) at 8
       ) producing {
-        call(ref("f"), lit(1), lit(2))
+        callSimple(ref("f"), lit(1), lit(2))
       }
     }
 
     it("should handle an unexpected token at the start of an argument") {
       "f(@, 1)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 2) producing {
-        call(ref("f"), lit(1))
+        callSimple(ref("f"), lit(1))
       }
     }
 
@@ -368,14 +368,14 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
       it("should support multiple assertions with chaining") {
         ("f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5))
-          .producing(call(ref("f"), lit(1), lit(2)))
+          .producing(callSimple(ref("f"), lit(1), lit(2)))
           .andNoFatalErrors()
       }
 
       it("should support withPartialAst for custom assertions") {
         ("f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5))
           .withPartialAst { ast =>
-            ast shouldBe call(ref("f"), lit(1), lit(2))
+            ast shouldBe callSimple(ref("f"), lit(1), lit(2))
           }
       }
     }

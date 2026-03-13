@@ -21,7 +21,7 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
         "f(1, g(2, @, 3), 4)" shouldRecoverWith (
           ParseError.UnexpectedToken(Token.At) at 10
           ) producing {
-          call(ref("f"), lit(1), call(ref("g"), lit(2), lit(3)), lit(4))
+          callSimple(ref("f"), lit(1), callSimple(ref("g"), lit(2), lit(3)), lit(4))
         }
       }
     }
@@ -32,7 +32,7 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
           ParseError.UnexpectedToken(Token.At) at 2,
           ParseError.UnexpectedToken(Token.Hash) at 8
         ) producing {
-          call(ref("f"), lit(1), lit(2))
+          callSimple(ref("f"), lit(1), lit(2))
         }
       }
     }
@@ -42,7 +42,7 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
         "f(1, @)" shouldRecoverWith (
           ParseError.UnexpectedToken(Token.At) at 5
           ) producing {
-          call(ref("f"), lit(1))
+          callSimple(ref("f"), lit(1))
         }
       }
 
@@ -50,7 +50,7 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
         "f(@)" shouldRecoverWith (
           ParseError.UnexpectedToken(Token.At) at 2
           ) producing {
-          call(ref("f"))
+          call(ref("f")).build()
         }
       }
     }
@@ -61,7 +61,7 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
           ParseError.UnexpectedToken(Token.At) at 5,
           ParseError.UnexpectedToken(Token.Hash) at 11
         ) producing {
-          call(ref("f"), lit(1), lit(2), lit(3))
+          callSimple(ref("f"), lit(1), lit(2), lit(3))
         }
       }
     }
@@ -72,7 +72,7 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
           ParseError.UnexpectedToken(Token.Val) at 5,
           ParseError.UnexpectedToken(Token.Identifier.Lower("x")) at 9
           ) producing {
-          call(ref("f"), lit(1), lit(3))
+          callSimple(ref("f"), lit(1), lit(3))
         }
       }
 
