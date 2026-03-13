@@ -14,7 +14,7 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
   import ParserTestOps._
   import software.kes.scaletta.testsupport.ParseErrorMatchers._
 
-  val errorAtIndex = atIndex _
+  private val errorAtIndex = atIndex _
   import software.kes.scaletta.testsupport.ParseWarningMatchers._
 
   describe("Parser") {
