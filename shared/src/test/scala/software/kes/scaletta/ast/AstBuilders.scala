@@ -26,10 +26,10 @@ object AstBuilders {
     new CallBuilder(target, Vector.empty, Vector.empty)
 
   /**
-   * Calls with 1 or more arguments in a single group, with no type arguments.
+   * Calls with only single argument group, and no type arguments.
    */
-  def callSimple(target: Expression[Id], first: Argument[Id], rest: Argument[Id]*): Expression[Id] =
-    call(target).group(ArgumentGroup[Id](Vector(first) ++ rest.toVector)).build()
+  def callSimple(target: Expression[Id], args: Argument[Id]*): Expression[Id] =
+    call(target).group(ArgumentGroup[Id](args.toVector)).build()
 
   def typed(expr: Expression[Id], ascription: TypeIdentifier[Id]): Expression[Id] =
     Typed[Id](expr, ascription)

@@ -50,7 +50,7 @@ class ParserSynchronizationTest extends AnyFunSpec with Matchers with TableDrive
         "f(@)" shouldRecoverWith (
           ParseError.UnexpectedToken(Token.At) at 2
           ) producing {
-          call(ref("f")).build()
+          callSimple(ref("f"))
         }
       }
     }

@@ -206,14 +206,14 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       describe("Default Parameter Values") {
         it("should parse a parameter with a default value") {
           "{ def f(x: Int = 1): Int = x; f() }" shouldParseTo {
-            block(call(ref("f")).build(),
+            block(callSimple(ref("f")),
               defDecl("f").group(param("x", "Int", lit(1))).returnType("Int").body(ref("x")))
           }
         }
 
         it("should parse multiple parameters with default values") {
           "{ def f(x: Int = 1, y: Int = 41): Int = x + y; f() }" shouldParseTo {
-            block(call(ref("f")).build(),
+            block(callSimple(ref("f")),
               defDecl("f").group(param("x", "Int", lit(1)), param("y", "Int", lit(41))).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }
