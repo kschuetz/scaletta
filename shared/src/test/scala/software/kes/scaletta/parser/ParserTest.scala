@@ -92,6 +92,26 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
           "a.b(c).d" shouldParseTo select(callSimple(select(ref("a"), "b"), ref("c")), "d")
         }
 
+        it("should parse a function call with named arguments") {
+          "f(x = 1, y = \"foo\")" shouldParseTo callSimple(ref("f"), namedArg("x", lit(1)), namedArg("y", lit("foo")))
+        }
+
+        it("should parse a function call with mixed positional and named arguments") {
+          "f(1, y = 2)" shouldParseTo callSimple(ref("f"), arg(lit(1)), namedArg("y", lit(2)))
+        }
+
+        it("should fail when a positional argument follows a named argument") {
+          "f(x = 1, 2)" shouldFailWith (ParseError.PositionalAfterNamedArgument at 9) producing {
+            callSimple(ref("f"), namedArg("x", lit(1)), arg(lit(2)))
+          }
+        }
+
+        it("should fail when a named argument is missing its value") {
+          "f(x = )" shouldFailWith(ParseError.UnexpectedToken(Token.RParen) at 6, ParseError.UnclosedDelimiter(Token.LParen, Token.RParen) at 1) producing {
+            call(ref("f")).group().build()
+          }
+        }
+
         it("should report an error for trailing dot (a.)") {
           "a." shouldFailWith (ParseError.UnexpectedToken(Token.EndOfInput) at 2) producing {
             ref("a")
@@ -220,7 +240,7 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
         it("should parse a default value in the middle of a parameter list") {
           "{ def f(x: Int = 1, y: Int): Int = x + y; f(y = 2) }" shouldParseTo {
-            block(callSimple(ref("f"), infix(ref("y"), "=", lit(2))),
+            block(callSimple(ref("f"), namedArg("y", lit(2))),
               defDecl("f").group(param("x", "Int", lit(1)), param("y", "Int")).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }

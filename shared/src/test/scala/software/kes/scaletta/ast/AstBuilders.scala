@@ -121,6 +121,9 @@ object AstBuilders {
 
   implicit def arg(expression: Expression[Id]): Argument[Id] = Argument[Id](expression)
 
+  def namedArg(name: String, expression: Expression[Id]): Argument[Id] =
+    Argument[Id](expression, Some(Identifier[Id](name)))
+
   implicit def identifier(name: String): Identifier[Id] = Identifier[Id](name)
 
   final class DefDeclBuilder(private val result: Def[Id]) {

@@ -621,6 +621,7 @@ final class Parser private() {
     private def parseArgumentGroup(lParenToken: Pos[Token]): (Option[ArgumentGroup[Pos]], CharIndex, ParseDiagnostics) = {
       var args = Vector.empty[Pos[Argument[Pos]]]
       var diagnostics = ParseDiagnostics.empty
+      var hasNamedArgument = false
 
       def continueParsing(): Boolean = {
         val next = scanner.peek(1).value
@@ -636,7 +637,14 @@ final class Parser private() {
         } else {
           val argExprResult = parseExpression(BindingPower.Minimum)
           val (argOpt, argDiagnostics) = parseSingleArgument(argExprResult)
-          argOpt.foreach(args :+= _)
+          argOpt.foreach { arg =>
+            if (arg.value.name.isDefined) {
+              hasNamedArgument = true
+            } else if (hasNamedArgument) {
+              diagnostics = diagnostics.addError(arg.as(ParseError.PositionalAfterNamedArgument))
+            }
+            args :+= arg
+          }
           diagnostics = diagnostics ++ argDiagnostics
 
           val next = scanner.peek(1)
@@ -665,7 +673,25 @@ final class Parser private() {
     private def parseSingleArgument(argExprResult: ExprResult[Pos]): (Option[Pos[Argument[Pos]]], ParseDiagnostics) = {
       argExprResult.value match {
         case Some(expr) =>
-          (Some(expr.as(Argument(expr))), argExprResult.diagnostics)
+          val nextToken = scanner.peek(1)
+          expr.value match {
+            case Reference(idPos) if nextToken.value == Token.Eq =>
+              scanner.get() // consume '='
+              val valueResult = parseExpression(BindingPower.Minimum)
+              valueResult.value match {
+                case Some(valueExpr) =>
+                  val combinedPos = Pos(Argument(valueExpr, Some(idPos)), expr.begin, valueExpr.end)
+                  (Some(combinedPos), argExprResult.diagnostics ++ valueResult.diagnostics)
+                case None =>
+                  var diag = argExprResult.diagnostics ++ valueResult.diagnostics
+                  if (diag.errors.isEmpty) {
+                    diag = diag.addError(Pos(ParseError.MissingExpression("named argument value"), nextToken.begin, nextToken.end))
+                  }
+                  (None, diag)
+              }
+            case _ =>
+              (Some(expr.as(Argument(expr))), argExprResult.diagnostics)
+          }
         case None =>
           if (argExprResult.diagnostics.errors.isEmpty) {
             val next = scanner.peek(1)

@@ -33,7 +33,7 @@ class BindingPowerTest extends AnyFunSpec with Matchers {
     check("==", BindingPower.Equality)
     check("!=", BindingPower.Equality)
     check("!", BindingPower.Equality)
-    check("=", BindingPower.Equality)
+    check("=", BindingPower.Minimum)
     check(":", BindingPower.ColonOperator)
     check("::", BindingPower.ColonOperator)
     check("+", BindingPower.Addition)

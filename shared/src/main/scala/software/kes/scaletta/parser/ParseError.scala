@@ -16,4 +16,6 @@ object ParseError {
   case object VariadicParameterMustBeLast extends ParseError
 
   case class Message(message: String) extends ParseError
+
+  case object PositionalAfterNamedArgument extends ParseError
 }

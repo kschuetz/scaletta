@@ -15,6 +15,7 @@ object Operators {
       case Token.Colon => BindingPower.Ascription
       case Token.Pipe => BindingPower.LogicalOr
       case Token.Ampersand => BindingPower.LogicalAnd
+      case Token.Eq => BindingPower.Minimum
       case _ => bindingPowerByName(reservedWord.name)
     }
   }
@@ -28,7 +29,8 @@ object Operators {
         case '^' => BindingPower.LogicalXor
         case '&' => BindingPower.LogicalAnd
         case '<' | '>' => BindingPower.Comparison
-        case '!' | '=' => BindingPower.Equality
+        case '!' => BindingPower.Equality
+        case '=' => if (name.length > 1) BindingPower.Equality else BindingPower.Minimum
         case ':' => BindingPower.ColonOperator
         case '+' | '-' => BindingPower.Addition
         case '*' | '/' | '%' => BindingPower.Multiplication
