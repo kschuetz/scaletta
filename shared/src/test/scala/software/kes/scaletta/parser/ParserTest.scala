@@ -157,44 +157,44 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       }
 
       it("should parse a def declaration with a return type") {
-        "{ def f: Int = 1; f }" shouldParseTo block(ref("f"), defDecl("f", Vector.empty, "Int", lit(1)))
+        "{ def f: Int = 1; f }" shouldParseTo block(ref("f"), defDecl("f").returnType("Int").body(lit(1)))
       }
 
       it("should parse a def declaration with a function return type") {
         "{ def g: Int => String = s; g }" shouldParseTo {
-          block(ref("g"), defDecl("g", Vector.empty, Some(tFunc(Vector(tName("Int")), tName("String"))), ref("s")))
+          block(ref("g"), defDecl("g").returnType(tFunc(Vector(tName("Int")), tName("String"))).body(ref("s")))
         }
       }
 
       it("should recover from a malformed return type in a def declaration") {
         "{ def f: = 1; f }" shouldRecoverWith (ParseError.UnexpectedToken(Token.Eq) at 9) producing {
-          block(ref("f"), defDecl("f", Vector.empty, None, lit(1)))
+          block(ref("f"), defDecl("f").body(lit(1)))
         }
       }
 
       it("should parse a def declaration with a single parameter group") {
         "{ def f(x: Int): Int = x; f(1) }" shouldParseTo {
-          block(call(ref("f"), lit(1)), defDecl("f", Vector(Vector(("x", "Int", None))), "Int", ref("x")))
+          block(call(ref("f"), lit(1)), defDecl("f").group(param("x", "Int")).returnType("Int").body(ref("x")))
         }
       }
 
       it("should parse a def declaration with multiple parameters") {
         "{ def add(x: Int, y: Int): Int = x + y; add(1, 2) }" shouldParseTo {
-          block(call(ref("add"), lit(1), lit(2)), defDecl("add", Vector(Vector(("x", "Int", None), ("y", "Int", None))), "Int", infix(ref("x"), "+", ref("y"))))
+          block(call(ref("add"), lit(1), lit(2)), defDecl("add").group(param("x", "Int"), param("y", "Int")).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
         }
       }
 
       it("should parse a def declaration with multiple parameter groups (currying)") {
         "{ def g(x: Int)(y: String): Boolean = true; g(1)(\"hi\") }" shouldParseTo {
           block(multiCall(ref("g"), Vector(Vector(lit(1)), Vector(lit("hi")))),
-            defDecl("g", Vector(Vector(("x", "Int", None)), Vector(("y", "String", None))), "Boolean", lit(true)))
+            defDecl("g").group(param("x", "Int")).group(param("y", "String")).returnType("Boolean").body(lit(true)))
         }
       }
 
       it("should handle error in parameter group but continue parsing") {
         ("{ def f(x: ): Int = 1; f }" shouldRecoverWith containErrorOfType[ParseError.UnexpectedToken])
           .producing {
-            block(ref("f"), defDecl("f", Vector(Vector.empty), "Int", lit(1)))
+            block(ref("f"), defDecl("f").group().returnType("Int").body(lit(1)))
           }.ignoringAst()
       }
 
@@ -207,28 +207,28 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         it("should parse a parameter with a default value") {
           "{ def f(x: Int = 1): Int = x; f() }" shouldParseTo {
             block(call(ref("f")),
-              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1))))), "Int", ref("x")))
+              defDecl("f").group(param("x", "Int", lit(1))).returnType("Int").body(ref("x")))
           }
         }
 
         it("should parse multiple parameters with default values") {
           "{ def f(x: Int = 1, y: Int = 41): Int = x + y; f() }" shouldParseTo {
             block(call(ref("f")),
-              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1))), ("y", "Int", Some(lit(41))))), "Int", infix(ref("x"), "+", ref("y"))))
+              defDecl("f").group(param("x", "Int", lit(1)), param("y", "Int", lit(41))).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }
 
         it("should parse a default value in the middle of a parameter list") {
           "{ def f(x: Int = 1, y: Int): Int = x + y; f(y = 2) }" shouldParseTo {
             block(call(ref("f"), infix(ref("y"), "=", lit(2))),
-              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1))), ("y", "Int", None))), "Int", infix(ref("x"), "+", ref("y"))))
+              defDecl("f").group(param("x", "Int", lit(1)), param("y", "Int")).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }
 
         it("should parse default values in multiple parameter groups") {
           "{ def f(x: Int = 1)(y: Int = 43): Int = x + y; f()() }" shouldParseTo {
             block(multiCall(ref("f"), Vector(Vector.empty, Vector.empty)),
-              defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1)))), Vector(("y", "Int", Some(lit(43))))), "Int", infix(ref("x"), "+", ref("y"))))
+              defDecl("f").group(param("x", "Int", lit(1))).group(param("y", "Int", lit(43))).returnType("Int").body(infix(ref("x"), "+", ref("y"))))
           }
         }
 

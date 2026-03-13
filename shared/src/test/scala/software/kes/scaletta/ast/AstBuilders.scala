@@ -81,32 +81,13 @@ object AstBuilders {
   def lazyValDecl(pattern: Pattern[Id], rhs: Expression[Id]): Declaration[Id] =
     Declaration.lazyVal[Id](pattern, rhs)
 
-  def defDecl(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], returnType: Option[TypeIdentifier[Id]], body: Expression[Id]): Declaration[Id] = {
-    val paramGroups = params.map { group =>
-      FormalParameterGroup[Id](group.map { case (n, t, d) =>
-        FormalParameter[Id](Identifier[Id](n), TypeIdentifier.name[Id](Identifier[Id](t)), d)
-      })
-    }
-    Declaration.def_[Id](Identifier(name), paramGroups, returnType, body)
+  def defDecl(name: String): DefDeclBuilder = {
+    val initial = Def[Id](Identifier(name), Vector.empty, None, Literal.null_())
+    new DefDeclBuilder(initial)
   }
 
-  def defDecl(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], returnType: String, body: Expression[Id]): Declaration[Id] =
-    defDecl(name, params, Some(tName(returnType)), body)
-
-  def defDecl(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], body: Expression[Id]): Declaration[Id] =
-    defDecl(name, params, None: Option[TypeIdentifier[Id]], body)
-
-  def defWithDefaults(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], returnType: String, body: Expression[Id]): Declaration[Id] =
-    defDecl(name, params, returnType, body)
-
-  def defWithDefaults(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], body: Expression[Id]): Declaration[Id] =
-    defDecl(name, params, body)
-
   def defSimple(name: String, body: Expression[Id]): Declaration[Id] =
-    defDecl(name, Vector.empty, body)
-
-  def defUnary(name: String, param: (String, String), body: Expression[Id]): Declaration[Id] =
-    defDecl(name, Vector(Vector((param._1, param._2, None))), body)
+    defDecl(name).body(body)
 
   def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
 
@@ -148,17 +129,15 @@ object AstBuilders {
   def paramGroup(params: FormalParameter[Id]*): FormalParameterGroup[Id] =
     FormalParameterGroup[Id](params.toVector)
 
-  def buildDefDecl(name: String): DefDeclBuilder = {
-    val initial = Def[Id](Identifier(name), Vector.empty, None, Literal.null_())
-    new DefDeclBuilder(initial)
-  }
-
   final class DefDeclBuilder(private val result: Def[Id]) {
     def group(params: FormalParameter[Id]*): DefDeclBuilder =
       modify(_.copy(params = result.params :+ paramGroup(params: _*)))
 
     def returnType(typ: String): DefDeclBuilder =
-      modify(_.copy[Id](returnType = Some(TypeIdentifier.name[Id](Identifier[Id](typ)))))
+      returnType(TypeIdentifier.name[Id](Identifier[Id](typ)))
+
+    def returnType(typ: TypeIdentifier[Id]): DefDeclBuilder =
+      modify(_.copy[Id](returnType = Some(typ)))
 
     def body(expression: Expression[Id]): Declaration[Id] =
       result.copy[Id](body = expression)
