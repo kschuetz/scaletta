@@ -12,7 +12,9 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
   private implicit val matchers: Matchers = Matchers
 
   import ParserTestOps._
-  import software.kes.scaletta.testsupport.ParseErrorMatchers.{atIndex => errorAtIndex, _}
+  import software.kes.scaletta.testsupport.ParseErrorMatchers._
+
+  val errorAtIndex = atIndex _
   import software.kes.scaletta.testsupport.ParseWarningMatchers._
 
   describe("Parser") {
@@ -172,20 +174,20 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
       it("should parse a def declaration with a single parameter group") {
         "{ def f(x: Int): Int = x; f(1) }" shouldParseTo {
-          block(call(ref("f"), lit(1)), defDecl("f", Vector(Vector("x" -> "Int")), "Int", ref("x")))
+          block(call(ref("f"), lit(1)), defDecl("f", Vector(Vector(("x", "Int", None))), "Int", ref("x")))
         }
       }
 
       it("should parse a def declaration with multiple parameters") {
         "{ def add(x: Int, y: Int): Int = x + y; add(1, 2) }" shouldParseTo {
-          block(call(ref("add"), lit(1), lit(2)), defDecl("add", Vector(Vector("x" -> "Int", "y" -> "Int")), "Int", infix(ref("x"), "+", ref("y"))))
+          block(call(ref("add"), lit(1), lit(2)), defDecl("add", Vector(Vector(("x", "Int", None), ("y", "Int", None))), "Int", infix(ref("x"), "+", ref("y"))))
         }
       }
 
       it("should parse a def declaration with multiple parameter groups (currying)") {
         "{ def g(x: Int)(y: String): Boolean = true; g(1)(\"hi\") }" shouldParseTo {
           block(multiCall(ref("g"), Vector(Vector(lit(1)), Vector(lit("hi")))),
-            defDecl("g", Vector(Vector("x" -> "Int"), Vector("y" -> "String")), "Boolean", lit(true)))
+            defDecl("g", Vector(Vector(("x", "Int", None)), Vector(("y", "String", None))), "Boolean", lit(true)))
         }
       }
 
@@ -218,7 +220,7 @@ class ParserTest extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
         it("should parse a default value in the middle of a parameter list") {
           "{ def f(x: Int = 1, y: Int): Int = x + y; f(y = 2) }" shouldParseTo {
-            block(call(ref("f"), Argument(ref("y"), Some(Identifier("y")))),
+            block(call(ref("f"), infix(ref("y"), "=", lit(2))),
               defWithDefaults("f", Vector(Vector(("x", "Int", Some(lit(1))), ("y", "Int", None))), "Int", infix(ref("x"), "+", ref("y"))))
           }
         }

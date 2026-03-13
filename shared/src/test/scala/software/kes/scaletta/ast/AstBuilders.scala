@@ -19,9 +19,19 @@ object AstBuilders {
   def infix(left: Expression[Id], op: String, right: Expression[Id]): Expression[Id] =
     Call.infix[Id](left, Identifier(op), Vector.empty, right)
 
-  def call(target: Expression[Id], args: Expression[Id]*): Expression[Id] = {
-    val argGroup = ArgumentGroup[Id](args.toVector.map(a => Argument[Id](a)))
-    Call.standard[Id](target, Vector.empty, Vector(argGroup))
+  def call(target: Expression[Id], args: Any*): Expression[Id] = {
+    if (args.isEmpty) {
+      Call.standard[Id](target, Vector.empty, Vector(ArgumentGroup[Id](Vector.empty)))
+    } else if (args.forall(_.isInstanceOf[ArgumentGroup[Id]])) {
+      Call.standard[Id](target, Vector.empty, args.toVector.asInstanceOf[Vector[ArgumentGroup[Id]]])
+    } else {
+      val argGroup = ArgumentGroup[Id](args.toVector.map {
+        case a: Argument[Id] => a
+        case e: Expression[Id] => Argument[Id](e)
+        case other => throw new IllegalArgumentException(s"Expected Expression or Argument, but got ${other.getClass.getSimpleName}")
+      })
+      Call.standard[Id](target, Vector.empty, Vector(argGroup))
+    }
   }
 
   def multiCall(target: Expression[Id], argGroups: Vector[Vector[Expression[Id]]]): Expression[Id] = {
@@ -85,8 +95,8 @@ object AstBuilders {
   def defDecl(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], body: Expression[Id]): Declaration[Id] =
     defDecl(name, params, None: Option[TypeIdentifier[Id]], body)
 
-  private implicit def toTripleVector(v: Vector[Vector[(String, String)]]): Vector[Vector[(String, String, Option[Expression[Id]])]] =
-    v.map(_.map { case (n, t) => (n, t, None) })
+  def defWithDefaults(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], returnType: String, body: Expression[Id]): Declaration[Id] =
+    defDecl(name, params, returnType, body)
 
   def defWithDefaults(name: String, params: Vector[Vector[(String, String, Option[Expression[Id]])]], body: Expression[Id]): Declaration[Id] =
     defDecl(name, params, body)
@@ -95,7 +105,7 @@ object AstBuilders {
     defDecl(name, Vector.empty, body)
 
   def defUnary(name: String, param: (String, String), body: Expression[Id]): Declaration[Id] =
-    defDecl(name, Vector(Vector(param)), body)
+    defDecl(name, Vector(Vector((param._1, param._2, None))), body)
 
   def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
 

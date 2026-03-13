@@ -104,6 +104,20 @@ object ParseErrorMatchers {
     }
   }
 
+  def containErrorWithMessage(msg: String): Matcher[Vector[Pos[ParseError]]] = (left: Vector[Pos[ParseError]]) => {
+    val found = left.exists { p =>
+      p.value match {
+        case ParseError.Message(m) => m == msg
+        case _ => false
+      }
+    }
+    MatchResult(
+      found,
+      s"Vector did not contain error with message '$msg'. Actual errors: $left",
+      s"Vector contained error with message '$msg'"
+    )
+  }
+
   def containError(expected: ErrorWithPosition): ContainErrorMatcher =
     new ContainErrorMatcher(expected.error, expected.index, expected.endIndex)
 
