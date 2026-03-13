@@ -1,5 +1,6 @@
 package software.kes.scaletta.ast
 
+import software.kes.scaletta.ast.Declaration.Def
 import software.kes.scaletta.util.functional.Id._
 
 object AstBuilders {
@@ -137,4 +138,32 @@ object AstBuilders {
 
   def caseExpr(pat: Pattern[Id], result: Expression[Id]): Case[Id] =
     Case[Id](pat, None, result)
+
+  def param(name: String, typ: String): FormalParameter[Id] =
+    FormalParameter[Id](Identifier[Id](name), TypeIdentifier.name[Id](Identifier[Id](typ)), None)
+
+  def param(name: String, typ: String, default: Expression[Id]): FormalParameter[Id] =
+    FormalParameter[Id](Identifier[Id](name), TypeIdentifier.name[Id](Identifier[Id](typ)), Some(default))
+
+  def paramGroup(params: FormalParameter[Id]*): FormalParameterGroup[Id] =
+    FormalParameterGroup[Id](params.toVector)
+
+  def buildDefDecl(name: String): DefDeclBuilder = {
+    val initial = Def[Id](Identifier(name), Vector.empty, None, Literal.null_())
+    new DefDeclBuilder(initial)
+  }
+
+  final class DefDeclBuilder(private val result: Def[Id]) {
+    def group(params: FormalParameter[Id]*): DefDeclBuilder =
+      modify(_.copy(params = result.params :+ paramGroup(params: _*)))
+
+    def returnType(typ: String): DefDeclBuilder =
+      modify(_.copy[Id](returnType = Some(TypeIdentifier.name[Id](Identifier[Id](typ)))))
+
+    def body(expression: Expression[Id]): Declaration[Id] =
+      result.copy[Id](body = expression)
+
+    private def modify(fn: Def[Id] => Def[Id]): DefDeclBuilder =
+      new DefDeclBuilder(fn(result))
+  }
 }
