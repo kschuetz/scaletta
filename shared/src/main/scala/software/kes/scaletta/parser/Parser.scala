@@ -16,18 +16,22 @@ final class Parser private() {
   }
 
   private class Session(scanner: Scanner, options: ParseOptions) {
+    private var diagnostics: ParseDiagnostics = ParseDiagnostics.empty
 
     def run: ExprResult[Pos] = {
       val result = parseExpression(BindingPower.Minimum)
-      if (options.requireExhaustion) {
+      val resultWithExhaustion = if (options.requireExhaustion) {
         val next = scanner.peek(1)
         next.value match {
           case Token.EndOfInput => result
-          case _ => result.addError(Pos(ParseError.ExtraToken(next.value, "end of input"), next.begin, next.end))
+          case _ =>
+            reportError(Pos(ParseError.ExtraToken(next.value, "end of input"), next.begin, next.end))
+            result
         }
       } else {
         result
       }
+      resultWithExhaustion.addDiagnostics(diagnostics)
     }
 
     private def parseExpression(minBindingPower: BindingPower): ExprResult[Pos] = {
@@ -96,7 +100,8 @@ final class Parser private() {
 
     private def nud(token: Pos[Token]): ExprResult[Pos] = {
       if (isStructuralBoundary(token.value)) {
-        return ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+        reportError(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+        return ParseResult.empty
       }
       token.value match {
         case Token.IntLiteral(v) => ParseResult.create(token.as(Literal.int(v)))
@@ -114,7 +119,8 @@ final class Parser private() {
         case Token.If =>
           parseConditional(token)
         case _ =>
-          ParseResult.error(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+          reportError(Pos(ParseError.UnexpectedToken(token.value), token.begin, token.end))
+          ParseResult.empty
       }
     }
 
@@ -125,34 +131,32 @@ final class Parser private() {
         case Token.RParen =>
           processParenthesizedResult(token, result, next)
         case Token.EndOfInput =>
-          result.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), token.begin, token.end))
+          reportError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), token.begin, token.end))
+          result
         case _ =>
-          result.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+          reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+          result
       }
     }
 
     private def processParenthesizedResult(token: Pos[Token], result: ExprResult[Pos], next: Pos[Token]): ExprResult[Pos] = {
       result.value match {
         case Some(inner) =>
-          val finalResult: ExprResult[Pos] = ParseResult.create(Pos(inner.value, token.begin, next.end))
-            .addDiagnostics(result.diagnostics)
           val isUnnecessary = inner.value.getClass match {
             case c if classOf[Literal[Pos]].isAssignableFrom(c) => true
             case c if classOf[Reference[Pos]].isAssignableFrom(c) => true
             case _ => false
           }
           if (isUnnecessary) {
-            finalResult.addHint(Pos(ParseHint.UnnecessaryParentheses, token.begin, next.end))
-          } else {
-            finalResult
+            reportHint(Pos(ParseHint.UnnecessaryParentheses, token.begin, next.end))
           }
+          ParseResult.create(Pos(inner.value, token.begin, next.end))
         case None => result
       }
     }
 
     private def parseBlock(token: Pos[Token]): ExprResult[Pos] = {
       var declarations = Vector.empty[Pos[Declaration[Pos]]]
-      var diagnostics = ParseDiagnostics.empty
 
       def isAtDeclarationStart: Boolean = {
         scanner.peek(1).value match {
@@ -164,7 +168,6 @@ final class Parser private() {
       while (isAtDeclarationStart) {
         val declResult = parseDeclaration()
         declResult.value.foreach(d => declarations = declarations :+ d)
-        diagnostics = diagnostics ++ declResult.diagnostics
 
         val next = scanner.peek(1)
         next.value match {
@@ -175,27 +178,29 @@ final class Parser private() {
           case Token.RBrace =>
           // will be handled by final expression parsing
           case _ if isAtDeclarationStart || !isStructuralBoundary(next.value) =>
-            diagnostics = diagnostics.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+            reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
           case _ =>
         }
       }
 
       val resultExpr = parseExpression(BindingPower.Minimum)
-      diagnostics = diagnostics ++ resultExpr.diagnostics
 
       val next = scanner.get()
       next.value match {
         case Token.RBrace =>
           resultExpr.value match {
             case Some(res) =>
-              ParseResult(Some(Pos(Block(declarations, res), token.begin, next.end)), diagnostics)
+              ParseResult.create(Pos(Block(declarations, res), token.begin, next.end))
             case None =>
-              ParseResult(None, diagnostics.addError(Pos(ParseError.MissingExpression("block result"), next.begin, next.end)))
+              reportError(Pos(ParseError.MissingExpression("block result"), next.begin, next.end))
+              ParseResult.empty
           }
         case Token.EndOfInput =>
-          ParseResult(None, diagnostics.addError(Pos(ParseError.UnclosedDelimiter(Token.LBrace, Token.RBrace), token.begin, token.end)))
+          reportError(Pos(ParseError.UnclosedDelimiter(Token.LBrace, Token.RBrace), token.begin, token.end))
+          ParseResult.empty
         case _ =>
-          ParseResult(None, diagnostics.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)))
+          reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+          ParseResult.empty
       }
     }
 
@@ -210,12 +215,14 @@ final class Parser private() {
             case Token.Val =>
               parseLazyValDeclaration(firstToken, next)
             case _ =>
-              ParseResult.error(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+              reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+              ParseResult.empty
           }
         case Token.Def =>
           parseDefDeclaration(firstToken)
         case _ =>
-          ParseResult.error(Pos(ParseError.UnexpectedToken(firstToken.value), firstToken.begin, firstToken.end))
+          reportError(Pos(ParseError.UnexpectedToken(firstToken.value), firstToken.begin, firstToken.end))
+          ParseResult.empty
       }
     }
 
@@ -226,12 +233,14 @@ final class Parser private() {
         val rhsResult = parseExpression(BindingPower.Minimum)
         (patternResult.value, rhsResult.value) match {
           case (Some(pat), Some(rhs)) =>
-            ParseResult(Some(Pos(Declaration.val_(pat, rhs), valToken.begin, rhs.end)), patternResult.diagnostics ++ rhsResult.diagnostics)
+            ParseResult.create(Pos(Declaration.val_(pat, rhs), valToken.begin, rhs.end))
           case _ =>
-            ParseResult(None, (patternResult.diagnostics ++ rhsResult.diagnostics).addError(Pos(ParseError.MissingExpression("val rhs"), eqToken.begin, eqToken.end)))
+            reportError(Pos(ParseError.MissingExpression("val rhs"), eqToken.begin, eqToken.end))
+            ParseResult.empty
         }
       } else {
-        ParseResult(None, patternResult.diagnostics.addError(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end)))
+        reportError(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
+        ParseResult.empty
       }
     }
 
@@ -242,24 +251,26 @@ final class Parser private() {
         val rhsResult = parseExpression(BindingPower.Minimum)
         (patternResult.value, rhsResult.value) match {
           case (Some(pat), Some(rhs)) =>
-            ParseResult(Some(Pos(Declaration.lazyVal(pat, rhs), lazyToken.begin, rhs.end)), patternResult.diagnostics ++ rhsResult.diagnostics)
+            ParseResult.create(Pos(Declaration.lazyVal(pat, rhs), lazyToken.begin, rhs.end))
           case _ =>
-            ParseResult(None, (patternResult.diagnostics ++ rhsResult.diagnostics).addError(Pos(ParseError.MissingExpression("lazy val rhs"), eqToken.begin, eqToken.end)))
+            reportError(Pos(ParseError.MissingExpression("lazy val rhs"), eqToken.begin, eqToken.end))
+            ParseResult.empty
         }
       } else {
-        ParseResult(None, patternResult.diagnostics.addError(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end)))
+        reportError(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
+        ParseResult.empty
       }
     }
 
     private def parseFormalParameterGroup(): ParseResult[Pos, Pos[FormalParameterGroup[Pos]]] = {
       val lParen = scanner.get()
       if (lParen.value != Token.LParen) {
-        return ParseResult.error(Pos(ParseError.UnexpectedToken(lParen.value), lParen.begin, lParen.end))
+        reportError(Pos(ParseError.UnexpectedToken(lParen.value), lParen.begin, lParen.end))
+        return ParseResult.empty
       }
 
       var params = Vector.empty[Pos[FormalParameter[Pos]]]
       var variadic: Option[Pos[FormalParameter[Pos]]] = None
-      var diagnostics = ParseDiagnostics.empty
 
       def continue(): Boolean = {
         val next = scanner.peek(1).value
@@ -274,7 +285,7 @@ final class Parser private() {
             val colon = scanner.get()
             if (colon.value == Token.Colon) {
               val typeResult = TypeIdentifierParser.parse(scanner)
-              diagnostics ++= typeResult.diagnostics
+              addDiagnostics(typeResult.diagnostics)
 
               typeResult.value match {
                 case Some(t) =>
@@ -293,12 +304,11 @@ final class Parser private() {
                   if (scanner.peek(1).value == Token.Eq) {
                     val eqToken = scanner.get()
                     val defaultResult = parseExpression(BindingPower.Minimum)
-                    diagnostics ++= defaultResult.diagnostics
                     defaultResult.value match {
                       case Some(expr) =>
                         default = Some(expr)
                       case None =>
-                        diagnostics = diagnostics.addError(Pos(ParseError.MissingExpression("parameter default value"), eqToken.begin, eqToken.end))
+                        reportError(Pos(ParseError.MissingExpression("parameter default value"), eqToken.begin, eqToken.end))
                     }
                   }
 
@@ -308,7 +318,7 @@ final class Parser private() {
                   if (hasAsterisk) {
                     if (default.isDefined) {
                       val errPos = asteriskPos.getOrElse(Pos(Token.EndOfInput, t.end, t.end))
-                      diagnostics = diagnostics.addError(Pos(ParseError.Message("Variadic parameter cannot have a default value"), errPos.begin, errPos.end))
+                      reportError(Pos(ParseError.Message("Variadic parameter cannot have a default value"), errPos.begin, errPos.end))
                     }
                     variadic = Some(param)
                   } else {
@@ -318,17 +328,17 @@ final class Parser private() {
                 // Error already in diagnostics from TypeIdentifierParser
               }
             } else {
-              diagnostics = diagnostics.addError(Pos(ParseError.UnexpectedToken(colon.value), colon.begin, colon.end))
+              reportError(Pos(ParseError.UnexpectedToken(colon.value), colon.begin, colon.end))
             }
           case _ =>
-            diagnostics = diagnostics.addError(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))
+            reportError(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))
         }
 
         val next = scanner.peek(1)
         if (next.value == Token.Comma) {
           scanner.get()
           if (variadic.isDefined) {
-            diagnostics = diagnostics.addError(Pos(ParseError.VariadicParameterMustBeLast, next.begin, next.end))
+            reportError(Pos(ParseError.VariadicParameterMustBeLast, next.begin, next.end))
           }
         } else if (next.value != Token.RParen && continue()) {
           // Basic synchronization
@@ -342,10 +352,10 @@ final class Parser private() {
       val rParen = scanner.get()
       val groupEnd = if (rParen.value == Token.RParen) rParen.end else scanner.peek(1).end
       if (rParen.value != Token.RParen) {
-        diagnostics = diagnostics.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParen.begin, lParen.end))
+        reportError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParen.begin, lParen.end))
       }
 
-      ParseResult(Some(Pos(FormalParameterGroup(params, variadic), lParen.begin, groupEnd)), diagnostics)
+      ParseResult.create(Pos(FormalParameterGroup(params, variadic), lParen.begin, groupEnd))
     }
 
     private def parseDefDeclaration(defToken: Pos[Token]): DeclResult[Pos] = {
@@ -356,49 +366,40 @@ final class Parser private() {
 
           // Step 4: Parse multiple parameter groups (currying support)
           var paramGroups = Vector.empty[Pos[FormalParameterGroup[Pos]]]
-          var allDiagnostics = ParseDiagnostics.empty
 
           while (scanner.peek(1).value == Token.LParen) {
             val groupResult = parseFormalParameterGroup()
-            allDiagnostics ++= groupResult.diagnostics
             groupResult.value.foreach(paramGroups :+= _)
           }
 
           // Step 3: Optional Return Type
-          val returnTypeResult: ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]] = if (scanner.peek(1).value == Token.Colon) {
+          val returnType: Option[Pos[TypeIdentifier[Pos]]] = if (scanner.peek(1).value == Token.Colon) {
             scanner.get() // Consume ':'
             val tr = TypeIdentifierParser.parse(scanner)
-            ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]](tr.value.map(Some(_)), tr.diagnostics)
+            addDiagnostics(tr.diagnostics)
+            tr.value
           } else {
-            ParseResult[Pos, Option[Pos[TypeIdentifier[Pos]]]](Some(None))
+            None
           }
-          allDiagnostics ++= returnTypeResult.diagnostics
 
           val eqToken = scanner.get()
           if (eqToken.value == Token.Eq) {
             val rhsResult = parseExpression(BindingPower.Minimum)
-            allDiagnostics ++= rhsResult.diagnostics
 
-            (returnTypeResult.value, rhsResult.value) match {
-              case (Some(returnType), Some(rhs)) =>
-                ParseResult(
-                  Some(Pos(Declaration.def_(name, paramGroups, returnType, rhs), defToken.begin, rhs.end)),
-                  allDiagnostics
-                )
-              case (None, Some(rhs)) =>
-                ParseResult(
-                  Some(Pos(Declaration.def_(name, paramGroups, None, rhs), defToken.begin, rhs.end)),
-                  allDiagnostics
-                )
-              case (_, _) =>
-                ParseResult(None, allDiagnostics.addError(Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end)))
+            rhsResult.value match {
+              case Some(rhs) =>
+                ParseResult.create(Pos(Declaration.def_(name, paramGroups, returnType, rhs), defToken.begin, rhs.end))
+              case _ =>
+                reportError(Pos(ParseError.MissingExpression("def body"), eqToken.begin, eqToken.end))
+                ParseResult.empty
             }
           } else {
-            ParseResult.error(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
-              .addDiagnostics(allDiagnostics)
+            reportError(Pos(ParseError.UnexpectedToken(eqToken.value), eqToken.begin, eqToken.end))
+            ParseResult.empty
           }
         case _ =>
-          ParseResult.error(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))
+          reportError(Pos(ParseError.UnexpectedToken(nameToken.value), nameToken.begin, nameToken.end))
+          ParseResult.empty
       }
     }
 
@@ -407,23 +408,26 @@ final class Parser private() {
       val baseResult: PatResult[Pos] = firstToken.value match {
         case idToken: Token.Identifier =>
           val id = firstToken.as(Identifier[Pos](idToken.name))
-          ParseResult(Some(firstToken.as(Pattern.Identifier(id))))
+          ParseResult.create(firstToken.as(Pattern.Identifier(id)))
         case Token.Underscore =>
-          ParseResult(Some(firstToken.as(Pattern.Wildcard())))
+          ParseResult.create(firstToken.as(Pattern.Wildcard()))
         case _ =>
-          ParseResult.error(Pos(ParseError.UnexpectedToken(firstToken.value), firstToken.begin, firstToken.end))
+          reportError(Pos(ParseError.UnexpectedToken(firstToken.value), firstToken.begin, firstToken.end))
+          ParseResult.empty
       }
 
-      baseResult.value match {
-        case Some(basePat) if scanner.peek(1).value == Token.Colon =>
+      (baseResult.value, scanner.peek(1).value) match {
+        case (Some(basePat), Token.Colon) =>
           scanner.get() // consume ':'
           val typeResult = TypeIdentifierParser.parse(scanner)
+          addDiagnostics(typeResult.diagnostics)
           typeResult.value match {
             case Some(ascription) =>
               val typedPat: Pattern[Pos] = Pattern.Typed(basePat, ascription)
-              ParseResult(Some(Pos(typedPat, basePat.begin, ascription.end)), baseResult.diagnostics ++ typeResult.diagnostics)
+              ParseResult.create(Pos(typedPat, basePat.begin, ascription.end))
             case None =>
-              baseResult.addDiagnostics(typeResult.diagnostics)
+              // TypeIdentifierParser already reported error if it couldn't produce a value
+              baseResult
           }
         case _ =>
           baseResult
@@ -455,49 +459,51 @@ final class Parser private() {
             case Some(qualifier) =>
               val selection: Expression[Pos] = Select[Pos](qualifier, name)
               ParseResult.create(Pos(selection, qualifier.begin, next.end))
-                .addDiagnostics(leftResult.diagnostics)
             case None =>
               // This should ideally not happen in a correctly functioning Pratt parser
               // if leftResult.value is None, it should have diagnostics already.
-              ParseResult(None, leftResult.diagnostics.addError(Pos(ParseError.MissingExpression("selection qualifier"), dotToken.begin, dotToken.end)))
+              reportError(Pos(ParseError.MissingExpression("selection qualifier"), dotToken.begin, dotToken.end))
+              ParseResult.empty
           }
         case _ =>
-          val result = leftResult.addError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+          reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
           // Synchronize to avoid cascading errors
           while (!isSynchronizationBoundary(scanner.peek(1).value)) {
             scanner.get()
           }
-          result
+          leftResult
       }
     }
 
     private def parseTypeAscription(leftResult: ExprResult[Pos], colonToken: Pos[Token]): ExprResult[Pos] = {
       val typeResult: TypeResult[Pos] = TypeIdentifierParser.parse(scanner)
+      addDiagnostics(typeResult.diagnostics)
 
       (leftResult.value, typeResult.value) match {
         case (Some(leftExpr), Some(ascription)) =>
           val typedNode: Expression[Pos] = Typed[Pos](leftExpr, ascription)
-          ParseResult.create(Pos(
+          ParseResult.create[Pos, Pos[Expression[Pos]]](Pos(
             typedNode,
             leftExpr.begin,
             ascription.end
-          )).addDiagnostics(leftResult.diagnostics ++ typeResult.diagnostics)
+          ))
 
         case _ =>
-          val result: ExprResult[Pos] = ParseResult(leftResult.value, leftResult.diagnostics ++ typeResult.diagnostics)
           // Synchronize if we failed to parse a type
-          while (!isSynchronizationBoundary(scanner.peek(1).value)) {
-            scanner.get()
+          if (typeResult.value.isEmpty) {
+            while (!isSynchronizationBoundary(scanner.peek(1).value)) {
+              scanner.get()
+            }
+            if (scanner.peek(1).value == Token.Semicolon) {
+              scanner.get()
+            }
           }
-          if (scanner.peek(1).value == Token.Semicolon) {
-            scanner.get()
-          }
-          result
+          leftResult
       }
     }
 
     private def parseFunctionCall(leftResult: ExprResult[Pos], opToken: Pos[Token]): ExprResult[Pos] = {
-      val (argsOpt, end, diagnostics) = parseArgumentGroup(opToken)
+      val (argsOpt, end) = parseArgumentGroup(opToken)
       argsOpt match {
         case Some(args) =>
           val group = Pos(args, opToken.begin, end)
@@ -509,16 +515,16 @@ final class Parser private() {
               } else {
                 Call.standard(left, Vector.empty, Vector(group))
               }
-              ParseResult.create(Pos(
+              ParseResult.create[Pos, Pos[Expression[Pos]]](Pos(
                 call,
                 left.begin,
                 end
-              )).addDiagnostics(leftResult.diagnostics ++ diagnostics)
+              ))
             case None =>
-              ParseResult(None, leftResult.diagnostics ++ diagnostics)
+              ParseResult.empty[Pos, Pos[Expression[Pos]]]
           }
         case None =>
-          ParseResult(None, leftResult.diagnostics ++ diagnostics)
+          ParseResult.empty[Pos, Pos[Expression[Pos]]]
       }
     }
 
@@ -539,23 +545,19 @@ final class Parser private() {
       (leftResult.value, rightResult.value) match {
         case (Some(left), Some(right)) =>
           val opId = Pos(Identifier[Pos](opName), opToken.begin, opToken.end)
-          var res: ExprResult[Pos] = ParseResult(
-            value = Some(Pos(
-              Call.infix(left, opId, Vector.empty, right),
-              left.begin,
-              right.end
-            )),
-            diagnostics = leftResult.diagnostics ++ rightResult.diagnostics
+          val resValue = Pos(
+            Call.infix(left, opId, Vector.empty, right),
+            left.begin,
+            right.end
           )
-          if (isSuspicious) res = res.addWarning(Pos(ParseWarning.SuspiciousInfixExpression(opName), opToken.begin, opToken.end))
-          res
+          if (isSuspicious) {
+            reportWarning(Pos(ParseWarning.SuspiciousInfixExpression(opName), opToken.begin, opToken.end))
+          }
+          ParseResult.create[Pos, Pos[Expression[Pos]]](resValue.as(resValue.value: Expression[Pos]))
         case (Some(left), None) =>
-          ParseResult(Some(left), leftResult.diagnostics ++ rightResult.diagnostics)
+          ParseResult.create[Pos, Pos[Expression[Pos]]](left)
         case _ =>
-          ParseResult(
-            value = None,
-            diagnostics = leftResult.diagnostics ++ rightResult.diagnostics
-          )
+          ParseResult.empty[Pos, Pos[Expression[Pos]]]
       }
     }
 
@@ -580,47 +582,44 @@ final class Parser private() {
         scanner.get()
         val cond = parseExpression(BindingPower.Minimum)
         val closeParen = scanner.get()
-        val finalCond = if (closeParen.value != Token.RParen) {
-          cond.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), next.begin, next.end))
-        } else {
-          cond
+        if (closeParen.value != Token.RParen) {
+          reportError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), next.begin, next.end))
         }
         if (scanner.peek(1).value == Token.Then) {
           scanner.get()
         }
-        finalCond
+        cond
       } else {
         val cond = parseExpression(BindingPower.Minimum)
         if (scanner.peek(1).value == Token.Then) {
           scanner.get()
           cond
         } else {
-          cond.addError(Pos(ParseError.UnexpectedToken(scanner.peek(1).value), scanner.peek(1).begin, scanner.peek(1).end))
+          reportError(Pos(ParseError.UnexpectedToken(scanner.peek(1).value), scanner.peek(1).begin, scanner.peek(1).end))
+          cond
         }
       }
 
       val thenResult = parseExpression(BindingPower.Minimum)
       val nextAfterThen = scanner.peek(1)
-      val elseResult = if (nextAfterThen.value == Token.Else) {
+      val elseResult: ExprResult[Pos] = if (nextAfterThen.value == Token.Else) {
         scanner.get()
         parseExpression(BindingPower.Minimum)
       } else {
-        ParseResult.error[Pos, Pos[Expression[Pos]]](Pos(ParseError.UnexpectedToken(nextAfterThen.value), nextAfterThen.begin, nextAfterThen.end))
+        reportError(Pos(ParseError.UnexpectedToken(nextAfterThen.value), nextAfterThen.begin, nextAfterThen.end))
+        ParseResult.empty
       }
-
-      val allDiagnostics = conditionResult.diagnostics ++ thenResult.diagnostics ++ elseResult.diagnostics
 
       (conditionResult.value, thenResult.value, elseResult.value) match {
         case (Some(c), Some(t), Some(e)) =>
-          ParseResult(Some(Pos(Conditional(c, t, e), ifToken.begin, e.end)), allDiagnostics)
+          ParseResult.create(Pos(Conditional(c, t, e), ifToken.begin, e.end))
         case _ =>
-          ParseResult(None, allDiagnostics)
+          ParseResult.empty
       }
     }
 
-    private def parseArgumentGroup(lParenToken: Pos[Token]): (Option[ArgumentGroup[Pos]], CharIndex, ParseDiagnostics) = {
+    private def parseArgumentGroup(lParenToken: Pos[Token]): (Option[ArgumentGroup[Pos]], CharIndex) = {
       var args = Vector.empty[Pos[Argument[Pos]]]
-      var diagnostics = ParseDiagnostics.empty
       var hasNamedArgument = false
 
       def continueParsing(): Boolean = {
@@ -632,20 +631,19 @@ final class Parser private() {
       while (!shouldStop && continueParsing()) {
         val nextToken = scanner.peek(1)
         if (nextToken.value == Token.Comma) {
-          diagnostics = diagnostics.addError(Pos(ParseError.MissingExpression("argument"), nextToken.begin, nextToken.end))
+          reportError(Pos(ParseError.MissingExpression("argument"), nextToken.begin, nextToken.end))
           scanner.get() // consume comma
         } else {
           val argExprResult = parseExpression(BindingPower.Minimum)
-          val (argOpt, argDiagnostics) = parseSingleArgument(argExprResult)
+          val argOpt = parseSingleArgument(argExprResult)
           argOpt.foreach { arg =>
             if (arg.value.name.isDefined) {
               hasNamedArgument = true
             } else if (hasNamedArgument) {
-              diagnostics = diagnostics.addError(arg.as(ParseError.PositionalAfterNamedArgument))
+              reportError(arg.as(ParseError.PositionalAfterNamedArgument))
             }
             args :+= arg
           }
-          diagnostics = diagnostics ++ argDiagnostics
 
           val next = scanner.peek(1)
           next.value match {
@@ -653,9 +651,7 @@ final class Parser private() {
               scanner.get() // consume comma
             case Token.RParen => // will exit loop
             case _ if continueParsing() =>
-              val (stop, syncErrors) = synchronizeToNextArgument()
-              shouldStop = stop
-              diagnostics = syncErrors.foldLeft(diagnostics)(_ addError _)
+              shouldStop = synchronizeToNextArgument()
             case _ =>
           }
         }
@@ -664,13 +660,14 @@ final class Parser private() {
       val rParenToken = scanner.peek(1)
       if (rParenToken.value == Token.RParen) {
         scanner.get()
-        (Some(ArgumentGroup[Pos](args)), rParenToken.end, diagnostics)
+        (Some(ArgumentGroup[Pos](args)), rParenToken.end)
       } else {
-        (Some(ArgumentGroup[Pos](args)), lParenToken.end, diagnostics.addError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParenToken.begin, lParenToken.end)))
+        reportError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lParenToken.begin, lParenToken.end))
+        (Some(ArgumentGroup[Pos](args)), lParenToken.end)
       }
     }
 
-    private def parseSingleArgument(argExprResult: ExprResult[Pos]): (Option[Pos[Argument[Pos]]], ParseDiagnostics) = {
+    private def parseSingleArgument(argExprResult: ExprResult[Pos]): Option[Pos[Argument[Pos]]] = {
       argExprResult.value match {
         case Some(expr) =>
           val nextToken = scanner.peek(1)
@@ -680,33 +677,28 @@ final class Parser private() {
               val valueResult = parseExpression(BindingPower.Minimum)
               valueResult.value match {
                 case Some(valueExpr) =>
-                  val combinedPos = Pos(Argument(valueExpr, Some(idPos)), expr.begin, valueExpr.end)
-                  (Some(combinedPos), argExprResult.diagnostics ++ valueResult.diagnostics)
+                  Some(Pos(Argument(valueExpr, Some(idPos)), expr.begin, valueExpr.end))
                 case None =>
-                  var diag = argExprResult.diagnostics ++ valueResult.diagnostics
-                  if (diag.errors.isEmpty) {
-                    diag = diag.addError(Pos(ParseError.MissingExpression("named argument value"), nextToken.begin, nextToken.end))
+                  if (!diagnostics.hasErrors) {
+                    reportError(Pos(ParseError.MissingExpression("named argument value"), nextToken.begin, nextToken.end))
                   }
-                  (None, diag)
+                  None
               }
             case _ =>
-              (Some(expr.as(Argument(expr))), argExprResult.diagnostics)
+              Some(expr.as(Argument(expr)))
           }
         case None =>
-          if (argExprResult.diagnostics.errors.isEmpty) {
-            val next = scanner.peek(1)
-            (None, argExprResult.diagnostics.addError(Pos(ParseError.MissingExpression("argument"), next.begin, next.end)))
-          } else {
-            (None, argExprResult.diagnostics)
+          if (!diagnostics.hasErrors) {
+            reportError(Pos(ParseError.MissingExpression("argument"), scanner.peek(1).begin, scanner.peek(1).end))
           }
+          None
       }
     }
 
-    private def synchronizeToNextArgument(): (Boolean, Vector[Pos[ParseError]]) = {
-      var errors = Vector.empty[Pos[ParseError]]
+    private def synchronizeToNextArgument(): Boolean = {
       val next = scanner.peek(1)
       if (!isStructuralBoundary(next.value)) {
-        errors :+= Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end)
+        reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
       }
       // Synchronize to next comma or RParen
       var sync = scanner.peek(1)
@@ -716,12 +708,24 @@ final class Parser private() {
       }
       if (sync.value == Token.Comma) {
         scanner.get()
-        (false, errors)
+        false
       } else if (isStructuralBoundary(sync.value) && sync.value != Token.RParen) {
-        (true, errors)
+        true
       } else {
-        (false, errors)
+        false
       }
     }
+
+    private def reportError(error: Pos[ParseError]): Unit =
+      diagnostics = diagnostics.addError(error)
+
+    private def reportWarning(warning: Pos[ParseWarning]): Unit =
+      diagnostics = diagnostics.addWarning(warning)
+
+    private def reportHint(hint: Pos[ParseHint]): Unit =
+      diagnostics = diagnostics.addHint(hint)
+
+    private def addDiagnostics(other: ParseDiagnostics): Unit =
+      diagnostics = diagnostics ++ other
   }
 }
