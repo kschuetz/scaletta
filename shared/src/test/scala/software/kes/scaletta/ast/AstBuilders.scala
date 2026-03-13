@@ -14,13 +14,13 @@ object AstBuilders {
 
   def litNull: Expression[Id] = Literal.null_()
 
-  def ref(name: String): Expression[Id] = Reference[Id](Identifier(name))
+  def ref(name: Identifier[Id]): Expression[Id] = Reference[Id](name)
 
-  def select(qualifier: Expression[Id], name: String): Expression[Id] =
-    Select[Id](qualifier, Identifier(name))
+  def select(qualifier: Expression[Id], name: Identifier[Id]): Expression[Id] =
+    Select[Id](qualifier, name)
 
-  def infix(left: Expression[Id], op: String, right: Expression[Id]): Expression[Id] =
-    Call.infix[Id](left, Identifier(op), Vector.empty, right)
+  def infix(left: Expression[Id], op: Identifier[Id], right: Expression[Id]): Expression[Id] =
+    Call.infix[Id](left, op, Vector.empty, right)
 
   def call(target: Expression[Id]): CallBuilder =
     new CallBuilder(target, Vector.empty, Vector.empty)
@@ -34,10 +34,12 @@ object AstBuilders {
   def typed(expr: Expression[Id], ascription: TypeIdentifier[Id]): Expression[Id] =
     Typed[Id](expr, ascription)
 
-  def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier[Id](name))
+  implicit def tName(name: Identifier[Id]): TypeIdentifier[Id] = TypeIdentifier.name[Id](name)
 
-  def tApplied(name: String, args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
-    TypeIdentifier.applied[Id](tName(name), args: _*)
+  implicit def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier[Id](name))
+
+  def tApplied(name: TypeIdentifier[Id], args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
+    TypeIdentifier.applied[Id](name, args: _*)
 
   def tFunc(params: Vector[TypeIdentifier[Id]], result: TypeIdentifier[Id]): TypeIdentifier[Id] =
     TypeIdentifier.function[Id](params, result)
@@ -79,28 +81,28 @@ object AstBuilders {
 
   def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
 
-  def pId(name: String): Pattern[Id] = Pattern.Identifier[Id](Identifier(name))
+  def pId(name: Identifier[Id]): Pattern[Id] = Pattern.Identifier[Id](name)
 
-  def pTypedId(name: String, typeName: String): Pattern[Id] =
-    pTyped(pId(name), typeName)
+  def pTypedId(name: String, typeId: TypeIdentifier[Id]): Pattern[Id] =
+    pTyped(pId(name), typeId)
 
-  def pWildTyped(typeName: String): Pattern[Id] =
-    pTyped(pWild, typeName)
+  def pWildTyped(typeId: TypeIdentifier[Id]): Pattern[Id] =
+    pTyped(pWild, typeId)
 
   def pLit(expr: Literal[Id]): Pattern[Id] = Pattern.Literal[Id](expr)
 
-  def pAs(name: String, pattern: Pattern[Id]): Pattern[Id] = Pattern.As[Id](Identifier(name), pattern)
+  def pAs(name: Identifier[Id], pattern: Pattern[Id]): Pattern[Id] = Pattern.As[Id](name, pattern)
 
   def pAsTyped(name: String, pattern: Pattern[Id], typeName: String): Pattern[Id] =
     pTyped(pAs(name, pattern), typeName)
 
-  def pTyped(pattern: Pattern[Id], typeName: String): Pattern[Id] =
-    Pattern.Typed[Id](pattern, TypeIdentifier.name[Id](Identifier[Id](typeName)))
+  def pTyped(pattern: Pattern[Id], typeId: TypeIdentifier[Id]): Pattern[Id] =
+    Pattern.Typed[Id](pattern, typeId)
 
   def pTuple(elements: Pattern[Id]*): Pattern[Id] = Pattern.Tuple[Id](elements.toVector)
 
-  def pProduct(typeName: String, args: Pattern[Id]*): Pattern[Id] =
-    Pattern.Product[Id](TypeIdentifier.name[Id](Identifier[Id](typeName)), args.toVector)
+  def pProduct(typeId: TypeIdentifier[Id], args: Pattern[Id]*): Pattern[Id] =
+    Pattern.Product[Id](typeId, args.toVector)
 
   def matchExpr(expr: Expression[Id], cases: Case[Id]*): Expression[Id] =
     Match[Id](expr, cases.toVector)
@@ -108,18 +110,16 @@ object AstBuilders {
   def caseExpr(pat: Pattern[Id], result: Expression[Id]): Case[Id] =
     Case[Id](pat, None, result)
 
-  def param(name: String, typ: String): FormalParameter[Id] =
-    FormalParameter[Id](Identifier[Id](name), TypeIdentifier.name[Id](Identifier[Id](typ)), None)
+  def param(name: Identifier[Id], typ: TypeIdentifier[Id]): FormalParameter[Id] =
+    FormalParameter[Id](name, typ, None)
 
-  def param(name: String, typ: String, default: Expression[Id]): FormalParameter[Id] =
-    FormalParameter[Id](Identifier[Id](name), TypeIdentifier.name[Id](Identifier[Id](typ)), Some(default))
+  def param(name: Identifier[Id], typ: TypeIdentifier[Id], default: Expression[Id]): FormalParameter[Id] =
+    FormalParameter[Id](name, typ, Some(default))
 
   def paramGroup(params: FormalParameter[Id]*): FormalParameterGroup[Id] =
     FormalParameterGroup[Id](params.toVector)
 
   implicit def arg(expression: Expression[Id]): Argument[Id] = Argument[Id](expression)
-
-  implicit def typeId(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier[Id](name))
 
   implicit def identifier(name: String): Identifier[Id] = Identifier[Id](name)
 
