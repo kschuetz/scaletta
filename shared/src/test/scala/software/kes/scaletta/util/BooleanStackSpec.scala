@@ -67,7 +67,7 @@ class BooleanStackSpec extends AnyFunSpec with Matchers {
         stack.push(i % 2 == 0)
       }
 
-      for (i <- (count to 1 by -1)) {
+      for (i <- count to 1 by -1) {
         stack.pop() shouldBe (i % 2 == 0)
       }
       stack.peek() shouldBe None

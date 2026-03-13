@@ -29,9 +29,9 @@ class BitArraySpec extends AnyFunSpec with Matchers {
 
     it("should update bits correctly") {
       val bits = BitArray.create(10)
-      bits.update(5, true)
+      bits.update(5, value = true)
       bits.get(5) shouldBe true
-      bits.update(5, false)
+      bits.update(5, value = false)
       bits.get(5) shouldBe false
     }
 

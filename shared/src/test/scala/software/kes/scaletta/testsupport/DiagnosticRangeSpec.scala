@@ -13,7 +13,7 @@ class DiagnosticRangeSpec extends AnyFunSpec with Matchers {
 
     it("should allow asserting a range using spanning") {
       val errors: Vector[Pos[ParseError]] = Vector(Pos(dummyError, CharIndex(5), CharIndex(10)))
-      (errors should containError(dummyError spanning(5, 10)))
+      errors should containError(dummyError spanning(5, 10))
     }
 
     it("should fail if the range doesn't match") {
@@ -25,13 +25,13 @@ class DiagnosticRangeSpec extends AnyFunSpec with Matchers {
 
     it("should still support at(index) for backward compatibility (ignoring end index)") {
       val errors: Vector[Pos[ParseError]] = Vector(Pos(dummyError, CharIndex(5), CharIndex(10)))
-      (errors should containError(dummyError at 5))
+      errors should containError(dummyError at 5)
     }
 
     describe("range matcher for Pos") {
       it("should match a Pos range") {
         val p: Pos[String] = Pos("foo", CharIndex(5), CharIndex(10))
-        (p should range[String](5, 10))
+        p should range[String](5, 10)
       }
 
       it("should fail if Pos range doesn't match") {
@@ -48,7 +48,7 @@ class DiagnosticRangeSpec extends AnyFunSpec with Matchers {
 
       it("should match exactly with ranges") {
         val errors: Vector[Pos[ParseError]] = Vector(Pos(dummyError, CharIndex(5), CharIndex(5)))
-        (errors should matchExactlyErrors(input, lineMap, Vector(dummyError spanning(5, 5))))
+        errors should matchExactlyErrors(input, lineMap, Vector(dummyError spanning(5, 5)))
       }
 
       it("should fail if range mismatches in matchExactlyErrors") {
