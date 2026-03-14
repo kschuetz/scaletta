@@ -114,7 +114,7 @@ object TypeIdentifierParser {
       (left.value, right.value) match {
         case (Some(l), Some(r)) =>
           val components: Vector[Pos[TypeIdentifier[Pos]]] = l.value match {
-            case TypeIdentifier.Conjunction(ct, comps) if ct == cType => comps.asInstanceOf[Vector[Pos[TypeIdentifier[Pos]]]] :+ r
+            case TypeIdentifier.Conjunction(ct, comps) if ct == cType => comps :+ r
             case _ => Vector(l, r)
           }
           ParseResult.create(Pos(TypeIdentifier.Conjunction(cType, components), l.begin, r.end))
