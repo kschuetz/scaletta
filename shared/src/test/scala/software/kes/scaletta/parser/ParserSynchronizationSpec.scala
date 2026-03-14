@@ -67,28 +67,30 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
     }
 
     describe("Structural Boundaries") {
+      import ParseError._
+      import Token.Identifier._
+      import Token._
+
       it("should recover at structural boundaries (like val)") {
-        "f(1, val x = 2, 3)" shouldRecoverWith (
-          ParseError.UnexpectedToken(Token.Val) at 5,
-          ParseError.UnexpectedToken(Token.Identifier.Lower("x")) at 9
-          ) producing {
-          callSimple(ref("f"), lit(1), lit(3))
-        }
+        "f(1, val x = 2, 3)" shouldFailWith(
+          ExpectedIdentifier(Val, "expression") spanning(5, 7),
+          ExpectedToken(Comma, Lower("x"), "argument list") spanning(9, 9)
+        )
       }
 
       it("should recover at structural boundaries (like def)") {
         "f(1, def f(x), 3)" shouldFailWith(
-          ParseError.UnexpectedToken(Token.Def) at 5,
-          ParseError.UnexpectedToken(Token.Identifier.Lower("f")) at 9,
-          ParseError.ExtraToken(Token.Comma, "end of input") at 13
+          ExpectedIdentifier(Def, "expression") spanning(5, 7),
+          ExpectedToken(Comma, Lower("f"), "argument list") spanning(9, 9),
+          ExtraToken(Comma, "end of input") spanning(13, 13)
         )
       }
 
       it("should recover at structural boundaries (like if)") {
         "f(1, if (x), 3)" shouldFailWith(
-          ParseError.UnexpectedToken(Token.Comma) at 11,
-          ParseError.UnexpectedToken(Token.IntLiteral(3)) at 13,
-          ParseError.UnexpectedToken(Token.IntLiteral(3)) at 13
+          UnexpectedToken(Comma) spanning(11, 11),
+          ExpectedToken(Else, IntLiteral(3), "conditional") spanning(13, 13),
+          ExpectedToken(Comma, IntLiteral(3), "argument list") spanning(13, 13)
         )
       }
     }

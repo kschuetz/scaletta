@@ -113,8 +113,8 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         }
 
         it("should report an error for trailing dot (a.)") {
-          "a." shouldFailWith (ParseError.UnexpectedToken(Token.EndOfInput) at 2) producing {
-            ref("a")
+          "a." shouldFailWith (ParseError.ExpectedIdentifier(Token.EndOfInput, "selection") spanning(2, 2)) producing {
+            select(ref("a"), "<error>")
           }
         }
       }
@@ -134,13 +134,13 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         }
 
         it("should handle missing type (1: ;)") {
-          "1: ;" shouldFailWith (ParseError.UnexpectedToken(Token.Semicolon) at 3) producing {
+          "1: ;" shouldFailWith (ParseError.ExpectedIdentifier(Token.Semicolon, "type") spanning(3, 3)) producing {
             lit(1)
           }
         }
 
         it("should handle invalid type identifier (1: 2 + 3)") {
-          "1: 2 + 3" shouldFailWith (ParseError.UnexpectedToken(Token.IntLiteral(2)) at 3) producing {
+          "1: 2 + 3" shouldFailWith (ParseError.ExpectedIdentifier(Token.IntLiteral(2), "type") spanning(3, 3)) producing {
             lit(1)
           }
         }
@@ -187,7 +187,7 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       }
 
       it("should recover from a malformed return type in a def declaration") {
-        "{ def f: = 1; f }" shouldRecoverWith (ParseError.UnexpectedToken(Token.Eq) at 9) producing {
+        "{ def f: = 1; f }" shouldRecoverWith (ParseError.ExpectedIdentifier(Token.Eq, "type") spanning(9, 9)) producing {
           block(ref("f"), defDecl("f").body(lit(1)))
         }
       }
@@ -212,7 +212,7 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       }
 
       it("should handle error in parameter group but continue parsing") {
-        ("{ def f(x: ): Int = 1; f }" shouldRecoverWith containErrorOfType[ParseError.UnexpectedToken])
+        ("{ def f(x: ): Int = 1; f }" shouldRecoverWith containErrorOfType[ParseError.ExpectedIdentifier])
           .producing {
             block(ref("f"), defDecl("f").group().returnType("Int").body(lit(1)))
           }.ignoringAst()
@@ -294,7 +294,7 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         """{
           |  val x: = 1
           |  x
-          |}""".stripMargin shouldFailWith containErrorOfType[ParseError.UnexpectedToken] producing {
+          |}""".stripMargin shouldFailWith containErrorOfType[ParseError.ExpectedIdentifier] producing {
           block(ref("x"), valId("x", lit(1)))
         }
       }
@@ -324,7 +324,7 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       }
 
       it("should require a separator between declarations") {
-        "{ val x = 1 val y = 2; x + y }" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+        "{ val x = 1 val y = 2; x + y }" shouldFailWith containErrorOfType[ParseError.ExpectedToken]
       }
     }
   }
@@ -428,12 +428,53 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
     }
 
     it("should fail if then/parens are missing") {
-      "if x > 0 a else b" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+      "if x > 0 a else b" shouldFailWith(
+        ParseError.ExpectedIdentifier(Token.Else, "expression") spanning(11, 14),
+        ParseError.ExpectedToken(Token.Then, Token.Identifier.Lower("b"), "conditional") spanning(16, 16),
+        ParseError.ExpectedToken(Token.Else, Token.EndOfInput, "conditional") spanning(17, 17)
+      )
     }
 
     it("should fail if else is missing") {
-      "if (c) a" shouldFailWith containErrorOfType[ParseError.UnexpectedToken]
+      "if (a) b".shouldFailWith(containErrorOfType[ParseError.ExpectedToken])
     }
   }
 
+  describe("diagnostics") {
+    it("should report ExpectedIdentifier when an expression is expected but a structural boundary is found") {
+      "if (" shouldFailWith(
+        ParseError.ExpectedIdentifier(Token.EndOfInput, "expression") spanning(4, 4),
+        ParseError.UnclosedDelimiter(Token.LParen, Token.RParen) spanning(3, 4),
+        ParseError.ExpectedIdentifier(Token.EndOfInput, "expression") spanning(4, 4),
+        ParseError.ExpectedToken(Token.Else, Token.EndOfInput, "conditional") spanning(4, 4)
+      )
+    }
+
+    it("should report ExpectedToken when 'then' is missing in an if expression") {
+      "if x a else b" shouldFailWith(
+        ParseError.ExpectedIdentifier(Token.Else, "expression") spanning(7, 10),
+        ParseError.ExpectedToken(Token.Then, Token.Identifier.Lower("b"), "conditional") spanning(12, 12),
+        ParseError.ExpectedToken(Token.Else, Token.EndOfInput, "conditional") spanning(13, 13)
+      )
+    }
+
+    it("should report ExpectedIdentifier in a val declaration") {
+      "{ val = 1; x }" shouldFailWith(
+        ParseError.ExpectedIdentifier(Token.Eq, "pattern") spanning(6, 6),
+        ParseError.ExpectedToken(Token.Eq, Token.IntLiteral(1), "val declaration") spanning(8, 8)
+      )
+    }
+
+    it("should report ExpectedIdentifier in a def declaration") {
+      "{ def (x: Int) = 1; f }" shouldFailWith containErrorOfType[ParseError.ExpectedIdentifier]
+    }
+
+    it("should report ExpectedToken for missing '=' in a def declaration") {
+      "{ def f(x: Int) 1; f }" shouldFailWith (ParseError.ExpectedToken(Token.Eq, Token.IntLiteral(1), "def declaration") spanning(16, 16))
+    }
+
+    it("should report ExpectedIdentifier in selection") {
+      "a." shouldFailWith (ParseError.ExpectedIdentifier(Token.EndOfInput, "selection") spanning(2, 2))
+    }
+  }
 }

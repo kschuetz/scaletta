@@ -56,7 +56,7 @@ object TypeIdentifierParser {
           parseParenthesizedOrFunctionStart()
 
         case _ =>
-          reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+          reportError(Pos(ParseError.ExpectedIdentifier(next.value, "type"), next.begin, next.end))
           ParseResult.empty[Pos, Pos[TypeIdentifier[Pos]]]
       }
     }
@@ -79,7 +79,7 @@ object TypeIdentifierParser {
             case _ =>
               // Empty brackets or error in args
               val rbracket = scanner.get()
-              reportError(Pos(ParseError.UnexpectedToken(rbracket.value), rbracket.begin, rbracket.end))
+              reportError(Pos(ParseError.ExpectedIdentifier(rbracket.value, "type argument"), rbracket.begin, rbracket.end))
               ParseResult.empty
           }
         case _ =>
@@ -101,7 +101,7 @@ object TypeIdentifierParser {
               val selectPos: Pos[TypeIdentifier[Pos]] = Pos(TypeIdentifier.Select(qualifierPos, idPos), qualifierPos.begin, next.end)
               ParseResult.create(selectPos)
             case _ =>
-              reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+              reportError(Pos(ParseError.ExpectedIdentifier(next.value, "type selection"), next.begin, next.end))
               ParseResult.empty
           }
         case None => qualifierResult
@@ -191,7 +191,7 @@ object TypeIdentifierParser {
           go()
         } else if (next.value != terminal && !isSynchronizationBoundary(next.value)) {
           // Unexpected token, try to recover
-          reportError(Pos(ParseError.UnexpectedToken(next.value), next.begin, next.end))
+          reportError(Pos(ParseError.ExpectedToken(Token.Comma, next.value, "type list"), next.begin, next.end))
           synchronize()
           if (scanner.peek(1).value == Token.Comma) {
             scanner.get()
