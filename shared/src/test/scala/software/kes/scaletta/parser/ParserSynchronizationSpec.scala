@@ -92,5 +92,72 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
         )
       }
     }
+
+    describe("Block Synchronization") {
+      import ParseError._
+      import Token._
+
+      // TODO: fix this
+      ignore("should recover from a malformed declaration in a block and find the next one") {
+        "{ val x = ; val y = 2; x + y }" shouldRecoverWith (
+          ExpectedIdentifier(Semicolon, "expression") at 10
+          ) producing {
+          block(
+            Vector(
+              valDecl(pId("x"), errExpr(ExpectedIdentifier(Semicolon, "expression"))),
+              valDecl(pId("y"), lit(2))
+            ),
+            infix(ref("x"), "+", ref("y"))
+          )
+        }
+      }
+
+      it("should recover from a completely broken declaration and continue") {
+        "{ val @ = 1; val y = 2; y }" shouldRecoverWith (
+          ExpectedIdentifier(At, "pattern") at 6
+          ) producing {
+          block(
+            Vector(
+              valDecl(errPat(ExpectedIdentifier(At, "pattern")), lit(1)),
+              valDecl(pId("y"), lit(2))
+            ),
+            ref("y")
+          )
+        }
+      }
+
+      it("should synchronize to the end of a block if an error occurs near the end") {
+        "{ val x = 1; val y = @; y }" shouldRecoverWith (
+          UnexpectedToken(At) at 21
+          ) producing {
+          block(
+            Vector(
+              valDecl(pId("x"), lit(1)),
+              valDecl(pId("y"), errUnexpected(At))
+            ),
+            ref("y")
+          )
+        }
+      }
+
+      // TODO: fix this
+      ignore("should handle multiple malformed declarations in a block") {
+        "{ val x = ; val @ = 2; val z = 3; z }" shouldFailWith(
+          ExpectedIdentifier(Semicolon, "expression") spanning(10, 10),
+          ExpectedIdentifier(At, "pattern") spanning(16, 16)
+        )
+      }
+    }
+
+    describe("Formal Parameter Group Synchronization") {
+      import ParseError._
+      import Token._
+
+      it("should recover from a malformed parameter and find the next one") {
+        "f(x: Int, @, y: String)".shouldRecoverWith(
+          UnexpectedToken(At) at 10
+        ).ignoringAst()
+      }
+    }
   }
 }

@@ -99,11 +99,6 @@ final class Parser private() {
     }
 
     private def nud(token: Pos[Token]): ExprResult[Pos] = {
-      if (isStructuralBoundary(token.value)) {
-        val error = ParseError.ExpectedIdentifier(token.value, "expression")
-        reportError(Pos(error, token.begin, token.end))
-        return ParseResult.create(syntheticExpression(error, token.begin, token.end))
-      }
       token.value match {
         case Token.IntLiteral(v) => ParseResult.create(token.as(Literal.int(v)))
         case Token.StringLiteral(v) => ParseResult.create(token.as(Literal.string(v)))
@@ -120,9 +115,15 @@ final class Parser private() {
         case Token.If =>
           parseConditional(token)
         case _ =>
-          val error = ParseError.UnexpectedToken(token.value)
-          reportError(Pos(error, token.begin, token.end))
-          ParseResult.create(syntheticExpression(error, token.begin, token.end))
+          if (isStructuralBoundary(token.value)) {
+            val error = ParseError.ExpectedIdentifier(token.value, "expression")
+            reportError(Pos(error, token.begin, token.end))
+            ParseResult.create[Pos, Pos[Expression[Pos]]](syntheticExpression(error, token.begin, token.end))
+          } else {
+            val error = ParseError.UnexpectedToken(token.value)
+            reportError(Pos(error, token.begin, token.end))
+            ParseResult.create[Pos, Pos[Expression[Pos]]](syntheticExpression(error, token.begin, token.end))
+          }
       }
     }
 
@@ -161,31 +162,47 @@ final class Parser private() {
       while (isAtDeclarationStart) {
         val declResult = parseDeclaration()
         declResult.value match {
-          case Some(d) => declarations = declarations :+ d
+          case Some(d) =>
+            declarations = declarations :+ d
+            // Semicolon check moved here to ensure it's checked after a successful declaration
+            if (scanner.peek(1).value != Token.RBrace) {
+              val nextToken = scanner.peek(1)
+              nextToken.value match {
+                case Token.Semicolon | Token.Newline =>
+                  scanner.get()
+                case _ =>
+                  if (isAtDeclarationStart) {
+                    reportError(Pos(ParseError.ExpectedToken(Token.Semicolon, nextToken.value, "block"), nextToken.begin, nextToken.end))
+                  } else if (!isStructuralBoundary(nextToken.value)) {
+                    reportError(Pos(ParseError.ExpectedToken(Token.Semicolon, nextToken.value, "block"), nextToken.begin, nextToken.end))
+                    if (synchronizeToNextDeclaration()) {
+                      val lastError = diagnostics.errors.last.value
+                      val resultExpr = ParseResult.create[Pos, Pos[Expression[Pos]]](syntheticExpression(lastError, nextToken.begin, nextToken.end))
+                      return finalizeBlock(token, declarations, resultExpr)
+                    }
+                  }
+              }
+            }
           case None =>
             // If parseDeclaration returned None, it must have already reported an error.
             // We'll create a synthetic error declaration to keep the block complete.
             val lastError = diagnostics.errors.lastOption.map(_.value).getOrElse(ParseError.Message("unknown error in declaration"))
-            val next = scanner.peek(1)
-            declarations = declarations :+ syntheticDeclaration(lastError, next.begin, next.end)
-        }
-
-        val next = scanner.peek(1)
-        next.value match {
-          case Token.Semicolon =>
-            scanner.get()
-          case Token.Newline =>
-            scanner.get()
-          case Token.RBrace =>
-          // will be handled by final expression parsing
-          case _ if isAtDeclarationStart || !isStructuralBoundary(next.value) =>
-            reportError(Pos(ParseError.ExpectedToken(Token.Semicolon, next.value, "block"), next.begin, next.end))
-          case _ =>
+            val nextToken = scanner.peek(1)
+            declarations = declarations :+ syntheticDeclaration(lastError, nextToken.begin, nextToken.end)
+            val syncResult = synchronizeToNextDeclaration()
+            if (syncResult && scanner.peek(1).value == Token.RBrace) {
+              // Return early if we hit a structural boundary (like Token.RBrace handled below)
+              val resultExpr = ParseResult.create[Pos, Pos[Expression[Pos]]](syntheticExpression(lastError, nextToken.begin, nextToken.end))
+              return finalizeBlock(token, declarations, resultExpr)
+            }
         }
       }
 
       val resultExpr = parseExpression(BindingPower.Minimum)
+      finalizeBlock(token, declarations, resultExpr)
+    }
 
+    private def finalizeBlock(token: Pos[Token], declarations: Vector[Pos[Declaration[Pos]]], resultExpr: ExprResult[Pos]): ExprResult[Pos] = {
       val next = expect(Token.RBrace, "block", Some(token.begin))
       next.value match {
         case Token.RBrace =>
@@ -352,11 +369,18 @@ final class Parser private() {
             reportError(Pos(ParseError.VariadicParameterMustBeLast, next.begin, next.end))
           }
         } else if (next.value != Token.RParen && continue()) {
-          // Basic synchronization
-          while (continue() && scanner.peek(1).value != Token.Comma && scanner.peek(1).value != Token.RParen) {
+          reportError(Pos(ParseError.ExpectedToken(Token.Comma, next.value, "formal parameter group"), next.begin, next.end))
+          val isFatal: Token => Boolean = {
+            case Token.RBrace | Token.EndOfInput => true
+            case _ => false
+          }
+          if (synchronizeTo(t => t == Token.Comma || t == Token.RParen, isFatal)) {
+            val groupEnd = scanner.peek(1).end
+            return ParseResult.create(Pos(FormalParameterGroup(params, variadic), lParen.begin, groupEnd))
+          }
+          if (scanner.peek(1).value == Token.Comma) {
             scanner.get()
           }
-          if (scanner.peek(1).value == Token.Comma) scanner.get()
         }
       }
 
@@ -574,6 +598,41 @@ final class Parser private() {
       }
     }
 
+    private def synchronizeTo(predicate: Token => Boolean, isFatal: Token => Boolean): Boolean = {
+      var next = scanner.peek(1)
+      while (!predicate(next.value) && !isFatal(next.value) && next.value != Token.EndOfInput) {
+        scanner.get()
+        next = scanner.peek(1)
+      }
+      isFatal(next.value)
+    }
+
+    private def synchronizeToNextDeclaration(): Boolean = {
+      val isDeclStart: Token => Boolean = {
+        case Token.Val | Token.Def | Token.Lazy => true
+        case _ => false
+      }
+      val isSyncBoundary: Token => Boolean = {
+        case t if isDeclStart(t) => true
+        case Token.Semicolon | Token.RBrace | Token.EndOfInput => true
+        case _ => false
+      }
+
+      val isFatal: Token => Boolean = {
+        case Token.RBrace | Token.EndOfInput => true
+        case _ => false
+      }
+
+      synchronizeTo(isSyncBoundary, isFatal)
+      val next = scanner.peek(1).value
+      if (next == Token.Semicolon) {
+        scanner.get()
+        false
+      } else {
+        isStructuralBoundary(next) && next != Token.RBrace
+      }
+    }
+
     private def isSynchronizationBoundary(token: Token): Boolean = {
       token match {
         case Token.Comma | Token.RParen | Token.EndOfInput | Token.Val | Token.Def |
@@ -716,22 +775,30 @@ final class Parser private() {
 
     private def synchronizeToNextArgument(): Boolean = {
       val next = scanner.peek(1)
-      if (!isStructuralBoundary(next.value) && next.value != Token.Comma && next.value != Token.RParen) {
+      if (!isSynchronizationBoundary(next.value) && next.value != Token.Comma && next.value != Token.RParen) {
         reportError(Pos(ParseError.ExpectedToken(Token.Comma, next.value, "argument list"), next.begin, next.end))
-      }
-      // Synchronize to next comma or RParen
-      var sync = scanner.peek(1)
-      while (!isSynchronizationBoundary(sync.value)) {
+        // Ensure progress if we aren't at a comma or closing paren
         scanner.get()
-        sync = scanner.peek(1)
       }
+
+      val isSyncPoint: Token => Boolean = {
+        case Token.Comma | Token.RParen => true
+        case _ => false
+      }
+
+      val isFatal: Token => Boolean = {
+        case Token.RBrace | Token.EndOfInput => true
+        case _ => false
+      }
+
+      synchronizeTo(isSyncPoint, isFatal)
+
+      val sync = scanner.peek(1)
       if (sync.value == Token.Comma) {
         scanner.get()
         false
-      } else if (isStructuralBoundary(sync.value) && sync.value != Token.RParen) {
-        true
       } else {
-        false
+        isFatal(sync.value)
       }
     }
 

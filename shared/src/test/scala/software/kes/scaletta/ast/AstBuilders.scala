@@ -24,6 +24,8 @@ object AstBuilders {
 
   def errUnexpected(token: Token): Expression[Id] = errExpr(ParseError.UnexpectedToken(token))
 
+  def errPat(error: ParseError): Pattern[Id] = Pattern.Error[Id](error)
+
   def ref(name: Identifier[Id]): Expression[Id] = Reference[Id](name)
 
   def select(qualifier: Expression[Id], name: Identifier[Id]): Expression[Id] =
