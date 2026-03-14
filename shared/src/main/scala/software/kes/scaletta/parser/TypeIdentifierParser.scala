@@ -7,7 +7,7 @@ import software.kes.scaletta.types.ConjunctionType
 
 import scala.annotation.tailrec
 
-private[parser] object TypeIdentifierParser {
+private[scaletta] object TypeIdentifierParser {
   def parse(scanner: Scanner): TypeResult[Pos] =
     new Session(scanner).run()
 
