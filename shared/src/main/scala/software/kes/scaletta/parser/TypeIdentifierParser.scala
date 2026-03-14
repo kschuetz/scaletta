@@ -152,17 +152,17 @@ private[scaletta] object TypeIdentifierParser {
     }
 
     private def parseCommaSeparatedTypes(terminal: Token): ParseResult[Pos, Vector[Pos[TypeIdentifier[Pos]]]] = {
-      var results = Vector.empty[Pos[TypeIdentifier[Pos]]]
-
       if (scanner.peek(1).value == terminal) {
-        return ParseResult(Some(results))
+        return ParseResult(Some(Vector.empty))
       }
+
+      val results = Vector.newBuilder[Pos[TypeIdentifier[Pos]]]
 
       @tailrec
       def go(): Unit = {
         val t = parseTypeIdentifier(BindingPower.Minimum)
         t.value match {
-          case Some(v) => results = results :+ v
+          case Some(v) => results += v
           case None => // error already reported
         }
 
@@ -182,7 +182,7 @@ private[scaletta] object TypeIdentifierParser {
       }
 
       go()
-      ParseResult(Some(results))
+      ParseResult(Some(results.result()))
     }
 
     private def isSynchronizationBoundary(token: Token): Boolean = {

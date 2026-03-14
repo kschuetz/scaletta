@@ -151,7 +151,7 @@ final class Parser private() {
     }
 
     private def parseBlock(token: Pos[Token]): ExprResult[Pos] = {
-      var declarations = Vector.empty[Pos[Declaration[Pos]]]
+      val declarations = Vector.newBuilder[Pos[Declaration[Pos]]]
 
       def isAtDeclarationStart: Boolean = {
         scanner.peek(1).value match {
@@ -164,7 +164,7 @@ final class Parser private() {
         val declResult = parseDeclaration()
         declResult.value match {
           case Some(d) =>
-            declarations = declarations :+ d
+            declarations += d
             // Semicolon check moved here to ensure it's checked after a successful declaration
             if (scanner.peek(1).value != Token.RBrace) {
               val nextToken = scanner.peek(1)
@@ -179,7 +179,7 @@ final class Parser private() {
                     if (synchronizeToNextDeclaration()) {
                       val lastError = diagnostics.errors.last.value
                       val resultExpr = ParseResult.create[Pos, Pos[Expression[Pos]]](syntheticExpression(lastError, nextToken.begin, nextToken.end))
-                      return finalizeBlock(token, declarations, resultExpr)
+                      return finalizeBlock(token, declarations.result(), resultExpr)
                     }
                   }
               }
@@ -189,18 +189,18 @@ final class Parser private() {
             // We'll create a synthetic error declaration to keep the block complete.
             val lastError = diagnostics.errors.lastOption.map(_.value).getOrElse(ParseError.Message("unknown error in declaration"))
             val nextToken = scanner.peek(1)
-            declarations = declarations :+ syntheticDeclaration(lastError, nextToken.begin, nextToken.end)
+            declarations += syntheticDeclaration(lastError, nextToken.begin, nextToken.end)
             val syncResult = synchronizeToNextDeclaration()
             if (syncResult && scanner.peek(1).value == Token.RBrace) {
               // Return early if we hit a structural boundary (like Token.RBrace handled below)
               val resultExpr = ParseResult.create[Pos, Pos[Expression[Pos]]](syntheticExpression(lastError, nextToken.begin, nextToken.end))
-              return finalizeBlock(token, declarations, resultExpr)
+              return finalizeBlock(token, declarations.result(), resultExpr)
             }
         }
       }
 
       val resultExpr = parseExpression(BindingPower.Minimum)
-      finalizeBlock(token, declarations, resultExpr)
+      finalizeBlock(token, declarations.result(), resultExpr)
     }
 
     private def finalizeBlock(token: Pos[Token], declarations: Vector[Pos[Declaration[Pos]]], resultExpr: ExprResult[Pos]): ExprResult[Pos] = {
@@ -305,7 +305,7 @@ final class Parser private() {
         return ParseResult.empty
       }
 
-      var params = Vector.empty[Pos[FormalParameter[Pos]]]
+      val params = Vector.newBuilder[Pos[FormalParameter[Pos]]]
       var variadic: Option[Pos[FormalParameter[Pos]]] = None
 
       def continue(): Boolean = {
@@ -356,7 +356,7 @@ final class Parser private() {
                 }
                 variadic = Some(param)
               } else {
-                params :+= param
+                params += param
               }
             case None =>
             // Error already in diagnostics from TypeIdentifierParser
@@ -377,7 +377,7 @@ final class Parser private() {
           }
           if (synchronizeTo(t => t == Token.Comma || t == Token.RParen, isFatal)) {
             val groupEnd = scanner.peek(1).end
-            return ParseResult.create(Pos(FormalParameterGroup(params, variadic), lParen.begin, groupEnd))
+            return ParseResult.create(Pos(FormalParameterGroup(params.result(), variadic), lParen.begin, groupEnd))
           }
           if (scanner.peek(1).value == Token.Comma) {
             scanner.get()
@@ -388,7 +388,7 @@ final class Parser private() {
       val rParen = expect(Token.RParen, "formal parameter group", Some(lParen.begin))
       val groupEnd = if (rParen.value == Token.RParen) rParen.end else scanner.peek(1).end
 
-      ParseResult.create(Pos(FormalParameterGroup(params, variadic), lParen.begin, groupEnd))
+      ParseResult.create(Pos(FormalParameterGroup(params.result(), variadic), lParen.begin, groupEnd))
     }
 
     private def parseDefDeclaration(defToken: Pos[Token]): DeclResult[Pos] = {
@@ -396,11 +396,11 @@ final class Parser private() {
       val name = nameToken.as(Identifier[Pos](nameToken.value.name))
 
       // Step 4: Parse multiple parameter groups (currying support)
-      var paramGroups = Vector.empty[Pos[FormalParameterGroup[Pos]]]
+      val paramGroups = Vector.newBuilder[Pos[FormalParameterGroup[Pos]]]
 
       while (scanner.peek(1).value == Token.LParen) {
         val groupResult = parseFormalParameterGroup()
-        groupResult.value.foreach(paramGroups :+= _)
+        groupResult.value.foreach(paramGroups += _)
       }
 
       // Step 3: Optional Return Type
@@ -428,7 +428,7 @@ final class Parser private() {
         syntheticExpression(error, eqToken.begin, eqToken.end)
       }
 
-      ParseResult.create(Pos(Declaration.def_(name, paramGroups, returnType, rhs), defToken.begin, rhs.end))
+      ParseResult.create(Pos(Declaration.def_(name, paramGroups.result(), returnType, rhs), defToken.begin, rhs.end))
     }
 
     private def parsePattern(): PatResult[Pos] = {
@@ -695,7 +695,7 @@ final class Parser private() {
     }
 
     private def parseArgumentGroup(lParenToken: Pos[Token]): (Option[ArgumentGroup[Pos]], CharIndex) = {
-      var args = Vector.empty[Pos[Argument[Pos]]]
+      val args = Vector.newBuilder[Pos[Argument[Pos]]]
       var hasNamedArgument = false
 
       def continueParsing(): Boolean = {
@@ -709,7 +709,7 @@ final class Parser private() {
           val errorPos: Pos[ParseError] = nextToken.as(ParseError.MissingExpression("argument"))
           reportError(errorPos)
           val errorExpr = syntheticExpression(errorPos.value, errorPos.begin, errorPos.end)
-          args :+= errorPos.as(Argument(errorExpr))
+          args += errorPos.as(Argument(errorExpr))
           scanner.get() // consume comma
         } else {
           val argExprResult = parseExpression(BindingPower.Minimum)
@@ -719,7 +719,7 @@ final class Parser private() {
           } else if (hasNamedArgument) {
             reportError(argPos.as(ParseError.PositionalAfterNamedArgument))
           }
-          args :+= argPos
+          args += argPos
 
           val next = scanner.peek(1)
           next.value match {
@@ -730,7 +730,7 @@ final class Parser private() {
               if (synchronizeToNextArgument()) {
                 // Return early if we hit a structural boundary
                 val rParenToken = expect(Token.RParen, "argument group", Some(lParenToken.begin))
-                return (Some(ArgumentGroup[Pos](args)), rParenToken.end)
+                return (Some(ArgumentGroup[Pos](args.result())), rParenToken.end)
               }
             case _ =>
           }
@@ -738,7 +738,7 @@ final class Parser private() {
       }
 
       val rParenToken = expect(Token.RParen, "argument group", Some(lParenToken.begin))
-      (Some(ArgumentGroup[Pos](args)), rParenToken.end)
+      (Some(ArgumentGroup[Pos](args.result())), rParenToken.end)
     }
 
     private def parseSingleArgument(argExprResult: ExprResult[Pos]): Pos[Argument[Pos]] = {
