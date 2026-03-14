@@ -1,10 +1,17 @@
 package software.kes.scaletta.ast
 
 import software.kes.scaletta.common.Interpolator
+import software.kes.scaletta.parser.ParseError
 import software.kes.scaletta.util.functional.{Functor, ~>}
 
 sealed trait Expression[F[_]] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Expression[G]
+}
+
+object Expression {
+  case class Error[F[_]](error: ParseError) extends Expression[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Error[G] = Error(error)
+  }
 }
 
 case class Block[F[_]](declarations: Vector[F[Declaration[F]]],
@@ -118,6 +125,7 @@ case class Conditional[F[_]](condition: F[Expression[F]],
       phi(F.map(elseBranch)(_.mapK(phi)))
     )
 }
+
 
 sealed trait Call[F[_]] extends Expression[F] {
   def target: F[Expression[F]]

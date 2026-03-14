@@ -23,14 +23,14 @@ object AstDiff {
             diff(a.target.asInstanceOf[Expression[Id]], e.target.asInstanceOf[Expression[Id]], s"$path -> target")
               .orElse {
                 if (a.args.length != e.args.length) {
-                  Some(s"$path -> args: length mismatch (actual: ${a.args.length}, expected: ${e.args.length})")
+                  Some(s"$path -> args: group length mismatch (actual: ${a.args.length}, expected: ${e.args.length})")
                 } else {
                   a.args.zip(e.args).zipWithIndex.collectFirst {
-                    case ((aa, ee), i) if aa != ee =>
-                      val actualArg = aa.asInstanceOf[Expression[Id]]
-                      val expectedArg = ee.asInstanceOf[Expression[Id]]
-                      diff(actualArg, expectedArg, s"$path -> args($i)").getOrElse(s"$path -> args($i) differs")
-                  }
+                    case ((aaGroup, eeGroup), i) =>
+                      val actualGroup = aaGroup.asInstanceOf[software.kes.scaletta.ast.ArgumentGroup[Id]]
+                      val expectedGroup = eeGroup.asInstanceOf[software.kes.scaletta.ast.ArgumentGroup[Id]]
+                      diffArgumentGroup(actualGroup, expectedGroup, s"$path -> args($i)")
+                  }.flatten
                 }
               }
           case (a: Call.Infix[_], e: Call.Infix[_]) =>
@@ -53,6 +53,21 @@ object AstDiff {
       } else {
         Some(s"$path: type mismatch (actual: ${actual.getClass.getSimpleName}, expected: ${expected.getClass.getSimpleName})")
       }
+    }
+  }
+
+  private def diffArgumentGroup(actual: software.kes.scaletta.ast.ArgumentGroup[Id],
+                                expected: software.kes.scaletta.ast.ArgumentGroup[Id],
+                                path: String): Option[String] = {
+    if (actual.arguments.length != expected.arguments.length) {
+      Some(s"$path: argument length mismatch (actual: ${actual.arguments.length}, expected: ${expected.arguments.length})")
+    } else {
+      actual.arguments.zip(expected.arguments).zipWithIndex.collectFirst {
+        case ((aaArg, eeArg), i) =>
+          val actualArg = aaArg
+          val expectedArg = eeArg
+          diff(actualArg.value, expectedArg.value, s"$path($i)")
+      }.flatten
     }
   }
 }

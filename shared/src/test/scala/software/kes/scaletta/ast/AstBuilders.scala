@@ -6,6 +6,10 @@ import software.kes.scaletta.util.functional.Id._
 import scala.language.implicitConversions
 
 object AstBuilders {
+
+  import software.kes.scaletta.parser.ParseError
+  import software.kes.scaletta.scanner.Token
+
   def lit(n: Int): Expression[Id] = Literal.int(n)
 
   def lit(s: String): Expression[Id] = Literal.string(s)
@@ -13,6 +17,12 @@ object AstBuilders {
   def lit(b: Boolean): Expression[Id] = Literal.boolean(b)
 
   def litNull: Expression[Id] = Literal.null_()
+
+  def errExpr(error: ParseError): Expression[Id] = Expression.Error[Id](error)
+
+  def errMissing(context: String): Expression[Id] = errExpr(ParseError.MissingExpression(context))
+
+  def errUnexpected(token: Token): Expression[Id] = errExpr(ParseError.UnexpectedToken(token))
 
   def ref(name: Identifier[Id]): Expression[Id] = Reference[Id](name)
 

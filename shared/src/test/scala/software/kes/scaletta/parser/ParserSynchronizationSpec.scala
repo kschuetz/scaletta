@@ -21,7 +21,7 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
         "f(1, g(2, @, 3), 4)" shouldRecoverWith (
           ParseError.UnexpectedToken(Token.At) at 10
           ) producing {
-          callSimple(ref("f"), lit(1), callSimple(ref("g"), lit(2), lit(3)), lit(4))
+          callSimple(ref("f"), lit(1), callSimple(ref("g"), lit(2), errUnexpected(Token.At), lit(3)), lit(4))
         }
       }
     }
@@ -32,7 +32,7 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
           ParseError.UnexpectedToken(Token.At) at 2,
           ParseError.UnexpectedToken(Token.Hash) at 8
         ) producing {
-          callSimple(ref("f"), lit(1), lit(2))
+          callSimple(ref("f"), errUnexpected(Token.At), lit(1), errUnexpected(Token.Hash), lit(2))
         }
       }
     }
@@ -42,7 +42,7 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
         "f(1, @)" shouldRecoverWith (
           ParseError.UnexpectedToken(Token.At) at 5
           ) producing {
-          callSimple(ref("f"), lit(1))
+          callSimple(ref("f"), lit(1), errUnexpected(Token.At))
         }
       }
 
@@ -50,7 +50,7 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
         "f(@)" shouldRecoverWith (
           ParseError.UnexpectedToken(Token.At) at 2
           ) producing {
-          callSimple(ref("f"))
+          callSimple(ref("f"), errUnexpected(Token.At))
         }
       }
     }
@@ -61,28 +61,26 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
           ParseError.UnexpectedToken(Token.At) at 5,
           ParseError.UnexpectedToken(Token.Hash) at 11
         ) producing {
-          callSimple(ref("f"), lit(1), lit(2), lit(3))
+          callSimple(ref("f"), lit(1), errUnexpected(Token.At), lit(2), errUnexpected(Token.Hash), lit(3))
         }
       }
     }
 
     describe("Structural Boundaries") {
       import ParseError._
-      import Token.Identifier._
       import Token._
 
       it("should recover at structural boundaries (like val)") {
         "f(1, val x = 2, 3)" shouldFailWith(
           ExpectedIdentifier(Val, "expression") spanning(5, 7),
-          ExpectedToken(Comma, Lower("x"), "argument list") spanning(9, 9)
+          UnexpectedToken(Eq) spanning(11, 11),
+          ExpectedToken(Comma, IntLiteral(2), "argument list") spanning(13, 13)
         )
       }
 
       it("should recover at structural boundaries (like def)") {
         "f(1, def f(x), 3)" shouldFailWith(
-          ExpectedIdentifier(Def, "expression") spanning(5, 7),
-          ExpectedToken(Comma, Lower("f"), "argument list") spanning(9, 9),
-          ExtraToken(Comma, "end of input") spanning(13, 13)
+          ExpectedIdentifier(Def, "expression") spanning(5, 7)
         )
       }
 

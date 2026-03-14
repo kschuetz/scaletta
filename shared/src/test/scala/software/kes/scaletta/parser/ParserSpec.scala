@@ -108,7 +108,7 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
         it("should fail when a named argument is missing its value") {
           "f(x = )" shouldFailWith(ParseError.UnexpectedToken(Token.RParen) at 6, ParseError.UnclosedDelimiter(Token.LParen, Token.RParen) at 1) producing {
-            call(ref("f")).group().build()
+            callSimple(ref("f"), namedArg("x", errUnexpected(Token.RParen)))
           }
         }
 
@@ -258,7 +258,7 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         }
 
         it("should report an error for missing expression after =") {
-          ("{ def f(x: Int = ): Int = 1; f }" shouldRecoverWith containErrorOfType[ParseError.MissingExpression])
+          ("{ def f(x: Int = ): Int = 1; f }" shouldRecoverWith containErrorOfType[ParseError.UnexpectedToken])
             .ignoringAst()
         }
       }
@@ -344,13 +344,13 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
     it("should handle a missing expression in an argument list") {
       "f(1, , 2)" shouldRecoverWith (ParseError.MissingExpression("argument") at 5) producing {
-        callSimple(ref("f"), lit(1), lit(2))
+        callSimple(ref("f"), lit(1), errMissing("argument"), lit(2))
       }
     }
 
     it("should recover from an unexpected token in a function call") {
       "f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5) producing {
-        callSimple(ref("f"), lit(1), lit(2))
+        callSimple(ref("f"), lit(1), errUnexpected(Token.At), lit(2))
       }
     }
 
@@ -359,13 +359,13 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         ParseError.UnexpectedToken(Token.At) at 5,
         ParseError.UnexpectedToken(Token.Hash) at 8
       ) producing {
-        callSimple(ref("f"), lit(1), lit(2))
+        callSimple(ref("f"), lit(1), errUnexpected(Token.At), errUnexpected(Token.Hash), lit(2))
       }
     }
 
     it("should handle an unexpected token at the start of an argument") {
       "f(@, 1)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 2) producing {
-        callSimple(ref("f"), lit(1))
+        callSimple(ref("f"), errUnexpected(Token.At), lit(1))
       }
     }
 
@@ -388,14 +388,14 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
       it("should support multiple assertions with chaining") {
         ("f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5))
-          .producing(callSimple(ref("f"), lit(1), lit(2)))
+          .producing(callSimple(ref("f"), lit(1), errUnexpected(Token.At), lit(2)))
           .andNoFatalErrors()
       }
 
       it("should support withPartialAst for custom assertions") {
         ("f(1, @, 2)" shouldRecoverWith (ParseError.UnexpectedToken(Token.At) at 5))
           .withPartialAst { ast =>
-            ast shouldBe callSimple(ref("f"), lit(1), lit(2))
+            ast shouldBe callSimple(ref("f"), lit(1), errUnexpected(Token.At), lit(2))
           }
       }
     }

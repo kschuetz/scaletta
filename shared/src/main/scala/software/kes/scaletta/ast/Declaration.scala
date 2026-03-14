@@ -1,5 +1,6 @@
 package software.kes.scaletta.ast
 
+import software.kes.scaletta.parser.ParseError
 import software.kes.scaletta.util.functional.{Functor, ~>}
 
 sealed trait Declaration[F[_]] {
@@ -48,5 +49,9 @@ object Declaration {
         phi(F.map(pattern)(_.mapK(phi))),
         phi(F.map(rhs)(_.mapK(phi)))
       )
+  }
+
+  case class Error[F[_]](error: ParseError) extends Declaration[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Error[G] = Error(error)
   }
 }

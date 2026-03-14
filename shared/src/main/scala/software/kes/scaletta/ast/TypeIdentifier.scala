@@ -18,7 +18,7 @@ object TypeIdentifier {
     args.toList match {
       case Nil =>
         qualifier match {
-          case q: TypeIdentifier[F] => q
+          case q: TypeIdentifier[F @unchecked] => q
           case _ =>
             // This case handles when F[TypeIdentifier[F]] is not TypeIdentifier[F] (e.g. Pos[TypeIdentifier[Pos]])
             // In that case, we can't easily extract the value without knowing F.
