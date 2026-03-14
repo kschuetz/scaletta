@@ -11,6 +11,7 @@ object Parser {
 case class ParseOptions(requireExhaustion: Boolean = true)
 
 final class Parser private() {
+
   def parse(scanner: Scanner, options: ParseOptions = ParseOptions()): ExprResult[Pos] = {
     new Session(scanner, options).run
   }
@@ -55,7 +56,7 @@ final class Parser private() {
     }
 
     private def shouldContinueAtInfix(minBindingPower: BindingPower, token: Token): Boolean = {
-      if (isStructuralBoundary(token)) {
+      if (ParserSupport.isStructuralBoundary(token)) {
         false
       } else {
         token match {
@@ -599,12 +600,7 @@ final class Parser private() {
     }
 
     private def synchronizeTo(predicate: Token => Boolean, isFatal: Token => Boolean): Boolean = {
-      var next = scanner.peek(1)
-      while (!predicate(next.value) && !isFatal(next.value) && next.value != Token.EndOfInput) {
-        scanner.get()
-        next = scanner.peek(1)
-      }
-      isFatal(next.value)
+      ParserSupport.synchronizeTo(scanner, predicate, isFatal)
     }
 
     private def synchronizeToNextDeclaration(): Boolean = {
@@ -629,16 +625,12 @@ final class Parser private() {
         scanner.get()
         false
       } else {
-        isStructuralBoundary(next) && next != Token.RBrace
+        ParserSupport.isStructuralBoundary(next) && next != Token.RBrace
       }
     }
 
     private def isSynchronizationBoundary(token: Token): Boolean = {
-      token match {
-        case Token.Comma | Token.RParen | Token.EndOfInput | Token.Val | Token.Def |
-             Token.If | Token.Case | Token.Semicolon | Token.RBrace => true
-        case _ => false
-      }
+      ParserSupport.isCommonSynchronizationBoundary(token)
     }
 
     private def isStructuralBoundary(token: Token): Boolean = {
@@ -836,49 +828,11 @@ final class Parser private() {
      * @return the token consumed from the scanner
      */
     private def expect(expected: Token, context: String, openPos: Option[CharIndex] = None): Pos[Token] = {
-      val token = scanner.get()
-      if (token.value != expected) {
-        val error: ParseError = token.value match {
-          case Token.EndOfInput =>
-            val open = getOpenForClose(expected)
-            if (open != expected) ParseError.UnclosedDelimiter(open, expected)
-            else ParseError.ExpectedToken(expected, token.value, context)
-          case _ => ParseError.ExpectedToken(expected, token.value, context)
-        }
-        val pos = token.value match {
-          case Token.EndOfInput =>
-            val open = getOpenForClose(expected)
-            if (open != expected) {
-              Pos(error, openPos.getOrElse(token.begin), token.end)
-            } else {
-              Pos(error, token.begin, token.end)
-            }
-          case _ => Pos(error, token.begin, token.end)
-        }
-        reportError(pos)
-      }
-      token
-    }
-
-    private def getOpenForClose(close: Token): Token = {
-      close match {
-        case Token.RParen => Token.LParen
-        case Token.RBrace => Token.LBrace
-        case Token.RBracket => Token.LBracket
-        case _ => close
-      }
+      ParserSupport.expect(scanner, expected, context, reportError, openPos)
     }
 
     private def expectIdentifier(context: String): Pos[Token.Identifier] = {
-      val token = scanner.get()
-      token.value match {
-        case id: Token.Identifier => token.as(id)
-        case _ =>
-          reportError(Pos(ParseError.ExpectedIdentifier(token.value, context), token.begin, token.end))
-          // Return a synthetic identifier to allow parsing to continue
-          val name = if (token.value == Token.EndOfInput) "<error>" else s"<error:${token.value}>"
-          token.as(Token.Identifier.Lower(name))
-      }
+      ParserSupport.expectIdentifier(scanner, context, reportError)
     }
 
     private def addDiagnostics(other: ParseDiagnostics): Unit =

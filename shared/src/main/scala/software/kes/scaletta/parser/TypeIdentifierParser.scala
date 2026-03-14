@@ -1,13 +1,13 @@
 package software.kes.scaletta.parser
 
 import software.kes.scaletta.ast.{Identifier, TypeIdentifier}
-import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.reporting.{CharIndex, Pos}
 import software.kes.scaletta.scanner.{Scanner, Token}
 import software.kes.scaletta.types.ConjunctionType
 
 import scala.annotation.tailrec
 
-object TypeIdentifierParser {
+private[parser] object TypeIdentifierParser {
   def parse(scanner: Scanner): TypeResult[Pos] =
     new Session(scanner).run()
 
@@ -48,9 +48,9 @@ object TypeIdentifierParser {
     private def parseAtom(): TypeResult[Pos] = {
       val next = scanner.peek(1)
       next.value match {
-        case id: Token.Identifier =>
-          scanner.get()
-          ParseResult.create(Pos(TypeIdentifier.name(Pos(Identifier(id.name), next.begin, next.end)), next.begin, next.end))
+        case _: Token.Identifier =>
+          val idToken = expectIdentifier("type")
+          ParseResult.create(Pos(TypeIdentifier.name(Pos(Identifier(idToken.value.name), idToken.begin, idToken.end)), idToken.begin, idToken.end))
 
         case Token.LParen =>
           parseParenthesizedOrFunctionStart()
@@ -64,21 +64,15 @@ object TypeIdentifierParser {
     private def parseApplied(qualifierResult: TypeResult[Pos]): TypeResult[Pos] = {
       qualifierResult.value match {
         case Some(qualifierPos) =>
-          scanner.get() // consume '['
+          val lbracket = expect(Token.LBracket, "type application")
           val argsResult = parseCommaSeparatedTypes(Token.RBracket)
           argsResult.value match {
             case Some(args) if args.nonEmpty =>
-              val rbracket = scanner.peek(1)
-              if (rbracket.value == Token.RBracket) {
-                scanner.get()
-                ParseResult.create(Pos(TypeIdentifier.Applied(qualifierPos, ::(args.head, args.tail.toList)), qualifierPos.begin, rbracket.end))
-              } else {
-                reportError(Pos(ParseError.UnclosedDelimiter(Token.LBracket, Token.RBracket), qualifierPos.end + 1, qualifierPos.end + 2))
-                ParseResult.create(Pos(TypeIdentifier.Applied(qualifierPos, ::(args.head, args.tail.toList)), qualifierPos.begin, rbracket.begin))
-              }
+              val rbracket = expect(Token.RBracket, "type application", Some(lbracket.begin))
+              ParseResult.create(Pos(TypeIdentifier.Applied(qualifierPos, ::(args.head, args.tail.toList)), qualifierPos.begin, rbracket.end))
             case _ =>
               // Empty brackets or error in args
-              val rbracket = scanner.get()
+              val rbracket = expect(Token.RBracket, "type application")
               reportError(Pos(ParseError.ExpectedIdentifier(rbracket.value, "type argument"), rbracket.begin, rbracket.end))
               ParseResult.empty
           }
@@ -92,18 +86,11 @@ object TypeIdentifierParser {
     private def parseSelect(qualifierResult: TypeResult[Pos]): TypeResult[Pos] = {
       qualifierResult.value match {
         case Some(qualifierPos) =>
-          scanner.get() // consume '.'
-          val next = scanner.peek(1)
-          next.value match {
-            case id: Token.Identifier =>
-              scanner.get()
-              val idPos: Pos[Identifier[Pos]] = Pos(Identifier(id.name), next.begin, next.end)
-              val selectPos: Pos[TypeIdentifier[Pos]] = Pos(TypeIdentifier.Select(qualifierPos, idPos), qualifierPos.begin, next.end)
-              ParseResult.create(selectPos)
-            case _ =>
-              reportError(Pos(ParseError.ExpectedIdentifier(next.value, "type selection"), next.begin, next.end))
-              ParseResult.empty
-          }
+          expect(Token.Dot, "type selection")
+          val idToken = expectIdentifier("type selection")
+          val idPos: Pos[Identifier[Pos]] = Pos(Identifier(idToken.value.name), idToken.begin, idToken.end)
+          val selectPos: Pos[TypeIdentifier[Pos]] = Pos(TypeIdentifier.Select(qualifierPos, idPos), qualifierPos.begin, idToken.end)
+          ParseResult.create(selectPos)
         case None => qualifierResult
       }
     }
@@ -136,15 +123,9 @@ object TypeIdentifierParser {
     }
 
     private def parseParenthesizedOrFunctionStart(): TypeResult[Pos] = {
-      val lparen = scanner.get()
+      val lparen = expect(Token.LParen, "parenthesized type")
       val typesResult = parseCommaSeparatedTypes(Token.RParen)
-      val rparen = scanner.peek(1)
-
-      if (rparen.value != Token.RParen) {
-        reportError(Pos(ParseError.UnclosedDelimiter(Token.LParen, Token.RParen), lparen.begin, lparen.end))
-        return ParseResult.empty
-      }
-      scanner.get() // consume ')'
+      val rparen = expect(Token.RParen, "parenthesized type", Some(lparen.begin))
 
       val next = scanner.peek(1)
       if (next.value == Token.RDoubleArrow) {
@@ -205,17 +186,19 @@ object TypeIdentifierParser {
     }
 
     private def isSynchronizationBoundary(token: Token): Boolean = {
-      token match {
-        case Token.Comma | Token.RParen | Token.RBracket | Token.RBrace | Token.Semicolon | Token.EndOfInput => true
-        case Token.Val | Token.Def => true
-        case _ => false
-      }
+      ParserSupport.isCommonSynchronizationBoundary(token) || token == Token.RBracket
     }
 
     private def synchronize(): Unit = {
-      while (!isSynchronizationBoundary(scanner.peek(1).value)) {
-        scanner.get()
-      }
+      ParserSupport.synchronizeTo(scanner, isSynchronizationBoundary, _ => false)
+    }
+
+    private def expect(expected: Token, context: String, openPos: Option[CharIndex] = None): Pos[Token] = {
+      ParserSupport.expect(scanner, expected, context, reportError, openPos)
+    }
+
+    private def expectIdentifier(context: String): Pos[Token.Identifier] = {
+      ParserSupport.expectIdentifier(scanner, context, reportError)
     }
 
     private def reportError(error: Pos[ParseError]): Unit =
