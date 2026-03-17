@@ -11,7 +11,7 @@ sealed trait TypeRelationship[+T] {
 
   def isStrictSupertype: Boolean
 
-  def commonSupertype: Option[T]
+  def commonSupertype: Option[Type[T]]
 }
 
 object TypeRelationship {
@@ -29,7 +29,7 @@ object TypeRelationship {
 
     def isStrictSupertype: Boolean = false
 
-    def commonSupertype: Option[Nothing] = Option.empty
+    def commonSupertype: Option[Type[Nothing]] = Option.empty
   }
 
   /**
@@ -46,7 +46,7 @@ object TypeRelationship {
 
     def isStrictSupertype: Boolean = false
 
-    def commonSupertype: Option[Nothing] = Option.empty
+    def commonSupertype: Option[Type[Nothing]] = Option.empty
   }
 
   /**
@@ -63,13 +63,13 @@ object TypeRelationship {
 
     def isStrictSupertype: Boolean = true
 
-    def commonSupertype: Option[Nothing] = Option.empty
+    def commonSupertype: Option[Type[Nothing]] = Option.empty
   }
 
   /**
    * The left and the right types have a common supertype.
    */
-  case class HaveCommonSupertype[T](value: T) extends TypeRelationship[T] {
+  case class HaveCommonSupertype[T](value: Type[T]) extends TypeRelationship[T] {
     def isSame: Boolean = false
 
     def isSubtype: Boolean = false
@@ -80,7 +80,7 @@ object TypeRelationship {
 
     def isStrictSupertype: Boolean = false
 
-    def commonSupertype: Option[T] = Some(value)
+    def commonSupertype: Option[Type[T]] = Some(value)
   }
 
   /**
@@ -97,6 +97,6 @@ object TypeRelationship {
 
     def isStrictSupertype: Boolean = false
 
-    def commonSupertype: Option[Nothing] = Option.empty
+    def commonSupertype: Option[Type[Nothing]] = Option.empty
   }
 }

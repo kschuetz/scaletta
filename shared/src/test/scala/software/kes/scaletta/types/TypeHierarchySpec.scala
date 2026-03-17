@@ -34,72 +34,80 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
    *     DiamondChild
    */
   private val testHierarchy = new TypeHierarchy[TestType] {
-    def relationshipFor(lhs: TestType, rhs: TestType): TypeRelationship[TestType] = {
+    private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
+
+    def relationshipFor(lhs: Type[TestType], rhs: Type[TestType]): TypeRelationship[TestType] = {
       if (lhs == rhs) TypeRelationship.Same
       else (lhs, rhs) match {
-        // Strict Subtypes
-        case (ParentA, Root) => TypeRelationship.StrictSubtype
-        case (ParentB, Root) => TypeRelationship.StrictSubtype
-        case (ChildA1, Root) => TypeRelationship.StrictSubtype
-        case (ChildB1, Root) => TypeRelationship.StrictSubtype
-        case (ChildA1, ParentA) => TypeRelationship.StrictSubtype
-        case (ChildB1, ParentB) => TypeRelationship.StrictSubtype
+        case (Type.Nominal(l), Type.Nominal(r)) =>
+          (l, r) match {
+            // Strict Subtypes
+            case (ParentA, Root) => TypeRelationship.StrictSubtype
+            case (ParentB, Root) => TypeRelationship.StrictSubtype
+            case (ChildA1, Root) => TypeRelationship.StrictSubtype
+            case (ChildB1, Root) => TypeRelationship.StrictSubtype
+            case (ChildA1, ParentA) => TypeRelationship.StrictSubtype
+            case (ChildB1, ParentB) => TypeRelationship.StrictSubtype
 
-        // DiamondChild Subtypes
-        case (DiamondChild, Root) => TypeRelationship.StrictSubtype
-        case (DiamondChild, ParentA) => TypeRelationship.StrictSubtype
-        case (DiamondChild, ParentB) => TypeRelationship.StrictSubtype
-        case (DiamondChild, ChildA1) => TypeRelationship.StrictSubtype
-        case (DiamondChild, ChildB1) => TypeRelationship.StrictSubtype
+            // DiamondChild Subtypes
+            case (DiamondChild, Root) => TypeRelationship.StrictSubtype
+            case (DiamondChild, ParentA) => TypeRelationship.StrictSubtype
+            case (DiamondChild, ParentB) => TypeRelationship.StrictSubtype
+            case (DiamondChild, ChildA1) => TypeRelationship.StrictSubtype
+            case (DiamondChild, ChildB1) => TypeRelationship.StrictSubtype
 
-        // Strict Supertypes
-        case (Root, ParentA) => TypeRelationship.StrictSupertype
-        case (Root, ParentB) => TypeRelationship.StrictSupertype
-        case (Root, ChildA1) => TypeRelationship.StrictSupertype
-        case (Root, ChildB1) => TypeRelationship.StrictSupertype
-        case (ParentA, ChildA1) => TypeRelationship.StrictSupertype
-        case (ParentB, ChildB1) => TypeRelationship.StrictSupertype
+            // Strict Supertypes
+            case (Root, ParentA) => TypeRelationship.StrictSupertype
+            case (Root, ParentB) => TypeRelationship.StrictSupertype
+            case (Root, ChildA1) => TypeRelationship.StrictSupertype
+            case (Root, ChildB1) => TypeRelationship.StrictSupertype
+            case (ParentA, ChildA1) => TypeRelationship.StrictSupertype
+            case (ParentB, ChildB1) => TypeRelationship.StrictSupertype
 
-        // DiamondChild Supertypes
-        case (Root, DiamondChild) => TypeRelationship.StrictSupertype
-        case (ParentA, DiamondChild) => TypeRelationship.StrictSupertype
-        case (ParentB, DiamondChild) => TypeRelationship.StrictSupertype
-        case (ChildA1, DiamondChild) => TypeRelationship.StrictSupertype
-        case (ChildB1, DiamondChild) => TypeRelationship.StrictSupertype
+            // DiamondChild Supertypes
+            case (Root, DiamondChild) => TypeRelationship.StrictSupertype
+            case (ParentA, DiamondChild) => TypeRelationship.StrictSupertype
+            case (ParentB, DiamondChild) => TypeRelationship.StrictSupertype
+            case (ChildA1, DiamondChild) => TypeRelationship.StrictSupertype
+            case (ChildB1, DiamondChild) => TypeRelationship.StrictSupertype
 
-        // Common Supertypes (LUB)
-        case (ParentA, ParentB) => TypeRelationship.HaveCommonSupertype(Root)
-        case (ParentB, ParentA) => TypeRelationship.HaveCommonSupertype(Root)
-        case (ChildA1, ParentB) => TypeRelationship.HaveCommonSupertype(Root)
-        case (ParentB, ChildA1) => TypeRelationship.HaveCommonSupertype(Root)
-        case (ChildB1, ParentA) => TypeRelationship.HaveCommonSupertype(Root)
-        case (ParentA, ChildB1) => TypeRelationship.HaveCommonSupertype(Root)
-        case (ChildA1, ChildB1) => TypeRelationship.HaveCommonSupertype(Root)
-        case (ChildB1, ChildA1) => TypeRelationship.HaveCommonSupertype(Root)
+            // Common Supertypes (LUB)
+            case (ParentA, ParentB) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
+            case (ParentB, ParentA) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
+            case (ChildA1, ParentB) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
+            case (ParentB, ChildA1) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
+            case (ChildB1, ParentA) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
+            case (ParentA, ChildB1) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
+            case (ChildA1, ChildB1) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
+            case (ChildB1, ChildA1) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
 
-        // DiamondChild Common Supertypes
-        case (DiamondChild, Unrelated) => TypeRelationship.None
-        case (Unrelated, DiamondChild) => TypeRelationship.None
+            // DiamondChild Common Supertypes
+            case (DiamondChild, Unrelated) => TypeRelationship.None
+            case (Unrelated, DiamondChild) => TypeRelationship.None
 
-        // ParentA is a common supertype for its branch, but we only return HaveCommonSupertype
-        // when there is no direct subtyping relationship.
-        // Actually, for ChildA1 and some other child of ParentA (if it existed), ParentA would be LUB.
-
+            case _ => TypeRelationship.None
+          }
         case _ => TypeRelationship.None
       }
     }
 
-    def immediateSupertypes(t: TestType): Iterable[TestType] =
+    def immediateSupertypes(t: Type[TestType]): Iterable[Type[TestType]] =
       t match {
-        case DiamondChild => List(ChildA1, ChildB1)
-        case ChildA1 => List(ParentA)
-        case ChildB1 => List(ParentB)
-        case ParentA => List(Root)
-        case ParentB => List(Root)
-        case Root => Nil
-        case Unrelated => Nil
+        case Type.Nominal(name) =>
+          name match {
+            case DiamondChild => List(toNominal(ChildA1), toNominal(ChildB1))
+            case ChildA1 => List(toNominal(ParentA))
+            case ChildB1 => List(toNominal(ParentB))
+            case ParentA => List(toNominal(Root))
+            case ParentB => List(toNominal(Root))
+            case Root => Nil
+            case Unrelated => Nil
+          }
+        case _ => Nil
       }
   }
+
+  private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
 
   describe("TypeRelationship") {
     describe("Same") {
@@ -139,14 +147,14 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
     }
 
     describe("HaveCommonSupertype") {
-      val rel = TypeRelationship.HaveCommonSupertype(Root)
+      val rel = TypeRelationship.HaveCommonSupertype(toNominal(Root))
       it("should have correct property values") {
         rel.isSame shouldBe false
         rel.isSubtype shouldBe false
         rel.isSupertype shouldBe false
         rel.isStrictSubtype shouldBe false
         rel.isStrictSupertype shouldBe false
-        rel.commonSupertype shouldBe Some(Root)
+        rel.commonSupertype shouldBe Some(toNominal(Root))
       }
     }
 
@@ -165,31 +173,31 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
 
   describe("TypeHierarchy Operations") {
     it("should identify identical types as Same") {
-      testHierarchy.relationshipFor(ChildA1, ChildA1) shouldBe TypeRelationship.Same
-      testHierarchy.relationshipFor(Root, Root) shouldBe TypeRelationship.Same
+      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(ChildA1)) shouldBe TypeRelationship.Same
+      testHierarchy.relationshipFor(toNominal(Root), toNominal(Root)) shouldBe TypeRelationship.Same
     }
 
     it("should identify strict subtypes") {
-      testHierarchy.relationshipFor(ChildA1, ParentA) shouldBe TypeRelationship.StrictSubtype
-      testHierarchy.relationshipFor(ChildA1, Root) shouldBe TypeRelationship.StrictSubtype
-      testHierarchy.relationshipFor(ParentA, Root) shouldBe TypeRelationship.StrictSubtype
+      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(ParentA)) shouldBe TypeRelationship.StrictSubtype
+      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(Root)) shouldBe TypeRelationship.StrictSubtype
+      testHierarchy.relationshipFor(toNominal(ParentA), toNominal(Root)) shouldBe TypeRelationship.StrictSubtype
     }
 
     it("should identify strict supertypes") {
-      testHierarchy.relationshipFor(ParentA, ChildA1) shouldBe TypeRelationship.StrictSupertype
-      testHierarchy.relationshipFor(Root, ChildA1) shouldBe TypeRelationship.StrictSupertype
-      testHierarchy.relationshipFor(Root, ParentA) shouldBe TypeRelationship.StrictSupertype
+      testHierarchy.relationshipFor(toNominal(ParentA), toNominal(ChildA1)) shouldBe TypeRelationship.StrictSupertype
+      testHierarchy.relationshipFor(toNominal(Root), toNominal(ChildA1)) shouldBe TypeRelationship.StrictSupertype
+      testHierarchy.relationshipFor(toNominal(Root), toNominal(ParentA)) shouldBe TypeRelationship.StrictSupertype
     }
 
     it("should identify types with a common supertype (LUB)") {
-      testHierarchy.relationshipFor(ChildA1, ParentB) shouldBe TypeRelationship.HaveCommonSupertype(Root)
-      testHierarchy.relationshipFor(ParentA, ParentB) shouldBe TypeRelationship.HaveCommonSupertype(Root)
-      testHierarchy.relationshipFor(ChildA1, ChildB1) shouldBe TypeRelationship.HaveCommonSupertype(Root)
+      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(ParentB)) shouldBe TypeRelationship.HaveCommonSupertype(toNominal(Root))
+      testHierarchy.relationshipFor(toNominal(ParentA), toNominal(ParentB)) shouldBe TypeRelationship.HaveCommonSupertype(toNominal(Root))
+      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(ChildB1)) shouldBe TypeRelationship.HaveCommonSupertype(toNominal(Root))
     }
 
     it("should return None for unrelated types") {
-      testHierarchy.relationshipFor(Root, Unrelated) shouldBe TypeRelationship.None
-      testHierarchy.relationshipFor(ChildA1, Unrelated) shouldBe TypeRelationship.None
+      testHierarchy.relationshipFor(toNominal(Root), toNominal(Unrelated)) shouldBe TypeRelationship.None
+      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(Unrelated)) shouldBe TypeRelationship.None
     }
 
     it("should correctly handle covariance in TypeRelationship") {
@@ -200,23 +208,23 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
 
     describe("immediateSupertypes") {
       it("should return ParentA for ChildA1") {
-        testHierarchy.immediateSupertypes(ChildA1) should contain theSameElementsAs List(ParentA)
+        testHierarchy.immediateSupertypes(toNominal(ChildA1)) should contain theSameElementsAs List(toNominal(ParentA))
       }
 
       it("should return Root for ParentA") {
-        testHierarchy.immediateSupertypes(ParentA) should contain theSameElementsAs List(Root)
+        testHierarchy.immediateSupertypes(toNominal(ParentA)) should contain theSameElementsAs List(toNominal(Root))
       }
 
       it("should return Nil for Root") {
-        testHierarchy.immediateSupertypes(Root) shouldBe empty
+        testHierarchy.immediateSupertypes(toNominal(Root)) shouldBe empty
       }
 
       it("should return Nil for Unrelated") {
-        testHierarchy.immediateSupertypes(Unrelated) shouldBe empty
+        testHierarchy.immediateSupertypes(toNominal(Unrelated)) shouldBe empty
       }
 
       it("should return both ChildA1 and ChildB1 for DiamondChild") {
-        testHierarchy.immediateSupertypes(DiamondChild) should contain theSameElementsAs List(ChildA1, ChildB1)
+        testHierarchy.immediateSupertypes(toNominal(DiamondChild)) should contain theSameElementsAs List(toNominal(ChildA1), toNominal(ChildB1))
       }
     }
   }
