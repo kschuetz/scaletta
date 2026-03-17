@@ -2,7 +2,7 @@ package software.kes.scaletta.types
 
 import software.kes.scaletta.util.{NonEmptyArityList, SetTwoPlus}
 
-sealed trait Type[T]
+sealed trait Type[+T]
 
 object Type {
   case class Nominal[T](name: T) extends Type[T]
