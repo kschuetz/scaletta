@@ -32,6 +32,10 @@ sealed trait ArityList[+A] {
 
   def foreach[U](fn: A => U): Unit
 
+  def forall(p: A => Boolean): Boolean
+
+  def exists(p: A => Boolean): Boolean
+
   def zip[B](other: ArityList[B]): ArityList[(A, B)]
 
   def prepend[AA >: A](element: AA): NonEmptyArityList[AA]
@@ -47,6 +51,10 @@ object EmptyArityList extends ArityList[Nothing] {
   def map[B](fn: Nothing => B): ArityList[B] = this
 
   def foreach[U](fn: Nothing => U): Unit = ()
+
+  def forall(p: Nothing => Boolean): Boolean = true
+
+  def exists(p: Nothing => Boolean): Boolean = false
 
   def zip[B](other: ArityList[B]): ArityList[(Nothing, B)] = this
 
@@ -86,9 +94,12 @@ final class NonEmptyArityList[A] private(val items: List[A],
 
   def foreach[U](fn: A => U): Unit = items.foreach(fn)
 
+  def forall(p: A => Boolean): Boolean = items.forall(p)
+
+  def exists(p: A => Boolean): Boolean = items.exists(p)
+
   def zip[B](other: ArityList[B]): ArityList[(A, B)] = {
     val newItems = items.zip(other.items)
-    val newArity = Math.min(this.arity, other.arity)
     NonEmptyArityList.tryFrom(newItems).getOrElse(EmptyArityList)
   }
 

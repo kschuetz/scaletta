@@ -88,6 +88,22 @@ class ArityListSpec extends AnyFunSpec with Matchers {
       count shouldBe 0
     }
 
+    it("should correctly handle forall") {
+      val list = ArityList.of(1, 2, 3)
+      list.forall(_ > 0) shouldBe true
+      list.forall(_ > 1) shouldBe false
+
+      EmptyArityList.forall((_: Int) => false) shouldBe true
+    }
+
+    it("should correctly handle exists") {
+      val list = ArityList.of(1, 2, 3)
+      list.exists(_ == 2) shouldBe true
+      list.exists(_ == 4) shouldBe false
+
+      EmptyArityList.exists((_: Int) => true) shouldBe false
+    }
+
     describe("factory methods") {
       it("should create from different Iterable types") {
         val fromSet = ArityList.fromSeq(Set(1, 2, 3).toSeq)
