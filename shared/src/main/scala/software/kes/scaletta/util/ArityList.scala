@@ -61,7 +61,7 @@ object NonEmptyArityList {
   def tryFrom[A](items: Iterable[A]): Option[NonEmptyArityList[A]] = {
     items match {
       case Nil => None
-      case list: List[_] => Some(new NonEmptyArityList(list, list.length))
+      case list: List[A @unchecked] => Some(new NonEmptyArityList(list, list.length))
       case other =>
         val size = other.size
         if (size == 0) None
