@@ -88,6 +88,14 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
       table.get(qName) shouldBe Some(43)
       table.get(QualifiedName.full(PackagePath.root, "y")) shouldBe None
     }
+
+    it("should support existence check via contains") {
+      val pkg = PackagePath.parseAbsolute("org.example").toOption.get
+      val qName = QualifiedName.full(pkg, "y")
+      val table = SymbolTable.empty[Int].add(qName, 43)
+      table.contains(qName) shouldBe true
+      table.contains(QualifiedName.full(PackagePath.root, "y")) shouldBe false
+    }
   }
 
   describe("SymbolIndex") {
@@ -110,6 +118,14 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
       val qName = QualifiedName.full(pkg, "y")
       val index = SymbolIndex.empty[Int].add(qName, 43)
       index.get(qName) shouldBe Some(43)
+    }
+
+    it("should support existence check via contains") {
+      val pkg = PackagePath.parseAbsolute("org.example").toOption.get
+      val qName = QualifiedName.full(pkg, "y")
+      val index = SymbolIndex.empty[Int].add(qName, 43)
+      index.contains(qName) shouldBe true
+      index.contains(QualifiedName.full(PackagePath.root, "y")) shouldBe false
     }
   }
 }

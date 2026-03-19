@@ -36,6 +36,14 @@ trait SymbolIndex[A] {
               imports: ImportScope): List[SymbolEntry.Global[A]]
 
   /**
+   * Checks if a fully qualified global name exists in the index.
+   *
+   * @param name The fully qualified name to check.
+   * @return true if the symbol exists, false otherwise.
+   */
+  def contains(name: QualifiedName.Full): Boolean
+
+  /**
    * Adds a global or package-level symbol.
    *
    * @param name The fully qualified name of the symbol.
@@ -93,6 +101,14 @@ sealed trait SymbolTable[A] {
               imports: ImportScope): List[SymbolEntry[A]]
 
   /**
+   * Checks if a fully qualified global name exists in the table.
+   *
+   * @param name The fully qualified name to check.
+   * @return true if the symbol exists, false otherwise.
+   */
+  def contains(name: QualifiedName.Full): Boolean
+
+  /**
    * Adds a global or package-level symbol.
    *
    * @param name The fully qualified name of the symbol.
@@ -130,6 +146,10 @@ private[symbols] abstract class BaseSymbolStore[A] {
 
   def get(name: QualifiedName.Full): Option[A] = {
     globals.get(name.qualifier).flatMap(_.get(name.name))
+  }
+
+  def contains(name: QualifiedName.Full): Boolean = {
+    globals.get(name.qualifier).exists(_.contains(name.name))
   }
 
   protected def resolveGlobal(name: QualifiedName,
