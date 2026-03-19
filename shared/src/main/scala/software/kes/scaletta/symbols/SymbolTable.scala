@@ -4,18 +4,6 @@ import software.kes.scaletta.common.PackagePath
 
 object SymbolTable {
   /**
-   * Represents a resolved entry in the symbol table.
-   *
-   * @param name      The simple name of the symbol.
-   * @param container The absolute package path of the entity containing this symbol.
-   * @param value     The generic value associated with the symbol (e.g., a Type or Term definition).
-   * @tparam A The type of the stored value.
-   */
-  final case class Entry[+A](name: String,
-                             container: Option[PackagePath.Absolute],
-                             value: A)
-
-  /**
    * Creates an empty SymbolTable.
    */
   def empty[A]: SymbolTable[A] = SimpleSymbolTable.empty[A]
@@ -30,27 +18,31 @@ object SymbolTable {
 trait SymbolIndex[A] {
 
   /**
+   * Performs a direct lookup for a fully qualified global name.
+   *
+   * @param name The fully qualified name to look up.
+   * @return Some(value) if the symbol exists, None otherwise.
+   */
+  def get(name: QualifiedName.Full): Option[A]
+
+  /**
    * Finds entries matching the given query within the context of active imports.
    *
-   * @param qualifier The PackagePath representing the qualification (Absolute or Relative), if present.
-   *                  This path should not include the symbol name itself.
-   * @param name      The specific identifier/symbol name to look up.
-   * @param imports   The active implicit imports in the current scope.
-   * @return A List of matching Entry[A] objects.
+   * @param name    The QualifiedName (Full or Partial) to look up.
+   * @param imports The active implicit imports in the current scope.
+   * @return A List of matching SymbolEntry.Global[A] objects.
    */
-  def resolve(qualifier: Option[PackagePath],
-              name: String,
-              imports: ImportScope): List[SymbolTable.Entry[A]]
+  def resolve(name: QualifiedName,
+              imports: ImportScope): List[SymbolEntry.Global[A]]
 
   /**
    * Adds a global or package-level symbol.
    *
-   * @param container The absolute path of the package/object containing the symbol.
-   * @param name      The identifier of the symbol.
+   * @param name The fully qualified name of the symbol.
    * @param value     The value to associate with the symbol.
    * @return A new SymbolIndex instance containing the added entry.
    */
-  def add(container: PackagePath.Absolute, name: String, value: A): SymbolIndex[A]
+  def add(name: QualifiedName.Full, value: A): SymbolIndex[A]
 }
 
 object SymbolIndex {
@@ -58,7 +50,7 @@ object SymbolIndex {
   /**
    * Creates an empty SymbolIndex.
    */
-  def empty[A]: SymbolIndex[A] = SimpleSymbolTable.empty[A]
+  def empty[A]: SymbolIndex[A] = SimpleSymbolIndex.empty[A]
 }
 
 /**
@@ -66,7 +58,15 @@ object SymbolIndex {
  *
  * @tparam A The type of value stored in the table.
  */
-sealed trait SymbolTable[A] extends SymbolIndex[A] {
+sealed trait SymbolTable[A] {
+
+  /**
+   * Performs a direct lookup for a fully qualified global name.
+   *
+   * @param name The fully qualified name to look up.
+   * @return Some(value) if the symbol exists, None otherwise.
+   */
+  def get(name: QualifiedName.Full): Option[A]
 
   /**
    * Finds entries matching the given query within the context of active imports.
@@ -82,28 +82,24 @@ sealed trait SymbolTable[A] extends SymbolIndex[A] {
    * Ambiguity (returning multiple entries) only occurs if multiple matches are found
    * at the *same* priority level (e.g., from multiple wildcard imports).
    *
-   * @param qualifier The PackagePath representing the qualification (Absolute or Relative), if present.
-   *                  This path should not include the symbol name itself.
-   * @param name      The specific identifier/symbol name to look up.
-   * @param imports   The active implicit imports in the current scope.
-   * @return A List of matching Entry[A] objects.
+   * @param name    The QualifiedName (Full or Partial) to look up.
+   * @param imports The active implicit imports in the current scope.
+   * @return A List of matching SymbolEntry[A] objects.
    *         - Nil: No match found.
    *         - List(entry): An unambiguous match found.
    *         - List(entry1, entry2, ...): Multiple matches found at the same priority level (Ambiguity).
    */
-  def resolve(qualifier: Option[PackagePath],
-              name: String,
-              imports: ImportScope): List[SymbolTable.Entry[A]]
+  def resolve(name: QualifiedName,
+              imports: ImportScope): List[SymbolEntry[A]]
 
   /**
    * Adds a global or package-level symbol.
    *
-   * @param container The absolute path of the package/object containing the symbol.
-   * @param name      The identifier of the symbol.
+   * @param name The fully qualified name of the symbol.
    * @param value     The value to associate with the symbol.
    * @return A new SymbolTable instance containing the added entry.
    */
-  def add(container: PackagePath.Absolute, name: String, value: A): SymbolTable[A]
+  def add(name: QualifiedName.Full, value: A): SymbolTable[A]
 
   /**
    * Adds a local symbol to the current innermost scope.
@@ -120,49 +116,105 @@ sealed trait SymbolTable[A] extends SymbolIndex[A] {
    * @return A new SymbolTable instance with an additional empty local scope.
    */
   def enterScope: SymbolTable[A]
+
+  /**
+   * Returns a view of this table as a global SymbolIndex.
+   *
+   * @return A SymbolIndex representing the global symbols in this table.
+   */
+  def asSymbolIndex: SymbolIndex[A]
+}
+
+private[symbols] abstract class BaseSymbolStore[A] {
+  protected def globals: Map[PackagePath.Absolute, Map[String, A]]
+
+  def get(name: QualifiedName.Full): Option[A] = {
+    globals.get(name.qualifier).flatMap(_.get(name.name))
+  }
+
+  protected def resolveGlobal(name: QualifiedName,
+                              imports: ImportScope): List[SymbolEntry.Global[A]] = {
+    val (qualifier, identifier) = name match {
+      case QualifiedName.Full(q, n) => (Some(q), n)
+      case QualifiedName.Partial(q, n) => (q, n)
+    }
+
+    qualifier match {
+      case None =>
+        // Only search the root package for now
+        globals.get(PackagePath.root).flatMap(_.get(identifier)) match {
+          case Some(value) => List(SymbolEntry.Global(identifier, PackagePath.root, value))
+          case None => Nil
+        }
+
+      case Some(path: PackagePath.Absolute) =>
+        globals.get(path).flatMap(_.get(identifier)) match {
+          case Some(value) => List(SymbolEntry.Global(identifier, path, value))
+          case None => Nil
+        }
+
+      case Some(path: PackagePath.Relative) =>
+        Nil
+    }
+  }
+}
+
+private[symbols] final class SimpleSymbolIndex[A](protected val globals: Map[PackagePath.Absolute, Map[String, A]])
+  extends BaseSymbolStore[A] with SymbolIndex[A] {
+
+  def resolve(name: QualifiedName,
+              imports: ImportScope): List[SymbolEntry.Global[A]] = {
+    resolveGlobal(name, imports)
+  }
+
+  def add(name: QualifiedName.Full, value: A): SymbolIndex[A] = {
+    val packageMap = globals.getOrElse(name.qualifier, Map.empty)
+    new SimpleSymbolIndex(globals + (name.qualifier -> (packageMap + (name.name -> value))))
+  }
+}
+
+private[symbols] object SimpleSymbolIndex {
+  def empty[A]: SimpleSymbolIndex[A] = new SimpleSymbolIndex(Map.empty)
 }
 
 private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[Map[String, A]],
-                                                  private val globals: Map[PackagePath.Absolute, Map[String, A]])
-  extends SymbolTable[A] {
+                                                  protected val globals: Map[PackagePath.Absolute, Map[String, A]])
+  extends BaseSymbolStore[A] with SymbolTable[A] {
 
-  def resolve(qualifier: Option[PackagePath],
-              name: String,
-              imports: ImportScope): List[SymbolTable.Entry[A]] = {
+  def resolve(name: QualifiedName,
+              imports: ImportScope): List[SymbolEntry[A]] = {
+    val (qualifier, identifier) = name match {
+      case QualifiedName.Full(q, n) => (Some(q), n)
+      case QualifiedName.Partial(q, n) => (q, n)
+    }
+
     qualifier match {
       case None =>
         // 1. Search local scopes from innermost to outermost
         val localMatch = localScopes.collectFirst {
-          case scope if scope.contains(name) => List(SymbolTable.Entry(name, None, scope(name)))
+          case scope if scope.contains(identifier) => List(SymbolEntry.Local(identifier, scope(identifier)))
         }
 
         localMatch.getOrElse {
           // 2. Search Specific Imports (to be implemented)
 
           // 3. Search Wildcard Imports and Root Package
-          // For now, only searching the root package since wildcard imports aren't implemented in the stub
-          globals.get(PackagePath.root).flatMap(_.get(name)) match {
-            case Some(value) => List(SymbolTable.Entry(name, Some(PackagePath.root), value))
-            case None => Nil
-          }
+          resolveGlobal(name, imports)
         }
 
-      case Some(path: PackagePath.Absolute) =>
+      case Some(_: PackagePath.Absolute) =>
         // Direct lookup in an absolute package
-        globals.get(path).flatMap(_.get(name)) match {
-          case Some(value) => List(SymbolTable.Entry(name, Some(path), value))
-          case None => Nil
-        }
+        resolveGlobal(name, imports)
 
-      case Some(path: PackagePath.Relative) =>
+      case Some(_: PackagePath.Relative) =>
         // Partially qualified lookup (To be fully implemented with ImportScope)
         Nil
     }
   }
 
-  def add(container: PackagePath.Absolute, name: String, value: A): SymbolTable[A] = {
-    val packageMap = globals.getOrElse(container, Map.empty)
-    new SimpleSymbolTable(localScopes, globals + (container -> (packageMap + (name -> value))))
+  def add(name: QualifiedName.Full, value: A): SymbolTable[A] = {
+    val packageMap = globals.getOrElse(name.qualifier, Map.empty)
+    new SimpleSymbolTable(localScopes, globals + (name.qualifier -> (packageMap + (name.name -> value))))
   }
 
   def addLocal(name: String, value: A): SymbolTable[A] = {
@@ -171,12 +223,14 @@ private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[
         new SimpleSymbolTable((head + (name -> value)) :: tail, globals)
       case Nil =>
         // If no local scope exists, treat as global/root
-        add(PackagePath.root, name, value)
+        add(QualifiedName.full(PackagePath.root, name), value)
     }
   }
 
   def enterScope: SymbolTable[A] =
     new SimpleSymbolTable(Map.empty[String, A] :: localScopes, globals)
+
+  def asSymbolIndex: SymbolIndex[A] = new SimpleSymbolIndex(globals)
 }
 
 private[symbols] object SimpleSymbolTable {
