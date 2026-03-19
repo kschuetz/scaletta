@@ -46,8 +46,8 @@ trait SymbolIndex[A] {
   /**
    * Adds a global or package-level symbol.
    *
-   * @param name The fully qualified name of the symbol.
-   * @param value     The value to associate with the symbol.
+   * @param name  The fully qualified name of the symbol.
+   * @param value The value to associate with the symbol.
    * @return A new SymbolIndex instance containing the added entry.
    */
   def add(name: QualifiedName.Full, value: A): SymbolIndex[A]
@@ -111,8 +111,8 @@ sealed trait SymbolTable[A] {
   /**
    * Adds a global or package-level symbol.
    *
-   * @param name The fully qualified name of the symbol.
-   * @param value     The value to associate with the symbol.
+   * @param name  The fully qualified name of the symbol.
+   * @param value The value to associate with the symbol.
    * @return A new SymbolTable instance containing the added entry.
    */
   def add(name: QualifiedName.Full, value: A): SymbolTable[A]
