@@ -22,11 +22,51 @@ object SymbolTable {
 }
 
 /**
+ * A base index for resolving symbols. Supports global symbol additions but
+ * does not support local scoping.
+ *
+ * @tparam A The type of value stored in the table.
+ */
+trait SymbolIndex[A] {
+
+  /**
+   * Finds entries matching the given query within the context of active imports.
+   *
+   * @param qualifier The PackagePath representing the qualification (Absolute or Relative), if present.
+   *                  This path should not include the symbol name itself.
+   * @param name      The specific identifier/symbol name to look up.
+   * @param imports   The active implicit imports in the current scope.
+   * @return A List of matching Entry[A] objects.
+   */
+  def resolve(qualifier: Option[PackagePath],
+              name: String,
+              imports: ImportScope): List[SymbolTable.Entry[A]]
+
+  /**
+   * Adds a global or package-level symbol.
+   *
+   * @param container The absolute path of the package/object containing the symbol.
+   * @param name      The identifier of the symbol.
+   * @param value     The value to associate with the symbol.
+   * @return A new SymbolIndex instance containing the added entry.
+   */
+  def add(container: PackagePath.Absolute, name: String, value: A): SymbolIndex[A]
+}
+
+object SymbolIndex {
+
+  /**
+   * Creates an empty SymbolIndex.
+   */
+  def empty[A]: SymbolIndex[A] = SimpleSymbolTable.empty[A]
+}
+
+/**
  * A table mapping identifiers to symbols within the Term or Type namespaces.
  *
  * @tparam A The type of value stored in the table.
  */
-sealed trait SymbolTable[A] {
+sealed trait SymbolTable[A] extends SymbolIndex[A] {
 
   /**
    * Finds entries matching the given query within the context of active imports.

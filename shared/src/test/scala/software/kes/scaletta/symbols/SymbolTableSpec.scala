@@ -80,4 +80,20 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
       table.resolve(Some(rel), "User", ImportScope.empty) shouldBe Nil
     }
   }
+
+  describe("SymbolIndex") {
+    it("should resolve a global symbol") {
+      val index: SymbolIndex[Int] = SymbolIndex.empty[Int].add(PackagePath.root, "x", 41)
+      val result = index.resolve(None, "x", ImportScope.empty)
+      result should have size 1
+      result.head.value shouldBe 41
+    }
+
+    it("should allow adding symbols and return a new SymbolIndex") {
+      val index1 = SymbolIndex.empty[Int]
+      val index2 = index1.add(PackagePath.root, "x", 41)
+      index1.resolve(None, "x", ImportScope.empty) shouldBe Nil
+      index2.resolve(None, "x", ImportScope.empty) should not be empty
+    }
+  }
 }
