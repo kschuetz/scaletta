@@ -163,14 +163,14 @@ sealed trait SymbolTable[A] {
 }
 
 private[symbols] abstract class BaseSymbolStore[A] {
-  protected def globals: Map[PackagePath.Absolute, Map[String, A]]
+  protected def globals: PackageNode[A]
 
   def get(name: QualifiedName.Full): Option[A] = {
-    globals.get(name.qualifier).flatMap(_.get(name.name))
+    globals.findNode(name.qualifier).flatMap(_.get(name.name))
   }
 
   def contains(name: QualifiedName.Full): Boolean = {
-    globals.get(name.qualifier).exists(_.contains(name.name))
+    globals.findNode(name.qualifier).exists(_.symbols.contains(name.name))
   }
 
   protected def resolveGlobal(name: QualifiedName,
@@ -178,7 +178,7 @@ private[symbols] abstract class BaseSymbolStore[A] {
     name match {
       case QualifiedName.Full(qualifier, identifier) =>
         // Direct lookup for absolute paths
-        globals.get(qualifier).flatMap(_.get(identifier)) match {
+        globals.findNode(qualifier).flatMap(_.get(identifier)) match {
           case Some(value) => List(SymbolEntry.Global(identifier, qualifier, value))
           case None => Nil
         }
@@ -187,7 +187,7 @@ private[symbols] abstract class BaseSymbolStore[A] {
         // Unqualified name resolution
         // 1. Specific Imports
         val specificMatch = imports.symbols.get(identifier).flatMap { pkgPath =>
-          globals.get(pkgPath).flatMap(_.get(identifier)).map { value =>
+          globals.findNode(pkgPath).flatMap(_.get(identifier)).map { value =>
             SymbolEntry.Global(identifier, pkgPath, value)
           }
         }
@@ -196,7 +196,7 @@ private[symbols] abstract class BaseSymbolStore[A] {
           case Some(entry) => List(entry)
           case None =>
             // 2. Root Package
-            val rootMatch = globals.get(PackagePath.root).flatMap(_.get(identifier)).map { value =>
+            val rootMatch = globals.get(identifier).map { value =>
               SymbolEntry.Global(identifier, PackagePath.root, value)
             }
 
@@ -205,7 +205,7 @@ private[symbols] abstract class BaseSymbolStore[A] {
               case None =>
                 // 3. Wildcard Imports
                 imports.wildcards.toList.flatMap { pkgPath =>
-                  globals.get(pkgPath).flatMap(_.get(identifier)).map { value =>
+                  globals.findNode(pkgPath).flatMap(_.get(identifier)).map { value =>
                     SymbolEntry.Global(identifier, pkgPath, value)
                   }
                 }.distinct
@@ -214,23 +214,29 @@ private[symbols] abstract class BaseSymbolStore[A] {
 
       case QualifiedName.Partial(Some(rel: PackagePath.Relative), identifier) =>
         // Relative qualifier resolution (Nested paths)
-        val firstSegment = rel.components.head.name
-        val remainingRel = PackagePath.relative(rel.components.tail: _*)
+        val components = rel.components
+        val firstSegment = components.head.name
+        val remainingRel = PackagePath.relative(components.tail: _*)
 
-        val basePaths = imports.packages.get(firstSegment) match {
-          case Some(absPath) => List(absPath ++ remainingRel)
-          case None => List(PackagePath.root ++ rel)
+        val candidates = imports.packages.get(firstSegment) match {
+          case Some(absPath) =>
+            // If the first segment is an imported package, we look there.
+            val fullPkgPath = absPath ++ remainingRel
+            globals.findNode(fullPkgPath).flatMap(_.get(identifier)).map { value =>
+              SymbolEntry.Global(identifier, fullPkgPath, value)
+            }.toList
+          case None =>
+            // Otherwise, we look in the root package.
+            val fullPkgPath = PackagePath.root ++ rel
+            globals.findNode(fullPkgPath).flatMap(_.get(identifier)).map { value =>
+              SymbolEntry.Global(identifier, fullPkgPath, value)
+            }.toList
         }
-
-        basePaths.flatMap { fullPkgPath =>
-          globals.get(fullPkgPath).flatMap(_.get(identifier)).map { value =>
-            SymbolEntry.Global(identifier, fullPkgPath, value)
-          }
-        }
+        candidates
 
       case QualifiedName.Partial(Some(abs: PackagePath.Absolute), identifier) =>
         // Treat like QualifiedName.Full
-        globals.get(abs).flatMap(_.get(identifier)) match {
+        globals.findNode(abs).flatMap(_.get(identifier)) match {
           case Some(value) => List(SymbolEntry.Global(identifier, abs, value))
           case None => Nil
         }
@@ -238,7 +244,7 @@ private[symbols] abstract class BaseSymbolStore[A] {
   }
 }
 
-private[symbols] final class SimpleSymbolIndex[A](protected val globals: Map[PackagePath.Absolute, Map[String, A]])
+private[symbols] final class SimpleSymbolIndex[A](protected val globals: PackageNode[A])
   extends BaseSymbolStore[A] with SymbolIndex[A] {
 
   def resolve(name: QualifiedName,
@@ -247,29 +253,23 @@ private[symbols] final class SimpleSymbolIndex[A](protected val globals: Map[Pac
   }
 
   def add(name: QualifiedName.Full, value: A): SymbolIndex[A] = {
-    val packageMap = globals.getOrElse(name.qualifier, Map.empty)
-    new SimpleSymbolIndex(globals + (name.qualifier -> (packageMap + (name.name -> value))))
+    new SimpleSymbolIndex(globals.add(name.qualifier, name.name, value))
   }
 
   def merge(other: SymbolIndex[A]): SymbolIndex[A] = {
     val otherIndex = other.asInstanceOf[SimpleSymbolIndex[A]]
-    val newGlobals = otherIndex.globals.foldLeft(this.globals) {
-      case (acc, (pkgPath, otherPackageMap)) =>
-        val thisPackageMap = acc.getOrElse(pkgPath, Map.empty)
-        acc + (pkgPath -> (thisPackageMap ++ otherPackageMap))
-    }
-    new SimpleSymbolIndex(newGlobals)
+    new SimpleSymbolIndex(globals.merge(otherIndex.globals))
   }
 
   def toSymbolTable: SymbolTable[A] = new SimpleSymbolTable(Nil, globals)
 }
 
 private[symbols] object SimpleSymbolIndex {
-  def empty[A]: SimpleSymbolIndex[A] = new SimpleSymbolIndex(Map.empty)
+  def empty[A]: SimpleSymbolIndex[A] = new SimpleSymbolIndex(PackageNode.empty[A])
 }
 
 private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[Map[String, A]],
-                                                  protected val globals: Map[PackagePath.Absolute, Map[String, A]])
+                                                  protected val globals: PackageNode[A])
   extends BaseSymbolStore[A] with SymbolTable[A] {
 
   def resolve(name: QualifiedName,
@@ -300,8 +300,7 @@ private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[
   }
 
   def add(name: QualifiedName.Full, value: A): SymbolTable[A] = {
-    val packageMap = globals.getOrElse(name.qualifier, Map.empty)
-    new SimpleSymbolTable(localScopes, globals + (name.qualifier -> (packageMap + (name.name -> value))))
+    new SimpleSymbolTable(localScopes, globals.add(name.qualifier, name.name, value))
   }
 
   def addLocal(name: String, value: A): SymbolTable[A] = {
@@ -321,5 +320,5 @@ private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[
 }
 
 private[symbols] object SimpleSymbolTable {
-  def empty[A]: SimpleSymbolTable[A] = new SimpleSymbolTable(Nil, Map.empty)
+  def empty[A]: SimpleSymbolTable[A] = new SimpleSymbolTable(Nil, PackageNode.empty[A])
 }
