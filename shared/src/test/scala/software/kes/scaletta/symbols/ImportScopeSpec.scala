@@ -119,5 +119,70 @@ class ImportScopeSpec extends AnyFunSpec with Matchers {
       scope.packages should contain("bar" -> path)
       scope.symbols shouldBe empty // Removed because of wildcard
     }
+
+    it("should support combining two ImportScopes with merge") {
+      val path1 = PackagePath.parseAbsolute("pkg1")
+      val path2 = PackagePath.parseAbsolute("pkg2")
+      val path3 = PackagePath.parseAbsolute("pkg3")
+
+      val scope1 = ImportScope.empty
+        .importPackage(path1)
+        .importSymbols(path2, Set("X"))
+        .importWildcard(path3)
+
+      val path4 = PackagePath.parseAbsolute("pkg4")
+      val path5 = PackagePath.parseAbsolute("pkg5")
+      val path6 = PackagePath.parseAbsolute("pkg6")
+
+      val scope2 = ImportScope.empty
+        .importPackage(path4)
+        .importSymbols(path5, Set("Y"))
+        .importWildcard(path6)
+
+      val combined = scope1.merge(scope2)
+
+      combined.packages should contain("pkg1" -> path1)
+      combined.packages should contain("pkg4" -> path4)
+      combined.symbols should contain("X" -> path2)
+      combined.symbols should contain("Y" -> path5)
+      combined.wildcards should contain(path3)
+      combined.wildcards should contain(path6)
+    }
+
+    it("merge: later scope should shadow earlier scope symbols") {
+      val path1 = PackagePath.parseAbsolute("pkg1")
+      val path2 = PackagePath.parseAbsolute("pkg2")
+
+      val scope1 = ImportScope.importSymbols(path1, Set("X"))
+      val scope2 = ImportScope.importSymbols(path2, Set("X"))
+
+      scope1.merge(scope2).symbols should contain("X" -> path2)
+    }
+
+    it("merge: later scope should shadow earlier scope packages") {
+      val path1 = PackagePath.parseAbsolute("pkg1.util")
+      val path2 = PackagePath.parseAbsolute("pkg2.util")
+
+      val scope1 = ImportScope.importPackages(path1)
+      val scope2 = ImportScope.importPackages(path2)
+
+      scope1.merge(scope2).packages should contain("util" -> path2)
+    }
+
+    it("merge: should maintain normalization (wildcard in later scope removes symbol in earlier scope)") {
+      val path = PackagePath.parseAbsolute("foo.bar")
+      val scope1 = ImportScope.importSymbols(path, Set("X"))
+      val scope2 = ImportScope.importWildcard(path)
+
+      scope1.merge(scope2).symbols should not contain key("X")
+    }
+
+    it("merge: should maintain normalization (wildcard in earlier scope prevents symbol in later scope)") {
+      val path = PackagePath.parseAbsolute("foo.bar")
+      val scope1 = ImportScope.importWildcard(path)
+      val scope2 = ImportScope.importSymbols(path, Set("X"))
+
+      scope1.merge(scope2).symbols should not contain key("X")
+    }
   }
 }

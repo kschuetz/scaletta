@@ -19,6 +19,13 @@ object ImportScope {
 
   def importWildcard(paths: PackagePath.Absolute*): ImportScope =
     empty.importWildcard(paths: _*)
+
+  def fromRules(rule: ImportRule*): ImportScope =
+    rule.foldLeft(empty)(_.add(_))
+
+  def merge(scopes: ImportScope*): ImportScope =
+    scopes.foldLeft(empty)(_.merge(_))
+
 }
 
 /**
@@ -70,6 +77,14 @@ final class ImportScope private(val symbols: Map[String, PackagePath.Absolute],
     case ImportRule.Package(path) => importPackage(path)
     case ImportRule.Symbols(path, names) => importSymbols(path, names)
     case ImportRule.Wildcard(path) => importWildcard(path)
+  }
+
+  def merge(other: ImportScope): ImportScope = {
+    val newWildcards = this.wildcards ++ other.wildcards
+    val newPackages = this.packages ++ other.packages
+    val mergedSymbols = this.symbols ++ other.symbols
+    val filteredSymbols = mergedSymbols.filter { case (_, pkgPath) => !newWildcards.contains(pkgPath) }
+    new ImportScope(filteredSymbols, newWildcards, newPackages)
   }
 
   override def equals(other: Any): Boolean = other match {
