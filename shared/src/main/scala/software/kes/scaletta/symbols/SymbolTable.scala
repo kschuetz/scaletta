@@ -284,8 +284,13 @@ private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[
     qualifier match {
       case None =>
         // 1. Search local scopes from innermost to outermost
-        val localMatch = localScopes.collectFirst {
-          case scope if scope.contains(identifier) => List(SymbolEntry.Local(identifier, scope(identifier)))
+        var localMatch = Option.empty[List[SymbolEntry[A]]]
+        val localScopesIter = localScopes.iterator
+        while (localScopesIter.hasNext && localMatch.isEmpty) {
+          val scope = localScopesIter.next()
+          scope.get(identifier).foreach { value =>
+            localMatch = Some(List(SymbolEntry.Local(identifier, value)))
+          }
         }
 
         localMatch.getOrElse {
