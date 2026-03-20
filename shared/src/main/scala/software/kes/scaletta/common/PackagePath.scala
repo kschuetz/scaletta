@@ -92,9 +92,20 @@ object PackagePath {
 
   /**
    * Parses a string into an absolute PackagePath.
+   * If the path is invalid, an IllegalArgumentException is thrown.
+   * Use tryParseAbsolute() if you want to handle errors.
+   */
+  def parseAbsolute(input: String): Absolute =
+    tryParseAbsolute(input) match {
+      case Left(error) => throw new IllegalArgumentException(error)
+      case Right(result) => result
+    }
+
+  /**
+   * Parses a string into an absolute PackagePath.
    * The path MAY start with "_root_". If it does, "_root_" will be ignored.
    */
-  def parseAbsolute(input: String): Either[String, Absolute] = {
+  def tryParseAbsolute(input: String): Either[String, Absolute] = {
     val trimmed = input.trim
     if (trimmed == RootPrefix) {
       Right(root)
@@ -112,8 +123,19 @@ object PackagePath {
 
   /**
    * Parses a string into a relative PackagePath.
+   * If the path is invalid, an IllegalArgumentException is thrown.
+   * Use tryParseRelative() if you want to handle errors.
    */
-  def parseRelative(input: String): Either[String, Relative] = {
+  def parseRelative(input: String): Relative =
+    tryParseRelative(input) match {
+      case Left(error) => throw new IllegalArgumentException(error)
+      case Right(result) => result
+    }
+
+  /**
+   * Parses a string into a relative PackagePath.
+   */
+  def tryParseRelative(input: String): Either[String, Relative] = {
     val trimmed = input.trim
     if (trimmed.isEmpty) {
       Right(new Relative(Vector.empty))
@@ -128,12 +150,12 @@ object PackagePath {
    * Parses a string into a PackagePath.
    * If it starts with "_root_", it is absolute. Otherwise, it's relative.
    */
-  def parse(input: String): Either[String, PackagePath] = {
+  def tryParse(input: String): Either[String, PackagePath] = {
     val trimmed = input.trim
     if (trimmed.startsWith(RootPrefix)) {
-      parseAbsolute(trimmed)
+      tryParseAbsolute(trimmed)
     } else {
-      parseRelative(trimmed)
+      tryParseRelative(trimmed)
     }
   }
 

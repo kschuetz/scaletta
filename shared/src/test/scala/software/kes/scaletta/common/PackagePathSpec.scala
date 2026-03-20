@@ -73,32 +73,32 @@ class PackagePathSpec extends AnyFunSpec with Matchers {
 
     describe("parse") {
       it("should parse _root_") {
-        PackagePath.parse("_root_") shouldBe Right(PackagePath.root)
+        PackagePath.tryParse("_root_") shouldBe Right(PackagePath.root)
       }
 
       it("should parse _root_.org.example") {
-        PackagePath.parse("_root_.org.example") shouldBe Right(PackagePath.absolute(nameOrg, nameExample))
+        PackagePath.tryParse("_root_.org.example") shouldBe Right(PackagePath.absolute(nameOrg, nameExample))
       }
 
       it("should parse org.example (relative)") {
-        PackagePath.parse("org.example") shouldBe Right(PackagePath.relative(nameOrg, nameExample))
+        PackagePath.tryParse("org.example") shouldBe Right(PackagePath.relative(nameOrg, nameExample))
       }
 
       it("should parse an empty string as an empty relative path") {
-        PackagePath.parse("") shouldBe Right(PackagePath.relative())
+        PackagePath.tryParse("") shouldBe Right(PackagePath.relative())
       }
 
       it("should reject _root_. with no components") {
-        PackagePath.parse("_root_.") shouldBe a[Left[_, _]]
+        PackagePath.tryParse("_root_.") shouldBe a[Left[_, _]]
       }
 
       it("should reject invalid components") {
-        PackagePath.parse("org.1example") shouldBe a[Left[_, _]]
-        PackagePath.parse("_root_.org.if") shouldBe a[Left[_, _]]
+        PackagePath.tryParse("org.1example") shouldBe a[Left[_, _]]
+        PackagePath.tryParse("_root_.org.if") shouldBe a[Left[_, _]]
       }
 
       it("should collect multiple errors") {
-        val result = PackagePath.parse("1org.if")
+        val result = PackagePath.tryParse("1org.if")
         result match {
           case Left(err) =>
             err should include("Invalid package name component: '1org'")
@@ -110,34 +110,34 @@ class PackagePathSpec extends AnyFunSpec with Matchers {
 
     describe("parseAbsolute") {
       it("should parse _root_") {
-        PackagePath.parseAbsolute("_root_") shouldBe Right(PackagePath.root)
+        PackagePath.tryParseAbsolute("_root_") shouldBe Right(PackagePath.root)
       }
 
       it("should parse _root_.org.example") {
-        PackagePath.parseAbsolute("_root_.org.example") shouldBe Right(PackagePath.absolute(nameOrg, nameExample))
+        PackagePath.tryParseAbsolute("_root_.org.example") shouldBe Right(PackagePath.absolute(nameOrg, nameExample))
       }
 
       it("should parse org.example without _root_ prefix") {
-        PackagePath.parseAbsolute("org.example") shouldBe Right(PackagePath.absolute(nameOrg, nameExample))
+        PackagePath.tryParseAbsolute("org.example") shouldBe Right(PackagePath.absolute(nameOrg, nameExample))
       }
 
       it("should reject empty strings") {
-        PackagePath.parseAbsolute("") shouldBe a[Left[_, _]]
+        PackagePath.tryParseAbsolute("") shouldBe a[Left[_, _]]
       }
     }
 
     describe("parseRelative") {
       it("should parse org.example") {
-        PackagePath.parseRelative("org.example") shouldBe Right(PackagePath.relative(nameOrg, nameExample))
+        PackagePath.tryParseRelative("org.example") shouldBe Right(PackagePath.relative(nameOrg, nameExample))
       }
 
       it("should parse an empty string") {
-        PackagePath.parseRelative("") shouldBe Right(PackagePath.relative())
+        PackagePath.tryParseRelative("") shouldBe Right(PackagePath.relative())
       }
 
       it("should reject paths starting with _root_") {
-        PackagePath.parseRelative("_root_") shouldBe a[Left[_, _]]
-        PackagePath.parseRelative("_root_.org") shouldBe a[Left[_, _]]
+        PackagePath.tryParseRelative("_root_") shouldBe a[Left[_, _]]
+        PackagePath.tryParseRelative("_root_.org") shouldBe a[Left[_, _]]
       }
     }
   }

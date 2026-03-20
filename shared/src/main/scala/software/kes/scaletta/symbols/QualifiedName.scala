@@ -41,7 +41,7 @@ object QualifiedName {
       val (qualifierStr, nameStr) = trimmed.splitAt(lastDot)
       for {
         name <- PackageSegment.parse(nameStr.tail)
-        qualifier <- PackagePath.parse(qualifierStr)
+        qualifier <- PackagePath.tryParse(qualifierStr)
       } yield Partial(Some(qualifier), name.name)
     }
   }
@@ -55,7 +55,7 @@ object QualifiedName {
       val (qualifierStr, nameStr) = trimmed.splitAt(lastDot)
       for {
         name <- PackageSegment.parse(nameStr.tail)
-        qualifier <- PackagePath.parseAbsolute(qualifierStr)
+        qualifier <- PackagePath.tryParseAbsolute(qualifierStr)
       } yield Full(qualifier, name.name)
     }
   }

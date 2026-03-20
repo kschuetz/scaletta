@@ -17,7 +17,7 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
     }
 
     it("should resolve a global symbol in a nested package (absolute qualifier)") {
-      val pkg = PackagePath.parseAbsolute("org.example").toOption.get
+      val pkg = PackagePath.parseAbsolute("org.example")
       val qName = QualifiedName.full(pkg, "y")
       val table = SymbolTable.empty[Int].add(qName, 43)
       val result = table.resolve(qName, ImportScope.empty)
@@ -68,21 +68,21 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
     }
 
     it("should not resolve a symbol after adding it to a different absolute package") {
-      val pkg1 = PackagePath.parseAbsolute("org.example1").toOption.get
-      val pkg2 = PackagePath.parseAbsolute("org.example2").toOption.get
+      val pkg1 = PackagePath.parseAbsolute("org.example1")
+      val pkg2 = PackagePath.parseAbsolute("org.example2")
       val table = SymbolTable.empty[Int].add(QualifiedName.full(pkg1, "x"), 41)
 
       table.resolve(QualifiedName.full(pkg2, "x"), ImportScope.empty) shouldBe empty
     }
 
     it("should return empty List for partially qualified lookup (not yet implemented)") {
-      val rel = PackagePath.parseRelative("models").toOption.get
+      val rel = PackagePath.parseRelative("models")
       val table = SymbolTable.empty[Int]
       table.resolve(QualifiedName.Partial(Some(rel), "User"), ImportScope.empty) shouldBe Nil
     }
 
     it("should support direct lookup via get") {
-      val pkg = PackagePath.parseAbsolute("org.example").toOption.get
+      val pkg = PackagePath.parseAbsolute("org.example")
       val qName = QualifiedName.full(pkg, "y")
       val table = SymbolTable.empty[Int].add(qName, 43)
       table.get(qName) shouldBe Some(43)
@@ -90,7 +90,7 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
     }
 
     it("should support existence check via contains") {
-      val pkg = PackagePath.parseAbsolute("org.example").toOption.get
+      val pkg = PackagePath.parseAbsolute("org.example")
       val qName = QualifiedName.full(pkg, "y")
       val table = SymbolTable.empty[Int].add(qName, 43)
       table.contains(qName) shouldBe true
@@ -114,14 +114,14 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
     }
 
     it("should support direct lookup via get") {
-      val pkg = PackagePath.parseAbsolute("org.example").toOption.get
+      val pkg = PackagePath.parseAbsolute("org.example")
       val qName = QualifiedName.full(pkg, "y")
       val index = SymbolIndex.empty[Int].add(qName, 43)
       index.get(qName) shouldBe Some(43)
     }
 
     it("should support existence check via contains") {
-      val pkg = PackagePath.parseAbsolute("org.example").toOption.get
+      val pkg = PackagePath.parseAbsolute("org.example")
       val qName = QualifiedName.full(pkg, "y")
       val index = SymbolIndex.empty[Int].add(qName, 43)
       index.contains(qName) shouldBe true

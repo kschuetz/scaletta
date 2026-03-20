@@ -19,7 +19,7 @@ class QualifiedNameSpec extends AnyFunSpec with Matchers {
 
       it("should parse a multi-level qualified name") {
         val result = QualifiedName.tryParseFull("org.example.User")
-        val expectedPkg = PackagePath.parseAbsolute("org.example").toOption.get
+        val expectedPkg = PackagePath.parseAbsolute("org.example")
         result shouldBe Right(QualifiedName.Full(expectedPkg, "User"))
       }
 
@@ -44,13 +44,13 @@ class QualifiedNameSpec extends AnyFunSpec with Matchers {
 
       it("should parse a relative qualified name") {
         val result = QualifiedName.tryParsePartial("models.User")
-        val expectedPkg = PackagePath.parseRelative("models").toOption.get
+        val expectedPkg = PackagePath.parseRelative("models")
         result shouldBe Right(QualifiedName.Partial(Some(expectedPkg), "User"))
       }
 
       it("should parse an absolute qualified name") {
         val result = QualifiedName.tryParsePartial("_root_.pkg.User")
-        val expectedPkg = PackagePath.parseAbsolute("pkg").toOption.get
+        val expectedPkg = PackagePath.parseAbsolute("pkg")
         result shouldBe Right(QualifiedName.Partial(Some(expectedPkg), "User"))
       }
 
