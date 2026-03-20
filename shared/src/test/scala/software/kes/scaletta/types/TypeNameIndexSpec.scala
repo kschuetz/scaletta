@@ -2,6 +2,7 @@ package software.kes.scaletta.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.common.PackagePath
 import software.kes.scaletta.symbols.{ImportScope, QualifiedName}
 
 class TypeNameIndexSpec extends AnyFunSpec with Matchers {
@@ -47,17 +48,96 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
       index.get(QualifiedName.full("other.Type")) shouldBe None
     }
 
-    it("should support resolution via resolve with imports") {
-      val nameInt = QualifiedName.full("scaletta.lang.Int")
-      val (index, idInt) = TypeNameIndex.empty.intern(nameInt)
+    describe("resolve with imports") {
+      it("should support resolution via resolve with empty imports (full name)") {
+        val nameInt = QualifiedName.full("scaletta.lang.Int")
+        val (index, idInt) = TypeNameIndex.empty.intern(nameInt)
 
-      // Currently ImportScope is a stub, so we test with empty and full name resolution
-      val results = index.resolve(nameInt, ImportScope.empty)
+        val results = index.resolve(nameInt, ImportScope.empty)
 
-      results should have size 1
-      results.head.value shouldBe idInt
-      results.head.name shouldBe "Int"
-      results.head.qualifier shouldBe nameInt.qualifier
+        results should have size 1
+        results.head.value shouldBe idInt
+        results.head.name shouldBe "Int"
+        results.head.qualifier shouldBe nameInt.qualifier
+      }
+
+      it("should support resolution via specific symbol import") {
+        val nameA = QualifiedName.full("pkg.A")
+        val (index, idA) = TypeNameIndex.empty.intern(nameA)
+        val imports = ImportScope.importSymbol(nameA)
+
+        val results = index.resolve(QualifiedName.partial("A"), imports)
+
+        results should have size 1
+        results.head.value shouldBe idA
+        results.head.qualifier shouldBe PackagePath.parseAbsolute("pkg")
+      }
+
+      it("should support resolution via wildcard import") {
+        val nameA = QualifiedName.full("pkg.A")
+        val nameB = QualifiedName.full("pkg.B")
+        val (index1, idA) = TypeNameIndex.empty.intern(nameA)
+        val (index2, idB) = index1.intern(nameB)
+        val imports = ImportScope.importWildcard(PackagePath.parseAbsolute("pkg"))
+
+        index2.resolve(QualifiedName.partial("A"), imports).map(_.value) should contain only idA
+        index2.resolve(QualifiedName.partial("B"), imports).map(_.value) should contain only idB
+      }
+
+      it("should handle shadowing: specific import wins over wildcard") {
+        val namePkgA = QualifiedName.full("pkg.A")
+        val nameOtherA = QualifiedName.full("other.A")
+        val (index1, idPkgA) = TypeNameIndex.empty.intern(namePkgA)
+        val (index2, idOtherA) = index1.intern(nameOtherA)
+
+        val imports = ImportScope.empty
+          .importWildcard(PackagePath.parseAbsolute("pkg"))
+          .importSymbol(nameOtherA)
+
+        val results = index2.resolve(QualifiedName.partial("A"), imports)
+        results should have size 1
+        results.head.value shouldBe idOtherA
+      }
+
+      it("should handle ambiguity: multiple matches from different wildcards") {
+        val namePkg1A = QualifiedName.full("pkg1.A")
+        val namePkg2A = QualifiedName.full("pkg2.A")
+        val (index1, id1) = TypeNameIndex.empty.intern(namePkg1A)
+        val (index2, id2) = index1.intern(namePkg2A)
+
+        val imports = ImportScope.empty
+          .importWildcard(PackagePath.parseAbsolute("pkg1"))
+          .importWildcard(PackagePath.parseAbsolute("pkg2"))
+
+        val results = index2.resolve(QualifiedName.partial("A"), imports)
+        results.map(_.value) should contain theSameElementsAs List(id1, id2)
+      }
+
+      it("should support resolution via package import and relative path") {
+        val nameA = QualifiedName.full("pkg.sub.A")
+        val (index, idA) = TypeNameIndex.empty.intern(nameA)
+        val imports = ImportScope.importPackage(PackagePath.parseAbsolute("pkg.sub"))
+
+        val results = index.resolve(QualifiedName.partial("sub.A"), imports)
+
+        results should have size 1
+        results.head.value shouldBe idA
+        results.head.qualifier shouldBe PackagePath.parseAbsolute("pkg.sub")
+      }
+
+      it("should handle shadowing: local root symbols over wildcard imports") {
+        val nameRootA = QualifiedName.full("A")
+        val namePkgA = QualifiedName.full("pkg.A")
+        val (index1, idRootA) = TypeNameIndex.empty.intern(nameRootA)
+        val (index2, idPkgA) = index1.intern(namePkgA)
+
+        val imports = ImportScope.importWildcard(PackagePath.parseAbsolute("pkg"))
+
+        val results = index2.resolve(QualifiedName.partial("A"), imports)
+        // Root package has priority over wildcard imports in resolveGlobal
+        results should have size 1
+        results.head.value shouldBe idRootA
+      }
     }
 
     it("should correctly retrieve name by TypeId") {
