@@ -56,6 +56,17 @@ trait SymbolIndex[A] {
    * @return A new SymbolIndex instance containing the added entry.
    */
   def add(name: QualifiedName.Full, value: A): SymbolIndex[A]
+
+  /**
+   * Merges another SymbolIndex into this one.
+   * Symbols in the other index will overwrite symbols with the same name in this index.
+   */
+  def merge(other: SymbolIndex[A]): SymbolIndex[A]
+
+  /**
+   * Converts this index into a SymbolTable with no local scopes.
+   */
+  def toSymbolTable: SymbolTable[A]
 }
 
 object SymbolIndex {
@@ -148,7 +159,7 @@ sealed trait SymbolTable[A] {
    *
    * @return A SymbolIndex representing the global symbols in this table.
    */
-  def asSymbolIndex: SymbolIndex[A]
+  def toSymbolIndex: SymbolIndex[A]
 }
 
 private[symbols] abstract class BaseSymbolStore[A] {
@@ -239,6 +250,18 @@ private[symbols] final class SimpleSymbolIndex[A](protected val globals: Map[Pac
     val packageMap = globals.getOrElse(name.qualifier, Map.empty)
     new SimpleSymbolIndex(globals + (name.qualifier -> (packageMap + (name.name -> value))))
   }
+
+  def merge(other: SymbolIndex[A]): SymbolIndex[A] = {
+    val otherIndex = other.asInstanceOf[SimpleSymbolIndex[A]]
+    val newGlobals = otherIndex.globals.foldLeft(this.globals) {
+      case (acc, (pkgPath, otherPackageMap)) =>
+        val thisPackageMap = acc.getOrElse(pkgPath, Map.empty)
+        acc + (pkgPath -> (thisPackageMap ++ otherPackageMap))
+    }
+    new SimpleSymbolIndex(newGlobals)
+  }
+
+  def toSymbolTable: SymbolTable[A] = new SimpleSymbolTable(Nil, globals)
 }
 
 private[symbols] object SimpleSymbolIndex {
@@ -294,7 +317,7 @@ private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[
   def enterScope: SymbolTable[A] =
     new SimpleSymbolTable(Map.empty[String, A] :: localScopes, globals)
 
-  def asSymbolIndex: SymbolIndex[A] = new SimpleSymbolIndex(globals)
+  def toSymbolIndex: SymbolIndex[A] = new SimpleSymbolIndex(globals)
 }
 
 private[symbols] object SimpleSymbolTable {

@@ -194,5 +194,39 @@ class SymbolTableSpec extends AnyFunSpec with Matchers {
       index.contains(qName) shouldBe true
       index.contains(QualifiedName.full(PackagePath.root, "y")) shouldBe false
     }
+
+    it("should merge with another SymbolIndex") {
+      val pkg1 = PackagePath.parseAbsolute("org.example1")
+      val pkg2 = PackagePath.parseAbsolute("org.example2")
+      val index1 = SymbolIndex.of(
+        QualifiedName.full(pkg1, "x") -> 41,
+        QualifiedName.full(pkg1, "y") -> 43
+      )
+      val index2 = SymbolIndex.of(
+        QualifiedName.full(pkg1, "x") -> 45, // Overwrite
+        QualifiedName.full(pkg2, "z") -> 47 // New
+      )
+
+      val merged = index1.merge(index2)
+
+      merged.get(QualifiedName.full(pkg1, "x")) shouldBe Some(45)
+      merged.get(QualifiedName.full(pkg1, "y")) shouldBe Some(43)
+      merged.get(QualifiedName.full(pkg2, "z")) shouldBe Some(47)
+    }
+
+    it("should convert to a SymbolTable") {
+      val pkg = PackagePath.parseAbsolute("org.example")
+      val index = SymbolIndex.of(QualifiedName.full(pkg, "x") -> 41)
+      val table = index.toSymbolTable
+
+      table.get(QualifiedName.full(pkg, "x")) shouldBe Some(41)
+      table.resolve(QualifiedName.full(pkg, "x"), ImportScope.empty) should not be empty
+    }
+
+    it("should allow converting from SymbolTable to SymbolIndex") {
+      val table = SymbolTable.of(QualifiedName.full(PackagePath.root, "x") -> 41)
+      val index = table.toSymbolIndex
+      index.get(QualifiedName.full(PackagePath.root, "x")) shouldBe Some(41)
+    }
   }
 }
