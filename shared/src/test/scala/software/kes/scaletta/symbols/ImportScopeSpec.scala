@@ -16,14 +16,14 @@ class ImportScopeSpec extends AnyFunSpec with Matchers {
 
     it("should support importing a package") {
       val path = PackagePath.parseAbsolute("foo.bar.baz")
-      val scope = ImportScope.importPackages(path)
+      val scope = ImportScope.importPackage(path)
       scope.packages should contain("baz" -> path)
     }
 
     it("should support importing multiple packages") {
       val path1 = PackagePath.parseAbsolute("foo.bar.baz")
       val path2 = PackagePath.parseAbsolute("quux.corge")
-      val scope = ImportScope.importPackages(path1, path2)
+      val scope = ImportScope.importPackage(path1, path2)
       scope.packages should contain("baz" -> path1)
       scope.packages should contain("corge" -> path2)
     }
@@ -163,8 +163,8 @@ class ImportScopeSpec extends AnyFunSpec with Matchers {
       val path1 = PackagePath.parseAbsolute("pkg1.util")
       val path2 = PackagePath.parseAbsolute("pkg2.util")
 
-      val scope1 = ImportScope.importPackages(path1)
-      val scope2 = ImportScope.importPackages(path2)
+      val scope1 = ImportScope.importPackage(path1)
+      val scope2 = ImportScope.importPackage(path2)
 
       scope1.merge(scope2).packages should contain("util" -> path2)
     }

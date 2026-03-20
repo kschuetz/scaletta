@@ -2,7 +2,9 @@ package software.kes.scaletta.symbols
 
 import software.kes.scaletta.common.{PackagePath, PackageSegment}
 
-sealed trait QualifiedName
+sealed trait QualifiedName {
+  def name: String
+}
 
 object QualifiedName {
 

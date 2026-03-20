@@ -8,7 +8,7 @@ object ImportScope {
    */
   val empty: ImportScope = new ImportScope(Map.empty, Set.empty, Map.empty)
 
-  def importPackages(paths: PackagePath.Absolute*): ImportScope =
+  def importPackage(paths: PackagePath.Absolute*): ImportScope =
     empty.importPackage(paths: _*)
 
   def importSymbol(names: QualifiedName.Full*): ImportScope =
