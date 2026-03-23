@@ -14,7 +14,7 @@ private[symbols] object PackageNode {
  * @tparam A The type of value stored in the node.
  */
 private[symbols] final class PackageNode[A](val symbols: Map[Name, A],
-                                            val subpackages: Map[String, PackageNode[A]]) {
+                                            val subpackages: Map[Name, PackageNode[A]]) {
 
   /**
    * Looks up a symbol directly in this package.

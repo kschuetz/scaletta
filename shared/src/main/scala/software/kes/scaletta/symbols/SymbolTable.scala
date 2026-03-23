@@ -215,7 +215,7 @@ private[symbols] abstract class BaseSymbolStore[A] {
       case QualifiedName.Partial(Some(rel: PackagePath.Relative), identifier) =>
         // Relative qualifier resolution (Nested paths)
         val components = rel.components
-        val firstSegment = Name(components.head.name)
+        val firstSegment = components.head.name
         val remainingRel = PackagePath.relative(components.tail: _*)
 
         val candidates = imports.packages.get(firstSegment) match {

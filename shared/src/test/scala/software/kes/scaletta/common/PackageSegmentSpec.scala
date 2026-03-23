@@ -2,6 +2,7 @@ package software.kes.scaletta.common
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.symbols.Name
 
 class PackageSegmentSpec extends AnyFunSpec with Matchers {
 
@@ -43,7 +44,7 @@ class PackageSegmentSpec extends AnyFunSpec with Matchers {
 
   describe("PackageSegment.apply") {
     it("should create a PackageSegment for valid input") {
-      PackageSegment("com").name shouldBe "com"
+      PackageSegment("com").name shouldBe Name("com")
     }
 
     it("should throw IllegalArgumentException for invalid input") {

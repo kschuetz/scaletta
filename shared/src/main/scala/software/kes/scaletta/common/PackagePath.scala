@@ -48,7 +48,7 @@ object PackagePath {
 
     lazy val fullName: String =
       if (components.isEmpty) RootPrefix
-      else components.map(_.name).mkString(".")
+      else components.map(_.name.value).mkString(".")
 
     override def toString: String = fullName
 
@@ -74,7 +74,7 @@ object PackagePath {
     def ++(other: Relative): Relative =
       new Relative(this.components ++ other.components)
 
-    lazy val fullName: String = components.map(_.name).mkString(".")
+    lazy val fullName: String = components.map(_.name.value).mkString(".")
 
     override def toString: String = fullName
 

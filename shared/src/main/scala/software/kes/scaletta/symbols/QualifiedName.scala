@@ -32,7 +32,7 @@ object QualifiedName {
     }
 
   def partial(qualifier: PackagePath.Relative): Partial =
-    Partial(Some(qualifier), qualifier.components.last.toName)
+    Partial(Some(qualifier), qualifier.components.last.name)
 
   def local(name: Name): Partial =
     Partial(None, name)
@@ -41,13 +41,13 @@ object QualifiedName {
     val trimmed = path.trim
     val lastDot = trimmed.lastIndexOf('.')
     if (lastDot == -1) {
-      PackageSegment.parse(trimmed).map(name => Full(PackagePath.root, name.toName))
+      PackageSegment.parse(trimmed).map(name => Full(PackagePath.root, name.name))
     } else {
       val (qualifierStr, nameStr) = trimmed.splitAt(lastDot)
       for {
         name <- PackageSegment.parse(nameStr.tail)
         qualifier <- PackagePath.tryParseAbsolute(qualifierStr)
-      } yield Full(qualifier, Name(name.name))
+      } yield Full(qualifier, name.name)
     }
   }
 
@@ -55,13 +55,13 @@ object QualifiedName {
     val trimmed = path.trim
     val lastDot = trimmed.lastIndexOf('.')
     if (lastDot == -1) {
-      PackageSegment.parse(trimmed).map(name => Partial(None, name.toName))
+      PackageSegment.parse(trimmed).map(name => Partial(None, name.name))
     } else {
       val (qualifierStr, nameStr) = trimmed.splitAt(lastDot)
       for {
         name <- PackageSegment.parse(nameStr.tail)
         qualifier <- PackagePath.tryParse(qualifierStr)
-      } yield Partial(Some(qualifier), name.toName)
+      } yield Partial(Some(qualifier), name.name)
     }
   }
 

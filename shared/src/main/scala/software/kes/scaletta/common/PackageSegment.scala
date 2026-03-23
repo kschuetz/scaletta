@@ -24,7 +24,7 @@ object PackageSegment {
     } else {
       val firstChar = name.charAt(0)
       if (isIdentifierStart(firstChar) && name.forall(isIdentifierInner)) {
-        Right(new PackageSegment(name))
+        Right(new PackageSegment(Name(name)))
       } else {
         Left(s"Invalid package name component: '$name'")
       }
@@ -33,11 +33,17 @@ object PackageSegment {
 
   // For use in tests only
   private[common] def _unsafeCreate(name: String): PackageSegment =
-    new PackageSegment(name)
+    new PackageSegment(Name(name))
 }
 
-final class PackageSegment private(val name: String) extends AnyVal {
-  override def toString: String = name
+final class PackageSegment private(val name: Name) {
+  override def equals(other: Any): Boolean = other match {
+    case that: PackageSegment =>
+      name == that.name
+    case _ => false
+  }
 
-  def toName: Name = Name(name)
+  override def hashCode(): Int = name.hashCode()
+
+  override def toString: String = name.toString
 }

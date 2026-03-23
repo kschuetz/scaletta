@@ -43,7 +43,7 @@ final class ImportScope private(val symbols: Map[Name, PackagePath.Absolute],
     paths.foldLeft(this) { (acc, path) =>
       path.components.lastOption match {
         case Some(segment) =>
-          new ImportScope(acc.symbols, acc.wildcards, acc.packages + (segment.toName -> path))
+          new ImportScope(acc.symbols, acc.wildcards, acc.packages + (segment.name -> path))
         case None => acc // Ignore root package as an explicit package import
       }
     }
