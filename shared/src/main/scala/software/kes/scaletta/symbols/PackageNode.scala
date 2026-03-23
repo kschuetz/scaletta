@@ -13,13 +13,13 @@ private[symbols] object PackageNode {
  * @param subpackages Nested packages.
  * @tparam A The type of value stored in the node.
  */
-private[symbols] final class PackageNode[A](val symbols: Map[String, A],
+private[symbols] final class PackageNode[A](val symbols: Map[Name, A],
                                             val subpackages: Map[String, PackageNode[A]]) {
 
   /**
    * Looks up a symbol directly in this package.
    */
-  def get(identifier: String): Option[A] = symbols.get(identifier)
+  def get(identifier: Name): Option[A] = symbols.get(identifier)
 
   /**
    * Returns the sub-package node for the given segment, if it exists.
@@ -54,7 +54,7 @@ private[symbols] final class PackageNode[A](val symbols: Map[String, A],
   /**
    * Adds a symbol at the given absolute path, creating nested nodes as needed.
    */
-  def add(path: PackagePath.Absolute, identifier: String, value: A): PackageNode[A] = {
+  def add(path: PackagePath.Absolute, identifier: Name, value: A): PackageNode[A] = {
     val components = path.components
 
     def go(current: PackageNode[A], index: Int): PackageNode[A] = {

@@ -14,7 +14,7 @@ object ImportScope {
   def importSymbol(names: QualifiedName.Full*): ImportScope =
     empty.importSymbol(names: _*)
 
-  def importSymbols(path: PackagePath.Absolute, names: Set[String]): ImportScope =
+  def importSymbols(path: PackagePath.Absolute, names: Set[Name]): ImportScope =
     empty.importSymbols(path, names)
 
   def importWildcard(paths: PackagePath.Absolute*): ImportScope =
@@ -35,15 +35,15 @@ object ImportScope {
  * wildcards: A set of packages where all members are visible without qualification
  * packages: Maps the last segment of an imported package (e.g., "baz") to the full path (e.g., "foo.bar.baz")
  */
-final class ImportScope private(val symbols: Map[String, PackagePath.Absolute],
+final class ImportScope private(val symbols: Map[Name, PackagePath.Absolute],
                                 val wildcards: Set[PackagePath.Absolute],
-                                val packages: Map[String, PackagePath.Absolute]) {
+                                val packages: Map[Name, PackagePath.Absolute]) {
 
   def importPackage(paths: PackagePath.Absolute*): ImportScope = {
     paths.foldLeft(this) { (acc, path) =>
       path.components.lastOption match {
         case Some(segment) =>
-          new ImportScope(acc.symbols, acc.wildcards, acc.packages + (segment.name -> path))
+          new ImportScope(acc.symbols, acc.wildcards, acc.packages + (segment.toName -> path))
         case None => acc // Ignore root package as an explicit package import
       }
     }
@@ -55,7 +55,7 @@ final class ImportScope private(val symbols: Map[String, PackagePath.Absolute],
     }
   }
 
-  def importSymbols(path: PackagePath.Absolute, names: Set[String]): ImportScope = {
+  def importSymbols(path: PackagePath.Absolute, names: Set[Name]): ImportScope = {
     // Only add specific symbols if the package is NOT already covered by a wildcard
     if (wildcards.contains(path)) {
       this

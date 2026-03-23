@@ -1,6 +1,6 @@
 package software.kes.scaletta.common
 
-import software.kes.scaletta.symbols.QualifiedName
+import software.kes.scaletta.symbols.{Name, QualifiedName}
 
 sealed trait PackagePath {
   def components: Vector[PackageSegment]
@@ -17,7 +17,7 @@ sealed trait PackagePath {
   /**
    * Returns a QualifiedName representing a member of this path.
    */
-  def qualify(name: String): QualifiedName
+  def qualify(name: Name): QualifiedName
 
   /**
    * Concatenates this path with a relative path.
@@ -40,7 +40,7 @@ object PackagePath {
     def /(segment: PackageSegment): Absolute =
       new Absolute(this.components :+ segment)
 
-    def qualify(name: String): QualifiedName.Full =
+    def qualify(name: Name): QualifiedName.Full =
       QualifiedName.full(this, name)
 
     def ++(other: Relative): Absolute =
@@ -68,7 +68,7 @@ object PackagePath {
     def /(segment: PackageSegment): Relative =
       new Relative(this.components :+ segment)
 
-    def qualify(name: String): QualifiedName.Partial =
+    def qualify(name: Name): QualifiedName.Partial =
       QualifiedName.Partial(Some(this), name)
 
     def ++(other: Relative): Relative =

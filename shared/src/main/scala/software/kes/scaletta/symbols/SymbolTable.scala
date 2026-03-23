@@ -145,7 +145,7 @@ sealed trait SymbolTable[A] {
    * @param value The value to associate with the symbol.
    * @return A new SymbolTable instance containing the added entry.
    */
-  def addLocal(name: String, value: A): SymbolTable[A]
+  def addLocal(name: Name, value: A): SymbolTable[A]
 
   /**
    * Pushes a new local scope onto the stack.
@@ -215,17 +215,17 @@ private[symbols] abstract class BaseSymbolStore[A] {
       case QualifiedName.Partial(Some(rel: PackagePath.Relative), identifier) =>
         // Relative qualifier resolution (Nested paths)
         val components = rel.components
-        val firstSegment = components.head.name
+        val firstSegment = Name(components.head.name)
         val remainingRel = PackagePath.relative(components.tail: _*)
 
         val candidates = imports.packages.get(firstSegment) match {
-          case Some(absPath) =>
+          case Some(absPath: PackagePath.Absolute) =>
             // If the first segment is an imported package, we look there.
             val fullPkgPath = absPath ++ remainingRel
             globals.findNode(fullPkgPath).flatMap(_.get(identifier)).map { value =>
               SymbolEntry.Global(identifier, fullPkgPath, value)
             }.toList
-          case None =>
+          case _ =>
             // Otherwise, we look in the root package.
             val fullPkgPath = PackagePath.root ++ rel
             globals.findNode(fullPkgPath).flatMap(_.get(identifier)).map { value =>
@@ -268,7 +268,7 @@ private[symbols] object SimpleSymbolIndex {
   def empty[A]: SimpleSymbolIndex[A] = new SimpleSymbolIndex(PackageNode.empty[A])
 }
 
-private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[Map[String, A]],
+private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[Map[Name, A]],
                                                   protected val globals: PackageNode[A])
   extends BaseSymbolStore[A] with SymbolTable[A] {
 
@@ -308,7 +308,7 @@ private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[
     new SimpleSymbolTable(localScopes, globals.add(name.qualifier, name.name, value))
   }
 
-  def addLocal(name: String, value: A): SymbolTable[A] = {
+  def addLocal(name: Name, value: A): SymbolTable[A] = {
     localScopes match {
       case head :: tail =>
         new SimpleSymbolTable((head + (name -> value)) :: tail, globals)
@@ -319,7 +319,7 @@ private[symbols] final class SimpleSymbolTable[A](private val localScopes: List[
   }
 
   def enterScope: SymbolTable[A] =
-    new SimpleSymbolTable(Map.empty[String, A] :: localScopes, globals)
+    new SimpleSymbolTable(Map.empty[Name, A] :: localScopes, globals)
 
   def toSymbolIndex: SymbolIndex[A] = new SimpleSymbolIndex(globals)
 }

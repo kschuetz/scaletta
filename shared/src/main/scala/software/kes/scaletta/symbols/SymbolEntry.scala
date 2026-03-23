@@ -8,7 +8,7 @@ import software.kes.scaletta.common.PackagePath
  * @tparam A The type of the stored value.
  */
 sealed trait SymbolEntry[+A] {
-  def name: String
+  def name: Name
 
   def value: A
 
@@ -16,13 +16,13 @@ sealed trait SymbolEntry[+A] {
 }
 
 object SymbolEntry {
-  final case class Global[+A](name: String,
+  final case class Global[+A](name: Name,
                               qualifier: PackagePath.Absolute,
                               value: A) extends SymbolEntry[A] {
     def container: Option[PackagePath.Absolute] = Some(qualifier)
   }
 
-  final case class Local[+A](name: String,
+  final case class Local[+A](name: Name,
                              value: A) extends SymbolEntry[A] {
     def container: Option[PackagePath.Absolute] = None
   }

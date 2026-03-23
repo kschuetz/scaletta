@@ -2,6 +2,7 @@ package software.kes.scaletta.common
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.symbols.Name
 
 class PackagePathSpec extends AnyFunSpec with Matchers {
 
@@ -42,19 +43,19 @@ class PackagePathSpec extends AnyFunSpec with Matchers {
 
       it("should qualify a name into a Full QualifiedName") {
         val path = PackagePath.absolute(nameOrg, nameExample)
-        val qName = path.qualify("MyType")
+        val qName = path.qualify(Name("MyType"))
 
         qName shouldBe a[software.kes.scaletta.symbols.QualifiedName.Full]
-        qName.name shouldBe "MyType"
+        qName.name shouldBe Name("MyType")
         qName.qualifier shouldBe path
       }
 
       it("should qualify a name from the root path") {
         val path = PackagePath.root
-        val qName = path.qualify("RootType")
+        val qName = path.qualify(Name("RootType"))
 
         qName shouldBe a[software.kes.scaletta.symbols.QualifiedName.Full]
-        qName.name shouldBe "RootType"
+        qName.name shouldBe Name("RootType")
         qName.qualifier shouldBe path
       }
     }
@@ -90,10 +91,10 @@ class PackagePathSpec extends AnyFunSpec with Matchers {
 
       it("should qualify a name into a Partial QualifiedName") {
         val path = PackagePath.relative(nameOrg, nameExample)
-        val qName = path.qualify("MyType")
+        val qName = path.qualify(Name("MyType"))
 
         qName shouldBe a[software.kes.scaletta.symbols.QualifiedName.Partial]
-        qName.name shouldBe "MyType"
+        qName.name shouldBe Name("MyType")
         qName.qualifier shouldBe Some(path)
       }
     }

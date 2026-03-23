@@ -16,7 +16,7 @@ object ImportRule {
    * Allows these symbols to be referenced without qualification.
    */
   final case class Symbols(path: PackagePath.Absolute,
-                           names: Set[String]) extends ImportRule
+                           names: Set[Name]) extends ImportRule
 
   /**
    * Represents "import foo.bar._"

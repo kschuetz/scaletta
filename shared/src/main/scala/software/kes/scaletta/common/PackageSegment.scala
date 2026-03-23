@@ -2,6 +2,7 @@ package software.kes.scaletta.common
 
 import software.kes.scaletta.scanner.CharacterClass.{isIdentifierInner, isIdentifierStart}
 import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.symbols.Name
 
 object PackageSegment {
   /**
@@ -37,4 +38,6 @@ object PackageSegment {
 
 final class PackageSegment private(val name: String) extends AnyVal {
   override def toString: String = name
+
+  def toName: Name = Name(name)
 }
