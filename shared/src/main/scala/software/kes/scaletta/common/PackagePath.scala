@@ -1,5 +1,7 @@
 package software.kes.scaletta.common
 
+import software.kes.scaletta.symbols.QualifiedName
+
 sealed trait PackagePath {
   def components: Vector[PackageSegment]
 
@@ -11,6 +13,11 @@ sealed trait PackagePath {
    * Appends a single component to this path.
    */
   def /(segment: PackageSegment): PackagePath
+
+  /**
+   * Returns a QualifiedName representing a member of this path.
+   */
+  def qualify(name: String): QualifiedName
 
   /**
    * Concatenates this path with a relative path.
@@ -32,6 +39,9 @@ object PackagePath {
 
     def /(segment: PackageSegment): Absolute =
       new Absolute(this.components :+ segment)
+
+    def qualify(name: String): QualifiedName.Full =
+      QualifiedName.full(this, name)
 
     def ++(other: Relative): Absolute =
       new Absolute(this.components ++ other.components)
@@ -55,11 +65,14 @@ object PackagePath {
   final class Relative private[PackagePath](val components: Vector[PackageSegment]) extends PackagePath {
     def isAbsolute: Boolean = false
 
-    def ++(other: Relative): Relative =
-      new Relative(this.components ++ other.components)
-
     def /(segment: PackageSegment): Relative =
       new Relative(this.components :+ segment)
+
+    def qualify(name: String): QualifiedName.Partial =
+      QualifiedName.Partial(Some(this), name)
+
+    def ++(other: Relative): Relative =
+      new Relative(this.components ++ other.components)
 
     lazy val fullName: String = components.map(_.name).mkString(".")
 

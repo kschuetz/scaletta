@@ -39,6 +39,24 @@ class PackagePathSpec extends AnyFunSpec with Matchers {
         result shouldBe PackagePath.absolute(nameOrg, nameExample)
         result.isAbsolute shouldBe true
       }
+
+      it("should qualify a name into a Full QualifiedName") {
+        val path = PackagePath.absolute(nameOrg, nameExample)
+        val qName = path.qualify("MyType")
+
+        qName shouldBe a[software.kes.scaletta.symbols.QualifiedName.Full]
+        qName.name shouldBe "MyType"
+        qName.qualifier shouldBe path
+      }
+
+      it("should qualify a name from the root path") {
+        val path = PackagePath.root
+        val qName = path.qualify("RootType")
+
+        qName shouldBe a[software.kes.scaletta.symbols.QualifiedName.Full]
+        qName.name shouldBe "RootType"
+        qName.qualifier shouldBe path
+      }
     }
 
     describe("Relative") {
@@ -68,6 +86,15 @@ class PackagePathSpec extends AnyFunSpec with Matchers {
         val result = rel / nameExample
         result shouldBe PackagePath.relative(nameOrg, nameExample)
         result.isRelative shouldBe true
+      }
+
+      it("should qualify a name into a Partial QualifiedName") {
+        val path = PackagePath.relative(nameOrg, nameExample)
+        val qName = path.qualify("MyType")
+
+        qName shouldBe a[software.kes.scaletta.symbols.QualifiedName.Partial]
+        qName.name shouldBe "MyType"
+        qName.qualifier shouldBe Some(path)
       }
     }
 

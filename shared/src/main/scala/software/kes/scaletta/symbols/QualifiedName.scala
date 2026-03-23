@@ -31,22 +31,11 @@ object QualifiedName {
       case Right(result) => result
     }
 
+  def partial(qualifier: PackagePath.Relative): Partial =
+    Partial(Some(qualifier), qualifier.components.last.name)
+
   def local(name: String): Partial =
     Partial(None, name)
-
-  def tryParsePartial(path: String): Either[String, Partial] = {
-    val trimmed = path.trim
-    val lastDot = trimmed.lastIndexOf('.')
-    if (lastDot == -1) {
-      PackageSegment.parse(trimmed).map(name => Partial(None, name.name))
-    } else {
-      val (qualifierStr, nameStr) = trimmed.splitAt(lastDot)
-      for {
-        name <- PackageSegment.parse(nameStr.tail)
-        qualifier <- PackagePath.tryParse(qualifierStr)
-      } yield Partial(Some(qualifier), name.name)
-    }
-  }
 
   def tryParseFull(path: String): Either[String, Full] = {
     val trimmed = path.trim
@@ -59,6 +48,20 @@ object QualifiedName {
         name <- PackageSegment.parse(nameStr.tail)
         qualifier <- PackagePath.tryParseAbsolute(qualifierStr)
       } yield Full(qualifier, name.name)
+    }
+  }
+
+  def tryParsePartial(path: String): Either[String, Partial] = {
+    val trimmed = path.trim
+    val lastDot = trimmed.lastIndexOf('.')
+    if (lastDot == -1) {
+      PackageSegment.parse(trimmed).map(name => Partial(None, name.name))
+    } else {
+      val (qualifierStr, nameStr) = trimmed.splitAt(lastDot)
+      for {
+        name <- PackageSegment.parse(nameStr.tail)
+        qualifier <- PackagePath.tryParse(qualifierStr)
+      } yield Partial(Some(qualifier), name.name)
     }
   }
 
