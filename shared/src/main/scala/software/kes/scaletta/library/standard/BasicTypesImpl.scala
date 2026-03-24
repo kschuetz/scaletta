@@ -1,7 +1,7 @@
 package software.kes.scaletta.library.standard
 
 import software.kes.scaletta.symbols.{Name, QualifiedName}
-import software.kes.scaletta.types.{Type, TypeId, TypeRegistryBootstrap}
+import software.kes.scaletta.types._
 
 private[scaletta] final class BasicTypesImpl(registry: TypeRegistryBootstrap)
   extends BasicTypes {
@@ -53,6 +53,17 @@ private[scaletta] final class BasicTypesImpl(registry: TypeRegistryBootstrap)
 
   val StringT: Type.Nominal[TypeId] =
     registry.addRefType(fqn(names.StringT))
+
+  val OptionT: TypeConstructor[TypeId] =
+    registry.addTypeConstructor(fqn(names.OptionT), TypeParameter.covariant)
+
+  val SomeT: TypeConstructor[TypeId] =
+    registry.addTypeConstructor(fqn(names.SomeT), TypeParameter.covariant)
+
+  val NoneT: Type.Nominal[TypeId] =
+    registry.addRefType(fqn(names.NoneT))
+
+  registry.addRelationship(OptionT, SomeT)
 
   private def fqn(name: Name): QualifiedName.Full = {
     Packages.scaletta.qualify(name)

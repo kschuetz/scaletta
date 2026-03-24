@@ -7,5 +7,10 @@ trait TypeRegistry {
 
   def addRefType(name: QualifiedName.Full): Type.Nominal[TypeId]
 
+  def addTypeConstructor(name: QualifiedName.Full,
+                         first: TypeParameter[TypeId], more: TypeParameter[TypeId]*): TypeConstructor[TypeId]
+
   def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit
+
+  def addRelationship(supertype: TypeConstructor[TypeId], subtype: TypeConstructor[TypeId]): Unit
 }
