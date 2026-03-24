@@ -83,9 +83,6 @@ object NonEmptyArityList {
    */
   def from[A](items: Iterable[A]): NonEmptyArityList[A] =
     tryFrom(items).getOrElse(sys.error(s"Cannot create NonEmptyArityList from empty iterable"))
-
-  def unapply[A](arg: NonEmptyArityList[A]): Option[(A, ArityList[A])] =
-    Some((arg.head, arg.tail))
 }
 
 final class NonEmptyArityList[+A] private(val items: List[A],

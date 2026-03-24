@@ -49,10 +49,10 @@ final class TypeConstructor[T] private(val name: T,
     def go(acc: List[TypeArgument[T]],
            params: ArityList[TypeParameter[T]]): Either[TypeConstructor[T], Type.Applied[T]] =
       params match {
-        case remaining@NonEmptyArityList(head, tail) =>
+        case remaining: NonEmptyArityList[TypeParameter[T] @unchecked] =>
           if (argsIter.hasNext) {
             val arg = argsIter.next()
-            go(TypeArgument(head, arg) :: acc, tail)
+            go(TypeArgument(remaining.head, arg) :: acc, remaining.tail)
           } else {
             // not enough
             Left(new TypeConstructor(name, remaining, acc))

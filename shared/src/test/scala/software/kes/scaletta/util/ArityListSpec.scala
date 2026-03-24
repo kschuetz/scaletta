@@ -176,13 +176,13 @@ class ArityListSpec extends AnyFunSpec with Matchers {
         }
       }
 
-      it("should correctly support head/tail deconstruction via NonEmptyArityList.unapply") {
+      it("should correctly support head/tail deconstruction via type matching") {
         val list: ArityList[Int] = ArityList.of(1, 2, 41)
 
         list match {
-          case NonEmptyArityList(head, tail) =>
-            head shouldBe 1
-            tail shouldBe ArityList.of(2, 41)
+          case n: NonEmptyArityList[Int @unchecked] =>
+            n.head shouldBe 1
+            n.tail shouldBe ArityList.of(2, 41)
           case EmptyArityList => fail("Should not have matched EmptyArityList")
         }
       }
@@ -191,7 +191,7 @@ class ArityListSpec extends AnyFunSpec with Matchers {
         val list: ArityList[Int] = EmptyArityList
 
         list match {
-          case NonEmptyArityList(_, _) => fail("Should not have matched NonEmptyArityList")
+          case _: NonEmptyArityList[Int] => fail("Should not have matched NonEmptyArityList")
           case EmptyArityList => // Success
         }
       }
