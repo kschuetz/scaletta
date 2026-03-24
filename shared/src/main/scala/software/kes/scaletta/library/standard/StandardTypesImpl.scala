@@ -81,8 +81,8 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val MapT: TypeConstructor[TypeId] =
     registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
 
-  registry.addRelationship(OptionT, SomeT)
-  registry.addRelationship(ListT, ConsT)
+  registry.addRelationship(SomeT, OptionT.applyAll(Type.variable(0)))
+  registry.addRelationship(ConsT, ListT.applyAll(Type.variable(0)))
 
   private def base(name: Name): QualifiedName.Full =
     Packages.scaletta.qualify(name)

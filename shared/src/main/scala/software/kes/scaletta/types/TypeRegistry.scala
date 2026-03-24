@@ -13,4 +13,6 @@ trait TypeRegistry {
   def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit
 
   def addRelationship(supertype: TypeConstructor[TypeId], subtype: TypeConstructor[TypeId]): Unit
+
+  def addRelationship(subtype: TypeConstructor[TypeId], supertypeApplication: Type.Applied[TypeId]): Unit
 }

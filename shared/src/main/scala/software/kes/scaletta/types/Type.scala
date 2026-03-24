@@ -30,4 +30,6 @@ object Type {
                       paramIndex: Int) extends Type[Nothing] {
     def isGround: Boolean = false
   }
+
+  def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 }
