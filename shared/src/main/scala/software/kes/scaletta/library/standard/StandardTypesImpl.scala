@@ -10,62 +10,83 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   import software.kes.scaletta.common.Packages
 
   val AnyT: Type.Nominal[TypeId] =
-    registry.addTop(fqn(names.AnyT))
+    registry.addTop(base(names.AnyT))
 
   val AnyValT: Type.Nominal[TypeId] =
-    registry.addTopValue(fqn(names.AnyValT))
+    registry.addTopValue(base(names.AnyValT))
 
   val AnyRefT: Type.Nominal[TypeId] =
-    registry.addTopRef(fqn(names.AnyRefT))
+    registry.addTopRef(base(names.AnyRefT))
 
   val NothingT: Type.Nominal[TypeId] =
-    registry.addBottom(fqn(names.NothingT))
+    registry.addBottom(base(names.NothingT))
 
   val NullT: Type.Nominal[TypeId] =
-    registry.addBottomRef(fqn(names.NullT))
+    registry.addBottomRef(base(names.NullT))
 
   val UnitT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.UnitT))
+    registry.addValueType(base(names.UnitT))
 
   val BooleanT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.BooleanT))
+    registry.addValueType(base(names.BooleanT))
 
   val ByteT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.ByteT))
+    registry.addValueType(base(names.ByteT))
 
   val ShortT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.ShortT))
+    registry.addValueType(base(names.ShortT))
 
   val IntT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.IntT))
+    registry.addValueType(base(names.IntT))
 
   val LongT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.LongT))
+    registry.addValueType(base(names.LongT))
 
   val FloatT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.FloatT))
+    registry.addValueType(base(names.FloatT))
 
   val DoubleT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.DoubleT))
+    registry.addValueType(base(names.DoubleT))
 
   val CharT: Type.Nominal[TypeId] =
-    registry.addValueType(fqn(names.CharT))
+    registry.addValueType(base(names.CharT))
 
   val StringT: Type.Nominal[TypeId] =
-    registry.addRefType(fqn(names.StringT))
+    registry.addRefType(base(names.StringT))
 
   val OptionT: TypeConstructor[TypeId] =
-    registry.addTypeConstructor(fqn(names.OptionT), TypeParameter.covariant)
+    registry.addTypeConstructor(base(names.OptionT), TypeParameter.covariant)
 
   val SomeT: TypeConstructor[TypeId] =
-    registry.addTypeConstructor(fqn(names.SomeT), TypeParameter.covariant)
+    registry.addTypeConstructor(base(names.SomeT), TypeParameter.covariant)
 
-  val NoneT: Type.Nominal[TypeId] =
-    registry.addRefType(fqn(names.NoneT))
+  val NoneT: Type.Applied[TypeId] =
+    OptionT.applyAll(NothingT)
+
+  val VectorT: TypeConstructor[TypeId] =
+    registry.addTypeConstructor(collection(names.VectorT), TypeParameter.covariant)
+
+  val SetT: TypeConstructor[TypeId] =
+    registry.addTypeConstructor(collection(names.SetT), TypeParameter.covariant)
+
+  val ListT: TypeConstructor[TypeId] =
+    registry.addTypeConstructor(collection(names.ListT), TypeParameter.covariant)
+
+  val ConsT: TypeConstructor[TypeId] =
+    registry.addTypeConstructor(collection(names.ConsT), TypeParameter.covariant)
+
+  val NilT: Type.Applied[TypeId] =
+    ListT.applyAll(NothingT)
+
+  val MapT: TypeConstructor[TypeId] =
+    registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
 
   registry.addRelationship(OptionT, SomeT)
+  registry.addRelationship(ListT, ConsT)
 
-  private def fqn(name: Name): QualifiedName.Full = {
+  private def base(name: Name): QualifiedName.Full =
     Packages.scaletta.qualify(name)
-  }
+
+  private def collection(name: Name): QualifiedName.Full =
+    Packages.scalettaCollection.qualify(name)
 }
