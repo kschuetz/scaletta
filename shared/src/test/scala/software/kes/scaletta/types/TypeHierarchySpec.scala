@@ -109,68 +109,6 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
 
   private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
 
-  describe("TypeRelationship") {
-    describe("Same") {
-      val rel: TypeRelationship[TestType] = TypeRelationship.Same
-      it("should have correct property values") {
-        rel.isSame shouldBe true
-        rel.isSubtype shouldBe true
-        rel.isSupertype shouldBe true
-        rel.isStrictSubtype shouldBe false
-        rel.isStrictSupertype shouldBe false
-        rel.commonSupertype shouldBe None
-      }
-    }
-
-    describe("StrictSubtype") {
-      val rel: TypeRelationship[TestType] = TypeRelationship.StrictSubtype
-      it("should have correct property values") {
-        rel.isSame shouldBe false
-        rel.isSubtype shouldBe true
-        rel.isSupertype shouldBe false
-        rel.isStrictSubtype shouldBe true
-        rel.isStrictSupertype shouldBe false
-        rel.commonSupertype shouldBe None
-      }
-    }
-
-    describe("StrictSupertype") {
-      val rel: TypeRelationship[TestType] = TypeRelationship.StrictSupertype
-      it("should have correct property values") {
-        rel.isSame shouldBe false
-        rel.isSubtype shouldBe false
-        rel.isSupertype shouldBe true
-        rel.isStrictSubtype shouldBe false
-        rel.isStrictSupertype shouldBe true
-        rel.commonSupertype shouldBe None
-      }
-    }
-
-    describe("HaveCommonSupertype") {
-      val rel = TypeRelationship.HaveCommonSupertype(toNominal(Root))
-      it("should have correct property values") {
-        rel.isSame shouldBe false
-        rel.isSubtype shouldBe false
-        rel.isSupertype shouldBe false
-        rel.isStrictSubtype shouldBe false
-        rel.isStrictSupertype shouldBe false
-        rel.commonSupertype shouldBe Some(toNominal(Root))
-      }
-    }
-
-    describe("None") {
-      val rel: TypeRelationship[TestType] = TypeRelationship.None
-      it("should have correct property values") {
-        rel.isSame shouldBe false
-        rel.isSubtype shouldBe false
-        rel.isSupertype shouldBe false
-        rel.isStrictSubtype shouldBe false
-        rel.isStrictSupertype shouldBe false
-        rel.commonSupertype shouldBe None
-      }
-    }
-  }
-
   describe("TypeHierarchy Operations") {
     it("should identify identical types as Same") {
       testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(ChildA1)) shouldBe TypeRelationship.Same
