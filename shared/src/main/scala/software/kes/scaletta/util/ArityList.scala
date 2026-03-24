@@ -12,8 +12,8 @@ object ArityList {
 
   def empty[A]: ArityList[A] = EmptyArityList
 
-  def unapply[A](arg: ArityList[A]): Option[(List[A], Int)] =
-    Some((arg.items, arg.arity))
+  def unapplySeq[A](arg: ArityList[A]): Option[Seq[A]] =
+    Some(arg.items)
 }
 
 sealed trait ArityList[+A] {
@@ -83,6 +83,9 @@ object NonEmptyArityList {
    */
   def from[A](items: Iterable[A]): NonEmptyArityList[A] =
     tryFrom(items).getOrElse(sys.error(s"Cannot create NonEmptyArityList from empty iterable"))
+
+  def unapply[A](arg: NonEmptyArityList[A]): Option[(A, ArityList[A])] =
+    Some((arg.head, arg.tail))
 }
 
 final class NonEmptyArityList[A] private(val items: List[A],

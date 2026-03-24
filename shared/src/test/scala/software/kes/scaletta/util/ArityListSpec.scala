@@ -161,22 +161,38 @@ class ArityListSpec extends AnyFunSpec with Matchers {
       }
     }
 
-    describe("unapply") {
-      it("should correctly pattern match on a NonEmptyArityList") {
-        val list = ArityList.of(41, 43)
+    describe("Pattern Matching") {
+      it("should correctly support sequence patterns via ArityList.unapplySeq") {
+        val list: ArityList[Int] = ArityList.of(1, 2, 41)
+
         list match {
-          case ArityList(items, arity) =>
-            items shouldBe List(41, 43)
-            arity shouldBe 2
+          case ArityList(1, 2, 41) => // Success
+          case _ => fail("Pattern match failed")
+        }
+
+        list match {
+          case ArityList(1, _*) => // Success
+          case _ => fail("Wildcard pattern match failed")
         }
       }
 
-      it("should correctly pattern match on an EmptyArityList") {
-        val list = ArityList.empty[Int]
+      it("should correctly support head/tail deconstruction via NonEmptyArityList.unapply") {
+        val list: ArityList[Int] = ArityList.of(1, 2, 41)
+
         list match {
-          case ArityList(items, arity) =>
-            items shouldBe Nil
-            arity shouldBe 0
+          case NonEmptyArityList(head, tail) =>
+            head shouldBe 1
+            tail shouldBe ArityList.of(2, 41)
+          case EmptyArityList => fail("Should not have matched EmptyArityList")
+        }
+      }
+
+      it("should correctly match EmptyArityList") {
+        val list: ArityList[Int] = EmptyArityList
+
+        list match {
+          case NonEmptyArityList(_, _) => fail("Should not have matched NonEmptyArityList")
+          case EmptyArityList => // Success
         }
       }
     }
