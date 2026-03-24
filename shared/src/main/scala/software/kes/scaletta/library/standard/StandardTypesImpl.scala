@@ -10,19 +10,19 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   import software.kes.scaletta.common.Packages
 
   val AnyT: Type.Nominal[TypeId] =
-    registry.addTop(base(names.AnyT))
+    registry.setTop(base(names.AnyT))
 
   val AnyValT: Type.Nominal[TypeId] =
-    registry.addTopValue(base(names.AnyValT))
+    registry.setTopValue(base(names.AnyValT))
 
   val AnyRefT: Type.Nominal[TypeId] =
-    registry.addTopRef(base(names.AnyRefT))
+    registry.setTopRef(base(names.AnyRefT))
 
   val NothingT: Type.Nominal[TypeId] =
-    registry.addBottom(base(names.NothingT))
+    registry.setBottom(base(names.NothingT))
 
   val NullT: Type.Nominal[TypeId] =
-    registry.addBottomRef(base(names.NullT))
+    registry.setBottomRef(base(names.NullT))
 
   val UnitT: Type.Nominal[TypeId] =
     registry.addValueType(base(names.UnitT))
