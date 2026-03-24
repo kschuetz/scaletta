@@ -3,10 +3,10 @@ package software.kes.scaletta.library.standard
 import software.kes.scaletta.symbols.{Name, QualifiedName}
 import software.kes.scaletta.types._
 
-private[scaletta] final class BasicTypesImpl(registry: TypeRegistryBootstrap)
-  extends BasicTypes {
+private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
+  extends StandardTypes {
 
-  import BasicTypes.names
+  import StandardTypes.names
   import software.kes.scaletta.common.Packages
 
   val AnyT: Type.Nominal[TypeId] =

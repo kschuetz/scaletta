@@ -3,7 +3,7 @@ package software.kes.scaletta.library.standard
 import software.kes.scaletta.symbols.Name
 import software.kes.scaletta.types.{Type, TypeConstructor, TypeId}
 
-object BasicTypes {
+object StandardTypes {
   object names {
     val AnyRefT = Name("AnyRef")
     val AnyT = Name("Any")
@@ -26,7 +26,7 @@ object BasicTypes {
   }
 }
 
-trait BasicTypes {
+trait StandardTypes {
   def AnyRefT: Type.Nominal[TypeId]
 
   def AnyT: Type.Nominal[TypeId]
