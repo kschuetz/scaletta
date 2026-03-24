@@ -88,8 +88,8 @@ object NonEmptyArityList {
     Some((arg.head, arg.tail))
 }
 
-final class NonEmptyArityList[A] private(val items: List[A],
-                                         val arity: Int) extends ArityList[A] {
+final class NonEmptyArityList[+A] private(val items: List[A],
+                                          val arity: Int) extends ArityList[A] {
   def isEmpty: Boolean = false
 
   def map[B](fn: A => B): NonEmptyArityList[B] =
