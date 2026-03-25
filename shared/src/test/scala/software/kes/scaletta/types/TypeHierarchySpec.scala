@@ -82,12 +82,12 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
             case (ChildB1, ChildA1) => TypeRelationship.HaveCommonSupertype(toNominal(Root))
 
             // DiamondChild Common Supertypes
-            case (DiamondChild, Unrelated) => TypeRelationship.None
-            case (Unrelated, DiamondChild) => TypeRelationship.None
+            case (DiamondChild, Unrelated) => TypeRelationship.Unrelated
+            case (Unrelated, DiamondChild) => TypeRelationship.Unrelated
 
-            case _ => TypeRelationship.None
+            case _ => TypeRelationship.Unrelated
           }
-        case _ => TypeRelationship.None
+        case _ => TypeRelationship.Unrelated
       }
     }
 
@@ -133,9 +133,9 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
       testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(ChildB1)) shouldBe TypeRelationship.HaveCommonSupertype(toNominal(Root))
     }
 
-    it("should return None for unrelated types") {
-      testHierarchy.relationshipFor(toNominal(Root), toNominal(Unrelated)) shouldBe TypeRelationship.None
-      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(Unrelated)) shouldBe TypeRelationship.None
+    it("should return Unrelated for unrelated types") {
+      testHierarchy.relationshipFor(toNominal(Root), toNominal(Unrelated)) shouldBe TypeRelationship.Unrelated
+      testHierarchy.relationshipFor(toNominal(ChildA1), toNominal(Unrelated)) shouldBe TypeRelationship.Unrelated
     }
 
     it("should correctly handle covariance in TypeRelationship") {

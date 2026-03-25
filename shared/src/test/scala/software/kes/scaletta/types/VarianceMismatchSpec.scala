@@ -25,8 +25,8 @@ class VarianceMismatchSpec extends AnyFunSpec with Matchers {
         VarianceMismatch.check(Variance.Invariant, rel) shouldBe Some(VarianceMismatch.InvariantUnrelated)
       }
 
-      it("should return InvariantUnrelated for TypeRelationship.None") {
-        VarianceMismatch.check(Variance.Invariant, TypeRelationship.None) shouldBe Some(VarianceMismatch.InvariantUnrelated)
+      it("should return InvariantUnrelated for TypeRelationship.Unrelated") {
+        VarianceMismatch.check(Variance.Invariant, TypeRelationship.Unrelated) shouldBe Some(VarianceMismatch.InvariantUnrelated)
       }
     }
 
@@ -48,8 +48,8 @@ class VarianceMismatchSpec extends AnyFunSpec with Matchers {
         VarianceMismatch.check(Variance.Covariant, rel) shouldBe Some(VarianceMismatch.CovariantUnrelated)
       }
 
-      it("should return CovariantUnrelated for TypeRelationship.None") {
-        VarianceMismatch.check(Variance.Covariant, TypeRelationship.None) shouldBe Some(VarianceMismatch.CovariantUnrelated)
+      it("should return CovariantUnrelated for TypeRelationship.Unrelated") {
+        VarianceMismatch.check(Variance.Covariant, TypeRelationship.Unrelated) shouldBe Some(VarianceMismatch.CovariantUnrelated)
       }
     }
 
@@ -71,8 +71,8 @@ class VarianceMismatchSpec extends AnyFunSpec with Matchers {
         VarianceMismatch.check(Variance.Contravariant, rel) shouldBe Some(VarianceMismatch.ContravariantUnrelated)
       }
 
-      it("should return ContravariantUnrelated for TypeRelationship.None") {
-        VarianceMismatch.check(Variance.Contravariant, TypeRelationship.None) shouldBe Some(VarianceMismatch.ContravariantUnrelated)
+      it("should return ContravariantUnrelated for TypeRelationship.Unrelated") {
+        VarianceMismatch.check(Variance.Contravariant, TypeRelationship.Unrelated) shouldBe Some(VarianceMismatch.ContravariantUnrelated)
       }
     }
   }

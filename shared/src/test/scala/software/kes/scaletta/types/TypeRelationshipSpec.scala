@@ -60,9 +60,9 @@ class TypeRelationshipSpec extends AnyFunSpec with Matchers {
       }
     }
 
-    describe("None") {
-      val rel: TypeRelationship[String] = TypeRelationship.None
-      it("should have correct property values for None") {
+    describe("Unrelated") {
+      val rel: TypeRelationship[String] = TypeRelationship.Unrelated
+      it("should have correct property values for Unrelated") {
         rel.isSame shouldBe false
         rel.isSubtype shouldBe false
         rel.isSupertype shouldBe false

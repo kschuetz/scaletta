@@ -86,7 +86,7 @@ object TypeRelationship {
   /**
    * No relationship between the two types.
    */
-  case object None extends TypeRelationship[Nothing] {
+  case object Unrelated extends TypeRelationship[Nothing] {
     def isSame: Boolean = false
 
     def isSubtype: Boolean = false
