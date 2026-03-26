@@ -1,6 +1,6 @@
 package software.kes.scaletta.types
 
-import software.kes.scaletta.util.{NonEmptyArityList, SetTwoPlus}
+import software.kes.scaletta.util.{NonEmptyVector, SetTwoPlus}
 
 sealed trait Type[+T] {
   def isGround: Boolean
@@ -14,7 +14,7 @@ object Type {
   }
 
   case class Applied[T](constructorName: T,
-                        arguments: NonEmptyArityList[TypeArgument[T]]) extends ConcreteType[T] {
+                        arguments: NonEmptyVector[TypeArgument[T]]) extends ConcreteType[T] {
     def isGround: Boolean = arguments.forall(_.value.isGround)
   }
 

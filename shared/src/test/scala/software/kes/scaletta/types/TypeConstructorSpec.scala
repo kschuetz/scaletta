@@ -2,26 +2,26 @@ package software.kes.scaletta.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.util.NonEmptyArityList
+import software.kes.scaletta.util.NonEmptyVector
 
 class TypeConstructorSpec extends AnyFunSpec with Matchers {
   private val typeName = "Option"
   private val param = TypeParameter.invariant[String]
-  private val tc = TypeConstructor.create(typeName, NonEmptyArityList.of(param))
+  private val tc = TypeConstructor.create(typeName, NonEmptyVector(param))
 
   describe("TypeConstructor") {
     describe("creation and basic properties") {
       it("should correctly report arity") {
         tc.arity shouldBe 1
 
-        val tc2 = TypeConstructor.create("Map", NonEmptyArityList.of(param, param))
+        val tc2 = TypeConstructor.create("Map", NonEmptyVector(param, param))
         tc2.arity shouldBe 2
       }
 
       it("should correctly handle equality and hashCode") {
-        val tc1a = TypeConstructor.create("Option", NonEmptyArityList.of(param))
-        val tc1b = TypeConstructor.create("Option", NonEmptyArityList.of(param))
-        val tc2 = TypeConstructor.create("List", NonEmptyArityList.of(param))
+        val tc1a = TypeConstructor.create("Option", NonEmptyVector(param))
+        val tc1b = TypeConstructor.create("Option", NonEmptyVector(param))
+        val tc2 = TypeConstructor.create("List", NonEmptyVector(param))
 
         tc1a shouldBe tc1b
         tc1a.hashCode() shouldBe tc1b.hashCode()
@@ -39,19 +39,19 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
         val arg = Type.Nominal("Int")
         val result = tc.applyAll(arg)
         result.constructorName shouldBe typeName
-        result.arguments.items.head.value shouldBe arg
+        result.arguments.head.value shouldBe arg
       }
 
       it("should ignore extra arguments") {
         val arg1 = Type.Nominal("Int")
         val arg2 = Type.Nominal("String")
         val result = tc.applyAll(arg1, arg2)
-        result.arguments.arity shouldBe 1
-        result.arguments.items.head.value shouldBe arg1
+        result.arguments.length shouldBe 1
+        result.arguments.head.value shouldBe arg1
       }
 
       it("should throw IllegalArgumentException when too few arguments are provided") {
-        val tc2 = TypeConstructor.create("Map", NonEmptyArityList.of(param, param))
+        val tc2 = TypeConstructor.create("Map", NonEmptyVector(param, param))
         val exception = intercept[IllegalArgumentException] {
           tc2.applyAll(Type.Nominal("Int"))
         }
@@ -64,13 +64,13 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
         val args = Seq(Type.Nominal("Int"))
         val result = tc.applyAllFromSeq(args)
         result.constructorName shouldBe typeName
-        result.arguments.items.head.value shouldBe args.head
+        result.arguments.head.value shouldBe args.head
       }
     }
 
     describe("applyArgs") {
       it("should return Left(TypeConstructor) when partially applied") {
-        val tc2 = TypeConstructor.create("Map", NonEmptyArityList.of(param, param))
+        val tc2 = TypeConstructor.create("Map", NonEmptyVector(param, param))
         val result = tc2.applyArgs(Type.Nominal("String"))
 
         result shouldBe a[Left[_, _]]
@@ -85,7 +85,7 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
         result shouldBe a[Right[_, _]]
         val applied = result.toOption.getOrElse(fail("Expected Right"))
         applied.constructorName shouldBe typeName
-        applied.arguments.items.head.value shouldBe Type.Nominal("String")
+        applied.arguments.head.value shouldBe Type.Nominal("String")
       }
 
       it("should return Left(original) when given zero arguments") {
@@ -97,7 +97,7 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
       }
 
       it("should handle chained applications") {
-        val tc2 = TypeConstructor.create("Map", NonEmptyArityList.of(param, param))
+        val tc2 = TypeConstructor.create("Map", NonEmptyVector(param, param))
         val result1 = tc2.applyArgs(Type.Nominal("Int"))
 
         result1 shouldBe a[Left[_, _]]
@@ -106,7 +106,7 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
         val result2 = partialTc.applyArgs(Type.Nominal("String"))
         result2 shouldBe a[Right[_, _]]
         val applied = result2.toOption.getOrElse(fail("Expected Right"))
-        applied.arguments.items.map(_.value) shouldBe List(Type.Nominal("Int"), Type.Nominal("String"))
+        applied.arguments.map(_.value) shouldBe NonEmptyVector(Type.Nominal("Int"), Type.Nominal("String"))
       }
     }
 

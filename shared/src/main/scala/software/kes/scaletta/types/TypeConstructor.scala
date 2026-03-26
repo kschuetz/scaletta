@@ -1,18 +1,18 @@
 package software.kes.scaletta.types
 
-import software.kes.scaletta.util.{ArityList, EmptyArityList, NonEmptyArityList}
+import software.kes.scaletta.util.NonEmptyVector
 
 import scala.annotation.tailrec
 
 object TypeConstructor {
   def create[T](name: T,
-                parameters: NonEmptyArityList[TypeParameter[T]]): TypeConstructor[T] =
-    new TypeConstructor(name, parameters, Nil)
+                parameters: NonEmptyVector[TypeParameter[T]]): TypeConstructor[T] =
+    new TypeConstructor(name, parameters, Vector.empty)
 }
 
 final class TypeConstructor[T] private(val name: T,
-                                       val parameters: NonEmptyArityList[TypeParameter[T]],
-                                       private val applied: List[TypeArgument[T]]) {
+                                       val parameters: NonEmptyVector[TypeParameter[T]],
+                                       private val applied: Vector[TypeArgument[T]]) {
   /**
    * Constructs a type from the given arguments.
    * There must be enough arguments to fill all remaining type parameters, or an IllegalArgumentException
@@ -44,33 +44,33 @@ final class TypeConstructor[T] private(val name: T,
    */
   def applyArgs(args: Type[T]*): Either[TypeConstructor[T], Type.Applied[T]] = {
     val argsIter = args.iterator
+    val totalParamsCount = applied.length + parameters.length
+
+    val builder = Vector.newBuilder[TypeArgument[T]]
+    builder ++= applied
 
     @tailrec
-    def go(acc: List[TypeArgument[T]],
-           params: ArityList[TypeParameter[T]]): Either[TypeConstructor[T], Type.Applied[T]] =
-      params match {
-        case remaining: NonEmptyArityList[TypeParameter[T] @unchecked] =>
-          if (argsIter.hasNext) {
-            val arg = argsIter.next()
-            go(TypeArgument(remaining.head, arg) :: acc, remaining.tail)
-          } else {
-            // not enough
-            Left(new TypeConstructor(name, remaining, acc))
-          }
-        case EmptyArityList => Right {
-          NonEmptyArityList.tryFrom(acc.reverse) match {
-            case Some(result) => Type.Applied(name, result)
-            case None =>
-              // This should never happen
-              throw new AssertionError("No type arguments")
-          }
+    def go(paramIdx: Int): Either[TypeConstructor[T], Type.Applied[T]] = {
+      if (paramIdx < totalParamsCount) {
+        if (argsIter.hasNext) {
+          val param = parameters(paramIdx - applied.length)
+          val arg = argsIter.next()
+          builder += TypeArgument(param, arg)
+          go(paramIdx + 1)
+        } else {
+          // not enough
+          val remainingParams = NonEmptyVector.from(parameters.drop(paramIdx - applied.length))
+          Left(new TypeConstructor(name, remainingParams, builder.result()))
         }
+      } else {
+        Right(Type.Applied(name, NonEmptyVector.from(builder.result())))
       }
+    }
 
-    go(applied, parameters)
+    go(applied.length)
   }
 
-  def arity: Int = parameters.arity
+  def arity: Int = parameters.length
 
   override def equals(other: Any): Boolean = other match {
     case that: TypeConstructor[T @unchecked] =>
@@ -88,5 +88,5 @@ final class TypeConstructor[T] private(val name: T,
   }
 
   override def toString: String =
-    s"TypeConstructor($name, ${parameters.arity})"
+    s"TypeConstructor($name, ${parameters.length})"
 }
