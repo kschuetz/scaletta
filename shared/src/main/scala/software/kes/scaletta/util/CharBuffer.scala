@@ -54,8 +54,8 @@ final class CharBuffer private(private var buffer: Array[Char]) {
   }
 
   def slice(start: Int, end: Int): String = {
-    val max = end min ptr
-    new String(buffer, start, end - start)
+    val actualEnd = end min ptr
+    new String(buffer, start, actualEnd - start)
   }
 
   def slice(end: Int): String =
