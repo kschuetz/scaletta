@@ -4,27 +4,9 @@ import software.kes.scaletta.symbols.QualifiedName
 
 trait TypeRegistryBootstrap extends TypeRegistry {
   /**
-   * There must be exactly one top type (e.g., Any).
+   * Registers a type name for a given type ID.
+   * Used for core types that have pre-assigned type IDs.
    */
-  def setTop(name: QualifiedName.Full): Type.Nominal[TypeId]
-
-  /**
-   * There must be at most one top value type (e.g., AnyVal).
-   */
-  def setTopValue(name: QualifiedName.Full): Type.Nominal[TypeId]
-
-  /**
-   * There must be at most one top ref type (e.g., AnyRef).
-   */
-  def setTopRef(name: QualifiedName.Full): Type.Nominal[TypeId]
-
-  /**
-   * There must be at most one bottom ref type (e.g., Null).
-   */
-  def setBottomRef(name: QualifiedName.Full): Type.Nominal[TypeId]
-
-  /**
-   * There must be at most one bottom type (e.g., Nothing).
-   */
-  def setBottom(name: QualifiedName.Full): Type.Nominal[TypeId]
+  def registerCore(name: QualifiedName.Full,
+                   typ: Type.Nominal[TypeId]): Type.Nominal[TypeId]
 }

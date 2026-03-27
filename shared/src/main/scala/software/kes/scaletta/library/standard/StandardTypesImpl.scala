@@ -1,5 +1,6 @@
 package software.kes.scaletta.library.standard
 
+import software.kes.scaletta.runtime.CoreTypes
 import software.kes.scaletta.symbols.{Name, QualifiedName}
 import software.kes.scaletta.types._
 
@@ -10,49 +11,49 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   import software.kes.scaletta.common.Packages
 
   val AnyT: Type.Nominal[TypeId] =
-    registry.setTop(base(names.AnyT))
+    registry.registerCore(base(names.AnyT), CoreTypes.AnyT)
 
   val AnyValT: Type.Nominal[TypeId] =
-    registry.setTopValue(base(names.AnyValT))
+    registry.registerCore(base(names.AnyValT), CoreTypes.AnyValT)
 
   val AnyRefT: Type.Nominal[TypeId] =
-    registry.setTopRef(base(names.AnyRefT))
-
-  val NothingT: Type.Nominal[TypeId] =
-    registry.setBottom(base(names.NothingT))
+    registry.registerCore(base(names.AnyRefT), CoreTypes.AnyRefT)
 
   val NullT: Type.Nominal[TypeId] =
-    registry.setBottomRef(base(names.NullT))
+    registry.registerCore(base(names.NullT), CoreTypes.NullT)
+
+  val NothingT: Type.Nominal[TypeId] =
+    registry.registerCore(base(names.NothingT), CoreTypes.NothingT)
 
   val UnitT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.UnitT))
+    registry.registerCore(base(names.UnitT), CoreTypes.UnitT)
 
   val BooleanT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.BooleanT))
+    registry.registerCore(base(names.BooleanT), CoreTypes.BooleanT)
 
   val ByteT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.ByteT))
-
-  val ShortT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.ShortT))
-
-  val IntT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.IntT))
-
-  val LongT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.LongT))
-
-  val FloatT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.FloatT))
-
-  val DoubleT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.DoubleT))
+    registry.registerCore(base(names.ByteT), CoreTypes.ByteT)
 
   val CharT: Type.Nominal[TypeId] =
-    registry.addValueType(base(names.CharT))
+    registry.registerCore(base(names.CharT), CoreTypes.CharT)
+
+  val DoubleT: Type.Nominal[TypeId] =
+    registry.registerCore(base(names.DoubleT), CoreTypes.DoubleT)
+
+  val FloatT: Type.Nominal[TypeId] =
+    registry.registerCore(base(names.FloatT), CoreTypes.FloatT)
+
+  val IntT: Type.Nominal[TypeId] =
+    registry.registerCore(base(names.IntT), CoreTypes.IntT)
+
+  val LongT: Type.Nominal[TypeId] =
+    registry.registerCore(base(names.LongT), CoreTypes.LongT)
+
+  val ShortT: Type.Nominal[TypeId] =
+    registry.registerCore(base(names.ShortT), CoreTypes.ShortT)
 
   val StringT: Type.Nominal[TypeId] =
-    registry.addRefType(base(names.StringT))
+    registry.registerCore(base(names.StringT), CoreTypes.StringT)
 
   val OptionT: TypeConstructor[TypeId] =
     registry.addTypeConstructor(base(names.OptionT), TypeParameter.covariant)
