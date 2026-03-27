@@ -16,7 +16,7 @@ object ArithmeticOps {
 
     def byteLong(args: ArgumentReader): Long = args.unsafeReadByte(0) + args.unsafeReadLong(1)
 
-    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) + args.unsafeReadByte(1)
+    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) + args.unsafeReadShort(1)
 
     def charByte(args: ArgumentReader): Int = args.unsafeReadChar(0) + args.unsafeReadByte(1)
 
@@ -30,7 +30,7 @@ object ArithmeticOps {
 
     def charLong(args: ArgumentReader): Long = args.unsafeReadChar(0) + args.unsafeReadLong(1)
 
-    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) + args.unsafeReadByte(1)
+    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) + args.unsafeReadShort(1)
 
     def doubleByte(args: ArgumentReader): Double = args.unsafeReadDouble(0) + args.unsafeReadByte(1)
 
@@ -44,7 +44,7 @@ object ArithmeticOps {
 
     def doubleLong(args: ArgumentReader): Double = args.unsafeReadDouble(0) + args.unsafeReadLong(1)
 
-    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) + args.unsafeReadByte(1)
+    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) + args.unsafeReadShort(1)
 
     def floatByte(args: ArgumentReader): Float = args.unsafeReadFloat(0) + args.unsafeReadByte(1)
 
@@ -58,7 +58,7 @@ object ArithmeticOps {
 
     def floatLong(args: ArgumentReader): Float = args.unsafeReadFloat(0) + args.unsafeReadLong(1)
 
-    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) + args.unsafeReadByte(1)
+    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) + args.unsafeReadShort(1)
 
     def intByte(args: ArgumentReader): Int = args.unsafeReadInt(0) + args.unsafeReadByte(1)
 
@@ -116,7 +116,7 @@ object ArithmeticOps {
 
     def byteLong(args: ArgumentReader): Long = args.unsafeReadByte(0) - args.unsafeReadLong(1)
 
-    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) - args.unsafeReadByte(1)
+    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) - args.unsafeReadShort(1)
 
     def charByte(args: ArgumentReader): Int = args.unsafeReadChar(0) - args.unsafeReadByte(1)
 
@@ -130,7 +130,7 @@ object ArithmeticOps {
 
     def charLong(args: ArgumentReader): Long = args.unsafeReadChar(0) - args.unsafeReadLong(1)
 
-    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) - args.unsafeReadByte(1)
+    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) - args.unsafeReadShort(1)
 
     def doubleByte(args: ArgumentReader): Double = args.unsafeReadDouble(0) - args.unsafeReadByte(1)
 
@@ -144,7 +144,7 @@ object ArithmeticOps {
 
     def doubleLong(args: ArgumentReader): Double = args.unsafeReadDouble(0) - args.unsafeReadLong(1)
 
-    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) - args.unsafeReadByte(1)
+    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) - args.unsafeReadShort(1)
 
     def floatByte(args: ArgumentReader): Float = args.unsafeReadFloat(0) - args.unsafeReadByte(1)
 
@@ -158,7 +158,7 @@ object ArithmeticOps {
 
     def floatLong(args: ArgumentReader): Float = args.unsafeReadFloat(0) - args.unsafeReadLong(1)
 
-    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) - args.unsafeReadByte(1)
+    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) - args.unsafeReadShort(1)
 
     def intByte(args: ArgumentReader): Int = args.unsafeReadInt(0) - args.unsafeReadByte(1)
 
@@ -216,7 +216,7 @@ object ArithmeticOps {
 
     def byteLong(args: ArgumentReader): Long = args.unsafeReadByte(0) * args.unsafeReadLong(1)
 
-    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) * args.unsafeReadByte(1)
+    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) * args.unsafeReadShort(1)
 
     def charByte(args: ArgumentReader): Int = args.unsafeReadChar(0) * args.unsafeReadByte(1)
 
@@ -230,7 +230,7 @@ object ArithmeticOps {
 
     def charLong(args: ArgumentReader): Long = args.unsafeReadChar(0) * args.unsafeReadLong(1)
 
-    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) * args.unsafeReadByte(1)
+    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) * args.unsafeReadShort(1)
 
     def doubleByte(args: ArgumentReader): Double = args.unsafeReadDouble(0) * args.unsafeReadByte(1)
 
@@ -244,7 +244,7 @@ object ArithmeticOps {
 
     def doubleLong(args: ArgumentReader): Double = args.unsafeReadDouble(0) * args.unsafeReadLong(1)
 
-    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) * args.unsafeReadByte(1)
+    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) * args.unsafeReadShort(1)
 
     def floatByte(args: ArgumentReader): Float = args.unsafeReadFloat(0) * args.unsafeReadByte(1)
 
@@ -258,7 +258,7 @@ object ArithmeticOps {
 
     def floatLong(args: ArgumentReader): Float = args.unsafeReadFloat(0) * args.unsafeReadLong(1)
 
-    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) * args.unsafeReadByte(1)
+    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) * args.unsafeReadShort(1)
 
     def intByte(args: ArgumentReader): Int = args.unsafeReadInt(0) * args.unsafeReadByte(1)
 
@@ -316,7 +316,7 @@ object ArithmeticOps {
 
     def byteLong(args: ArgumentReader): Long = args.unsafeReadByte(0) / args.unsafeReadLong(1)
 
-    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) / args.unsafeReadByte(1)
+    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) / args.unsafeReadShort(1)
 
     def charByte(args: ArgumentReader): Int = args.unsafeReadChar(0) / args.unsafeReadByte(1)
 
@@ -330,7 +330,7 @@ object ArithmeticOps {
 
     def charLong(args: ArgumentReader): Long = args.unsafeReadChar(0) / args.unsafeReadLong(1)
 
-    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) / args.unsafeReadByte(1)
+    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) / args.unsafeReadShort(1)
 
     def doubleByte(args: ArgumentReader): Double = args.unsafeReadDouble(0) / args.unsafeReadByte(1)
 
@@ -344,7 +344,7 @@ object ArithmeticOps {
 
     def doubleLong(args: ArgumentReader): Double = args.unsafeReadDouble(0) / args.unsafeReadLong(1)
 
-    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) / args.unsafeReadByte(1)
+    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) / args.unsafeReadShort(1)
 
     def floatByte(args: ArgumentReader): Float = args.unsafeReadFloat(0) / args.unsafeReadByte(1)
 
@@ -358,7 +358,7 @@ object ArithmeticOps {
 
     def floatLong(args: ArgumentReader): Float = args.unsafeReadFloat(0) / args.unsafeReadLong(1)
 
-    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) / args.unsafeReadByte(1)
+    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) / args.unsafeReadShort(1)
 
     def intByte(args: ArgumentReader): Int = args.unsafeReadInt(0) / args.unsafeReadByte(1)
 
@@ -416,7 +416,7 @@ object ArithmeticOps {
 
     def byteLong(args: ArgumentReader): Long = args.unsafeReadByte(0) % args.unsafeReadLong(1)
 
-    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) % args.unsafeReadByte(1)
+    def byteShort(args: ArgumentReader): Int = args.unsafeReadByte(0) % args.unsafeReadShort(1)
 
     def charByte(args: ArgumentReader): Int = args.unsafeReadChar(0) % args.unsafeReadByte(1)
 
@@ -430,7 +430,7 @@ object ArithmeticOps {
 
     def charLong(args: ArgumentReader): Long = args.unsafeReadChar(0) % args.unsafeReadLong(1)
 
-    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) % args.unsafeReadByte(1)
+    def charShort(args: ArgumentReader): Int = args.unsafeReadChar(0) % args.unsafeReadShort(1)
 
     def doubleByte(args: ArgumentReader): Double = args.unsafeReadDouble(0) % args.unsafeReadByte(1)
 
@@ -444,7 +444,7 @@ object ArithmeticOps {
 
     def doubleLong(args: ArgumentReader): Double = args.unsafeReadDouble(0) % args.unsafeReadLong(1)
 
-    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) % args.unsafeReadByte(1)
+    def doubleShort(args: ArgumentReader): Double = args.unsafeReadDouble(0) % args.unsafeReadShort(1)
 
     def floatByte(args: ArgumentReader): Float = args.unsafeReadFloat(0) % args.unsafeReadByte(1)
 
@@ -458,7 +458,7 @@ object ArithmeticOps {
 
     def floatLong(args: ArgumentReader): Float = args.unsafeReadFloat(0) % args.unsafeReadLong(1)
 
-    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) % args.unsafeReadByte(1)
+    def floatShort(args: ArgumentReader): Float = args.unsafeReadFloat(0) % args.unsafeReadShort(1)
 
     def intByte(args: ArgumentReader): Int = args.unsafeReadInt(0) % args.unsafeReadByte(1)
 
