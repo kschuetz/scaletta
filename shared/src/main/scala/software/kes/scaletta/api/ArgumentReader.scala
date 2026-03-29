@@ -161,4 +161,12 @@ trait ArgumentReader {
    * The returned ArraySeq is safe to share.
    */
   def unsafeReadShortArray(index: Int): ArraySeq[Short]
+
+  /**
+   * Read the argument at index as a thunk to the specified type.
+   * Use only if you are sure the argument is a thunk, otherwise a RuntimeException will be thrown.
+   */
+  def unsafeReadThunk[A](index: Int): () => A =
+    read(index).asInstanceOf[() => A]
+
 }
