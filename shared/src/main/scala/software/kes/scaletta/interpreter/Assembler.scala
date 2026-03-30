@@ -1,5 +1,7 @@
 package software.kes.scaletta.interpreter
 
+import software.kes.scaletta.common.BasicTypes
+
 final class Assembler(emitter: OpcodeEmitter,
                       interner: ConstantInterner) {
 
@@ -19,105 +21,105 @@ final class Assembler(emitter: OpcodeEmitter,
 
   def pushImmediateInt(value: Int): Unit =
     if (value >= Short.MinValue && value <= Short.MaxValue) {
-      pushConst(Opcodes.Types.Int, value.toShort)
-    } else push(Opcodes.Types.Int, value)
+      pushConst(BasicTypes.Int, value.toShort)
+    } else push(BasicTypes.Int, value)
 
   def pushImmediateLong(value: Long): Unit =
     if (value >= Short.MinValue && value <= Short.MaxValue) {
-      pushConst(Opcodes.Types.Long, value.toShort)
-    } else push(Opcodes.Types.Long, interner.internLong(value))
+      pushConst(BasicTypes.Long, value.toShort)
+    } else push(BasicTypes.Long, interner.internLong(value))
 
   def pushImmediateBoolean(value: Boolean): Unit =
-    pushConst(Opcodes.Types.Boolean, if (value) 1 else 0)
+    pushConst(BasicTypes.Boolean, if (value) 1 else 0)
 
   def pushImmediateByte(value: Byte): Unit =
-    pushConst(Opcodes.Types.Byte, value)
+    pushConst(BasicTypes.Byte, value)
 
   def pushImmediateShort(value: Short): Unit =
-    pushConst(Opcodes.Types.Short, value)
+    pushConst(BasicTypes.Short, value)
 
   def pushImmediateDouble(value: Double): Unit =
     if (value.isWhole) {
       if (value >= Short.MinValue && value <= Short.MaxValue) {
-        pushConst(Opcodes.Types.Double, value.toShort)
+        pushConst(BasicTypes.Double, value.toShort)
       } else {
-        push(Opcodes.Types.Double, interner.internDouble(value))
+        push(BasicTypes.Double, interner.internDouble(value))
       }
-    } else push(Opcodes.Types.Double, interner.internDouble(value))
+    } else push(BasicTypes.Double, interner.internDouble(value))
 
   def pushImmediateFloat(value: Float): Unit =
     if (value.isWhole) {
       if (value >= Short.MinValue && value <= Short.MaxValue) {
-        pushConst(Opcodes.Types.Float, value.toShort)
+        pushConst(BasicTypes.Float, value.toShort)
       } else {
-        push(Opcodes.Types.Float, interner.internFloat(value))
+        push(BasicTypes.Float, interner.internFloat(value))
       }
-    } else push(Opcodes.Types.Float, interner.internFloat(value))
+    } else push(BasicTypes.Float, interner.internFloat(value))
 
   def pushImmediateChar(value: Char): Unit =
-    if (value >= Short.MinValue && value <= Short.MaxValue) pushConst(Opcodes.Types.Char, value.toShort)
-    else push(Opcodes.Types.Char, value)
+    if (value >= Short.MinValue && value <= Short.MaxValue) pushConst(BasicTypes.Char, value.toShort)
+    else push(BasicTypes.Char, value)
 
   def pushImmediateObject(value: AnyRef): Unit =
     if (value == null) pushNull()
-    else push(Opcodes.Types.Object, interner.internObject(value))
+    else push(BasicTypes.Object, interner.internObject(value))
 
   def pushNull(): Unit =
-    pushConst(Opcodes.Types.Object, 0)
+    pushConst(BasicTypes.Object, 0)
 
   def pushIntFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Int, varIndex)
+    pushFromVar(BasicTypes.Int, varIndex)
 
   def pushLongFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Long, varIndex)
+    pushFromVar(BasicTypes.Long, varIndex)
 
   def pushDoubleFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Double, varIndex)
+    pushFromVar(BasicTypes.Double, varIndex)
 
   def pushFloatFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Float, varIndex)
+    pushFromVar(BasicTypes.Float, varIndex)
 
   def pushByteFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Byte, varIndex)
+    pushFromVar(BasicTypes.Byte, varIndex)
 
   def pushShortFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Short, varIndex)
+    pushFromVar(BasicTypes.Short, varIndex)
 
   def pushCharFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Char, varIndex)
+    pushFromVar(BasicTypes.Char, varIndex)
 
   def pushBooleanFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Boolean, varIndex)
+    pushFromVar(BasicTypes.Boolean, varIndex)
 
   def pushObjectFromVar(varIndex: Int): Unit =
-    pushFromVar(Opcodes.Types.Object, varIndex)
+    pushFromVar(BasicTypes.Object, varIndex)
 
   def popIntIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Int, varIndex)
+    popIntoVar(BasicTypes.Int, varIndex)
 
   def popLongIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Long, varIndex)
+    popIntoVar(BasicTypes.Long, varIndex)
 
   def popDoubleIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Double, varIndex)
+    popIntoVar(BasicTypes.Double, varIndex)
 
   def popFloatIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Float, varIndex)
+    popIntoVar(BasicTypes.Float, varIndex)
 
   def popByteIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Byte, varIndex)
+    popIntoVar(BasicTypes.Byte, varIndex)
 
   def popShortIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Short, varIndex)
+    popIntoVar(BasicTypes.Short, varIndex)
 
   def popCharIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Char, varIndex)
+    popIntoVar(BasicTypes.Char, varIndex)
 
   def popBooleanIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Boolean, varIndex)
+    popIntoVar(BasicTypes.Boolean, varIndex)
 
   def popObjectIntoVar(varIndex: Int): Unit =
-    popIntoVar(Opcodes.Types.Object, varIndex)
+    popIntoVar(BasicTypes.Object, varIndex)
 
   def storeImmediate(varIndex: Int, value: Any): Unit = value match {
     case null => storeNull(varIndex)
@@ -134,34 +136,34 @@ final class Assembler(emitter: OpcodeEmitter,
 
   def storeImmediateObject(varIndex: Int, value: AnyRef): Unit =
     if (value == null) storeNull(varIndex)
-    else store(Opcodes.Types.Object, varIndex, interner.internObject(value), allowConst = false)
+    else store(BasicTypes.Object, varIndex, interner.internObject(value), allowConst = false)
 
   def storeImmediateBoolean(varIndex: Int, value: Boolean): Unit =
-    store(Opcodes.Types.Boolean, varIndex, if (value) 1 else 0)
+    store(BasicTypes.Boolean, varIndex, if (value) 1 else 0)
 
   def storeImmediateInt(varIndex: Int, value: Int): Unit =
-    store(Opcodes.Types.Int, varIndex, value)
+    store(BasicTypes.Int, varIndex, value)
 
   def storeImmediateLong(varIndex: Int, value: Long): Unit =
-    storeInternable(Opcodes.Types.Int, varIndex, maybeConst(value), interner.internLong(value))
+    storeInternable(BasicTypes.Int, varIndex, maybeConst(value), interner.internLong(value))
 
   def storeImmediateShort(varIndex: Int, value: Short): Unit =
-    store(Opcodes.Types.Short, varIndex, value)
+    store(BasicTypes.Short, varIndex, value)
 
   def storeImmediateByte(varIndex: Int, value: Byte): Unit =
-    store(Opcodes.Types.Byte, varIndex, value)
+    store(BasicTypes.Byte, varIndex, value)
 
   def storeImmediateChar(varIndex: Int, value: Char): Unit =
-    store(Opcodes.Types.Char, varIndex, value)
+    store(BasicTypes.Char, varIndex, value)
 
   def storeImmediateDouble(varIndex: Int, value: Double): Unit =
-    storeInternable(Opcodes.Types.Int, varIndex, maybeConst(value), interner.internDouble(value))
+    storeInternable(BasicTypes.Int, varIndex, maybeConst(value), interner.internDouble(value))
 
   def storeImmediateFloat(varIndex: Int, value: Float): Unit =
-    storeInternable(Opcodes.Types.Int, varIndex, maybeConst(value), interner.internFloat(value))
+    storeInternable(BasicTypes.Int, varIndex, maybeConst(value), interner.internFloat(value))
 
   def storeNull(varIndex: Int): Unit =
-    store(Opcodes.Types.Object, varIndex, 0)
+    store(BasicTypes.Object, varIndex, 0)
 
   private def pushConst(typ: Byte, value: Short): Unit = {
     val opcode = makeOpcode(Opcodes.PushConst, typ, value)
