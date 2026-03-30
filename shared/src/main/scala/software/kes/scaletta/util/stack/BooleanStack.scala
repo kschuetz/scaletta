@@ -1,4 +1,6 @@
-package software.kes.scaletta.util
+package software.kes.scaletta.util.stack
+
+import software.kes.scaletta.util.BitArray
 
 object BooleanStack {
   def create(): BooleanStack = {

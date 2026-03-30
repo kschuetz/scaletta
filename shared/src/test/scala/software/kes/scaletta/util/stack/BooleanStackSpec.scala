@@ -1,4 +1,4 @@
-package software.kes.scaletta.util
+package software.kes.scaletta.util.stack
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
