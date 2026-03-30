@@ -1,0 +1,61 @@
+package software.kes.scaletta.util.stack
+
+import software.kes.scaletta.util.array.ArrayUtil
+
+import scala.reflect.classTag
+
+object ObjectStack {
+  def create(initialCapacity: Int = 16): ObjectStack = {
+    new ObjectStack(new Array[AnyRef](Math.max(initialCapacity, 1)))
+  }
+}
+
+final class ObjectStack private(private var elements: Array[AnyRef]) extends PrimitiveStack {
+  def push(value: AnyRef): Unit = {
+    ensureCapacity(_size + 1)
+    elements(_size) = value
+    _size += 1
+  }
+
+  def peek(): Option[AnyRef] = {
+    if (_size == 0) {
+      None
+    } else {
+      Some(elements(_size - 1))
+    }
+  }
+
+  def pop(): AnyRef = {
+    checkBeforePop()
+    _size -= 1
+    val value = elements(_size)
+    elements(_size) = null // Prevent memory leaks by clearing the reference
+    value
+  }
+
+  /**
+   * Gets the value at the specified position from the top of the stack.
+   *
+   * @param position 0 is top of the stack, 1 is second from top, etc.
+   *                 position must be less than size, or the result is undefined.
+   */
+  def unsafeGet(position: Int): AnyRef = {
+    val idx = _size - 1 - position
+    elements(idx)
+  }
+
+  override def clear(): Unit = {
+    // For object stacks, we must null out all elements to allow GC
+    var i = 0
+    while (i < _size) {
+      elements(i) = null
+      i += 1
+    }
+    super.clear()
+  }
+
+  private def ensureCapacity(minCapacity: Int): Unit = {
+    // Using the generic growArray with an explicit ClassTag for AnyRef
+    elements = ArrayUtil.growArray(elements, minCapacity, _size)(classTag[AnyRef])
+  }
+}
