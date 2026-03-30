@@ -1,5 +1,7 @@
 package software.kes.scaletta.util
 
+import software.kes.scaletta.util.array.ArrayUtil
+
 object CharBuffer {
   def create(initialCapacity: Int = 256): CharBuffer =
     new CharBuffer(new Array[Char](initialCapacity))
@@ -71,10 +73,6 @@ final class CharBuffer private(private var buffer: Array[Char]) {
     ptr += 1
   }
 
-  private def grow(capacity: Int): Unit =
-    if (capacity > buffer.length) {
-      val newBuffer = new Array[Char](capacity * 2)
-      System.arraycopy(buffer, 0, newBuffer, 0, buffer.length)
-      buffer = newBuffer
-    }
+  private def grow(minCapacity: Int): Unit =
+    buffer = ArrayUtil.growCharArray(buffer, minCapacity, ptr)
 }

@@ -1,5 +1,7 @@
 package software.kes.scaletta.util
 
+import software.kes.scaletta.util.array.ArrayUtil
+
 object BitArray {
   def create(initialBitCapacity: Int = 0): BitArray = {
     if (initialBitCapacity <= 0) new BitArray(new Array[Long](0))
@@ -39,12 +41,7 @@ final class BitArray private(private var elements: Array[Long]) {
 
   def ensureCapacity(bitCapacity: Int): Unit = {
     val requiredLongs = (bitCapacity + 63) / 64
-    if (requiredLongs > elements.length) {
-      val newCapacity = Math.max(requiredLongs, elements.length * 2)
-      val newElements = new Array[Long](newCapacity)
-      System.arraycopy(elements, 0, newElements, 0, elements.length)
-      elements = newElements
-    }
+    elements = ArrayUtil.growLongArray(elements, requiredLongs, elements.length)
   }
 
   def bitCapacity(): Int = elements.length * 64

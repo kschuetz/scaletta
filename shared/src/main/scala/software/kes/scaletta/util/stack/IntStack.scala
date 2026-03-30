@@ -1,5 +1,7 @@
 package software.kes.scaletta.util.stack
 
+import software.kes.scaletta.util.array.ArrayUtil
+
 object IntStack {
   def create(initialCapacity: Int = 16): IntStack = {
     new IntStack(new Array[Int](Math.max(initialCapacity, 1)))
@@ -40,11 +42,6 @@ final class IntStack private(private var elements: Array[Int]) extends Primitive
   }
 
   private def ensureCapacity(minCapacity: Int): Unit = {
-    if (minCapacity > elements.length) {
-      val newCapacity = Math.max(minCapacity, elements.length * 2)
-      val newElements = new Array[Int](newCapacity)
-      System.arraycopy(elements, 0, newElements, 0, _size)
-      elements = newElements
-    }
+    elements = ArrayUtil.growIntArray(elements, minCapacity, _size)
   }
 }

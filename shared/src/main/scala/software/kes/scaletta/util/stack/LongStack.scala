@@ -1,5 +1,7 @@
 package software.kes.scaletta.util.stack
 
+import software.kes.scaletta.util.array.ArrayUtil
+
 object LongStack {
   def create(initialCapacity: Int = 16): LongStack = {
     new LongStack(new Array[Long](Math.max(initialCapacity, 1)))
@@ -40,11 +42,6 @@ final class LongStack private(private var elements: Array[Long]) extends Primiti
   }
 
   private def ensureCapacity(minCapacity: Int): Unit = {
-    if (minCapacity > elements.length) {
-      val newCapacity = Math.max(minCapacity, elements.length * 2)
-      val newElements = new Array[Long](newCapacity)
-      System.arraycopy(elements, 0, newElements, 0, _size)
-      elements = newElements
-    }
+    elements = ArrayUtil.growLongArray(elements, minCapacity, _size)
   }
 }
