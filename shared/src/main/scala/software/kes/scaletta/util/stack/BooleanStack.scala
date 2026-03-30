@@ -4,16 +4,11 @@ import software.kes.scaletta.util.BitArray
 
 object BooleanStack {
   def create(): BooleanStack = {
-    new BooleanStack(BitArray.create(64), 0)
+    new BooleanStack(BitArray.create(64))
   }
 }
 
-final class BooleanStack private(private val elements: BitArray,
-                                 private var _size: Int) {
-  def size(): Int = _size
-
-  def isEmpty: Boolean = _size == 0
-
+final class BooleanStack private(private val elements: BitArray) extends PrimitiveStack {
   def push(value: Boolean): Unit = {
     elements.update(_size, value)
     _size += 1
@@ -28,12 +23,20 @@ final class BooleanStack private(private val elements: BitArray,
   }
 
   def pop(): Boolean = {
-    if (_size == 0) {
-      throw new NoSuchElementException("pop() called on empty stack")
-    } else {
-      val value = elements.get(_size - 1)
-      _size -= 1
-      value
-    }
+    checkBeforePop()
+    val value = elements.get(_size - 1)
+    _size -= 1
+    value
+  }
+
+  /**
+   * Gets the value at the specified position from the top of the stack.
+   *
+   * @param position 0 is top of the stack, 1 is second from top, etc.
+   *                 position must be less than size, or the result is undefined.
+   */
+  def unsafeGet(position: Int): Boolean = {
+    val idx = _size - 1 - position
+    elements.get(idx)
   }
 }
