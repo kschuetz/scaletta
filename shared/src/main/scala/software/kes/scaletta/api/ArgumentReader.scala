@@ -89,6 +89,12 @@ trait ArgumentReader {
   def unsafeReadShort(index: Int): Short
 
   /**
+   * Read the argument at index as an Object.
+   * Use only if you are sure the argument is an Object, otherwise the behavior is undefined.
+   */
+  def unsafeReadObject(index: Int): AnyRef
+
+  /**
    * Read the argument at index as an ArraySeq of unboxed Booleans.
    * Use only if you are sure the argument is an ArraySeq[Boolean], otherwise a RuntimeException will be thrown.
    *

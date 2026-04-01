@@ -181,6 +181,10 @@ final class MultiStack private(private[interpreter] val control: ByteStack,
     floats.clear()
   }
 
+  /**
+   * Creates an ArgumentReader for the given signature.
+   * WARNING: The stack cannot be changed for the duration of the lifetime of the ArgumentReader returned!
+   */
   def argumentReader(signature: ParamsSignature): ArgumentReader =
     new MultiStackArgumentReader(this, signature)
 }
