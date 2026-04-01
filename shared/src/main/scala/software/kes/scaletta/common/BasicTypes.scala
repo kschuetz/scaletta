@@ -39,4 +39,7 @@ object BasicTypes {
       case Float => "Float"
       case _ => "Object"
     }
+
+  private[scaletta] val MaxValue: Byte = Float
 }
+

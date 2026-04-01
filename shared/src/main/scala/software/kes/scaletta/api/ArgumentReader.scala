@@ -41,16 +41,6 @@ trait ArgumentReader {
   def toArray: Array[Any]
 
   /**
-   * Copies all varargs into a Vector that is safe to share.
-   */
-  def varArgsToVector: Vector[Any]
-
-  /**
-   * Copies all varargs into a new Array
-   */
-  def varArgsToArray: Array[Any]
-
-  /**
    * Read the argument at index as an unboxed Boolean.
    * Use only if you are sure the argument is a Boolean, otherwise the behavior is undefined.
    */
