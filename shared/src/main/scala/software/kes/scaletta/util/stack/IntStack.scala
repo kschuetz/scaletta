@@ -31,14 +31,25 @@ final class IntStack private(private var elements: Array[Int]) extends Primitive
   }
 
   /**
-   * Gets the value at the specified position from the top of the stack.
+   * Reads the value at the specified position from the top of the stack.
    *
    * @param position 0 is top of the stack, 1 is second from top, etc.
    *                 position must be less than size, or the result is undefined.
    */
-  def unsafeGet(position: Int): Int = {
+  def unsafeRead(position: Int): Int = {
     val idx = _size - 1 - position
     elements(idx)
+  }
+
+  /**
+   * Writes a value to the specified position from the top of the stack.
+   *
+   * @param position 0 is top of the stack, 1 is second from top, etc.
+   *                 position must be less than size, or the result is undefined.
+   */
+  def unsafeWrite(position: Int, value: Int): Unit = {
+    val idx = _size - 1 - position
+    elements(idx) = value
   }
 
   private def ensureCapacity(minCapacity: Int): Unit = {

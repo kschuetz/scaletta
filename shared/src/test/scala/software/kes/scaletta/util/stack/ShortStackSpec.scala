@@ -119,15 +119,31 @@ class ShortStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = ShortStack.create()
       stack.push(100.toShort) // index 2 from top
       stack.push(200.toShort) // index 1 from top
       stack.push(300.toShort) // index 0 from top
 
-      stack.unsafeGet(0) shouldBe 300.toShort
-      stack.unsafeGet(1) shouldBe 200.toShort
-      stack.unsafeGet(2) shouldBe 100.toShort
+      stack.unsafeRead(0) shouldBe 300.toShort
+      stack.unsafeRead(1) shouldBe 200.toShort
+      stack.unsafeRead(2) shouldBe 100.toShort
+    }
+
+    it("should support unsafeWrite") {
+      val stack = ShortStack.create()
+      stack.push(100.toShort)
+      stack.push(200.toShort)
+      stack.push(300.toShort)
+
+      stack.unsafeWrite(0, 41.toShort)
+      stack.unsafeRead(0) shouldBe 41.toShort
+
+      stack.unsafeWrite(1, 43.toShort)
+      stack.unsafeRead(1) shouldBe 43.toShort
+
+      stack.unsafeWrite(2, 45.toShort)
+      stack.unsafeRead(2) shouldBe 45.toShort
     }
   }
 }

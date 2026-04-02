@@ -119,15 +119,31 @@ class IntStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = IntStack.create()
       stack.push(100) // index 2 from top
       stack.push(200) // index 1 from top
       stack.push(300) // index 0 from top
 
-      stack.unsafeGet(0) shouldBe 300
-      stack.unsafeGet(1) shouldBe 200
-      stack.unsafeGet(2) shouldBe 100
+      stack.unsafeRead(0) shouldBe 300
+      stack.unsafeRead(1) shouldBe 200
+      stack.unsafeRead(2) shouldBe 100
+    }
+
+    it("should support unsafeWrite") {
+      val stack = IntStack.create()
+      stack.push(100)
+      stack.push(200)
+      stack.push(300)
+
+      stack.unsafeWrite(0, 41)
+      stack.unsafeRead(0) shouldBe 41
+
+      stack.unsafeWrite(1, 43)
+      stack.unsafeRead(1) shouldBe 43
+
+      stack.unsafeWrite(2, 45)
+      stack.unsafeRead(2) shouldBe 45
     }
   }
 }

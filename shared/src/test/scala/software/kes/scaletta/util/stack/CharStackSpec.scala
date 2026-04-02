@@ -119,15 +119,31 @@ class CharStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = CharStack.create()
       stack.push('c') // index 2 from top
       stack.push('b') // index 1 from top
       stack.push('a') // index 0 from top
 
-      stack.unsafeGet(0) shouldBe 'a'
-      stack.unsafeGet(1) shouldBe 'b'
-      stack.unsafeGet(2) shouldBe 'c'
+      stack.unsafeRead(0) shouldBe 'a'
+      stack.unsafeRead(1) shouldBe 'b'
+      stack.unsafeRead(2) shouldBe 'c'
+    }
+
+    it("should support unsafeWrite") {
+      val stack = CharStack.create()
+      stack.push('c')
+      stack.push('b')
+      stack.push('a')
+
+      stack.unsafeWrite(0, 'x')
+      stack.unsafeRead(0) shouldBe 'x'
+
+      stack.unsafeWrite(1, 'y')
+      stack.unsafeRead(1) shouldBe 'y'
+
+      stack.unsafeWrite(2, 'z')
+      stack.unsafeRead(2) shouldBe 'z'
     }
   }
 }

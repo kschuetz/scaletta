@@ -119,15 +119,31 @@ class LongStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = LongStack.create()
       stack.push(100L) // index 2 from top
       stack.push(200L) // index 1 from top
       stack.push(300L) // index 0 from top
 
-      stack.unsafeGet(0) shouldBe 300L
-      stack.unsafeGet(1) shouldBe 200L
-      stack.unsafeGet(2) shouldBe 100L
+      stack.unsafeRead(0) shouldBe 300L
+      stack.unsafeRead(1) shouldBe 200L
+      stack.unsafeRead(2) shouldBe 100L
+    }
+
+    it("should support unsafeWrite") {
+      val stack = LongStack.create()
+      stack.push(100L)
+      stack.push(200L)
+      stack.push(300L)
+
+      stack.unsafeWrite(0, 41L)
+      stack.unsafeRead(0) shouldBe 41L
+
+      stack.unsafeWrite(1, 43L)
+      stack.unsafeRead(1) shouldBe 43L
+
+      stack.unsafeWrite(2, 45L)
+      stack.unsafeRead(2) shouldBe 45L
     }
   }
 }

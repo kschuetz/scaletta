@@ -119,15 +119,31 @@ class FloatStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = FloatStack.create()
       stack.push(100.1f) // index 2 from top
       stack.push(200.2f) // index 1 from top
       stack.push(300.3f) // index 0 from top
 
-      stack.unsafeGet(0) shouldBe 300.3f
-      stack.unsafeGet(1) shouldBe 200.2f
-      stack.unsafeGet(2) shouldBe 100.1f
+      stack.unsafeRead(0) shouldBe 300.3f
+      stack.unsafeRead(1) shouldBe 200.2f
+      stack.unsafeRead(2) shouldBe 100.1f
+    }
+
+    it("should support unsafeWrite") {
+      val stack = FloatStack.create()
+      stack.push(100.1f)
+      stack.push(200.2f)
+      stack.push(300.3f)
+
+      stack.unsafeWrite(0, 41.1f)
+      stack.unsafeRead(0) shouldBe 41.1f
+
+      stack.unsafeWrite(1, 43.3f)
+      stack.unsafeRead(1) shouldBe 43.3f
+
+      stack.unsafeWrite(2, 45.5f)
+      stack.unsafeRead(2) shouldBe 45.5f
     }
   }
 }

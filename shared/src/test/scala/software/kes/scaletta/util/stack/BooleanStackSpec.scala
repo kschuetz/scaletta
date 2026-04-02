@@ -129,15 +129,31 @@ class BooleanStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = BooleanStack.create()
       stack.push(true) // pos 2
       stack.push(false) // pos 1
       stack.push(true) // pos 0
 
-      stack.unsafeGet(0) shouldBe true
-      stack.unsafeGet(1) shouldBe false
-      stack.unsafeGet(2) shouldBe true
+      stack.unsafeRead(0) shouldBe true
+      stack.unsafeRead(1) shouldBe false
+      stack.unsafeRead(2) shouldBe true
+    }
+
+    it("should support unsafeWrite") {
+      val stack = BooleanStack.create()
+      stack.push(true)
+      stack.push(false)
+      stack.push(true)
+
+      stack.unsafeWrite(0, false)
+      stack.unsafeRead(0) shouldBe false
+
+      stack.unsafeWrite(1, true)
+      stack.unsafeRead(1) shouldBe true
+
+      stack.unsafeWrite(2, false)
+      stack.unsafeRead(2) shouldBe false
     }
   }
 }

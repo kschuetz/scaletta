@@ -126,7 +126,7 @@ class ObjectStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = ObjectStack.create()
       val v1 = "100.1"
       val v2 = "200.2"
@@ -135,9 +135,32 @@ class ObjectStackSpec extends AnyFunSpec with Matchers {
       stack.push(v2) // index 1 from top
       stack.push(v3) // index 0 from top
 
-      stack.unsafeGet(0) shouldBe v3
-      stack.unsafeGet(1) shouldBe v2
-      stack.unsafeGet(2) shouldBe v1
+      stack.unsafeRead(0) shouldBe v3
+      stack.unsafeRead(1) shouldBe v2
+      stack.unsafeRead(2) shouldBe v1
+    }
+
+    it("should support unsafeWrite") {
+      val stack = ObjectStack.create()
+      val v1 = "100.1"
+      val v2 = "200.2"
+      val v3 = "300.3"
+      stack.push(v1)
+      stack.push(v2)
+      stack.push(v3)
+
+      val n1 = "41"
+      val n2 = "43"
+      val n3 = "45"
+
+      stack.unsafeWrite(0, n1)
+      stack.unsafeRead(0) shouldBe n1
+
+      stack.unsafeWrite(1, n2)
+      stack.unsafeRead(1) shouldBe n2
+
+      stack.unsafeWrite(2, n3)
+      stack.unsafeRead(2) shouldBe n3
     }
   }
 }

@@ -31,14 +31,25 @@ final class ShortStack private(private var elements: Array[Short]) extends Primi
   }
 
   /**
-   * Gets the value at the specified position from the top of the stack.
+   * Reads the value at the specified position from the top of the stack.
    *
    * @param position 0 is top of the stack, 1 is second from top, etc.
    *                 position must be less than size, or the result is undefined.
    */
-  def unsafeGet(position: Int): Short = {
+  def unsafeRead(position: Int): Short = {
     val idx = _size - 1 - position
     elements(idx)
+  }
+
+  /**
+   * Writes a value to the specified position from the top of the stack.
+   *
+   * @param position 0 is top of the stack, 1 is second from top, etc.
+   *                 position must be less than size, or the result is undefined.
+   */
+  def unsafeWrite(position: Int, value: Short): Unit = {
+    val idx = _size - 1 - position
+    elements(idx) = value
   }
 
   private def ensureCapacity(minCapacity: Int): Unit = {

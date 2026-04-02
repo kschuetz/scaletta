@@ -94,7 +94,7 @@ final class MultiStack private(private[interpreter] val control: ByteStack,
 
   def peek: Option[Any] = {
     if (control.isEmpty) None
-    else control.unsafeGet(0) match {
+    else control.unsafeRead(0) match {
       case BasicTypes.Boolean => booleans.peek()
       case BasicTypes.Int => ints.peek()
       case BasicTypes.Long => longs.peek()
@@ -223,31 +223,31 @@ private class MultiStackArgumentReader(stack: MultiStack,
   }
 
   def unsafeReadBoolean(index: Int): Boolean =
-    stack.booleans.unsafeGet(signature.stackOffsetOf(index))
+    stack.booleans.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadByte(index: Int): Byte =
-    stack.bytes.unsafeGet(signature.stackOffsetOf(index))
+    stack.bytes.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadChar(index: Int): Char =
-    stack.chars.unsafeGet(signature.stackOffsetOf(index))
+    stack.chars.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadDouble(index: Int): Double =
-    stack.doubles.unsafeGet(signature.stackOffsetOf(index))
+    stack.doubles.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadFloat(index: Int): Float =
-    stack.floats.unsafeGet(signature.stackOffsetOf(index))
+    stack.floats.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadInt(index: Int): Int =
-    stack.ints.unsafeGet(signature.stackOffsetOf(index))
+    stack.ints.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadLong(index: Int): Long =
-    stack.longs.unsafeGet(signature.stackOffsetOf(index))
+    stack.longs.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadShort(index: Int): Short =
-    stack.shorts.unsafeGet(signature.stackOffsetOf(index))
+    stack.shorts.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadObject(index: Int): AnyRef =
-    stack.objects.unsafeGet(signature.stackOffsetOf(index))
+    stack.objects.unsafeRead(signature.stackOffsetOf(index))
 
   def unsafeReadBooleanArray(index: Int): ArraySeq[Boolean] =
     unsafeReadObject(index).asInstanceOf[ArraySeq[Boolean]]

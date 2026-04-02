@@ -119,15 +119,31 @@ class DoubleStackSpec extends AnyFunSpec with Matchers {
       stack.peek() shouldBe None
     }
 
-    it("should support unsafeGet") {
+    it("should support unsafeRead") {
       val stack = DoubleStack.create()
       stack.push(100.1) // index 2 from top
       stack.push(200.2) // index 1 from top
       stack.push(300.3) // index 0 from top
 
-      stack.unsafeGet(0) shouldBe 300.3
-      stack.unsafeGet(1) shouldBe 200.2
-      stack.unsafeGet(2) shouldBe 100.1
+      stack.unsafeRead(0) shouldBe 300.3
+      stack.unsafeRead(1) shouldBe 200.2
+      stack.unsafeRead(2) shouldBe 100.1
+    }
+
+    it("should support unsafeWrite") {
+      val stack = DoubleStack.create()
+      stack.push(100.1)
+      stack.push(200.2)
+      stack.push(300.3)
+
+      stack.unsafeWrite(0, 41.1)
+      stack.unsafeRead(0) shouldBe 41.1
+
+      stack.unsafeWrite(1, 43.3)
+      stack.unsafeRead(1) shouldBe 43.3
+
+      stack.unsafeWrite(2, 45.5)
+      stack.unsafeRead(2) shouldBe 45.5
     }
   }
 }
