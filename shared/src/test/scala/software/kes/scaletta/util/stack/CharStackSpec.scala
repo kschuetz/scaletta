@@ -145,5 +145,52 @@ class CharStackSpec extends AnyFunSpec with Matchers {
       stack.unsafeWrite(2, 'z')
       stack.unsafeRead(2) shouldBe 'z'
     }
+
+    it("should support expand and contract") {
+      val stack = CharStack.create(initialCapacity = 2)
+      stack.push('a')
+      stack.push('b')
+
+      stack.expand(3)
+      stack.size() shouldBe 5
+
+      stack.unsafeWrite(0, 'e')
+      stack.unsafeWrite(1, 'd')
+      stack.unsafeWrite(2, 'c')
+
+      stack.peek() shouldBe Some('e')
+      stack.pop() shouldBe 'e'
+      stack.pop() shouldBe 'd'
+      stack.pop() shouldBe 'c'
+      stack.pop() shouldBe 'b'
+      stack.pop() shouldBe 'a'
+      stack.isEmpty shouldBe true
+
+      stack.push('a')
+      stack.push('b')
+      stack.push('c')
+      stack.contract(2)
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some('a')
+      stack.pop() shouldBe 'a'
+      stack.isEmpty shouldBe true
+    }
+
+    it("should handle invalid expand and contract amounts") {
+      val stack = CharStack.create()
+      stack.push('a')
+      stack.expand(0)
+      stack.size() shouldBe 1
+      stack.expand(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(0)
+      stack.size() shouldBe 1
+      stack.contract(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(100)
+      stack.size() shouldBe 0
+    }
   }
 }

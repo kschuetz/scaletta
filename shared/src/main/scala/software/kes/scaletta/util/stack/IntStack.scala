@@ -52,7 +52,6 @@ final class IntStack private(private var elements: Array[Int]) extends Primitive
     elements(idx) = value
   }
 
-  private def ensureCapacity(minCapacity: Int): Unit = {
+  protected def ensureCapacity(minCapacity: Int): Unit =
     elements = ArrayUtil.growIntArray(elements, minCapacity, _size)
-  }
 }

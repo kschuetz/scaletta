@@ -52,7 +52,6 @@ final class ShortStack private(private var elements: Array[Short]) extends Primi
     elements(idx) = value
   }
 
-  private def ensureCapacity(minCapacity: Int): Unit = {
+  protected def ensureCapacity(minCapacity: Int): Unit =
     elements = ArrayUtil.growShortArray(elements, minCapacity, _size)
-  }
 }

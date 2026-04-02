@@ -3,6 +3,7 @@ package software.kes.scaletta.util.stack
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 
+//noinspection NameBooleanParameters
 class BooleanStackSpec extends AnyFunSpec with Matchers {
   describe("BooleanStack") {
     it("should be initially empty") {
@@ -154,6 +155,53 @@ class BooleanStackSpec extends AnyFunSpec with Matchers {
 
       stack.unsafeWrite(2, false)
       stack.unsafeRead(2) shouldBe false
+    }
+
+    it("should support expand and contract") {
+      val stack = BooleanStack.create()
+      stack.push(true)
+      stack.push(false)
+
+      stack.expand(3)
+      stack.size() shouldBe 5
+
+      stack.unsafeWrite(0, true)
+      stack.unsafeWrite(1, false)
+      stack.unsafeWrite(2, true)
+
+      stack.peek() shouldBe Some(true)
+      stack.pop() shouldBe true
+      stack.pop() shouldBe false
+      stack.pop() shouldBe true
+      stack.pop() shouldBe false
+      stack.pop() shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.push(true)
+      stack.push(false)
+      stack.push(true)
+      stack.contract(2)
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(true)
+      stack.pop() shouldBe true
+      stack.isEmpty shouldBe true
+    }
+
+    it("should handle invalid expand and contract amounts") {
+      val stack = BooleanStack.create()
+      stack.push(true)
+      stack.expand(0)
+      stack.size() shouldBe 1
+      stack.expand(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(0)
+      stack.size() shouldBe 1
+      stack.contract(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(100)
+      stack.size() shouldBe 0
     }
   }
 }

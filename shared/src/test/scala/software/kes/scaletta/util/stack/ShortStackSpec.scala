@@ -145,5 +145,52 @@ class ShortStackSpec extends AnyFunSpec with Matchers {
       stack.unsafeWrite(2, 45.toShort)
       stack.unsafeRead(2) shouldBe 45.toShort
     }
+
+    it("should support expand and contract") {
+      val stack = ShortStack.create(initialCapacity = 2)
+      stack.push(41.toShort)
+      stack.push(43.toShort)
+
+      stack.expand(3)
+      stack.size() shouldBe 5
+
+      stack.unsafeWrite(0, 49.toShort)
+      stack.unsafeWrite(1, 47.toShort)
+      stack.unsafeWrite(2, 45.toShort)
+
+      stack.peek() shouldBe Some(49.toShort)
+      stack.pop() shouldBe 49.toShort
+      stack.pop() shouldBe 47.toShort
+      stack.pop() shouldBe 45.toShort
+      stack.pop() shouldBe 43.toShort
+      stack.pop() shouldBe 41.toShort
+      stack.isEmpty shouldBe true
+
+      stack.push(41.toShort)
+      stack.push(43.toShort)
+      stack.push(45.toShort)
+      stack.contract(2)
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(41.toShort)
+      stack.pop() shouldBe 41.toShort
+      stack.isEmpty shouldBe true
+    }
+
+    it("should handle invalid expand and contract amounts") {
+      val stack = ShortStack.create()
+      stack.push(41.toShort)
+      stack.expand(0)
+      stack.size() shouldBe 1
+      stack.expand(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(0)
+      stack.size() shouldBe 1
+      stack.contract(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(100)
+      stack.size() shouldBe 0
+    }
   }
 }

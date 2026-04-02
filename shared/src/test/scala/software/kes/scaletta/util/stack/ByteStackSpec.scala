@@ -145,5 +145,52 @@ class ByteStackSpec extends AnyFunSpec with Matchers {
       stack.unsafeWrite(2, 45.toByte)
       stack.unsafeRead(2) shouldBe 45.toByte
     }
+
+    it("should support expand and contract") {
+      val stack = ByteStack.create(initialCapacity = 2)
+      stack.push(41.toByte)
+      stack.push(43.toByte)
+
+      stack.expand(3)
+      stack.size() shouldBe 5
+
+      stack.unsafeWrite(0, 49.toByte)
+      stack.unsafeWrite(1, 47.toByte)
+      stack.unsafeWrite(2, 45.toByte)
+
+      stack.peek() shouldBe Some(49.toByte)
+      stack.pop() shouldBe 49.toByte
+      stack.pop() shouldBe 47.toByte
+      stack.pop() shouldBe 45.toByte
+      stack.pop() shouldBe 43.toByte
+      stack.pop() shouldBe 41.toByte
+      stack.isEmpty shouldBe true
+
+      stack.push(41.toByte)
+      stack.push(43.toByte)
+      stack.push(45.toByte)
+      stack.contract(2)
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(41.toByte)
+      stack.pop() shouldBe 41.toByte
+      stack.isEmpty shouldBe true
+    }
+
+    it("should handle invalid expand and contract amounts") {
+      val stack = ByteStack.create()
+      stack.push(41.toByte)
+      stack.expand(0)
+      stack.size() shouldBe 1
+      stack.expand(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(0)
+      stack.size() shouldBe 1
+      stack.contract(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(100)
+      stack.size() shouldBe 0
+    }
   }
 }

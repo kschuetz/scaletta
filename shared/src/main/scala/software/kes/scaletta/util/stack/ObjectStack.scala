@@ -65,8 +65,24 @@ final class ObjectStack private(private var elements: Array[AnyRef]) extends Pri
     super.clear()
   }
 
-  private def ensureCapacity(minCapacity: Int): Unit = {
+  /**
+   * Contracts the stack by the specified amount.
+   *
+   * The previously occupied slots will be replaced with nulls.
+   */
+  override def contract(amount: Int): Unit = {
+    if (amount > 0) {
+      val actualAmount = Math.min(amount, _size)
+      var i = actualAmount
+      while (i > 0) {
+        _size -= 1
+        elements(_size) = null
+        i -= 1
+      }
+    }
+  }
+
+  protected def ensureCapacity(minCapacity: Int): Unit =
     // Using the generic growArray with an explicit ClassTag for AnyRef
     elements = ArrayUtil.growArray(elements, minCapacity, _size)(classTag[AnyRef])
-  }
 }

@@ -145,5 +145,52 @@ class IntStackSpec extends AnyFunSpec with Matchers {
       stack.unsafeWrite(2, 45)
       stack.unsafeRead(2) shouldBe 45
     }
+
+    it("should support expand and contract") {
+      val stack = IntStack.create(initialCapacity = 2)
+      stack.push(41)
+      stack.push(43)
+
+      stack.expand(3)
+      stack.size() shouldBe 5
+
+      stack.unsafeWrite(0, 49)
+      stack.unsafeWrite(1, 47)
+      stack.unsafeWrite(2, 45)
+
+      stack.peek() shouldBe Some(49)
+      stack.pop() shouldBe 49
+      stack.pop() shouldBe 47
+      stack.pop() shouldBe 45
+      stack.pop() shouldBe 43
+      stack.pop() shouldBe 41
+      stack.isEmpty shouldBe true
+
+      stack.push(41)
+      stack.push(43)
+      stack.push(45)
+      stack.contract(2)
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(41)
+      stack.pop() shouldBe 41
+      stack.isEmpty shouldBe true
+    }
+
+    it("should handle invalid expand and contract amounts") {
+      val stack = IntStack.create()
+      stack.push(41)
+      stack.expand(0)
+      stack.size() shouldBe 1
+      stack.expand(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(0)
+      stack.size() shouldBe 1
+      stack.contract(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(100)
+      stack.size() shouldBe 0
+    }
   }
 }

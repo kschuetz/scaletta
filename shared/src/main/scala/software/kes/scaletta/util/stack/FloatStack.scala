@@ -52,7 +52,6 @@ final class FloatStack private(private var elements: Array[Float]) extends Primi
     elements(idx) = value
   }
 
-  private def ensureCapacity(minCapacity: Int): Unit = {
+  protected def ensureCapacity(minCapacity: Int): Unit =
     elements = ArrayUtil.growFloatArray(elements, minCapacity, _size)
-  }
 }

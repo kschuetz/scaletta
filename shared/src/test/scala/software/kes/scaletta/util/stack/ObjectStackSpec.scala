@@ -162,5 +162,58 @@ class ObjectStackSpec extends AnyFunSpec with Matchers {
       stack.unsafeWrite(2, n3)
       stack.unsafeRead(2) shouldBe n3
     }
+
+    it("should support expand and contract") {
+      val stack = ObjectStack.create(initialCapacity = 2)
+      val v1 = "41"
+      val v2 = "43"
+      stack.push(v1)
+      stack.push(v2)
+
+      stack.expand(3)
+      stack.size() shouldBe 5
+
+      val v3 = "45"
+      val v4 = "47"
+      val v5 = "49"
+
+      stack.unsafeWrite(0, v5)
+      stack.unsafeWrite(1, v4)
+      stack.unsafeWrite(2, v3)
+
+      stack.peek() shouldBe Some(v5)
+      stack.pop() shouldBe v5
+      stack.pop() shouldBe v4
+      stack.pop() shouldBe v3
+      stack.pop() shouldBe v2
+      stack.pop() shouldBe v1
+      stack.isEmpty shouldBe true
+
+      stack.push(v1)
+      stack.push(v2)
+      stack.push(v3)
+      stack.contract(2)
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(v1)
+      stack.pop() shouldBe v1
+      stack.isEmpty shouldBe true
+    }
+
+    it("should handle invalid expand and contract amounts") {
+      val stack = ObjectStack.create()
+      stack.push("41")
+      stack.expand(0)
+      stack.size() shouldBe 1
+      stack.expand(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(0)
+      stack.size() shouldBe 1
+      stack.contract(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(100)
+      stack.size() shouldBe 0
+    }
   }
 }

@@ -145,5 +145,52 @@ class LongStackSpec extends AnyFunSpec with Matchers {
       stack.unsafeWrite(2, 45L)
       stack.unsafeRead(2) shouldBe 45L
     }
+
+    it("should support expand and contract") {
+      val stack = LongStack.create(initialCapacity = 2)
+      stack.push(41L)
+      stack.push(43L)
+
+      stack.expand(3)
+      stack.size() shouldBe 5
+
+      stack.unsafeWrite(0, 49L)
+      stack.unsafeWrite(1, 47L)
+      stack.unsafeWrite(2, 45L)
+
+      stack.peek() shouldBe Some(49L)
+      stack.pop() shouldBe 49L
+      stack.pop() shouldBe 47L
+      stack.pop() shouldBe 45L
+      stack.pop() shouldBe 43L
+      stack.pop() shouldBe 41L
+      stack.isEmpty shouldBe true
+
+      stack.push(41L)
+      stack.push(43L)
+      stack.push(45L)
+      stack.contract(2)
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(41L)
+      stack.pop() shouldBe 41L
+      stack.isEmpty shouldBe true
+    }
+
+    it("should handle invalid expand and contract amounts") {
+      val stack = LongStack.create()
+      stack.push(41L)
+      stack.expand(0)
+      stack.size() shouldBe 1
+      stack.expand(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(0)
+      stack.size() shouldBe 1
+      stack.contract(-43)
+      stack.size() shouldBe 1
+
+      stack.contract(100)
+      stack.size() shouldBe 0
+    }
   }
 }

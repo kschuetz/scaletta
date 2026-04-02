@@ -50,4 +50,7 @@ final class BooleanStack private(private val elements: BitArray) extends Primiti
     val idx = _size - 1 - position
     elements.update(idx, value)
   }
+
+  protected def ensureCapacity(minCapacity: Int): Unit =
+    elements.ensureCapacity(minCapacity)
 }

@@ -52,7 +52,6 @@ final class ByteStack private(private var elements: Array[Byte]) extends Primiti
     elements(idx) = value
   }
 
-  private def ensureCapacity(minCapacity: Int): Unit = {
+  protected def ensureCapacity(minCapacity: Int): Unit =
     elements = ArrayUtil.growByteArray(elements, minCapacity, _size)
-  }
 }
