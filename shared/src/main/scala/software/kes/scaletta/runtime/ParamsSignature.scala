@@ -28,6 +28,9 @@ object ParamsSignature {
 }
 
 /**
+ * This is intended for interaction with native functions. It used to create an ArgumentReader from
+ * the operand stack.
+ *
  * Each parameter is encoded as a pair of a basic type and a stack offset into the specialized stack
  * for that basic type.
  * This assumes that arguments were pushed onto the stack from left to right.
