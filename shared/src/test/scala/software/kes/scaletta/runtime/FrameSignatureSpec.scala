@@ -46,6 +46,44 @@ class FrameSignatureSpec extends AnyFunSpec with Matchers {
       sig.slotCount shouldBe 0
       sig.slots shouldBe empty
       sig.toString shouldBe "FrameSignature()"
+
+      sig.objectCount shouldBe 0
+      sig.booleanCount shouldBe 0
+      sig.intCount shouldBe 0
+      sig.longCount shouldBe 0
+      sig.shortCount shouldBe 0
+      sig.byteCount shouldBe 0
+      sig.charCount shouldBe 0
+      sig.doubleCount shouldBe 0
+      sig.floatCount shouldBe 0
+    }
+
+    it("should correctly pre-calculate counts for each basic type") {
+      val sig = FrameSignature.of(
+        CoreTypes.IntT, // intCount = 1
+        CoreTypes.IntT, // intCount = 2
+        CoreTypes.BooleanT, // booleanCount = 1
+        CoreTypes.AnyRefT, // objectCount = 1
+        CoreTypes.StringT, // objectCount = 2
+        CoreTypes.DoubleT, // doubleCount = 1
+        CoreTypes.IntT // intCount = 3
+      )
+
+      sig.slotCount shouldBe 7
+      sig.intCount shouldBe 3
+      sig.booleanCount shouldBe 1
+      sig.objectCount shouldBe 2
+      sig.doubleCount shouldBe 1
+      sig.longCount shouldBe 0
+      sig.shortCount shouldBe 0
+      sig.byteCount shouldBe 0
+      sig.charCount shouldBe 0
+      sig.floatCount shouldBe 0
+
+      val totalCount = sig.objectCount + sig.booleanCount + sig.intCount + sig.longCount +
+        sig.shortCount + sig.byteCount + sig.charCount + sig.doubleCount + sig.floatCount
+
+      totalCount shouldBe sig.slotCount
     }
 
     it("should handle all basic types") {
@@ -82,6 +120,11 @@ class FrameSignatureSpec extends AnyFunSpec with Matchers {
       val encoded = sig.slot(0)
       VarAddress.decodeBasicType(encoded) shouldBe BasicTypes.Int
       VarAddress.decodeStackOffset(encoded) shouldBe 0
+    }
+
+    it("should provide a friendly toString") {
+      val sig = FrameSignature.of(CoreTypes.IntT, CoreTypes.BooleanT, CoreTypes.StringT)
+      sig.toString shouldBe "FrameSignature(Int, Boolean, Object)"
     }
   }
 }

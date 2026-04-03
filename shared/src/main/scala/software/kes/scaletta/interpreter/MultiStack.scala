@@ -2,7 +2,7 @@ package software.kes.scaletta.interpreter
 
 import software.kes.scaletta.api.ArgumentReader
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.runtime.ParamsSignature
+import software.kes.scaletta.runtime.{FrameSignature, ParamsSignature, VarAddress}
 import software.kes.scaletta.util.stack._
 
 import scala.collection.immutable.ArraySeq
@@ -179,6 +179,40 @@ final class MultiStack private(private[interpreter] val control: ByteStack,
     chars.clear()
     doubles.clear()
     floats.clear()
+  }
+
+  def expandFrame(signature: FrameSignature): Unit = {
+    objects.expand(signature.objectCount)
+    booleans.expand(signature.booleanCount)
+    ints.expand(signature.intCount)
+    longs.expand(signature.longCount)
+    shorts.expand(signature.shortCount)
+    bytes.expand(signature.byteCount)
+    chars.expand(signature.charCount)
+    doubles.expand(signature.doubleCount)
+    floats.expand(signature.floatCount)
+
+    val slots = signature.slots
+    val len = slots.length
+    var i = 0
+    while (i < len) {
+      control.push(VarAddress.decodeBasicType(slots(i)))
+      i += 1
+    }
+  }
+
+  def contractFrame(signature: FrameSignature): Unit = {
+    objects.contract(signature.objectCount)
+    booleans.contract(signature.booleanCount)
+    ints.contract(signature.intCount)
+    longs.contract(signature.longCount)
+    shorts.contract(signature.shortCount)
+    bytes.contract(signature.byteCount)
+    chars.contract(signature.charCount)
+    doubles.contract(signature.doubleCount)
+    floats.contract(signature.floatCount)
+
+    control.contract(signature.slotCount)
   }
 
   /**

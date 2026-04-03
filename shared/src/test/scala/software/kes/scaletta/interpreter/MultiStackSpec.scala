@@ -3,9 +3,40 @@ package software.kes.scaletta.interpreter
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.runtime.{CoreTypes, FrameSignature}
+import software.kes.scaletta.types.{Type, TypeId}
 
 class MultiStackSpec extends AnyFunSpec with Matchers {
   describe("MultiStack") {
+    it("should correctly expand and contract a frame") {
+      val stack = MultiStack.create()
+      val types: Seq[Type[TypeId]] = Seq(CoreTypes.IntT, CoreTypes.BooleanT, CoreTypes.IntT, CoreTypes.AnyRefT)
+      val signature = FrameSignature.fromSeq(types)
+
+      signature.intCount shouldBe 2
+      signature.booleanCount shouldBe 1
+      signature.objectCount shouldBe 1
+      signature.floatCount shouldBe 0
+
+      stack.expandFrame(signature)
+      stack.size() shouldBe 4
+      stack.isEmpty shouldBe false
+
+      stack.ints.size() shouldBe 2
+      stack.booleans.size() shouldBe 1
+      stack.objects.size() shouldBe 1
+      stack.floats.size() shouldBe 0
+
+      stack.contractFrame(signature)
+      stack.size() shouldBe 0
+      stack.isEmpty shouldBe true
+
+      stack.ints.size() shouldBe 0
+      stack.booleans.size() shouldBe 0
+      stack.objects.size() shouldBe 0
+      stack.floats.size() shouldBe 0
+    }
+
     it("should be initially empty") {
       val stack = MultiStack.create()
       stack.isEmpty shouldBe true
@@ -147,6 +178,23 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
         else stack.pop() shouldBe i.toString
       }
 
+      stack.isEmpty shouldBe true
+    }
+
+    it("should allow popping values from an expanded frame") {
+      val stack = MultiStack.create()
+      val signature = FrameSignature.of(CoreTypes.IntT, CoreTypes.BooleanT)
+      stack.expandFrame(signature)
+
+      stack.size() shouldBe 2
+
+      // Manually initialize the values in the expanded slots
+      // (Since expandFrame doesn't initialize them, we use unsafeWrite)
+      stack.ints.unsafeWrite(0, 41)
+      stack.booleans.unsafeWrite(0, true)
+
+      stack.pop() shouldBe true
+      stack.pop() shouldBe 41
       stack.isEmpty shouldBe true
     }
   }

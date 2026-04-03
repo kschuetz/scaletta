@@ -21,10 +21,21 @@ object FrameSignature {
       out(i) = VarAddress.encode(t, occCount)
       i += 1
     }
-    new FrameSignature(ArraySeq.unsafeWrapArray(out))
+    new FrameSignature(
+      ArraySeq.unsafeWrapArray(out),
+      occ(BasicTypes.Object),
+      occ(BasicTypes.Boolean),
+      occ(BasicTypes.Int),
+      occ(BasicTypes.Long),
+      occ(BasicTypes.Short),
+      occ(BasicTypes.Byte),
+      occ(BasicTypes.Char),
+      occ(BasicTypes.Double),
+      occ(BasicTypes.Float)
+    )
   }
 
-  val empty: FrameSignature = new FrameSignature(ArraySeq.empty)
+  val empty: FrameSignature = new FrameSignature(ArraySeq.empty, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 }
 
 /**
@@ -34,7 +45,16 @@ object FrameSignature {
  * Each slot is encoded as a pair of a basic type and a stack offset into the specialized stack
  * for that basic type.
  */
-final class FrameSignature private(val slots: ArraySeq[VarAddress.Encoded]) {
+final class FrameSignature private(val slots: ArraySeq[VarAddress.Encoded],
+                                   val objectCount: Int,
+                                   val booleanCount: Int,
+                                   val intCount: Int,
+                                   val longCount: Int,
+                                   val shortCount: Int,
+                                   val byteCount: Int,
+                                   val charCount: Int,
+                                   val doubleCount: Int,
+                                   val floatCount: Int) {
   def slotCount: Int = slots.length
 
   def slot(index: Int): VarAddress.Encoded = slots(index)
