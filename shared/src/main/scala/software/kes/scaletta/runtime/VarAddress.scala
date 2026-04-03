@@ -1,6 +1,6 @@
 package software.kes.scaletta.runtime
 
-object ParamAddress {
+object VarAddress {
   type Encoded = Int
 
   def decodeBasicType(encoded: Encoded): Byte =

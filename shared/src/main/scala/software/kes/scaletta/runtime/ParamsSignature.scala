@@ -12,13 +12,13 @@ object ParamsSignature {
   def fromSeq(params: Iterable[Type[TypeId]]): ParamsSignature = {
     val types = params.map(BasicTypes.fromType).toArray
     val occ = Array.fill[Int](BasicTypes.MaxValue + 1)(0)
-    val out = new Array[ParamAddress.Encoded](params.size)
+    val out = new Array[VarAddress.Encoded](params.size)
     var i = types.length - 1
     while (i >= 0) {
       val t = types(i)
       val occCount = occ(t)
       occ(t) += 1
-      out(i) = ParamAddress.encode(t, occCount)
+      out(i) = VarAddress.encode(t, occCount)
       i -= 1
     }
     new ParamsSignature(ArraySeq.unsafeWrapArray(out))
@@ -33,14 +33,14 @@ object ParamsSignature {
  * This assumes that arguments were pushed onto the stack from left to right.
  * (i.e., the top of the stack will contain the last argument)
  */
-final class ParamsSignature private(val params: ArraySeq[ParamAddress.Encoded]) {
+final class ParamsSignature private(val params: ArraySeq[VarAddress.Encoded]) {
   def paramCount: Int = params.length
 
-  def param(index: Int): ParamAddress.Encoded = params(index)
+  def param(index: Int): VarAddress.Encoded = params(index)
 
-  def basicTypeOf(index: Int): Byte = ParamAddress.decodeBasicType(params(index))
+  def basicTypeOf(index: Int): Byte = VarAddress.decodeBasicType(params(index))
 
-  def stackOffsetOf(index: Int): Int = ParamAddress.decodeStackOffset(params(index))
+  def stackOffsetOf(index: Int): Int = VarAddress.decodeStackOffset(params(index))
 
   override def equals(other: Any): Boolean = other match {
     case that: ParamsSignature =>
@@ -51,6 +51,6 @@ final class ParamsSignature private(val params: ArraySeq[ParamAddress.Encoded]) 
   override def hashCode(): Int = params.hashCode()
 
   override def toString: String =
-    params.map(p => BasicTypes.friendlyName(ParamAddress.decodeBasicType(p)))
+    params.map(p => BasicTypes.friendlyName(VarAddress.decodeBasicType(p)))
       .mkString("ParamsSignature(", ", ", ")")
 }
