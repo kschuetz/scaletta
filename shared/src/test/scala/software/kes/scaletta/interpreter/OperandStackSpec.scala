@@ -3,42 +3,11 @@ package software.kes.scaletta.interpreter
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.runtime.{CoreTypes, FrameSignature}
-import software.kes.scaletta.types.{Type, TypeId}
 
-class MultiStackSpec extends AnyFunSpec with Matchers {
-  describe("MultiStack") {
-    it("should correctly expand and contract a frame") {
-      val stack = MultiStack.create()
-      val types: Seq[Type[TypeId]] = Seq(CoreTypes.IntT, CoreTypes.BooleanT, CoreTypes.IntT, CoreTypes.AnyRefT)
-      val signature = FrameSignature.fromSeq(types)
-
-      signature.intCount shouldBe 2
-      signature.booleanCount shouldBe 1
-      signature.objectCount shouldBe 1
-      signature.floatCount shouldBe 0
-
-      stack.expandFrame(signature)
-      stack.size() shouldBe 4
-      stack.isEmpty shouldBe false
-
-      stack.ints.size() shouldBe 2
-      stack.booleans.size() shouldBe 1
-      stack.objects.size() shouldBe 1
-      stack.floats.size() shouldBe 0
-
-      stack.contractFrame(signature)
-      stack.size() shouldBe 0
-      stack.isEmpty shouldBe true
-
-      stack.ints.size() shouldBe 0
-      stack.booleans.size() shouldBe 0
-      stack.objects.size() shouldBe 0
-      stack.floats.size() shouldBe 0
-    }
-
+class OperandStackSpec extends AnyFunSpec with Matchers {
+  describe("OperandStack") {
     it("should be initially empty") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       stack.isEmpty shouldBe true
       stack.size() shouldBe 0
       stack.peek shouldBe None
@@ -46,7 +15,7 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should push and pop objects correctly") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val v1 = "41"
       val v2 = "43"
       stack.pushObject(v1)
@@ -64,7 +33,7 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should push and pop primitives correctly") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
 
       stack.pushBoolean(true)
       stack.peek shouldBe Some(true)
@@ -108,7 +77,7 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle polymorphic push and pop") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       stack.push(41)
       stack.push("43")
       stack.push(true)
@@ -119,7 +88,7 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should support unsafePop variants") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       stack.pushInt(41)
       stack.pushObject("43")
       stack.pushBoolean(false)
@@ -131,7 +100,7 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should maintain LIFO order across different types") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       stack.pushInt(1)
       stack.pushObject("two")
       stack.pushDouble(3.0)
@@ -144,7 +113,7 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should correctly clear all internal stacks") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       stack.pushInt(41)
       stack.pushObject("43")
       stack.clear()
@@ -155,16 +124,14 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should throw exception when popping from empty stack") {
-      val stack = MultiStack.create()
-      // The underlying stacks (like ByteStack) usually throw NoSuchElementException or similar
-      // MultiStack.pop calls control.pop() first.
+      val stack = OperandStack.create()
       assertThrows[NoSuchElementException] {
         stack.pop()
       }
     }
 
     it("should correctly handle many elements of different types") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val count = 100
       for (i <- 1 to count) {
         if (i % 2 == 0) stack.pushInt(i)
@@ -178,23 +145,6 @@ class MultiStackSpec extends AnyFunSpec with Matchers {
         else stack.pop() shouldBe i.toString
       }
 
-      stack.isEmpty shouldBe true
-    }
-
-    it("should allow popping values from an expanded frame") {
-      val stack = MultiStack.create()
-      val signature = FrameSignature.of(CoreTypes.IntT, CoreTypes.BooleanT)
-      stack.expandFrame(signature)
-
-      stack.size() shouldBe 2
-
-      // Manually initialize the values in the expanded slots
-      // (Since expandFrame doesn't initialize them, we use unsafeWrite)
-      stack.ints.unsafeWrite(0, 41)
-      stack.booleans.unsafeWrite(0, true)
-
-      stack.pop() shouldBe true
-      stack.pop() shouldBe 41
       stack.isEmpty shouldBe true
     }
   }

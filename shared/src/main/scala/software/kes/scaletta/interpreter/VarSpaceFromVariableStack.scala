@@ -1,27 +1,28 @@
 package software.kes.scaletta.interpreter
 
+import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.runtime.VarSpaceSignature
 
-object VarSpaceFromMultiStack {
-  def create(stack: MultiStack,
-             initialSignature: VarSpaceSignature = VarSpaceSignature.empty): VarSpaceFromMultiStack =
-    new VarSpaceFromMultiStack(stack, initialSignature)
+object VarSpaceFromVariableStack {
+  def create(stack: VariableStack,
+             initialSignature: VarSpaceSignature = VarSpaceSignature.empty): VarSpaceFromVariableStack =
+    new VarSpaceFromVariableStack(stack, initialSignature)
 }
 
-final class VarSpaceFromMultiStack private(stack: MultiStack,
-                                           private var signature: VarSpaceSignature) extends VarSpace {
+final class VarSpaceFromVariableStack private(stack: VariableStack,
+                                              private var signature: VarSpaceSignature) extends VarSpace {
   def setSignature(signature: VarSpaceSignature): Unit = this.signature = signature
 
   def read(index: Int): Any =
     signature.basicTypeOf(index) match {
-      case software.kes.scaletta.common.BasicTypes.Boolean => unsafeReadBoolean(index)
-      case software.kes.scaletta.common.BasicTypes.Int => unsafeReadInt(index)
-      case software.kes.scaletta.common.BasicTypes.Long => unsafeReadLong(index)
-      case software.kes.scaletta.common.BasicTypes.Short => unsafeReadShort(index)
-      case software.kes.scaletta.common.BasicTypes.Byte => unsafeReadByte(index)
-      case software.kes.scaletta.common.BasicTypes.Char => unsafeReadChar(index)
-      case software.kes.scaletta.common.BasicTypes.Double => unsafeReadDouble(index)
-      case software.kes.scaletta.common.BasicTypes.Float => unsafeReadFloat(index)
+      case BasicTypes.Boolean => unsafeReadBoolean(index)
+      case BasicTypes.Int => unsafeReadInt(index)
+      case BasicTypes.Long => unsafeReadLong(index)
+      case BasicTypes.Short => unsafeReadShort(index)
+      case BasicTypes.Byte => unsafeReadByte(index)
+      case BasicTypes.Char => unsafeReadChar(index)
+      case BasicTypes.Double => unsafeReadDouble(index)
+      case BasicTypes.Float => unsafeReadFloat(index)
       case _ => unsafeReadObject(index)
     }
 

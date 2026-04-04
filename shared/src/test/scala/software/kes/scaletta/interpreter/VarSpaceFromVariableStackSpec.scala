@@ -4,33 +4,35 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.runtime.{CoreTypes, FrameSignature, VarSpaceSignature}
 
-class VarSpaceFromMultiStackSpec extends AnyFunSpec with Matchers {
-  describe("VarSpaceFromMultiStack") {
+class VarSpaceFromVariableStackSpec extends AnyFunSpec with Matchers {
+  describe("VarSpaceFromVariableStack") {
     it("should read and write values correctly") {
-      val stack = MultiStack.create()
-      stack.pushInt(41)
-      stack.pushObject("hello")
-      stack.pushBoolean(true)
-      stack.pushInt(43)
-
-      val signature = VarSpaceSignature.of(FrameSignature.of(
+      val stack = VariableStack.create()
+      val fs = FrameSignature.of(
         CoreTypes.IntT,
         CoreTypes.StringT,
         CoreTypes.BooleanT,
         CoreTypes.IntT
-      ))
+      )
+      stack.expandFrame(fs)
+      stack.ints.unsafeWrite(0, 41)
+      stack.objects.unsafeWrite(0, "hello")
+      stack.booleans.unsafeWrite(0, true)
+      stack.ints.unsafeWrite(1, 43)
 
-      val varSpace = VarSpaceFromMultiStack.create(stack, signature)
+      val signature = VarSpaceSignature.of(fs)
 
-      varSpace.read(0) shouldBe 43
+      val varSpace = VarSpaceFromVariableStack.create(stack, signature)
+
+      varSpace.read(0) shouldBe 41
       varSpace.read(1) shouldBe "hello"
       varSpace.read(2) shouldBe true
-      varSpace.read(3) shouldBe 41
+      varSpace.read(3) shouldBe 43
 
-      varSpace.unsafeReadInt(0) shouldBe 43
+      varSpace.unsafeReadInt(0) shouldBe 41
       varSpace.unsafeReadObject(1) shouldBe "hello"
       varSpace.unsafeReadBoolean(2) shouldBe true
-      varSpace.unsafeReadInt(3) shouldBe 41
+      varSpace.unsafeReadInt(3) shouldBe 43
 
       varSpace.unsafeWriteInt(0, 47)
       varSpace.unsafeWriteObject(1, "world")
@@ -44,24 +46,26 @@ class VarSpaceFromMultiStackSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle all primitive types") {
-      val stack = MultiStack.create()
-      stack.pushByte(1)
-      stack.pushShort(2)
-      stack.pushChar('a')
-      stack.pushLong(3L)
-      stack.pushFloat(4.5f)
-      stack.pushDouble(5.5)
-
-      val signature = VarSpaceSignature.of(FrameSignature.of(
+      val stack = VariableStack.create()
+      val fs = FrameSignature.of(
         CoreTypes.ByteT,
         CoreTypes.ShortT,
         CoreTypes.CharT,
         CoreTypes.LongT,
         CoreTypes.FloatT,
         CoreTypes.DoubleT
-      ))
+      )
+      stack.expandFrame(fs)
+      stack.bytes.unsafeWrite(0, 1)
+      stack.shorts.unsafeWrite(0, 2)
+      stack.chars.unsafeWrite(0, 'a')
+      stack.longs.unsafeWrite(0, 3L)
+      stack.floats.unsafeWrite(0, 4.5f)
+      stack.doubles.unsafeWrite(0, 5.5)
 
-      val varSpace = VarSpaceFromMultiStack.create(stack, signature)
+      val signature = VarSpaceSignature.of(fs)
+
+      val varSpace = VarSpaceFromVariableStack.create(stack, signature)
 
       varSpace.unsafeReadByte(0) shouldBe 1
       varSpace.unsafeReadShort(1) shouldBe 2

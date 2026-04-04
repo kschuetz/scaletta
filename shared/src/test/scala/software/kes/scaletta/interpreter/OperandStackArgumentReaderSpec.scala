@@ -6,10 +6,10 @@ import software.kes.scaletta.runtime.{CoreTypes, ParamsSignature}
 
 import scala.collection.immutable.ArraySeq
 
-class MultiStackArgumentReaderSpec extends AnyFunSpec with Matchers {
-  describe("MultiStackArgumentReader") {
+class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
+  describe("OperandStackArgumentReader") {
     it("should read all primitive types correctly") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val signature = ParamsSignature.of(
         CoreTypes.BooleanT,
         CoreTypes.ByteT,
@@ -60,7 +60,7 @@ class MultiStackArgumentReaderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should read object types correctly") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val signature = ParamsSignature.of(CoreTypes.StringT, CoreTypes.AnyRefT)
 
       val s = "hello"
@@ -78,7 +78,7 @@ class MultiStackArgumentReaderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should read primitive arrays correctly") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val signature = ParamsSignature.of(
         CoreTypes.AnyRefT,
         CoreTypes.AnyRefT,
@@ -121,7 +121,7 @@ class MultiStackArgumentReaderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should read mixed types with correct mapping (LIFO vs left-to-right)") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       // Signature: (Int, String, Double, Boolean)
       val signature = ParamsSignature.of(CoreTypes.IntT, CoreTypes.StringT, CoreTypes.DoubleT, CoreTypes.BooleanT)
 
@@ -140,7 +140,7 @@ class MultiStackArgumentReaderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should export to collections correctly") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val signature = ParamsSignature.of(CoreTypes.IntT, CoreTypes.BooleanT)
       stack.pushInt(41)
       stack.pushBoolean(true)
@@ -151,7 +151,7 @@ class MultiStackArgumentReaderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle empty signature") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val reader = stack.argumentReader(ParamsSignature.empty)
 
       reader.argCount shouldBe 0
@@ -160,7 +160,7 @@ class MultiStackArgumentReaderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle multiple occurrences of the same type correctly") {
-      val stack = MultiStack.create()
+      val stack = OperandStack.create()
       val signature = ParamsSignature.of(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT)
 
       stack.pushInt(1)
