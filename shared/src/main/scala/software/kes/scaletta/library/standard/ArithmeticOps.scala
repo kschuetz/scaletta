@@ -1,4 +1,4 @@
-package software.kes.scaletta.runtime
+package software.kes.scaletta.library.standard
 
 import software.kes.scaletta.api.ArgumentReader
 
