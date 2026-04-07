@@ -1,6 +1,7 @@
 package software.kes.scaletta.builtins
 
 import software.kes.scaletta.api.ArgumentReader
+import software.kes.scaletta.symbols.Name
 import software.kes.scaletta.types.{Type, TypeId}
 
 case class FunctionDefinition(paramGroups: Vector[ParameterGroup],
@@ -8,12 +9,12 @@ case class FunctionDefinition(paramGroups: Vector[ParameterGroup],
                               pure: Boolean,
                               impl: FunctionImpl)
 
-case class FormalParameter(name: String,
+case class FormalParameter(name: Name,
                            typ: Type[TypeId],
                            default: Option[Any] = None)
 
 object ParameterGroup {
-  def single(params: FormalParameter*): ParameterGroup = ParameterGroup(params.toVector)
+  def single(params: FormalParameter*): Vector[ParameterGroup] = Vector(ParameterGroup(params.toVector))
 }
 
 case class ParameterGroup(params: Vector[FormalParameter])
