@@ -1,9 +1,19 @@
 package software.kes.scaletta.interpreter
 
 import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.interpreter.Assembler.BranchTarget
 
-final class Assembler(emitter: OpcodeEmitter,
+object Assembler {
+  trait BranchTarget {
+    def set(address: Int): Unit
+  }
+}
+
+final class Assembler(writer: OpcodeWriter,
                       interner: ConstantInterner) {
+
+  def nop(): Unit =
+    writer.writeAndAdvance(Opcodes.Nop)
 
   def pushImmediate(value: Any): Unit =
     value match {
@@ -165,15 +175,24 @@ final class Assembler(emitter: OpcodeEmitter,
   def storeNull(varIndex: Int): Unit =
     store(BasicTypes.Object, varIndex, 0)
 
+  def branch(offset: Int = 0): BranchTarget =
+    makeBranch(Opcodes.Branch, offset)
+
+  def branchIf(offset: Int = 0): BranchTarget =
+    makeBranch(Opcodes.BranchIf, offset)
+
+  def branchIfNot(offset: Int = 0): BranchTarget =
+    makeBranch(Opcodes.BranchIfNot, offset)
+
   private def pushConst(typ: Byte, value: Short): Unit = {
     val opcode = makeOpcode(Opcodes.PushConst, typ, value)
-    emitter.emit(opcode)
+    writer.writeAndAdvance(opcode)
   }
 
   private def push(typ: Byte, value: Int): Unit = {
     val opcode = makeOpcode(Opcodes.Push, typ, 0)
-    emitter.emit(opcode)
-    emitter.emit(value)
+    writer.writeAndAdvance(opcode)
+    writer.writeAndAdvance(value)
   }
 
   private def store(typ: Byte,
@@ -184,17 +203,17 @@ final class Assembler(emitter: OpcodeEmitter,
     if (s < 65536) {
       if (!allowConst || s > 255 || value < -128 || value > 127) {
         val opcode = makeOpcode(Opcodes.Store, typ, (s & 0xFF).toShort)
-        emitter.emit(opcode)
-        emitter.emit(value)
+        writer.writeAndAdvance(opcode)
+        writer.writeAndAdvance(value)
       } else {
         val opcode = makeOpcode(Opcodes.StoreConst, typ, (s & 0xFF).toByte, value.toByte)
-        emitter.emit(opcode)
+        writer.writeAndAdvance(opcode)
       }
     } else {
       val opcode = makeOpcode(Opcodes.StoreWide, typ, 0)
-      emitter.emit(opcode)
-      emitter.emit(s)
-      emitter.emit(value)
+      writer.writeAndAdvance(opcode)
+      writer.writeAndAdvance(s)
+      writer.writeAndAdvance(value)
     }
   }
 
@@ -206,17 +225,17 @@ final class Assembler(emitter: OpcodeEmitter,
     constValue match {
       case Some(value) if s <= 255 =>
         val opcode = makeOpcode(Opcodes.StoreConst, typ, (s & 0xFF).toByte, value)
-        emitter.emit(opcode)
+        writer.writeAndAdvance(opcode)
       case None =>
         if (s < 65536) {
           val opcode = makeOpcode(Opcodes.Store, typ, (s & 0xFF).toShort)
-          emitter.emit(opcode)
-          emitter.emit(intern)
+          writer.writeAndAdvance(opcode)
+          writer.writeAndAdvance(intern)
         } else {
           val opcode = makeOpcode(Opcodes.StoreWide, typ, 0)
-          emitter.emit(opcode)
-          emitter.emit(s)
-          emitter.emit(intern)
+          writer.writeAndAdvance(opcode)
+          writer.writeAndAdvance(s)
+          writer.writeAndAdvance(intern)
         }
     }
   }
@@ -231,11 +250,11 @@ final class Assembler(emitter: OpcodeEmitter,
     val s = if (varIndex < 0) 0 else varIndex
     if (s < 65536) {
       val opcode = makeOpcode(narrow, typ, (s & 0xFFFF).toShort)
-      emitter.emit(opcode)
+      writer.writeAndAdvance(opcode)
     } else {
       val opcode = makeOpcode(wide, typ, 0)
-      emitter.emit(opcode)
-      emitter.emit(s)
+      writer.writeAndAdvance(opcode)
+      writer.writeAndAdvance(s)
     }
   }
 
@@ -256,5 +275,18 @@ final class Assembler(emitter: OpcodeEmitter,
 
   private def makeOpcode(instruction: Int, typ: Byte, varIndex: Byte, value: Byte): Int =
     (instruction << 24) | ((typ & 0xFF) << 16) | (varIndex << 8) | value
+
+  private def makeBranch(baseInstruction: Int,
+                         offset: Int = 0): BranchTarget = {
+    val sourceAddress = writer.currentAddress
+    writer.writeAndAdvance(encodeBranch(baseInstruction, offset))
+    (targetAddress: Int) => {
+      val instruction = encodeBranch(baseInstruction, targetAddress - sourceAddress - 1)
+      writer.write(sourceAddress, instruction)
+    }
+  }
+
+  private def encodeBranch(baseInstruction: Int, offset: Int): Int =
+    (baseInstruction << 24) | (offset & 0xFFFFFF)
 
 }
