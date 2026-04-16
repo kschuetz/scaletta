@@ -1,12 +1,12 @@
 package software.kes.scaletta.interpreter
 
 import software.kes.scaletta.api.{EvalResult, RuntimeContextReader}
-import software.kes.scaletta.builtins.FunctionDispatchTable
+import software.kes.scaletta.builtins.NativeFunctionTable
 import software.kes.scaletta.util.stack.IntStack
 
 object Interpreter {
   def create(program: Program,
-             functionTable: FunctionDispatchTable): Interpreter = {
+             functionTable: NativeFunctionTable): Interpreter = {
     val callStack = IntStack.create()
     val operandStack = OperandStack.create()
     val variableStack = VariableStack.create()
@@ -18,13 +18,13 @@ object Interpreter {
 }
 
 final class Interpreter private(private val program: Program,
-                                private val functionTable: FunctionDispatchTable,
+                                private val functionTable: NativeFunctionTable,
                                 private val callStack: IntStack,
                                 private val operandStack: OperandStack,
                                 private val variableStack: VariableStack,
                                 private val varSpace: VarSpaceFromVariableStack,
                                 private val evalResultContainer: EvalResultContainer,
-                                private var functionIndex: Int,
+                                private var userFunctionIndex: Int,
                                 private var instructionPointer: Int) {
   def run(runtimeContexts: RuntimeContextReader): EvalResult = {
     reset()
@@ -32,7 +32,7 @@ final class Interpreter private(private val program: Program,
   }
 
   private def reset(): Unit = {
-    functionIndex = 0
+    userFunctionIndex = 0
     instructionPointer = 0
     callStack.clear()
     operandStack.clear()

@@ -1,3 +1,3 @@
 package software.kes.scaletta.builtins
 
-case class OverloadTable(variations: Vector[FunctionDefinition])
+case class OverloadTable(variations: Vector[NativeFunctionDefinition])

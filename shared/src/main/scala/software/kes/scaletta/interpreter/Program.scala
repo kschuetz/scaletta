@@ -6,11 +6,14 @@ import software.kes.scaletta.util.NonEmptyVector
 import scala.collection.immutable.ArraySeq
 
 case class Program(constantPool: ConstantPool,
-                   functions: NonEmptyVector[LocalFunction],
+                   functions: NonEmptyVector[UserFunction],
                    returnType: Byte) {
-  def mainFunction: LocalFunction = functions.head
+  def mainFunction: UserFunction = functions.head
 }
 
-case class LocalFunction(varSpaceSignature: VarSpaceSignature,
-                         frameSignature: FrameSignature,
-                         instructions: ArraySeq[Int])
+case class UserFunction(varSpaceSignature: VarSpaceSignature,
+                        frameSignature: FrameSignature,
+                        instructions: ArraySeq[Int]) {
+  def getInstructionOrOperand(address: Int): Int =
+    instructions(address)
+}

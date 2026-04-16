@@ -1,4 +1,4 @@
 package software.kes.scaletta.builtins
 
 final class Universe private(val symbolTable: FunctionSymbolTable,
-                             val dispatchTable: FunctionDispatchTable)
+                             val dispatchTable: NativeFunctionTable)
