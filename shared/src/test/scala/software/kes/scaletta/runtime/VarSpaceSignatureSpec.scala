@@ -116,5 +116,18 @@ class VarSpaceSignatureSpec extends AnyFunSpec with Matchers {
       val expected = VarAddress.encode(BasicTypes.Int, 0)
       sig.slot(0) shouldBe expected
     }
+
+    it("should store the first frame signature") {
+      val f1 = FrameSignature.of(CoreTypes.IntT, CoreTypes.StringT)
+      val f2 = FrameSignature.of(CoreTypes.DoubleT)
+      val sig = VarSpaceSignature.of(f1, f2)
+
+      sig.frameSignature shouldBe f1
+    }
+
+    it("should use FrameSignature.empty when no frames are provided") {
+      val sig = VarSpaceSignature.fromSeq(Nil)
+      sig.frameSignature shouldBe FrameSignature.empty
+    }
   }
 }

@@ -12,8 +12,12 @@ object VarSpaceSignature {
     val size = frames.foldLeft(0) {
       case (acc, frame) => acc + frame.slotCount
     }
-    if (size < 1) empty
-    else {
+
+    val firstFrame = frames.headOption.getOrElse(FrameSignature.empty)
+
+    if (size < 1) {
+      new VarSpaceSignature(ArraySeq.empty, FrameSignature.empty)
+    } else {
       val out = new Array[VarAddress.Encoded](size)
       val occ = Array.fill[Int](BasicTypes.MaxValue + 1)(0)
       var i = 0
@@ -25,16 +29,16 @@ object VarSpaceSignature {
           out(i) = VarAddress.encode(t, occCount)
           i += 1
         }
-
       }
-      new VarSpaceSignature(ArraySeq.unsafeWrapArray(out))
+      new VarSpaceSignature(ArraySeq.unsafeWrapArray(out), firstFrame)
     }
   }
 
-  val empty: VarSpaceSignature = new VarSpaceSignature(ArraySeq.empty)
+  val empty: VarSpaceSignature = new VarSpaceSignature(ArraySeq.empty, FrameSignature.empty)
 }
 
-final class VarSpaceSignature private(val slots: ArraySeq[VarAddress.Encoded]) {
+final class VarSpaceSignature private(val slots: ArraySeq[VarAddress.Encoded],
+                                      val frameSignature: FrameSignature) {
   def slotCount: Int = slots.length
 
   def slot(index: Int): VarAddress.Encoded = slots(index)
