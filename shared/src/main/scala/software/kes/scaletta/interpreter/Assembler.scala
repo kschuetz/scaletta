@@ -1,16 +1,24 @@
 package software.kes.scaletta.interpreter
 
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.interpreter.Assembler.BranchTarget
+import software.kes.scaletta.util.stack.IntStack
 
 object Assembler {
-  trait BranchTarget {
-    def set(address: Int): Unit
+  trait Label {
+
+    /**
+     * Binds this label to the current address in the Assembler.
+     * Any previous forward branches to this label will be patched.
+     * Any subsequent branches to this label will use this address immediately.
+     */
+    def bind(): Unit
   }
+
 }
 
-final class Assembler(writer: OpcodeWriter,
-                      interner: ConstantInterner) {
+final class Assembler(private val writer: OpcodeWriter,
+                      private val interner: ConstantInterner) {
+  def label(): Assembler.Label = new LabelImpl()
 
   def nop(): Unit =
     writer.writeAndAdvance(Opcodes.Nop)
@@ -175,14 +183,26 @@ final class Assembler(writer: OpcodeWriter,
   def storeNull(varIndex: Int): Unit =
     store(BasicTypes.Object, varIndex, 0)
 
-  def branch(offset: Int = 0): BranchTarget =
-    makeBranch(Opcodes.Branch, offset)
+  def branch(label: Assembler.Label): Unit =
+    emitBranch(Opcodes.Branch, label)
 
-  def branchIf(offset: Int = 0): BranchTarget =
-    makeBranch(Opcodes.BranchIf, offset)
+  def branchIf(label: Assembler.Label): Unit =
+    emitBranch(Opcodes.BranchIf, label)
 
-  def branchIfNot(offset: Int = 0): BranchTarget =
-    makeBranch(Opcodes.BranchIfNot, offset)
+  def branchIfNot(label: Assembler.Label): Unit =
+    emitBranch(Opcodes.BranchIfNot, label)
+
+  private def emitBranch(baseInstruction: Int, label: Assembler.Label): Unit = {
+    val impl = label.asInstanceOf[LabelImpl]
+    if (impl.isBound) {
+      val offset = impl.address - writer.currentAddress - 1
+      writer.writeAndAdvance(encodeBranch(baseInstruction, offset))
+    } else {
+      val site = writer.currentAddress
+      impl.addPatchSite(site)
+      writer.writeAndAdvance(encodeBranch(baseInstruction, 0))
+    }
+  }
 
   private def pushConst(typ: Byte, value: Short): Unit = {
     val opcode = makeOpcode(Opcodes.PushConst, typ, value)
@@ -276,17 +296,33 @@ final class Assembler(writer: OpcodeWriter,
   private def makeOpcode(instruction: Int, typ: Byte, varIndex: Byte, value: Byte): Int =
     (instruction << 24) | ((typ & 0xFF) << 16) | (varIndex << 8) | value
 
-  private def makeBranch(baseInstruction: Int,
-                         offset: Int = 0): BranchTarget = {
-    val sourceAddress = writer.currentAddress
-    writer.writeAndAdvance(encodeBranch(baseInstruction, offset))
-    (targetAddress: Int) => {
-      val instruction = encodeBranch(baseInstruction, targetAddress - sourceAddress - 1)
-      writer.write(sourceAddress, instruction)
-    }
-  }
-
   private def encodeBranch(baseInstruction: Int, offset: Int): Int =
     (baseInstruction << 24) | (offset & 0xFFFFFF)
+
+  private class LabelImpl extends Assembler.Label {
+    private var boundAddress: Option[Int] = None
+    private val patchSites = IntStack.create()
+
+    def isBound: Boolean = boundAddress.isDefined
+
+    def address: Int = boundAddress.getOrElse(0)
+
+    def bind(): Unit = {
+      if (boundAddress.isDefined) {
+        throw new IllegalStateException("Label is already bound")
+      }
+      val target = writer.currentAddress
+      boundAddress = Some(target)
+      while (!patchSites.isEmpty) {
+        val site = patchSites.pop()
+        val offset = target - site - 1
+        writer.write(site, offset, 0xFFFFFF)
+      }
+    }
+
+    def addPatchSite(address: Int): Unit = {
+      patchSites.push(address)
+    }
+  }
 
 }

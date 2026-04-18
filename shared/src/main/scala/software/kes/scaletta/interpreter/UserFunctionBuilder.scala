@@ -17,11 +17,15 @@ final class UserFunctionBuilder private(private val signature: VarSpaceSignature
 
   def currentAddress: Int = writePtr
 
-  def write(address: Int, data: Int): Unit = {
+  def write(address: Int, data: Int, mask: Int = 0xFFFFFFFF): Unit = {
     if (address < 0 || address >= writePtr) {
       throw new IndexOutOfBoundsException(s"Address $address is out of bounds (0 to ${writePtr - 1})")
     }
-    buffer(address) = data
+    if (mask == 0xFFFFFFFF) {
+      buffer(address) = data
+    } else {
+      buffer(address) = (buffer(address) & ~mask) | (data & mask)
+    }
   }
 
   def writeAndAdvance(opcodeOrOperand: Int): Unit = {

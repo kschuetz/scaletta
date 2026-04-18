@@ -63,5 +63,14 @@ class UserFunctionBuilderSpec extends AnyFunSpec with Matchers {
         func.instructions(i) shouldBe i
       }
     }
+
+    it("should support bitmasking in write") {
+      val sig = VarSpaceSignature.empty
+      val builder = UserFunctionBuilder.create(sig)
+      builder.writeAndAdvance(0x12345678)
+      builder.write(0, 0x0000ABCD, 0x0000FFFF)
+      val func = builder.build()
+      func.instructions(0) shouldBe 0x1234ABCD
+    }
   }
 }
