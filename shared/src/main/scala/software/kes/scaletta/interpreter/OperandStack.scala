@@ -107,16 +107,43 @@ final class OperandStack(private[interpreter] val control: ByteStack,
 
   def pop(): Any = {
     val basicType = control.pop()
-    basicType match {
-      case BasicTypes.Object => objects.pop()
-      case BasicTypes.Boolean => booleans.pop()
-      case BasicTypes.Int => ints.pop()
-      case BasicTypes.Long => longs.pop()
-      case BasicTypes.Short => shorts.pop()
-      case BasicTypes.Byte => bytes.pop()
-      case BasicTypes.Char => chars.pop()
-      case BasicTypes.Double => doubles.pop()
-      case BasicTypes.Float => floats.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Object =>
+        val value = objects.unsafeRead(0)
+        objects.contract(1)
+        value
+      case BasicTypes.Boolean =>
+        val value = booleans.unsafeRead(0)
+        booleans.contract(1)
+        value
+      case BasicTypes.Int =>
+        val value = ints.unsafeRead(0)
+        ints.contract(1)
+        value
+      case BasicTypes.Long =>
+        val value = longs.unsafeRead(0)
+        longs.contract(1)
+        value
+      case BasicTypes.Short =>
+        val value = shorts.unsafeRead(0)
+        shorts.contract(1)
+        value
+      case BasicTypes.Byte =>
+        val value = bytes.unsafeRead(0)
+        bytes.contract(1)
+        value
+      case BasicTypes.Char =>
+        val value = chars.unsafeRead(0)
+        chars.contract(1)
+        value
+      case BasicTypes.Double =>
+        val value = doubles.unsafeRead(0)
+        doubles.contract(1)
+        value
+      case BasicTypes.Float =>
+        val value = floats.unsafeRead(0)
+        floats.contract(1)
+        value
       case _ => throw new IllegalStateException(s"Unknown type: $basicType")
     }
   }
@@ -126,16 +153,43 @@ final class OperandStack(private[interpreter] val control: ByteStack,
    */
   def popCondition(): Boolean = {
     val basicType = control.pop()
-    basicType match {
-      case BasicTypes.Object => objects.pop() != null
-      case BasicTypes.Boolean => booleans.pop()
-      case BasicTypes.Int => ints.pop() != 0
-      case BasicTypes.Long => longs.pop() != 0L
-      case BasicTypes.Short => shorts.pop() != 0.toShort
-      case BasicTypes.Byte => bytes.pop() != 0.toByte
-      case BasicTypes.Char => chars.pop() != 0
-      case BasicTypes.Double => doubles.pop() != 0d
-      case BasicTypes.Float => floats.pop() != 0f
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Object =>
+        val value = objects.unsafeRead(0)
+        objects.contract(1)
+        value != null
+      case BasicTypes.Boolean =>
+        val value = booleans.unsafeRead(0)
+        booleans.contract(1)
+        value
+      case BasicTypes.Int =>
+        val value = ints.unsafeRead(0)
+        ints.contract(1)
+        value != 0
+      case BasicTypes.Long =>
+        val value = longs.unsafeRead(0)
+        longs.contract(1)
+        value != 0L
+      case BasicTypes.Short =>
+        val value = shorts.unsafeRead(0)
+        shorts.contract(1)
+        value != 0
+      case BasicTypes.Byte =>
+        val value = bytes.unsafeRead(0)
+        bytes.contract(1)
+        value != 0
+      case BasicTypes.Char =>
+        val value = chars.unsafeRead(0)
+        chars.contract(1)
+        value != 0
+      case BasicTypes.Double =>
+        val value = doubles.unsafeRead(0)
+        doubles.contract(1)
+        value != 0d
+      case BasicTypes.Float =>
+        val value = floats.unsafeRead(0)
+        floats.contract(1)
+        value != 0f
       case _ => throw new IllegalStateException(s"Unknown type: $basicType")
     }
   }
