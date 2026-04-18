@@ -18,7 +18,6 @@ object Assembler {
 
 final class Assembler(private val writer: OpcodeWriter,
                       private val interner: ConstantInterner) {
-  def label(): Assembler.Label = new LabelImpl()
 
   def nop(): Unit =
     writer.writeAndAdvance(Opcodes.Nop)
@@ -191,6 +190,30 @@ final class Assembler(private val writer: OpcodeWriter,
 
   def branchIfNot(label: Assembler.Label): Unit =
     emitBranch(Opcodes.BranchIfNot, label)
+
+  def label(): Assembler.Label = new LabelImpl()
+
+  /**
+   * Creates a new label and immediately binds it to the current address.
+   * This is primarily used for backward branches (loops).
+   *
+   * @return A label bound to the current address.
+   */
+  def mark(): Assembler.Label = {
+    val l = label()
+    l.bind()
+    l
+  }
+
+  /**
+   * Performs an unconditional branch to the specified label.
+   * This is a semantic alias for `branch(label)`, intended for loops.
+   *
+   * @param label The target label to jump back to.
+   */
+  def loop(label: Assembler.Label): Unit = {
+    branch(label)
+  }
 
   def ifTrue(body: => Unit): Unit = {
     val exitLabel = label()

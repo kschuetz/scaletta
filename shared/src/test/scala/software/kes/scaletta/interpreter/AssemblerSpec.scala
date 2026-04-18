@@ -71,6 +71,29 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
           }
         }
       }
+
+      it("should correctly handle loops with mark and loop") {
+        withEnvironment(defaultSignature) { env =>
+          import env._
+
+          // address 0: mark the start
+          val loopStart = assembler.mark()
+
+          // address 0: some body instruction
+          assembler.nop()
+
+          // address 1: loop back to start
+          assembler.loop(loopStart)
+
+          val func = userFunctionBuilder.build()
+
+          // Offset for instruction at address 1:
+          // target(0) - site(1) - 1 = -2
+          // -2 in 24-bit (two's complement) is 0xFFFFFE
+          val expectedInstruction = (Opcodes.Branch << 24) | 0xFFFFFE
+          func.instructions(1) shouldBe expectedInstruction
+        }
+      }
     }
 
     describe("Block-based DSL") {
