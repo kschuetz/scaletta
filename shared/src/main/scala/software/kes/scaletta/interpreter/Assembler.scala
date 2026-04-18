@@ -192,6 +192,25 @@ final class Assembler(private val writer: OpcodeWriter,
   def branchIfNot(label: Assembler.Label): Unit =
     emitBranch(Opcodes.BranchIfNot, label)
 
+  def ifTrue(body: => Unit): Unit = {
+    val exitLabel = label()
+    branchIfNot(exitLabel)
+    body
+    exitLabel.bind()
+  }
+
+  def ifElse(onTrue: => Unit,
+             onFalse: => Unit): Unit = {
+    val elseLabel = label()
+    val exitLabel = label()
+    branchIfNot(elseLabel)
+    onTrue
+    branch(exitLabel)
+    elseLabel.bind()
+    onFalse
+    exitLabel.bind()
+  }
+
   private def emitBranch(baseInstruction: Int, label: Assembler.Label): Unit = {
     val impl = label.asInstanceOf[LabelImpl]
     if (impl.isBound) {

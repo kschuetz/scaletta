@@ -2,6 +2,7 @@ package software.kes.scaletta.interpreter
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.runtime.VarSpaceSignature
 
 class AssemblerSpec extends AnyFunSpec with Matchers {
@@ -68,6 +69,57 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
           an[IllegalStateException] should be thrownBy {
             label.bind()
           }
+        }
+      }
+    }
+
+    describe("Block-based DSL") {
+      it("should correctly assemble ifTrue") {
+        withEnvironment(defaultSignature) { env =>
+          import env._
+          assembler.ifTrue {
+            assembler.nop()
+          }
+
+          val func = userFunctionBuilder.build()
+          // site 0: branchIfNot (12) to site 2 (after nop)
+          // address 0: branchIfNot, offset = 2 - 0 - 1 = 1
+          // address 1: nop
+          // address 2: (bound here)
+          func.instructions(0) shouldBe ((Opcodes.BranchIfNot << 24) | 1)
+          func.instructions(1) shouldBe Opcodes.Nop
+        }
+      }
+
+      it("should correctly assemble ifElse") {
+        withEnvironment(defaultSignature) { env =>
+          import env._
+          assembler.ifElse(
+            onTrue = {
+              assembler.pushImmediateInt(41)
+            },
+            onFalse = {
+              assembler.pushImmediateInt(43)
+            }
+          )
+
+          val func = userFunctionBuilder.build()
+          // address 0: branchIfNot to elseLabel
+          // address 1: pushImmediateInt(41) (PushConst, type Int, value 41)
+          // address 2: branch to exitLabel
+          // elseLabel bound here (address 3)
+          // address 3: pushImmediateInt(43) (PushConst, type Int, value 43)
+          // exitLabel bound here (address 4)
+
+          // 0: branchIfNot, offset = 3 - 0 - 1 = 2
+          func.instructions(0) shouldBe ((Opcodes.BranchIfNot << 24) | 2)
+          // 1: pushConst Int 41
+          // pushConst is 1, Int is 2
+          func.instructions(1) shouldBe ((Opcodes.PushConst << 24) | (BasicTypes.Int << 16) | 41)
+          // 2: branch, offset = 4 - 2 - 1 = 1
+          func.instructions(2) shouldBe ((Opcodes.Branch << 24) | 1)
+          // 3: pushConst Int 43
+          func.instructions(3) shouldBe ((Opcodes.PushConst << 24) | (BasicTypes.Int << 16) | 43)
         }
       }
     }
