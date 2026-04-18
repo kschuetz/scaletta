@@ -147,5 +147,65 @@ class OperandStackSpec extends AnyFunSpec with Matchers {
 
       stack.isEmpty shouldBe true
     }
+
+    it("should correctly evaluate conditions with popCondition") {
+      val stack = OperandStack.create()
+
+      // Objects
+      stack.pushObject(null)
+      stack.popCondition() shouldBe false
+      stack.pushObject("not null")
+      stack.popCondition() shouldBe true
+
+      // Booleans
+      stack.pushBoolean(false)
+      stack.popCondition() shouldBe false
+      stack.pushBoolean(true)
+      stack.popCondition() shouldBe true
+
+      // Integers
+      stack.pushInt(0)
+      stack.popCondition() shouldBe false
+      stack.pushInt(41)
+      stack.popCondition() shouldBe true
+
+      // Longs
+      stack.pushLong(0L)
+      stack.popCondition() shouldBe false
+      stack.pushLong(43L)
+      stack.popCondition() shouldBe true
+
+      // Shorts
+      stack.pushShort(0.toShort)
+      stack.popCondition() shouldBe false
+      stack.pushShort(41.toShort)
+      stack.popCondition() shouldBe true
+
+      // Bytes
+      stack.pushByte(0.toByte)
+      stack.popCondition() shouldBe false
+      stack.pushByte(43.toByte)
+      stack.popCondition() shouldBe true
+
+      // Chars
+      stack.pushChar(0.toChar)
+      stack.popCondition() shouldBe false
+      stack.pushChar('A')
+      stack.popCondition() shouldBe true
+
+      // Doubles
+      stack.pushDouble(0.0)
+      stack.popCondition() shouldBe false
+      stack.pushDouble(41.5)
+      stack.popCondition() shouldBe true
+
+      // Floats
+      stack.pushFloat(0.0f)
+      stack.popCondition() shouldBe false
+      stack.pushFloat(43.5f)
+      stack.popCondition() shouldBe true
+
+      stack.isEmpty shouldBe true
+    }
   }
 }

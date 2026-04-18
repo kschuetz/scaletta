@@ -121,6 +121,25 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     }
   }
 
+  /**
+   * Pops the value at the top of the stack (regardless of type), and returns true if the value is "truthy".
+   */
+  def popCondition(): Boolean = {
+    val basicType = control.pop()
+    basicType match {
+      case BasicTypes.Object => objects.pop() != null
+      case BasicTypes.Boolean => booleans.pop()
+      case BasicTypes.Int => ints.pop() != 0
+      case BasicTypes.Long => longs.pop() != 0L
+      case BasicTypes.Short => shorts.pop() != 0.toShort
+      case BasicTypes.Byte => bytes.pop() != 0.toByte
+      case BasicTypes.Char => chars.pop() != 0
+      case BasicTypes.Double => doubles.pop() != 0d
+      case BasicTypes.Float => floats.pop() != 0f
+      case _ => throw new IllegalStateException(s"Unknown type: $basicType")
+    }
+  }
+
   def unsafePopObject(): AnyRef = {
     control.pop()
     objects.pop()
