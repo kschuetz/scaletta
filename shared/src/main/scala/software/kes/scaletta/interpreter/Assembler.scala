@@ -1,5 +1,6 @@
 package software.kes.scaletta.interpreter
 
+import software.kes.scaletta.builtins.NativeFunctionId
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.util.stack.IntStack
 
@@ -191,6 +192,18 @@ final class Assembler(private val writer: OpcodeWriter,
   def branchIfNot(label: Assembler.Label): Unit =
     emitBranch(Opcodes.BranchIfNot, label)
 
+  def dup(): Unit =
+    writer.writeAndAdvance(makeOpcode(Opcodes.Dup, 0, 0))
+
+  def swap(): Unit =
+    writer.writeAndAdvance(makeOpcode(Opcodes.Swap, 0, 0))
+
+  def callNative(nativeFunctionId: NativeFunctionId): Unit =
+    writer.writeAndAdvance(makeOpcode24(Opcodes.CallNative, nativeFunctionId.value))
+
+  def callLocal(userFunctionIndex: Int): Unit =
+    writer.writeAndAdvance(makeOpcode24(Opcodes.CallLocal, userFunctionIndex))
+
   def label(): Assembler.Label = new LabelImpl()
 
   /**
@@ -338,8 +351,11 @@ final class Assembler(private val writer: OpcodeWriter,
   private def makeOpcode(instruction: Int, typ: Byte, varIndex: Byte, value: Byte): Int =
     (instruction << 24) | ((typ & 0xFF) << 16) | (varIndex << 8) | value
 
+  private def makeOpcode24(baseInstruction: Int, operand: Int): Int =
+    (baseInstruction << 24) | (operand & 0xFFFFFF)
+
   private def encodeBranch(baseInstruction: Int, offset: Int): Int =
-    (baseInstruction << 24) | (offset & 0xFFFFFF)
+    makeOpcode24(baseInstruction, offset)
 
   private class LabelImpl extends Assembler.Label {
     private var boundAddress: Option[Int] = None

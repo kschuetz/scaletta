@@ -5,5 +5,5 @@ object NativeFunctionId {
 }
 
 final class NativeFunctionId(val value: Int) extends AnyVal {
-  override def toString = s"FunctionId($value)"
+  override def toString = s"NativeFunctionId($value)"
 }

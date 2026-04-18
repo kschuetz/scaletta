@@ -15,9 +15,10 @@ object Opcodes {
   final val BranchIf = 11
   final val BranchIfNot = 12
   final val Dup = 13
-  final val CallNative = 14
-  final val CallLocal = 15
-  final val Return = 16
-  final val Pop = 17
-  final val PopWide = 18
+  final val Swap = 14
+  final val CallNative = 15
+  final val CallLocal = 16
+  final val Return = 17
+  final val Pop = 18
+  final val PopWide = 19
 }
