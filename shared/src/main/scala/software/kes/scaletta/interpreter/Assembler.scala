@@ -183,14 +183,37 @@ final class Assembler(private val writer: OpcodeWriter,
   def storeNull(varIndex: Int): Unit =
     store(BasicTypes.Object, varIndex, 0)
 
+  /**
+   * Unconditionally branches to the specified label.
+   */
   def branch(label: Assembler.Label): Unit =
     emitBranch(Opcodes.Branch, label)
 
+  /**
+   * Value on the top of the operand stack is popped. If it was truthy, the branch is taken.
+   */
   def branchIf(label: Assembler.Label): Unit =
     emitBranch(Opcodes.BranchIf, label)
 
+  /**
+   * Value on the top of the operand stack is popped. If it was not truthy, the branch is taken.
+   */
   def branchUnless(label: Assembler.Label): Unit =
     emitBranch(Opcodes.BranchUnless, label)
+
+  /**
+   * Peeks the value at the top of the operand stack. If truthy, the branch is taken, and the
+   * stack is unchanged. If not truthy, the value on the stack is popped.
+   */
+  def logicalAnd(label: Assembler.Label): Unit =
+    emitBranch(Opcodes.LogicalAnd, label)
+
+  /**
+   * Peeks the value at the top of the operand stack. If not truthy, the branch is taken, and the
+   * stack is unchanged. If truthy, the value on the stack is popped.
+   */
+  def logicalOr(label: Assembler.Label): Unit =
+    emitBranch(Opcodes.LogicalOr, label)
 
   def dup(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Dup, 0, 0))

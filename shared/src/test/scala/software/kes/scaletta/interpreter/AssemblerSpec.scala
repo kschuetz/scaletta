@@ -61,6 +61,23 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
         }
       }
 
+      it("should handle logicalAnd and logicalOr") {
+        withEnvironment(defaultSignature) { env =>
+          import env._
+          val label = assembler.label()
+          assembler.logicalAnd(label) // site 0
+          assembler.logicalOr(label) // site 1
+          label.bind() // address 2
+
+          val func = userFunctionBuilder.build()
+
+          // site 0: 2 - 0 - 1 = 1
+          func.instructions(0) shouldBe ((Opcodes.LogicalAnd << 24) | 1)
+          // site 1: 2 - 1 - 1 = 0
+          func.instructions(1) shouldBe ((Opcodes.LogicalOr << 24) | 0)
+        }
+      }
+
       it("should throw IllegalStateException when binding a label twice") {
         withEnvironment(defaultSignature) { env =>
           import env._
