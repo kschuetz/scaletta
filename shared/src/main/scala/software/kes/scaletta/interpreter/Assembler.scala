@@ -189,8 +189,8 @@ final class Assembler(private val writer: OpcodeWriter,
   def branchIf(label: Assembler.Label): Unit =
     emitBranch(Opcodes.BranchIf, label)
 
-  def branchIfNot(label: Assembler.Label): Unit =
-    emitBranch(Opcodes.BranchIfNot, label)
+  def branchUnless(label: Assembler.Label): Unit =
+    emitBranch(Opcodes.BranchUnless, label)
 
   def dup(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Dup, 0, 0))
@@ -230,7 +230,7 @@ final class Assembler(private val writer: OpcodeWriter,
 
   def ifTrue(body: => Unit): Unit = {
     val exitLabel = label()
-    branchIfNot(exitLabel)
+    branchUnless(exitLabel)
     body
     exitLabel.bind()
   }
@@ -239,7 +239,7 @@ final class Assembler(private val writer: OpcodeWriter,
              onFalse: => Unit): Unit = {
     val elseLabel = label()
     val exitLabel = label()
-    branchIfNot(elseLabel)
+    branchUnless(elseLabel)
     onTrue
     branch(exitLabel)
     elseLabel.bind()

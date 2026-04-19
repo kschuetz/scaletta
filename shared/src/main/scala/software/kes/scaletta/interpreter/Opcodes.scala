@@ -13,7 +13,7 @@ object Opcodes {
   final val PopIntoVarWide = 9
   final val Branch = 10
   final val BranchIf = 11
-  final val BranchIfNot = 12
+  final val BranchUnless = 12
   final val Dup = 13
   final val Swap = 14
   final val CallNative = 15

@@ -49,7 +49,7 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
           import env._
           val label = assembler.label()
           assembler.branchIf(label) // site 0
-          assembler.branchIfNot(label) // site 1
+          assembler.branchUnless(label) // site 1
           label.bind() // address 2
 
           val func = userFunctionBuilder.build()
@@ -57,7 +57,7 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
           // site 0: 2 - 0 - 1 = 1
           func.instructions(0) shouldBe ((Opcodes.BranchIf << 24) | 1)
           // site 1: 2 - 1 - 1 = 0
-          func.instructions(1) shouldBe ((Opcodes.BranchIfNot << 24) | 0)
+          func.instructions(1) shouldBe ((Opcodes.BranchUnless << 24) | 0)
         }
       }
 
@@ -105,11 +105,11 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
           }
 
           val func = userFunctionBuilder.build()
-          // site 0: branchIfNot (12) to site 2 (after nop)
-          // address 0: branchIfNot, offset = 2 - 0 - 1 = 1
+          // site 0: branchUnless (12) to site 2 (after nop)
+          // address 0: branchUnless, offset = 2 - 0 - 1 = 1
           // address 1: nop
           // address 2: (bound here)
-          func.instructions(0) shouldBe ((Opcodes.BranchIfNot << 24) | 1)
+          func.instructions(0) shouldBe ((Opcodes.BranchUnless << 24) | 1)
           func.instructions(1) shouldBe Opcodes.Nop
         }
       }
@@ -127,15 +127,15 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
           )
 
           val func = userFunctionBuilder.build()
-          // address 0: branchIfNot to elseLabel
+          // address 0: branchUnless to elseLabel
           // address 1: pushImmediateInt(41) (PushConst, type Int, value 41)
           // address 2: branch to exitLabel
           // elseLabel bound here (address 3)
           // address 3: pushImmediateInt(43) (PushConst, type Int, value 43)
           // exitLabel bound here (address 4)
 
-          // 0: branchIfNot, offset = 3 - 0 - 1 = 2
-          func.instructions(0) shouldBe ((Opcodes.BranchIfNot << 24) | 2)
+          // 0: branchUnless, offset = 3 - 0 - 1 = 2
+          func.instructions(0) shouldBe ((Opcodes.BranchUnless << 24) | 2)
           // 1: pushConst Int 41
           // pushConst is 1, Int is 2
           func.instructions(1) shouldBe ((Opcodes.PushConst << 24) | (BasicTypes.Int << 16) | 41)
