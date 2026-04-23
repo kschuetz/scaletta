@@ -1,8 +1,8 @@
 package software.kes.scaletta.library.standard
 
-import software.kes.scaletta.api.{ArgumentReader, MethodRegistry}
+import software.kes.scaletta.api.{ArgumentReader, MethodName, MethodRegistry}
+import software.kes.scaletta.builtins.FormalParameter
 import software.kes.scaletta.builtins.FunctionImpl.{doubleResult, floatResult, intResult, longResult}
-import software.kes.scaletta.builtins.{FormalParameter, ParameterGroup}
 import software.kes.scaletta.runtime.CoreTypes
 import software.kes.scaletta.runtime.CoreTypes._
 import software.kes.scaletta.symbols.Name
@@ -111,61 +111,72 @@ object ArithmeticOps {
     def shortShort(args: ArgumentReader): Int
 
     def register(registry: MethodRegistry): Unit = {
-      registry.addPureMethod(IntT, name, rhsInt, IntT, intResult(intInt))
-      registry.addPureMethod(IntT, name, rhsLong, LongT, longResult(intLong))
-      registry.addPureMethod(IntT, name, rhsShort, IntT, intResult(intShort))
-      registry.addPureMethod(IntT, name, rhsByte, IntT, intResult(intByte))
-      registry.addPureMethod(IntT, name, rhsChar, IntT, intResult(intChar))
-      registry.addPureMethod(IntT, name, rhsDouble, DoubleT, doubleResult(intDouble))
-      registry.addPureMethod(IntT, name, rhsFloat, FloatT, floatResult(intFloat))
+      registry.pushSettings(_.withPureHint(true))
 
-      registry.addPureMethod(LongT, name, rhsInt, LongT, longResult(longInt))
-      registry.addPureMethod(LongT, name, rhsLong, LongT, longResult(longLong))
-      registry.addPureMethod(LongT, name, rhsShort, LongT, longResult(longShort))
-      registry.addPureMethod(LongT, name, rhsByte, LongT, longResult(longByte))
-      registry.addPureMethod(LongT, name, rhsChar, LongT, longResult(longChar))
-      registry.addPureMethod(LongT, name, rhsDouble, DoubleT, doubleResult(longDouble))
-      registry.addPureMethod(LongT, name, rhsFloat, FloatT, floatResult(longFloat))
+      var overloads = registry.overloadRegistryFor(MethodName(IntT, name))
+      overloads.addOverload(rhsInt, IntT, intResult(intInt))
+      overloads.addOverload(rhsLong, LongT, longResult(intLong))
+      overloads.addOverload(rhsShort, IntT, intResult(intShort))
+      overloads.addOverload(rhsByte, IntT, intResult(intByte))
+      overloads.addOverload(rhsChar, IntT, intResult(intChar))
+      overloads.addOverload(rhsDouble, DoubleT, doubleResult(intDouble))
+      overloads.addOverload(rhsFloat, FloatT, floatResult(intFloat))
 
-      registry.addPureMethod(ShortT, name, rhsInt, IntT, longResult(shortInt))
-      registry.addPureMethod(ShortT, name, rhsLong, LongT, longResult(shortLong))
-      registry.addPureMethod(ShortT, name, rhsShort, IntT, intResult(shortShort))
-      registry.addPureMethod(ShortT, name, rhsByte, IntT, intResult(shortByte))
-      registry.addPureMethod(ShortT, name, rhsChar, IntT, intResult(shortChar))
-      registry.addPureMethod(ShortT, name, rhsDouble, DoubleT, doubleResult(shortDouble))
-      registry.addPureMethod(ShortT, name, rhsFloat, FloatT, floatResult(shortFloat))
+      overloads = registry.overloadRegistryFor(MethodName(LongT, name))
+      overloads.addOverload(rhsInt, LongT, longResult(longInt))
+      overloads.addOverload(rhsLong, LongT, longResult(longLong))
+      overloads.addOverload(rhsShort, LongT, longResult(longShort))
+      overloads.addOverload(rhsByte, LongT, longResult(longByte))
+      overloads.addOverload(rhsChar, LongT, longResult(longChar))
+      overloads.addOverload(rhsDouble, DoubleT, doubleResult(longDouble))
+      overloads.addOverload(rhsFloat, FloatT, floatResult(longFloat))
 
-      registry.addPureMethod(ByteT, name, rhsInt, IntT, longResult(byteInt))
-      registry.addPureMethod(ByteT, name, rhsLong, LongT, longResult(byteLong))
-      registry.addPureMethod(ByteT, name, rhsShort, IntT, intResult(byteShort))
-      registry.addPureMethod(ByteT, name, rhsByte, IntT, intResult(byteByte))
-      registry.addPureMethod(ByteT, name, rhsChar, IntT, intResult(byteChar))
-      registry.addPureMethod(ByteT, name, rhsDouble, DoubleT, doubleResult(byteDouble))
-      registry.addPureMethod(ByteT, name, rhsFloat, FloatT, floatResult(byteFloat))
+      overloads = registry.overloadRegistryFor(MethodName(ShortT, name))
+      overloads.addOverload(rhsInt, IntT, longResult(shortInt))
+      overloads.addOverload(rhsLong, LongT, longResult(shortLong))
+      overloads.addOverload(rhsShort, IntT, intResult(shortShort))
+      overloads.addOverload(rhsByte, IntT, intResult(shortByte))
+      overloads.addOverload(rhsChar, IntT, intResult(shortChar))
+      overloads.addOverload(rhsDouble, DoubleT, doubleResult(shortDouble))
+      overloads.addOverload(rhsFloat, FloatT, floatResult(shortFloat))
 
-      registry.addPureMethod(CharT, name, rhsInt, IntT, intResult(charInt))
-      registry.addPureMethod(CharT, name, rhsLong, LongT, longResult(charLong))
-      registry.addPureMethod(CharT, name, rhsShort, IntT, intResult(charShort))
-      registry.addPureMethod(CharT, name, rhsByte, IntT, intResult(charByte))
-      registry.addPureMethod(CharT, name, rhsChar, IntT, intResult(charChar))
-      registry.addPureMethod(CharT, name, rhsDouble, DoubleT, doubleResult(charDouble))
-      registry.addPureMethod(CharT, name, rhsFloat, FloatT, floatResult(charFloat))
+      overloads = registry.overloadRegistryFor(MethodName(ByteT, name))
+      overloads.addOverload(rhsInt, IntT, longResult(byteInt))
+      overloads.addOverload(rhsLong, LongT, longResult(byteLong))
+      overloads.addOverload(rhsShort, IntT, intResult(byteShort))
+      overloads.addOverload(rhsByte, IntT, intResult(byteByte))
+      overloads.addOverload(rhsChar, IntT, intResult(byteChar))
+      overloads.addOverload(rhsDouble, DoubleT, doubleResult(byteDouble))
+      overloads.addOverload(rhsFloat, FloatT, floatResult(byteFloat))
 
-      registry.addPureMethod(DoubleT, name, rhsInt, DoubleT, doubleResult(doubleInt))
-      registry.addPureMethod(DoubleT, name, rhsLong, DoubleT, doubleResult(doubleLong))
-      registry.addPureMethod(DoubleT, name, rhsShort, DoubleT, doubleResult(doubleShort))
-      registry.addPureMethod(DoubleT, name, rhsByte, DoubleT, doubleResult(doubleByte))
-      registry.addPureMethod(DoubleT, name, rhsChar, DoubleT, doubleResult(doubleChar))
-      registry.addPureMethod(DoubleT, name, rhsDouble, DoubleT, doubleResult(doubleDouble))
-      registry.addPureMethod(DoubleT, name, rhsFloat, DoubleT, doubleResult(doubleFloat))
+      overloads = registry.overloadRegistryFor(MethodName(ByteT, name))
+      overloads.addOverload(rhsInt, IntT, intResult(charInt))
+      overloads.addOverload(rhsLong, LongT, longResult(charLong))
+      overloads.addOverload(rhsShort, IntT, intResult(charShort))
+      overloads.addOverload(rhsByte, IntT, intResult(charByte))
+      overloads.addOverload(rhsChar, IntT, intResult(charChar))
+      overloads.addOverload(rhsDouble, DoubleT, doubleResult(charDouble))
+      overloads.addOverload(rhsFloat, FloatT, floatResult(charFloat))
 
-      registry.addPureMethod(FloatT, name, rhsInt, FloatT, floatResult(floatInt))
-      registry.addPureMethod(FloatT, name, rhsLong, FloatT, floatResult(floatLong))
-      registry.addPureMethod(FloatT, name, rhsShort, FloatT, floatResult(floatShort))
-      registry.addPureMethod(FloatT, name, rhsByte, FloatT, floatResult(floatByte))
-      registry.addPureMethod(FloatT, name, rhsChar, FloatT, floatResult(floatChar))
-      registry.addPureMethod(FloatT, name, rhsDouble, DoubleT, doubleResult(floatDouble))
-      registry.addPureMethod(FloatT, name, rhsFloat, FloatT, floatResult(floatFloat))
+      overloads = registry.overloadRegistryFor(MethodName(DoubleT, name))
+      overloads.addOverload(rhsInt, DoubleT, doubleResult(doubleInt))
+      overloads.addOverload(rhsLong, DoubleT, doubleResult(doubleLong))
+      overloads.addOverload(rhsShort, DoubleT, doubleResult(doubleShort))
+      overloads.addOverload(rhsByte, DoubleT, doubleResult(doubleByte))
+      overloads.addOverload(rhsChar, DoubleT, doubleResult(doubleChar))
+      overloads.addOverload(rhsDouble, DoubleT, doubleResult(doubleDouble))
+      overloads.addOverload(rhsFloat, DoubleT, doubleResult(doubleFloat))
+
+      overloads = registry.overloadRegistryFor(MethodName(FloatT, name))
+      overloads.addOverload(rhsInt, FloatT, floatResult(floatInt))
+      overloads.addOverload(rhsLong, FloatT, floatResult(floatLong))
+      overloads.addOverload(rhsShort, FloatT, floatResult(floatShort))
+      overloads.addOverload(rhsByte, FloatT, floatResult(floatByte))
+      overloads.addOverload(rhsChar, FloatT, floatResult(floatChar))
+      overloads.addOverload(rhsDouble, DoubleT, doubleResult(floatDouble))
+      overloads.addOverload(rhsFloat, FloatT, floatResult(floatFloat))
+
+      registry.popSettings()
     }
   }
 
@@ -680,11 +691,11 @@ object ArithmeticOps {
   }
 
   private val rhsName = Name("x")
-  private val rhsInt = ParameterGroup.single(FormalParameter(rhsName, IntT))
-  private val rhsLong = ParameterGroup.single(FormalParameter(rhsName, LongT))
-  private val rhsShort = ParameterGroup.single(FormalParameter(rhsName, CoreTypes.ShortT))
-  private val rhsByte = ParameterGroup.single(FormalParameter(rhsName, CoreTypes.ByteT))
-  private val rhsChar = ParameterGroup.single(FormalParameter(rhsName, CoreTypes.CharT))
-  private val rhsDouble = ParameterGroup.single(FormalParameter(rhsName, DoubleT))
-  private val rhsFloat = ParameterGroup.single(FormalParameter(rhsName, FloatT))
+  private val rhsInt = Vector(FormalParameter(rhsName, IntT))
+  private val rhsLong = Vector(FormalParameter(rhsName, LongT))
+  private val rhsShort = Vector(FormalParameter(rhsName, CoreTypes.ShortT))
+  private val rhsByte = Vector(FormalParameter(rhsName, CoreTypes.ByteT))
+  private val rhsChar = Vector(FormalParameter(rhsName, CoreTypes.CharT))
+  private val rhsDouble = Vector(FormalParameter(rhsName, DoubleT))
+  private val rhsFloat = Vector(FormalParameter(rhsName, FloatT))
 }
