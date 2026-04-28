@@ -6,6 +6,7 @@ import software.kes.scaletta.symbols.QualifiedName
 import software.kes.scaletta.types.{Type, TypeConstructor, TypeId, TypeParameter}
 import software.kes.scaletta.util.{NonEmptyVector, SettingsStack}
 
+//noinspection AccessorLikeMethodIsEmptyParen
 object MockRegistry {
   def create(): ScalettaRegistry = new ScalettaRegistry {
     private var nextNativeFunctionId = 1
@@ -76,8 +77,6 @@ object MockRegistry {
       def addRelationship(subtype: TypeConstructor[TypeId], supertypeApplication: Type.Applied[TypeId]): Unit = ()
     }
 
-    val runtimeContextRegistry: RuntimeContextRegistry = new RuntimeContextRegistry {
-      def createRuntimeContextType(): RuntimeContextId = getNextRuntimeContextId()
-    }
+    val runtimeContextRegistry: RuntimeContextRegistry = () => getNextRuntimeContextId()
   }
 }
