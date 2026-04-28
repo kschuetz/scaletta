@@ -29,6 +29,13 @@ object Module {
   def apply[A](fn: ScalettaRegistry => A): Module[A] =
     new Basic(fn)
 
+  val empty: Module[Unit] = pure(())
+
+  /**
+   * Creates a module that registers nothing but yields a constant value.
+   */
+  def pure[A](value: => A): Module[A] = Module { _ => value }
+
   /**
    * Create a module where only methods need to be registered
    */
@@ -42,6 +49,12 @@ object Module {
     Module { registry => fn(registry.typeRegistry) }
 
   /**
+   * Create a module where only runtime contexts need to be registered
+   */
+  def runtimeContextsOnly[A](fn: RuntimeContextRegistry => A): Module[A] =
+    Module { registry => fn(registry.runtimeContextRegistry) }
+
+  /**
    * Create a module consisting of a single ref type
    */
   def refType(name: QualifiedName.Full): Module[Type.Nominal[TypeId]] =
@@ -53,6 +66,34 @@ object Module {
   lazy val newRuntimeContext: Module[RuntimeContextId] =
     Module {
       _.runtimeContextRegistry.createRuntimeContextType()
+    }
+
+  /**
+   * Declares that the underlying module has 'pureHint' set to the specified value
+   * as a default.
+   */
+  def withPureHint[A](value: Boolean)
+                     (underlying: Module[A]): Module[A] =
+    withMethodRegistrySettings(_.withPureHint(value))(underlying)
+
+  /**
+   * Declares that the underlying module requires the specified runtime contexts
+   * as a default.
+   */
+  def requireContexts[A](contexts: RuntimeContextId*)
+                        (underlying: Module[A]): Module[A] =
+    withMethodRegistrySettings(_.requireContexts(contexts: _*))(underlying)
+
+  /**
+   * Updates the default method registry settings for the underlying module
+   */
+  def withMethodRegistrySettings[A](fn: MethodRegistry.Settings => MethodRegistry.Settings)
+                                   (underlying: Module[A]): Module[A] =
+    Module { registry =>
+      registry.methodRegistry.pushSettings(fn)
+      val result = underlying.register(registry)
+      registry.methodRegistry.popSettings()
+      result
     }
 
   def composite(modules: Module[_]*): Module[Unit] =

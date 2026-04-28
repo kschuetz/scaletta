@@ -10,13 +10,15 @@ import software.kes.scaletta.symbols.Name
 object ArithmeticOps {
 
   lazy val module: Module[Unit] =
-    Module.composite(
-      Module.methodsOnly(add.register),
-      Module.methodsOnly(subtract.register),
-      Module.methodsOnly(multiply.register),
-      Module.methodsOnly(divide.register),
-      Module.methodsOnly(modulo.register),
-    )
+    Module.withPureHint(value = true) {
+      Module.composite(
+        Module.methodsOnly(add.register),
+        Module.methodsOnly(subtract.register),
+        Module.methodsOnly(multiply.register),
+        Module.methodsOnly(divide.register),
+        Module.methodsOnly(modulo.register),
+      )
+    }
 
   trait BinaryOp {
     def name: Name
@@ -120,8 +122,6 @@ object ArithmeticOps {
     def shortShort(args: ArgumentReader): Int
 
     def register(registry: MethodRegistry): Unit = {
-      registry.pushSettings(_.withPureHint(true))
-
       var overloads = registry.overloadRegistryFor(MethodName(IntT, name))
       overloads.addOverload(rhsInt, IntT, intResult(intInt))
       overloads.addOverload(rhsLong, LongT, longResult(intLong))
@@ -184,8 +184,6 @@ object ArithmeticOps {
       overloads.addOverload(rhsChar, FloatT, floatResult(floatChar))
       overloads.addOverload(rhsDouble, DoubleT, doubleResult(floatDouble))
       overloads.addOverload(rhsFloat, FloatT, floatResult(floatFloat))
-
-      registry.popSettings()
     }
   }
 
