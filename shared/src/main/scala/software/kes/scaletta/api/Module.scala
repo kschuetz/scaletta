@@ -102,6 +102,9 @@ object Module {
   def fromSeq(modules: Seq[Module[_]]): Module[Unit] =
     new Composite(modules)
 
+  def traverse[A, B](items: Seq[A])(fn: A => Module[B]): Module[Seq[B]] =
+    new Traversed(items, fn)
+
   def combine[A, Result](ma: Module[A])
                         (fn: A => Result): Module[Result] =
     ma.map(fn)
@@ -295,6 +298,15 @@ object Module {
   private class Composite(components: Seq[Module[_]]) extends Module[Unit] {
     def register(registry: ScalettaRegistry): Unit = {
       components.foreach(_.register(registry))
+    }
+  }
+
+  private final class Traversed[A, B](items: Seq[A],
+                                      fn: A => Module[B]) extends Module[Seq[B]] {
+    def register(registry: ScalettaRegistry): Seq[B] = {
+      items.foldLeft(Vector.empty[B]) { (acc, item) =>
+        acc :+ fn(item).register(registry)
+      }
     }
   }
 
