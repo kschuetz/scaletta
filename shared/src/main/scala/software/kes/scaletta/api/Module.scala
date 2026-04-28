@@ -102,6 +102,15 @@ object Module {
   def fromSeq(modules: Seq[Module[_]]): Module[Unit] =
     new Composite(modules)
 
+  def sequence[A](modules: Seq[Module[A]]): Module[Seq[A]] =
+    traverse(modules)(identity)
+
+  def when(condition: Boolean)(module: => Module[Unit]): Module[Unit] =
+    if (condition) module else Module.empty
+
+  def unless(condition: Boolean)(module: => Module[Unit]): Module[Unit] =
+    if (!condition) module else Module.empty
+
   def traverse[A, B](items: Seq[A])(fn: A => Module[B]): Module[Seq[B]] =
     new Traversed(items, fn)
 

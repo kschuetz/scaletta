@@ -53,4 +53,49 @@ class ModuleSpec extends AnyFunSpec with Matchers {
     }
   }
 
+  describe("Module.sequence") {
+    it("should sequence registrations and return a collection of results") {
+      val modules = Seq(Module.pure(41), Module.pure(43), Module.pure(47))
+      val result = Module.sequence(modules).register(mockRegistry)
+      result shouldBe Seq(41, 43, 47)
+    }
+
+    it("should handle an empty sequence") {
+      val result = Module.sequence(Seq.empty[Module[Int]]).register(mockRegistry)
+      result shouldBe Seq.empty
+    }
+  }
+
+  describe("Module.when") {
+    it("should execute the module when the condition is true") {
+      var executed = false
+      val module = Module { _ => executed = true }
+      Module.when(condition = true)(module).register(mockRegistry)
+      executed shouldBe true
+    }
+
+    it("should not execute the module when the condition is false") {
+      var executed = false
+      val module = Module { _ => executed = true }
+      Module.when(condition = false)(module).register(mockRegistry)
+      executed shouldBe false
+    }
+  }
+
+  describe("Module.unless") {
+    it("should execute the module when the condition is false") {
+      var executed = false
+      val module = Module { _ => executed = true }
+      Module.unless(condition = false)(module).register(mockRegistry)
+      executed shouldBe true
+    }
+
+    it("should not execute the module when the condition is true") {
+      var executed = false
+      val module = Module { _ => executed = true }
+      Module.unless(condition = true)(module).register(mockRegistry)
+      executed shouldBe false
+    }
+  }
+
 }
