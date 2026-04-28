@@ -20,6 +20,9 @@ trait Module[A] {
 
   def unit: Module[Unit] =
     Module.mapped[A, Unit](this, _ => ())
+
+  def flatten[B](implicit ev: A <:< Module[B]): Module[B] =
+    flatMap(ev)
 }
 
 object Module {

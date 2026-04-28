@@ -98,4 +98,29 @@ class ModuleSpec extends AnyFunSpec with Matchers {
     }
   }
 
+  describe("Module.flatten") {
+    it("should collapse nested modules") {
+      val nested = Module.pure(Module.pure(41))
+      val flattened = nested.flatten
+      flattened.register(mockRegistry) shouldBe 41
+    }
+
+    it("should execute registrations in both layers") {
+      var count1 = 0
+      var count2 = 0
+      val nested = Module { _ =>
+        count1 += 1
+        Module { _ =>
+          count2 += 1
+          43
+        }
+      }
+      val flattened = nested.flatten
+      val result = flattened.register(mockRegistry)
+      result shouldBe 43
+      count1 shouldBe 1
+      count2 shouldBe 1
+    }
+  }
+
 }
