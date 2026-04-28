@@ -1,6 +1,6 @@
 package software.kes.scaletta.library.standard
 
-import software.kes.scaletta.api.{ArgumentReader, MethodName, MethodRegistry}
+import software.kes.scaletta.api.{ArgumentReader, MethodName, MethodRegistry, Module}
 import software.kes.scaletta.builtins.FormalParameter
 import software.kes.scaletta.builtins.FunctionImpl.{doubleResult, floatResult, intResult, longResult}
 import software.kes.scaletta.runtime.CoreTypes
@@ -8,6 +8,15 @@ import software.kes.scaletta.runtime.CoreTypes._
 import software.kes.scaletta.symbols.Name
 
 object ArithmeticOps {
+
+  lazy val module: Module[Unit] =
+    Module.composite(
+      Module.methodsOnly(add.register),
+      Module.methodsOnly(subtract.register),
+      Module.methodsOnly(multiply.register),
+      Module.methodsOnly(divide.register),
+      Module.methodsOnly(modulo.register),
+    )
 
   trait BinaryOp {
     def name: Name

@@ -1,5 +1,8 @@
 package software.kes.scaletta.api
 
+import software.kes.scaletta.symbols.QualifiedName
+import software.kes.scaletta.types.{Type, TypeId}
+
 trait Module[A] {
   def register(registry: ScalettaRegistry): A
 
@@ -20,8 +23,43 @@ trait Module[A] {
 }
 
 object Module {
+  /**
+   * Create a module where anything can be registered
+   */
   def apply[A](fn: ScalettaRegistry => A): Module[A] =
     new Basic(fn)
+
+  /**
+   * Create a module where only methods need to be registered
+   */
+  def methodsOnly[A](fn: MethodRegistry => A): Module[A] =
+    Module { registry => fn(registry.methodRegistry) }
+
+  /**
+   * Create a module where only types need to be registered
+   */
+  def typesOnly[A](fn: TypeRegistry => A): Module[A] =
+    Module { registry => fn(registry.typeRegistry) }
+
+  /**
+   * Create a module consisting of a single ref type
+   */
+  def refType(name: QualifiedName.Full): Module[Type.Nominal[TypeId]] =
+    Module.typesOnly(_.addRefType(name))
+
+  /**
+   * Create a module that registers a new runtime context type
+   */
+  lazy val newRuntimeContext: Module[RuntimeContextId] =
+    Module {
+      _.runtimeContextRegistry.createRuntimeContextType()
+    }
+
+  def composite(modules: Module[_]*): Module[Unit] =
+    fromSeq(modules)
+
+  def fromSeq(modules: Seq[Module[_]]): Module[Unit] =
+    new Composite(modules)
 
   def combine[A, Result](ma: Module[A])
                         (fn: A => Result): Module[Result] =
@@ -211,6 +249,12 @@ object Module {
                                  fn: A => Module[B]) extends Module[B] {
     def register(registry: ScalettaRegistry): B =
       fn(underlying.register(registry)).register(registry)
+  }
+
+  private class Composite(components: Seq[Module[_]]) extends Module[Unit] {
+    def register(registry: ScalettaRegistry): Unit = {
+      components.foreach(_.register(registry))
+    }
   }
 
   private final class Zipped2[A, B, Result](ma: Module[A],
