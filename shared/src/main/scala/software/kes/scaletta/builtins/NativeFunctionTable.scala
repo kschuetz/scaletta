@@ -4,9 +4,9 @@ import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 
 object NativeFunctionTable {
-  def builder: Builder = new Builder()
+  def builder(): Builder = new Builder()
 
-  final class Builder(private val table: ArrayBuffer[NativeFunction] = ArrayBuffer()) {
+  final class Builder private[NativeFunctionTable](private val table: ArrayBuffer[NativeFunction] = ArrayBuffer()) {
     def add(definition: NativeFunction): NativeFunctionId = {
       val result = NativeFunctionId(table.size)
       table += definition
