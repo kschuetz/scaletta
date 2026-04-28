@@ -2,8 +2,11 @@ package software.kes.scaletta.api
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.testsupport.MockRegistry
 
 class ModuleSpec extends AnyFunSpec with Matchers {
+
+  private val mockRegistry = MockRegistry.create()
 
   describe("Module.traverse") {
     it("should sequence registrations and return a collection of results") {
@@ -17,14 +20,6 @@ class ModuleSpec extends AnyFunSpec with Matchers {
         }
       }
 
-      val mockRegistry = new ScalettaRegistry {
-        def methodRegistry: MethodRegistry = ???
-
-        def typeRegistry: TypeRegistry = ???
-
-        def runtimeContextRegistry: RuntimeContextRegistry = ???
-      }
-
       val result = module.register(mockRegistry)
 
       result shouldBe Seq(2, 6, 10, 14)
@@ -34,14 +29,6 @@ class ModuleSpec extends AnyFunSpec with Matchers {
     it("should handle an empty sequence") {
       val module = Module.traverse(Seq.empty[Int]) { item =>
         Module.pure(item)
-      }
-
-      val mockRegistry = new ScalettaRegistry {
-        def methodRegistry: MethodRegistry = ???
-
-        def typeRegistry: TypeRegistry = ???
-
-        def runtimeContextRegistry: RuntimeContextRegistry = ???
       }
 
       val result = module.register(mockRegistry)
@@ -57,14 +44,6 @@ class ModuleSpec extends AnyFunSpec with Matchers {
           order = order :+ item
           item.toUpperCase
         }
-      }
-
-      val mockRegistry = new ScalettaRegistry {
-        def methodRegistry: MethodRegistry = ???
-
-        def typeRegistry: TypeRegistry = ???
-
-        def runtimeContextRegistry: RuntimeContextRegistry = ???
       }
 
       val result = module.register(mockRegistry)
