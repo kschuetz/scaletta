@@ -123,4 +123,14 @@ class ModuleSpec extends AnyFunSpec with Matchers {
     }
   }
 
+  describe("Module.tap") {
+    it("should perform side-effects without changing the result") {
+      var sideEffect = 0
+      val module = Module.pure(43).tap(a => sideEffect = a)
+      val result = module.register(mockRegistry)
+      result shouldBe 43
+      sideEffect shouldBe 43
+    }
+  }
+
 }

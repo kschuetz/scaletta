@@ -23,6 +23,22 @@ trait Module[A] {
 
   def flatten[B](implicit ev: A <:< Module[B]): Module[B] =
     flatMap(ev)
+
+  /**
+   * Performs a side-effect with the result of the registration, while keeping the original result.
+   *
+   * This is useful for "intercepting" registration results (such as TypeIds or NativeFunctionIds)
+   * for logging, debugging, or notifying external systems, without breaking the module chain
+   * or altering the return type.
+   *
+   * @param fn the side-effect to perform
+   * @return a new Module that yields the same result as this one
+   */
+  def tap(fn: A => Unit): Module[A] =
+    map { a =>
+      fn(a)
+      a
+    }
 }
 
 object Module {
