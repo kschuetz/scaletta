@@ -7,8 +7,8 @@ import software.kes.scaletta.types.{Type, TypeConstructor, TypeId, TypeParameter
 import software.kes.scaletta.util.{NonEmptyVector, SettingsStack}
 
 //noinspection AccessorLikeMethodIsEmptyParen
-object MockRegistry {
-  def create(): ScalettaRegistry = new ScalettaRegistry {
+object MockSetup {
+  def create(): Setup = new Setup {
     private var nextNativeFunctionId = 1
     private var nextTypeId = 1
     private var nextRuntimeContextId = 1

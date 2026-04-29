@@ -1,6 +1,6 @@
 package software.kes.scaletta.api
 
-trait ScalettaRegistry {
+trait Setup {
   def methodRegistry: MethodRegistry
 
   def typeRegistry: TypeRegistry

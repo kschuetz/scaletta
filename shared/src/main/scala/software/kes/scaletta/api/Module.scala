@@ -4,7 +4,7 @@ import software.kes.scaletta.symbols.QualifiedName
 import software.kes.scaletta.types.{Type, TypeId}
 
 trait Module[A] {
-  def register(registry: ScalettaRegistry): A
+  def configure(setup: Setup): A
 
   def map[B](fn: A => B): Module[B] =
     Module.mapped(this, fn)
@@ -45,7 +45,7 @@ object Module {
   /**
    * Create a module where anything can be registered
    */
-  def apply[A](fn: ScalettaRegistry => A): Module[A] =
+  def apply[A](fn: Setup => A): Module[A] =
     new Basic(fn)
 
   val empty: Module[Unit] = pure(())
@@ -110,7 +110,7 @@ object Module {
                                    (underlying: Module[A]): Module[A] =
     Module { registry =>
       registry.methodRegistry.pushSettings(fn)
-      val result = underlying.register(registry)
+      val result = underlying.configure(registry)
       registry.methodRegistry.popSettings()
       result
     }
@@ -277,20 +277,20 @@ object Module {
                                                                               ml: Module[L],
                                                                               mm: Module[M],
                                                                               fn: (A, B, C, D, E, F, G, H, I, J, K, L, M) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
-      val g = mg.register(registry)
-      val h = mh.register(registry)
-      val i = mi.register(registry)
-      val j = mj.register(registry)
-      val k = mk.register(registry)
-      val l = ml.register(registry)
-      val m = mm.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
+      val g = mg.configure(setup)
+      val h = mh.configure(setup)
+      val i = mi.configure(setup)
+      val j = mj.configure(setup)
+      val k = mk.configure(setup)
+      val l = ml.configure(setup)
+      val m = mm.configure(setup)
       fn(a, b, c, d, e, f, g, h, i, j, k, l, m)
     }
   }
@@ -306,34 +306,34 @@ object Module {
   private def zip[A, B](ma: Module[A], mb: Module[B]): Module[(A, B)] =
     new Zipped2(ma, mb, (a: A, b: B) => (a, b))
 
-  private class Basic[A](fn: ScalettaRegistry => A) extends Module[A] {
-    def register(registry: ScalettaRegistry): A = fn(registry)
+  private class Basic[A](fn: Setup => A) extends Module[A] {
+    def configure(setup: Setup): A = fn(setup)
   }
 
 
   private class Mapped[A, B](underlying: Module[A],
                              fn: A => B) extends Module[B] {
-    def register(registry: ScalettaRegistry): B =
-      fn(underlying.register(registry))
+    def configure(setup: Setup): B =
+      fn(underlying.configure(setup))
   }
 
   private class FlatMapped[A, B](underlying: Module[A],
                                  fn: A => Module[B]) extends Module[B] {
-    def register(registry: ScalettaRegistry): B =
-      fn(underlying.register(registry)).register(registry)
+    def configure(setup: Setup): B =
+      fn(underlying.configure(setup)).configure(setup)
   }
 
   private class Composite(components: Seq[Module[_]]) extends Module[Unit] {
-    def register(registry: ScalettaRegistry): Unit = {
-      components.foreach(_.register(registry))
+    def configure(setup: Setup): Unit = {
+      components.foreach(_.configure(setup))
     }
   }
 
   private final class Traversed[A, B](items: Seq[A],
                                       fn: A => Module[B]) extends Module[Seq[B]] {
-    def register(registry: ScalettaRegistry): Seq[B] = {
+    def configure(setup: Setup): Seq[B] = {
       items.foldLeft(Vector.empty[B]) { (acc, item) =>
-        acc :+ fn(item).register(registry)
+        acc :+ fn(item).configure(setup)
       }
     }
   }
@@ -341,9 +341,9 @@ object Module {
   private final class Zipped2[A, B, Result](ma: Module[A],
                                             mb: Module[B],
                                             fn: (A, B) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
       fn(a, b)
     }
   }
@@ -352,10 +352,10 @@ object Module {
                                                mb: Module[B],
                                                mc: Module[C],
                                                fn: (A, B, C) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
       fn(a, b, c)
     }
   }
@@ -365,11 +365,11 @@ object Module {
                                                   mc: Module[C],
                                                   md: Module[D],
                                                   fn: (A, B, C, D) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
       fn(a, b, c, d)
     }
   }
@@ -380,12 +380,12 @@ object Module {
                                                      md: Module[D],
                                                      me: Module[E],
                                                      fn: (A, B, C, D, E) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
       fn(a, b, c, d, e)
     }
   }
@@ -397,13 +397,13 @@ object Module {
                                                         me: Module[E],
                                                         mf: Module[F],
                                                         fn: (A, B, C, D, E, F) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
       fn(a, b, c, d, e, f)
     }
   }
@@ -416,14 +416,14 @@ object Module {
                                                            mf: Module[F],
                                                            mg: Module[G],
                                                            fn: (A, B, C, D, E, F, G) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
-      val g = mg.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
+      val g = mg.configure(setup)
       fn(a, b, c, d, e, f, g)
     }
   }
@@ -437,15 +437,15 @@ object Module {
                                                               mg: Module[G],
                                                               mh: Module[H],
                                                               fn: (A, B, C, D, E, F, G, H) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
-      val g = mg.register(registry)
-      val h = mh.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
+      val g = mg.configure(setup)
+      val h = mh.configure(setup)
       fn(a, b, c, d, e, f, g, h)
     }
   }
@@ -460,16 +460,16 @@ object Module {
                                                                  mh: Module[H],
                                                                  mi: Module[I],
                                                                  fn: (A, B, C, D, E, F, G, H, I) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
-      val g = mg.register(registry)
-      val h = mh.register(registry)
-      val i = mi.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
+      val g = mg.configure(setup)
+      val h = mh.configure(setup)
+      val i = mi.configure(setup)
       fn(a, b, c, d, e, f, g, h, i)
     }
   }
@@ -485,17 +485,17 @@ object Module {
                                                                      mi: Module[I],
                                                                      mj: Module[J],
                                                                      fn: (A, B, C, D, E, F, G, H, I, J) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
-      val g = mg.register(registry)
-      val h = mh.register(registry)
-      val i = mi.register(registry)
-      val j = mj.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
+      val g = mg.configure(setup)
+      val h = mh.configure(setup)
+      val i = mi.configure(setup)
+      val j = mj.configure(setup)
       fn(a, b, c, d, e, f, g, h, i, j)
     }
   }
@@ -512,18 +512,18 @@ object Module {
                                                                         mj: Module[J],
                                                                         mk: Module[K],
                                                                         fn: (A, B, C, D, E, F, G, H, I, J, K) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
-      val g = mg.register(registry)
-      val h = mh.register(registry)
-      val i = mi.register(registry)
-      val j = mj.register(registry)
-      val k = mk.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
+      val g = mg.configure(setup)
+      val h = mh.configure(setup)
+      val i = mi.configure(setup)
+      val j = mj.configure(setup)
+      val k = mk.configure(setup)
       fn(a, b, c, d, e, f, g, h, i, j, k)
     }
   }
@@ -541,19 +541,19 @@ object Module {
                                                                            mk: Module[K],
                                                                            ml: Module[L],
                                                                            fn: (A, B, C, D, E, F, G, H, I, J, K, L) => Result) extends Module[Result] {
-    def register(registry: ScalettaRegistry): Result = {
-      val a = ma.register(registry)
-      val b = mb.register(registry)
-      val c = mc.register(registry)
-      val d = md.register(registry)
-      val e = me.register(registry)
-      val f = mf.register(registry)
-      val g = mg.register(registry)
-      val h = mh.register(registry)
-      val i = mi.register(registry)
-      val j = mj.register(registry)
-      val k = mk.register(registry)
-      val l = ml.register(registry)
+    def configure(setup: Setup): Result = {
+      val a = ma.configure(setup)
+      val b = mb.configure(setup)
+      val c = mc.configure(setup)
+      val d = md.configure(setup)
+      val e = me.configure(setup)
+      val f = mf.configure(setup)
+      val g = mg.configure(setup)
+      val h = mh.configure(setup)
+      val i = mi.configure(setup)
+      val j = mj.configure(setup)
+      val k = mk.configure(setup)
+      val l = ml.configure(setup)
       fn(a, b, c, d, e, f, g, h, i, j, k, l)
     }
   }
