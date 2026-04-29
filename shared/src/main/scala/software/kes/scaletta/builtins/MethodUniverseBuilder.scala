@@ -8,15 +8,15 @@ import software.kes.scaletta.symbols.QualifiedName
 import software.kes.scaletta.types.{Type, TypeId}
 import software.kes.scaletta.util.SettingsStack
 
-object UniverseBuilder {
-  def create(): UniverseBuilder =
-    new UniverseBuilder(FunctionSymbolTable.builder(),
+object MethodUniverseBuilder {
+  def create(): MethodUniverseBuilder =
+    new MethodUniverseBuilder(FunctionSymbolTable.builder(),
       NativeFunctionTable.builder(), SettingsStack.create(MethodRegistry.Settings()))
 }
 
-final class UniverseBuilder private(private val functionSymbolTableBuilder: FunctionSymbolTable.Builder,
-                                    private val nativeFunctionTableBuilder: NativeFunctionTable.Builder,
-                                    private val settingsStack: SettingsStack[MethodRegistry.Settings]) extends MethodRegistry {
+final class MethodUniverseBuilder private(private val functionSymbolTableBuilder: FunctionSymbolTable.Builder,
+                                          private val nativeFunctionTableBuilder: NativeFunctionTable.Builder,
+                                          private val settingsStack: SettingsStack[MethodRegistry.Settings]) extends MethodRegistry {
 
   def addMethod(methodName: MethodName,
                 parameters: Vector[FormalParameter],
@@ -74,8 +74,8 @@ final class UniverseBuilder private(private val functionSymbolTableBuilder: Func
   def popSettings(): Unit =
     settingsStack.pop()
 
-  def build(): Universe = {
-    new Universe(functionSymbolTableBuilder.result(), nativeFunctionTableBuilder.result())
+  def build(): MethodUniverse = {
+    new MethodUniverse(functionSymbolTableBuilder.result(), nativeFunctionTableBuilder.result())
   }
 }
 
