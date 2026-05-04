@@ -1,4 +1,4 @@
-package software.kes.scaletta.library.standard
+package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.{ArgumentReader, MethodName, MethodRegistry, ScalettaModule}
 import software.kes.scaletta.internal.builtins.FormalParameter
