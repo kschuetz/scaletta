@@ -1,4 +1,4 @@
-package software.kes.scaletta.builtins
+package software.kes.scaletta.internal.builtins
 
 import software.kes.scaletta.api.RuntimeContextId
 import software.kes.scaletta.symbols.Name

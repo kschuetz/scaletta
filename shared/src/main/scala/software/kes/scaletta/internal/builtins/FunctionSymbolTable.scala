@@ -1,4 +1,4 @@
-package software.kes.scaletta.builtins
+package software.kes.scaletta.internal.builtins
 
 import software.kes.scaletta.symbols._
 import software.kes.scaletta.types.{Type, TypeId}

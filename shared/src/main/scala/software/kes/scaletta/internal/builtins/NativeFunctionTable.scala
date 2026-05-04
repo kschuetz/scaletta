@@ -1,4 +1,4 @@
-package software.kes.scaletta.builtins
+package software.kes.scaletta.internal.builtins
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer

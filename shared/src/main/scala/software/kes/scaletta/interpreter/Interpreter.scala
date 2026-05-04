@@ -1,7 +1,7 @@
 package software.kes.scaletta.interpreter
 
 import software.kes.scaletta.api.{EvalResult, RuntimeContextReader}
-import software.kes.scaletta.builtins.NativeFunctionTable
+import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.util.stack.IntStack
 
 object Interpreter {

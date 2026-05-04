@@ -1,7 +1,7 @@
 package software.kes.scaletta.interpreter
 
-import software.kes.scaletta.builtins.NativeFunctionId
 import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.internal.builtins.NativeFunctionId
 import software.kes.scaletta.util.stack.IntStack
 
 object Assembler {
