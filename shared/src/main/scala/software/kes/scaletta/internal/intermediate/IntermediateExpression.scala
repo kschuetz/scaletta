@@ -1,4 +1,4 @@
-package software.kes.scaletta.intermediate
+package software.kes.scaletta.internal.intermediate
 
 import software.kes.scaletta.internal.builtins.NativeFunctionId
 
