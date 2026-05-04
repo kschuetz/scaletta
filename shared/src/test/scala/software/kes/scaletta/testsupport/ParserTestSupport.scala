@@ -2,7 +2,7 @@ package software.kes.scaletta.testsupport
 
 import org.scalactic.source.Position
 import org.scalatest.Assertions
-import software.kes.scaletta.ast.{Expression, TypeIdentifier}
+import software.kes.scaletta.internal.ast.{Expression, TypeIdentifier}
 import software.kes.scaletta.parser._
 import software.kes.scaletta.reader.SourceReader
 import software.kes.scaletta.reporting.{LineMap, LineMapBuilder, Pos}

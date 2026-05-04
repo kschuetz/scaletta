@@ -1,4 +1,4 @@
-package software.kes.scaletta.ast
+package software.kes.scaletta.internal.ast
 
 import software.kes.scaletta.util.functional.{Functor, ~>}
 

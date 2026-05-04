@@ -1,6 +1,6 @@
 package software.kes.scaletta.parser
 
-import software.kes.scaletta.ast.{Identifier, TypeIdentifier}
+import software.kes.scaletta.internal.ast.{Identifier, TypeIdentifier}
 import software.kes.scaletta.reporting.{CharIndex, Pos}
 import software.kes.scaletta.scanner.{Scanner, Token}
 import software.kes.scaletta.types.ConjunctionType

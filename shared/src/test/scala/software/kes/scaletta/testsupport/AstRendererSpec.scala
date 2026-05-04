@@ -2,8 +2,8 @@ package software.kes.scaletta.testsupport
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.ast.AstBuilders._
-import software.kes.scaletta.ast._
+import software.kes.scaletta.internal.ast.AstBuilders._
+import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.util.functional.Id._
 
 class AstRendererSpec extends AnyFunSuite with Matchers {

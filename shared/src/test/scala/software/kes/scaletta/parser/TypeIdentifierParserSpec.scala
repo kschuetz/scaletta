@@ -2,7 +2,7 @@ package software.kes.scaletta.parser
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.ast.{Identifier, TypeIdentifier}
+import software.kes.scaletta.internal.ast.{Identifier, TypeIdentifier}
 import software.kes.scaletta.scanner.Token
 import software.kes.scaletta.testsupport.{ParseErrorMatchers, ParserTestSupport}
 import software.kes.scaletta.types.ConjunctionType

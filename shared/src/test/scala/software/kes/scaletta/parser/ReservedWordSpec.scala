@@ -2,7 +2,7 @@ package software.kes.scaletta.parser
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.ast.AstBuilders._
+import software.kes.scaletta.internal.ast.AstBuilders._
 import software.kes.scaletta.scanner.Token
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 

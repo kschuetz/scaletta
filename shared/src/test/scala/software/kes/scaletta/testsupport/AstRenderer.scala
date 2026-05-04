@@ -1,7 +1,7 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.ast._
 import software.kes.scaletta.common.Interpolator
+import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.parser.{BindingPower, Operators}
 import software.kes.scaletta.scanner.Token
 import software.kes.scaletta.testsupport.AstRenderer.Settings

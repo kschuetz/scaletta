@@ -1,6 +1,6 @@
-package software.kes.scaletta.ast
+package software.kes.scaletta.internal.ast
 
-import software.kes.scaletta.ast.Declaration.Def
+import software.kes.scaletta.internal.ast.Declaration.Def
 import software.kes.scaletta.util.functional.Id._
 
 import scala.language.implicitConversions

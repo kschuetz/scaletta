@@ -3,7 +3,7 @@ package software.kes.scaletta.parser
 import org.scalactic.source.Position
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.ast.AstBuilders._
+import software.kes.scaletta.internal.ast.AstBuilders._
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 
 class ParserComplexExampleSpec extends AnyFunSuite with Matchers {
