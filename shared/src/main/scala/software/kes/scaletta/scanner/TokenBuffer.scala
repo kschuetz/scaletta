@@ -1,6 +1,6 @@
 package software.kes.scaletta.scanner
 
-import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.internal.reporting.Pos
 
 import scala.collection.mutable
 

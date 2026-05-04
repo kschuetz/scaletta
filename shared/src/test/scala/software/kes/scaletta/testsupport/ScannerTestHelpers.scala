@@ -1,6 +1,6 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.reporting.{CharIndex, Pos}
+import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.scanner.{ScanError, Token}
 
 object ScannerTestHelpers {

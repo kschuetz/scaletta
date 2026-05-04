@@ -1,12 +1,12 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, Pos}
 import software.kes.scaletta.scanner.Token
 
 object TestErrorFormatting {
 
-  def renderUnderline(input: String, lineMap: software.kes.scaletta.reporting.LineMap, beginIndex: Int, endIndex: Option[Int], label: String): String = {
-    val beginPos = lineMap.indexToPosition(software.kes.scaletta.reporting.CharIndex(beginIndex))
+  def renderUnderline(input: String, lineMap: LineMap, beginIndex: Int, endIndex: Option[Int], label: String): String = {
+    val beginPos = lineMap.indexToPosition(CharIndex(beginIndex))
     val lines = input.split("\n")
     val result = new StringBuilder()
 
@@ -34,7 +34,7 @@ object TestErrorFormatting {
     result.toString()
   }
 
-  def renderUnderline(input: String, lineMap: software.kes.scaletta.reporting.LineMap, index: Int, label: String): String =
+  def renderUnderline(input: String, lineMap: LineMap, index: Int, label: String): String =
     renderUnderline(input, lineMap, index, None, label)
 
   def formatToken(p: Pos[Token]): String = s"${p.value} at ${p.begin}:${p.end}"

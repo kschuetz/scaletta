@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.parser
 
-import software.kes.scaletta.reporting.{CharIndex, Pos}
+import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.scanner.{Scanner, Token}
 
 private[parser] object ParserSupport {

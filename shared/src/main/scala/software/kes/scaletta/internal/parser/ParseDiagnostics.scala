@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.parser
 
-import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.internal.reporting.Pos
 
 case class ParseDiagnostics(errors: Vector[Pos[ParseError]] = Vector.empty,
                             warnings: Vector[Pos[ParseWarning]] = Vector.empty,

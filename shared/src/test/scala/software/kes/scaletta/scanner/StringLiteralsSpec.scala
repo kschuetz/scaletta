@@ -3,7 +3,7 @@ package software.kes.scaletta.scanner
 import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.reporting.{CharIndex, Pos, line}
+import software.kes.scaletta.internal.reporting.{CharIndex, Pos, line}
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}

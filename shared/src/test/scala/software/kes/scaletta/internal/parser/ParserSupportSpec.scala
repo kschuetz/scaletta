@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.parser
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.reader.SourceReader
-import software.kes.scaletta.reporting.{CharIndex, LineMap, LineMapBuilder, Pos}
+import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.scanner.{IdentifierPolicy, Scanner, Token}
 
 class ParserSupportSpec extends AnyFunSpec with Matchers {

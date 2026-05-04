@@ -1,4 +1,4 @@
-package software.kes.scaletta.reporting
+package software.kes.scaletta.internal.reporting
 
 import scala.collection.immutable.TreeMap
 

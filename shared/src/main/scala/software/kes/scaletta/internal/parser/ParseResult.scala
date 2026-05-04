@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.parser
 
-import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.internal.reporting.Pos
 
 case class ParseResult[F[_], +A](value: Option[A] = None,
                                  diagnostics: ParseDiagnostics = ParseDiagnostics.empty) {

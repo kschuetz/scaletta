@@ -1,7 +1,7 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.internal.reader.SourceReader
-import software.kes.scaletta.reporting.CharIndex
+import software.kes.scaletta.internal.reporting.CharIndex
 
 import scala.annotation.switch
 

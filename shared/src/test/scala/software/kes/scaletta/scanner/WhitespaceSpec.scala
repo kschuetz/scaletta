@@ -2,7 +2,7 @@ package software.kes.scaletta.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.reporting.{CharIndex, Position}
+import software.kes.scaletta.internal.reporting.{CharIndex, Position}
 import software.kes.scaletta.testsupport.TestReaderFactory
 
 class WhitespaceSpec extends AnyFunSpec with Matchers {

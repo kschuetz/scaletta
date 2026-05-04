@@ -1,4 +1,4 @@
-package software.kes.scaletta.reporting
+package software.kes.scaletta.internal.reporting
 
 import software.kes.scaletta.util.functional.Functor
 

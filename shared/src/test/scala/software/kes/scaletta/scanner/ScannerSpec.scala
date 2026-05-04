@@ -4,7 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.Interpolator
-import software.kes.scaletta.reporting.Pos
+import software.kes.scaletta.internal.reporting.Pos
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.ScannerTestHelpers.{failure, success}
 import software.kes.scaletta.testsupport.{AssertExpectedTokens, TestReaderFactory}

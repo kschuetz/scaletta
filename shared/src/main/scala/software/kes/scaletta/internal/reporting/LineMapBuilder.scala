@@ -1,4 +1,4 @@
-package software.kes.scaletta.reporting
+package software.kes.scaletta.internal.reporting
 
 object LineMapBuilder {
   def create(initial: LineMap = LineMap.create()): LineMapBuilder =
