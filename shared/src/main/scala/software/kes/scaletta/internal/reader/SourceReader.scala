@@ -1,6 +1,6 @@
-package software.kes.scaletta.reader
+package software.kes.scaletta.internal.reader
 
-import software.kes.scaletta.reader.SourceReader.Settings
+import software.kes.scaletta.internal.reader.SourceReader.Settings
 import software.kes.scaletta.reporting.{CharIndex, LineMap, LineMapBuilder}
 import software.kes.scaletta.util.{CharPushback, SettingsStack}
 

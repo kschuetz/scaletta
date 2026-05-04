@@ -1,6 +1,6 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.reader.SourceReader
+import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.reporting.LineMap
 
 object TestReaderFactory {

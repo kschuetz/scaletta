@@ -1,6 +1,6 @@
 package software.kes.scaletta.scanner
 
-import software.kes.scaletta.reader.SourceReader
+import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.reporting.{CharIndex, Pos}
 import software.kes.scaletta.scanner.ScanError._
 import software.kes.scaletta.scanner.ScannerConstants.{DoubleQuotes2, DoubleQuotes3}

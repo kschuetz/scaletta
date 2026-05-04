@@ -1,7 +1,7 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.common.Interpolator
-import software.kes.scaletta.reader.SourceReader
+import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.reporting.{CharIndex, Pos}
 import software.kes.scaletta.scanner.CharacterClass._
 import software.kes.scaletta.scanner.ScanError.{EmptyQuotedIdentifier, IdentifierTooLong, UnclosedQuotedIdentifier}

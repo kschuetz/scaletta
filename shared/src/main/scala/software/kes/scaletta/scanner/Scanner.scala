@@ -1,7 +1,7 @@
 package software.kes.scaletta.scanner
 
 import software.kes.scaletta.common.Interpolator
-import software.kes.scaletta.reader.SourceReader
+import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.reporting.{CharIndex, Pos}
 import software.kes.scaletta.scanner.ScannerConstants.DoubleQuotes3
 import software.kes.scaletta.scanner.Token._
