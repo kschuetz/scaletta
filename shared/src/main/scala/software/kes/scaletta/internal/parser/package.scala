@@ -1,4 +1,4 @@
-package software.kes.scaletta
+package software.kes.scaletta.internal
 
 import software.kes.scaletta.internal.ast.{Declaration, Expression, Pattern, TypeIdentifier}
 

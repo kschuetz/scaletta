@@ -1,4 +1,4 @@
-package software.kes.scaletta.parser
+package software.kes.scaletta.internal.parser
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
@@ -70,7 +70,7 @@ class BindingPowerSpec extends AnyFunSpec with Matchers {
     }
 
     it("should correctly handle nudges") {
-      import BindingPower._
+      import software.kes.scaletta.internal.parser.BindingPower._
       val base = Addition
       val before = base.nudge(-1)
       val after = base.nudge(1)

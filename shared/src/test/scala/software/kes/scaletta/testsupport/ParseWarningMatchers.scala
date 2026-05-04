@@ -1,7 +1,7 @@
 package software.kes.scaletta.testsupport
 
 import org.scalatest.matchers.{MatchResult, Matcher}
-import software.kes.scaletta.parser.ParseWarning
+import software.kes.scaletta.internal.parser.ParseWarning
 import software.kes.scaletta.reporting.{LineMap, Pos}
 import software.kes.scaletta.testsupport.TestErrorFormatting.renderUnderline
 

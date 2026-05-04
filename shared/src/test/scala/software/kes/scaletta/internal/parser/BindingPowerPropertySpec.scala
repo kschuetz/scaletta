@@ -1,4 +1,4 @@
-package software.kes.scaletta.parser
+package software.kes.scaletta.internal.parser
 
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.funspec.AnyFunSpec

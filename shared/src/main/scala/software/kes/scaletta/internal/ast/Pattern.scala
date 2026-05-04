@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.ast
 
 import software.kes.scaletta.internal.ast
-import software.kes.scaletta.parser.ParseError
+import software.kes.scaletta.internal.parser.ParseError
 import software.kes.scaletta.util.functional.{Functor, ~>}
 
 sealed trait Pattern[F[_]] {

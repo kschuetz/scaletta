@@ -1,4 +1,4 @@
-package software.kes.scaletta.parser
+package software.kes.scaletta.internal.parser
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
@@ -67,8 +67,8 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
     }
 
     describe("Structural Boundaries") {
-      import ParseError._
       import Token._
+      import software.kes.scaletta.internal.parser.ParseError._
 
       it("should recover at structural boundaries (like val)") {
         "f(1, val x = 2, 3)" shouldFailWith(
@@ -94,8 +94,8 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
     }
 
     describe("Block Synchronization") {
-      import ParseError._
       import Token._
+      import software.kes.scaletta.internal.parser.ParseError._
 
       // TODO: fix this
       ignore("should recover from a malformed declaration in a block and find the next one") {
@@ -150,8 +150,8 @@ class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrive
     }
 
     describe("Formal Parameter Group Synchronization") {
-      import ParseError._
       import Token._
+      import software.kes.scaletta.internal.parser.ParseError._
 
       it("should recover from a malformed parameter and find the next one") {
         "f(x: Int, @, y: String)".shouldRecoverWith(

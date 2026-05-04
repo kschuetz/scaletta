@@ -1,6 +1,6 @@
-package software.kes.scaletta.parser
+package software.kes.scaletta.internal.parser
 
-import software.kes.scaletta.parser.BindingPower.BindingPowerOrdering
+import software.kes.scaletta.internal.parser.BindingPower.BindingPowerOrdering
 
 import scala.annotation.tailrec
 

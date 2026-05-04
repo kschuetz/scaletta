@@ -4,7 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.ast.{Expression, TypeIdentifier}
-import software.kes.scaletta.parser.{ParseError, ParseHint, ParseOptions, ParseWarning}
+import software.kes.scaletta.internal.parser.{ParseError, ParseHint, ParseOptions, ParseWarning}
 import software.kes.scaletta.reporting.{LineMap, Pos}
 import software.kes.scaletta.util.functional.Id._
 
