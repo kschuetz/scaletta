@@ -4,7 +4,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.testsupport.MockSetup
 
-class ModuleSpec extends AnyFunSpec with Matchers {
+class ScalettaModuleSpec extends AnyFunSpec with Matchers {
 
   private val mockSetup = MockSetup.create()
 
@@ -13,8 +13,8 @@ class ModuleSpec extends AnyFunSpec with Matchers {
       val items = Seq(1, 3, 5, 7) // Using primes as requested
       var registrationCount = 0
 
-      val module = Module.traverse(items) { item =>
-        Module { _ =>
+      val module = ScalettaModule.traverse(items) { item =>
+        ScalettaModule { _ =>
           registrationCount += 1
           item * 2
         }
@@ -27,8 +27,8 @@ class ModuleSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle an empty sequence") {
-      val module = Module.traverse(Seq.empty[Int]) { item =>
-        Module.pure(item)
+      val module = ScalettaModule.traverse(Seq.empty[Int]) { item =>
+        ScalettaModule.pure(item)
       }
 
       val result = module.configure(mockSetup)
@@ -39,8 +39,8 @@ class ModuleSpec extends AnyFunSpec with Matchers {
       val items = Seq("a", "b", "c")
       var order = Vector.empty[String]
 
-      val module = Module.traverse(items) { item =>
-        Module { _ =>
+      val module = ScalettaModule.traverse(items) { item =>
+        ScalettaModule { _ =>
           order = order :+ item
           item.toUpperCase
         }
@@ -55,13 +55,13 @@ class ModuleSpec extends AnyFunSpec with Matchers {
 
   describe("Module.sequence") {
     it("should sequence registrations and return a collection of results") {
-      val modules = Seq(Module.pure(41), Module.pure(43), Module.pure(47))
-      val result = Module.sequence(modules).configure(mockSetup)
+      val modules = Seq(ScalettaModule.pure(41), ScalettaModule.pure(43), ScalettaModule.pure(47))
+      val result = ScalettaModule.sequence(modules).configure(mockSetup)
       result shouldBe Seq(41, 43, 47)
     }
 
     it("should handle an empty sequence") {
-      val result = Module.sequence(Seq.empty[Module[Int]]).configure(mockSetup)
+      val result = ScalettaModule.sequence(Seq.empty[ScalettaModule[Int]]).configure(mockSetup)
       result shouldBe Seq.empty
     }
   }
@@ -69,15 +69,15 @@ class ModuleSpec extends AnyFunSpec with Matchers {
   describe("Module.when") {
     it("should execute the module when the condition is true") {
       var executed = false
-      val module = Module { _ => executed = true }
-      Module.when(condition = true)(module).configure(mockSetup)
+      val module = ScalettaModule { _ => executed = true }
+      ScalettaModule.when(condition = true)(module).configure(mockSetup)
       executed shouldBe true
     }
 
     it("should not execute the module when the condition is false") {
       var executed = false
-      val module = Module { _ => executed = true }
-      Module.when(condition = false)(module).configure(mockSetup)
+      val module = ScalettaModule { _ => executed = true }
+      ScalettaModule.when(condition = false)(module).configure(mockSetup)
       executed shouldBe false
     }
   }
@@ -85,22 +85,22 @@ class ModuleSpec extends AnyFunSpec with Matchers {
   describe("Module.unless") {
     it("should execute the module when the condition is false") {
       var executed = false
-      val module = Module { _ => executed = true }
-      Module.unless(condition = false)(module).configure(mockSetup)
+      val module = ScalettaModule { _ => executed = true }
+      ScalettaModule.unless(condition = false)(module).configure(mockSetup)
       executed shouldBe true
     }
 
     it("should not execute the module when the condition is true") {
       var executed = false
-      val module = Module { _ => executed = true }
-      Module.unless(condition = true)(module).configure(mockSetup)
+      val module = ScalettaModule { _ => executed = true }
+      ScalettaModule.unless(condition = true)(module).configure(mockSetup)
       executed shouldBe false
     }
   }
 
   describe("Module.flatten") {
     it("should collapse nested modules") {
-      val nested = Module.pure(Module.pure(41))
+      val nested = ScalettaModule.pure(ScalettaModule.pure(41))
       val flattened = nested.flatten
       flattened.configure(mockSetup) shouldBe 41
     }
@@ -108,9 +108,9 @@ class ModuleSpec extends AnyFunSpec with Matchers {
     it("should execute registrations in both layers") {
       var count1 = 0
       var count2 = 0
-      val nested = Module { _ =>
+      val nested = ScalettaModule { _ =>
         count1 += 1
-        Module { _ =>
+        ScalettaModule { _ =>
           count2 += 1
           43
         }
@@ -126,7 +126,7 @@ class ModuleSpec extends AnyFunSpec with Matchers {
   describe("Module.tap") {
     it("should perform side-effects without changing the result") {
       var sideEffect = 0
-      val module = Module.pure(43).tap(a => sideEffect = a)
+      val module = ScalettaModule.pure(43).tap(a => sideEffect = a)
       val result = module.configure(mockSetup)
       result shouldBe 43
       sideEffect shouldBe 43
