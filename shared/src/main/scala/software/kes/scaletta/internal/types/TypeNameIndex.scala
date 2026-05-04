@@ -1,5 +1,6 @@
 package software.kes.scaletta.internal.types
 
+import software.kes.scaletta.api.TypeId
 import software.kes.scaletta.internal.symbols.{ImportScope, QualifiedName, SymbolEntry, SymbolIndex}
 
 object TypeNameIndex {

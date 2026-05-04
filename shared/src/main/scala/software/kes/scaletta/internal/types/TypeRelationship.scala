@@ -1,5 +1,7 @@
 package software.kes.scaletta.internal.types
 
+import software.kes.scaletta.api.Type
+
 sealed trait TypeRelationship[+T] {
   def isSame: Boolean
 

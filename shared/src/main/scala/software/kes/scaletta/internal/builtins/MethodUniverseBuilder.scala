@@ -1,11 +1,10 @@
 package software.kes.scaletta.internal.builtins
 
 import software.kes.scaletta.api.ReceiverType.{Instance, Static}
-import software.kes.scaletta.api.{MethodName, MethodRegistry, OverloadRegistry}
+import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.runtime.ParamsSignature
 import software.kes.scaletta.internal.symbols.QualifiedName
-import software.kes.scaletta.internal.types.{Type, TypeId}
 import software.kes.scaletta.util.SettingsStack
 
 object MethodUniverseBuilder {

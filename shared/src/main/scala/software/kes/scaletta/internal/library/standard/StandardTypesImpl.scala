@@ -1,5 +1,6 @@
 package software.kes.scaletta.internal.library.standard
 
+import software.kes.scaletta.api.{Type, TypeId}
 import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.symbols.{Name, QualifiedName}
 import software.kes.scaletta.internal.types._

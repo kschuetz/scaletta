@@ -1,5 +1,6 @@
 package software.kes.scaletta.internal.types
 
+import software.kes.scaletta.api.Type
 import software.kes.scaletta.util.NonEmptyVector
 
 import scala.annotation.tailrec

@@ -2,8 +2,8 @@ package software.kes.scaletta.internal.interpreter
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.api.{Type, TypeId}
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature}
-import software.kes.scaletta.internal.types.{Type, TypeId}
 
 class VariableStackSpec extends AnyFunSpec with Matchers {
   describe("VariableStack") {

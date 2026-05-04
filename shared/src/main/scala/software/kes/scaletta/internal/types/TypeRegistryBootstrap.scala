@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.types
 
-import software.kes.scaletta.api.TypeRegistry
+import software.kes.scaletta.api.{Type, TypeId, TypeRegistry}
 import software.kes.scaletta.internal.symbols.QualifiedName
 
 trait TypeRegistryBootstrap extends TypeRegistry {

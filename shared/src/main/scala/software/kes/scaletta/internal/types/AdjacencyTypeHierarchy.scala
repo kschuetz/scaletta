@@ -1,5 +1,7 @@
 package software.kes.scaletta.internal.types
 
+import software.kes.scaletta.api.Type
+
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
 
