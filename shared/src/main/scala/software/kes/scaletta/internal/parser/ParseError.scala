@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.parser
 
-import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.internal.scanner.Token
 
 sealed trait ParseError
 

@@ -1,7 +1,7 @@
 package software.kes.scaletta.testsupport
 
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
-import software.kes.scaletta.scanner.{ScanError, Token}
+import software.kes.scaletta.internal.scanner.{ScanError, Token}
 
 object ScannerTestHelpers {
   def success(token: Token, begin: Int, end: Int): Pos[Token] =

@@ -6,6 +6,7 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.ast.{Expression, TypeIdentifier}
 import software.kes.scaletta.internal.parser.{ParseError, ParseHint, ParseOptions, ParseWarning}
 import software.kes.scaletta.internal.reporting.{LineMap, Pos}
+import software.kes.scaletta.internal.scanner.ScanError
 import software.kes.scaletta.util.functional.Id._
 
 object ParserTestOps {
@@ -223,14 +224,14 @@ object ParserTestOps {
     /**
      * Asserts that no "fatal" errors occurred during parsing that would have halted the analysis entirely.
      *
-     * Currently checks for [[software.kes.scaletta.scanner.ScanError.UnbalancedBraces]].
+     * Currently checks for [[ScanError.UnbalancedBraces]].
      *
      * @return this verifier
      */
     def andNoFatalErrors()
                         (implicit matchers: Matchers, pos: Position): ParseResultVerifier = {
       import matchers._
-      import software.kes.scaletta.scanner.{ScanError, Token}
+      import software.kes.scaletta.internal.scanner.{ScanError, Token}
       actualErrors.foreach { p =>
         p.value match {
           case ParseError.UnexpectedToken(Token.Error(ScanError.UnbalancedBraces)) =>

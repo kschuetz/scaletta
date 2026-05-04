@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.parser
 
 import software.kes.scaletta.internal.ast.{Identifier, TypeIdentifier}
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
-import software.kes.scaletta.scanner.{Scanner, Token}
+import software.kes.scaletta.internal.scanner.{Scanner, Token}
 import software.kes.scaletta.types.ConjunctionType
 
 import scala.annotation.tailrec

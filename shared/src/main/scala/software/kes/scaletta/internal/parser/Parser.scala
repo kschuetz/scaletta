@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.parser
 
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
-import software.kes.scaletta.scanner.{Scanner, Token}
+import software.kes.scaletta.internal.scanner.{Scanner, Token}
 
 object Parser {
   def create(): Parser = new Parser()

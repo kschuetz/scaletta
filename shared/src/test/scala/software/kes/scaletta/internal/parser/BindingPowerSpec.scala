@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.parser
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.internal.scanner.Token
 
 class BindingPowerSpec extends AnyFunSpec with Matchers {
 

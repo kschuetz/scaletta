@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.parser
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.ast.AstBuilders._
-import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.internal.scanner.Token
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 
 class ReservedWordSpec extends AnyFunSpec with Matchers {

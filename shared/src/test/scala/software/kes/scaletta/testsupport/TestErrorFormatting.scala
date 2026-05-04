@@ -1,7 +1,7 @@
 package software.kes.scaletta.testsupport
 
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, Pos}
-import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.internal.scanner.Token
 
 object TestErrorFormatting {
 

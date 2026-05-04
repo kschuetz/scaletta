@@ -3,7 +3,7 @@ package software.kes.scaletta.testsupport
 import org.scalactic.source.Position
 import org.scalatest.Assertions
 import software.kes.scaletta.internal.reporting.{LineMap, Pos}
-import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.internal.scanner.Token
 import software.kes.scaletta.testsupport.TestErrorFormatting.{formatToken, renderUnderline}
 
 trait AssertExpectedTokens {

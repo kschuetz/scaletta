@@ -4,12 +4,13 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.parser.ParseError
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, Pos}
+import software.kes.scaletta.internal.scanner.Token
 import software.kes.scaletta.testsupport.ParseErrorMatchers._
 
 class DiagnosticRangeSpec extends AnyFunSpec with Matchers {
 
   describe("Diagnostic Range DSL") {
-    val dummyError = ParseError.UnexpectedToken(software.kes.scaletta.scanner.Token.At)
+    val dummyError = ParseError.UnexpectedToken(Token.At)
 
     it("should allow asserting a range using spanning") {
       val errors: Vector[Pos[ParseError]] = Vector(Pos(dummyError, CharIndex(5), CharIndex(10)))

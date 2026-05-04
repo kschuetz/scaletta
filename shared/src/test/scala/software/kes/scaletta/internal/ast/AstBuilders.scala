@@ -8,7 +8,7 @@ import scala.language.implicitConversions
 object AstBuilders {
 
   import software.kes.scaletta.internal.parser.ParseError
-  import software.kes.scaletta.scanner.Token
+  import software.kes.scaletta.internal.scanner.Token
 
   def lit(n: Int): Expression[Id] = Literal.int(n)
 

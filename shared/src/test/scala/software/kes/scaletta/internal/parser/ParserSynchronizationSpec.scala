@@ -4,7 +4,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import software.kes.scaletta.internal.ast.AstBuilders._
-import software.kes.scaletta.scanner.Token
+import software.kes.scaletta.internal.scanner.Token
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 
 class ParserSynchronizationSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks {

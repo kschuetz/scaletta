@@ -6,7 +6,7 @@ import software.kes.scaletta.internal.ast.{Expression, TypeIdentifier}
 import software.kes.scaletta.internal.parser._
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{LineMap, LineMapBuilder, Pos}
-import software.kes.scaletta.scanner.{IdentifierPolicy, Scanner}
+import software.kes.scaletta.internal.scanner.{IdentifierPolicy, Scanner}
 import software.kes.scaletta.util.functional.Id._
 import software.kes.scaletta.util.functional.~>
 

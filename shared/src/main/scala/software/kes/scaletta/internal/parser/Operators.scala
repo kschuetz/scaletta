@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.parser
 
-import software.kes.scaletta.scanner.{CharacterClass, Token}
+import software.kes.scaletta.internal.scanner.{CharacterClass, Token}
 
 object Operators {
   def bindingPower(identifier: Token.Identifier): BindingPower = {
