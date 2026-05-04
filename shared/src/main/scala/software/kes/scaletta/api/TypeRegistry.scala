@@ -1,6 +1,6 @@
 package software.kes.scaletta.api
 
-import software.kes.scaletta.symbols.QualifiedName
+import software.kes.scaletta.internal.symbols.QualifiedName
 import software.kes.scaletta.types.{Type, TypeConstructor, TypeId, TypeParameter}
 
 trait TypeRegistry {

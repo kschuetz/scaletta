@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.library.standard
 
-import software.kes.scaletta.symbols.Name
+import software.kes.scaletta.internal.symbols.Name
 import software.kes.scaletta.types.{Type, TypeConstructor, TypeId}
 
 object StandardTypes {

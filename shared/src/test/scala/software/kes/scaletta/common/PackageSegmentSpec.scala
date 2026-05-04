@@ -2,7 +2,7 @@ package software.kes.scaletta.common
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.symbols.Name
+import software.kes.scaletta.internal.symbols.Name
 
 class PackageSegmentSpec extends AnyFunSpec with Matchers {
 

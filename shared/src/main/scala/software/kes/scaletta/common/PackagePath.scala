@@ -1,6 +1,6 @@
 package software.kes.scaletta.common
 
-import software.kes.scaletta.symbols.{Name, QualifiedName}
+import software.kes.scaletta.internal.symbols.{Name, QualifiedName}
 
 sealed trait PackagePath {
   def components: Vector[PackageSegment]

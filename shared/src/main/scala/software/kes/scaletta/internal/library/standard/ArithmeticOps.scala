@@ -5,7 +5,7 @@ import software.kes.scaletta.internal.builtins.FormalParameter
 import software.kes.scaletta.internal.builtins.FunctionImpl.{doubleResult, floatResult, intResult, longResult}
 import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.runtime.CoreTypes._
-import software.kes.scaletta.symbols.Name
+import software.kes.scaletta.internal.symbols.Name
 
 object ArithmeticOps {
 

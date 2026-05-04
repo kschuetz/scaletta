@@ -1,4 +1,4 @@
-package software.kes.scaletta.symbols
+package software.kes.scaletta.internal.symbols
 
 import software.kes.scaletta.common.PackagePath
 

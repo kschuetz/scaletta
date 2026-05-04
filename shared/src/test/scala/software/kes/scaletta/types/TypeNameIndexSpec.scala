@@ -3,7 +3,7 @@ package software.kes.scaletta.types
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.PackagePath
-import software.kes.scaletta.symbols.{ImportScope, Name, QualifiedName}
+import software.kes.scaletta.internal.symbols.{ImportScope, Name, QualifiedName}
 
 class TypeNameIndexSpec extends AnyFunSpec with Matchers {
   describe("TypeNameIndex") {
