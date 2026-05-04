@@ -1,4 +1,4 @@
-package software.kes.scaletta.interpreter
+package software.kes.scaletta.internal.interpreter
 
 object Opcodes {
   final val Nop = 0

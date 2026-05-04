@@ -1,4 +1,4 @@
-package software.kes.scaletta.interpreter
+package software.kes.scaletta.internal.interpreter
 
 trait ConstantInterner {
   def internObject(value: AnyRef): Int

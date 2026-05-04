@@ -1,4 +1,4 @@
-package software.kes.scaletta.interpreter
+package software.kes.scaletta.internal.interpreter
 
 import software.kes.scaletta.api.{EvalResult, RuntimeContextReader}
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
