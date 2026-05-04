@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.runtime.FrameSignature
+import software.kes.scaletta.internal.runtime.FrameSignature
 import software.kes.scaletta.util.stack._
 
 object VariableStack {

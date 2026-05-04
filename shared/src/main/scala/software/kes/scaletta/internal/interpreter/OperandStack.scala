@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.interpreter
 
 import software.kes.scaletta.api.ArgumentReader
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.runtime.ParamsSignature
+import software.kes.scaletta.internal.runtime.ParamsSignature
 import software.kes.scaletta.util.stack._
 
 object OperandStack {

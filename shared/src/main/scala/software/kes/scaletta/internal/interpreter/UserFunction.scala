@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.runtime.{FrameSignature, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime.{FrameSignature, VarSpaceSignature}
 
 import scala.collection.immutable.ArraySeq
 

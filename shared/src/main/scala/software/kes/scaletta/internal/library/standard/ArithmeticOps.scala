@@ -3,8 +3,8 @@ package software.kes.scaletta.internal.library.standard
 import software.kes.scaletta.api.{ArgumentReader, MethodName, MethodRegistry, ScalettaModule}
 import software.kes.scaletta.internal.builtins.FormalParameter
 import software.kes.scaletta.internal.builtins.FunctionImpl.{doubleResult, floatResult, intResult, longResult}
-import software.kes.scaletta.runtime.CoreTypes
-import software.kes.scaletta.runtime.CoreTypes._
+import software.kes.scaletta.internal.runtime.CoreTypes
+import software.kes.scaletta.internal.runtime.CoreTypes._
 import software.kes.scaletta.symbols.Name
 
 object ArithmeticOps {

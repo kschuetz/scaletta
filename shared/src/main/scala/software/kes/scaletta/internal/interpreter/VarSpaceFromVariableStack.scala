@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.interpreter
 
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.runtime.VarSpaceSignature
+import software.kes.scaletta.internal.runtime.VarSpaceSignature
 
 object VarSpaceFromVariableStack {
   def create(stack: VariableStack,

@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.interpreter
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.runtime.{CoreTypes, FrameSignature, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarSpaceSignature}
 
 class VarSpaceFromVariableStackSpec extends AnyFunSpec with Matchers {
   describe("VarSpaceFromVariableStack") {

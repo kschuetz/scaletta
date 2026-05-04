@@ -1,4 +1,4 @@
-package software.kes.scaletta.runtime
+package software.kes.scaletta.internal.runtime
 
 import software.kes.scaletta.common.BasicTypes
 

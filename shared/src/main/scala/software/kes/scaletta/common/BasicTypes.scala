@@ -1,6 +1,6 @@
 package software.kes.scaletta.common
 
-import software.kes.scaletta.runtime.CoreTypes
+import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.types.{Type, TypeId}
 
 object BasicTypes {

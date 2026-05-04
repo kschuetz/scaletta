@@ -1,4 +1,4 @@
-package software.kes.scaletta.runtime
+package software.kes.scaletta.internal.runtime
 
 object VarAddress {
   type Encoded = Int

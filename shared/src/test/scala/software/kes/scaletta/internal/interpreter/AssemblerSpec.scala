@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.interpreter
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.runtime.VarSpaceSignature
+import software.kes.scaletta.internal.runtime.VarSpaceSignature
 
 class AssemblerSpec extends AnyFunSpec with Matchers {
   private val defaultSignature = VarSpaceSignature.empty
