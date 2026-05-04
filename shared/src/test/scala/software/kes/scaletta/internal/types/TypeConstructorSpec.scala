@@ -1,4 +1,4 @@
-package software.kes.scaletta.types
+package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers

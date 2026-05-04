@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.builtins
 
 import software.kes.scaletta.internal.symbols._
-import software.kes.scaletta.types.{Type, TypeId}
+import software.kes.scaletta.internal.types.{Type, TypeId}
 
 import scala.collection.mutable
 

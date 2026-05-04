@@ -1,4 +1,4 @@
-package software.kes.scaletta.types
+package software.kes.scaletta.internal.types
 
 trait TypeHierarchy[T] {
   def relationshipFor(lhs: Type[T], rhs: Type[T]): TypeRelationship[T]

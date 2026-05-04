@@ -1,4 +1,4 @@
-package software.kes.scaletta.types
+package software.kes.scaletta.internal.types
 
 object TypeParameter {
   def invariant[T]: TypeParameter[T] = TypeParameter(Variance.invariant)

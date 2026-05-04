@@ -1,7 +1,7 @@
 package software.kes.scaletta.api
 
 import software.kes.scaletta.common.PackagePath
-import software.kes.scaletta.types.{Type, TypeId}
+import software.kes.scaletta.internal.types.{Type, TypeId}
 
 import scala.language.implicitConversions
 

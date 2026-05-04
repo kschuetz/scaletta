@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.ast
 
-import software.kes.scaletta.types.ConjunctionType
+import software.kes.scaletta.internal.types.ConjunctionType
 import software.kes.scaletta.util.functional.{Functor, ~>}
 
 sealed trait TypeIdentifier[F[_]] {

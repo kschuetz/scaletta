@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.runtime
 
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.types.{Type, TypeId}
+import software.kes.scaletta.internal.types.{Type, TypeId}
 
 import scala.collection.immutable.ArraySeq
 

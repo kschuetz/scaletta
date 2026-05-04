@@ -1,4 +1,4 @@
-package software.kes.scaletta.types
+package software.kes.scaletta.internal.types
 
 import software.kes.scaletta.api.TypeRegistry
 import software.kes.scaletta.internal.symbols.QualifiedName

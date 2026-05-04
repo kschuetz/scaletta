@@ -1,7 +1,7 @@
 package software.kes.scaletta.api
 
 import software.kes.scaletta.internal.symbols.QualifiedName
-import software.kes.scaletta.types.{Type, TypeConstructor, TypeId, TypeParameter}
+import software.kes.scaletta.internal.types.{Type, TypeConstructor, TypeId, TypeParameter}
 
 trait TypeRegistry {
   def addValueType(name: QualifiedName.Full): Type.Nominal[TypeId]

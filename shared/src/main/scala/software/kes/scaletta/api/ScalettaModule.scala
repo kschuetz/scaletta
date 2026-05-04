@@ -1,7 +1,7 @@
 package software.kes.scaletta.api
 
 import software.kes.scaletta.internal.symbols.QualifiedName
-import software.kes.scaletta.types.{Type, TypeId}
+import software.kes.scaletta.internal.types.{Type, TypeId}
 
 trait ScalettaModule[A] {
   def configure(setup: Setup): A

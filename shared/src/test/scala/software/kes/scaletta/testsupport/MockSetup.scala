@@ -3,7 +3,7 @@ package software.kes.scaletta.testsupport
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins.{FormalParameter, FunctionImpl, NativeFunctionId, ParameterGroup}
 import software.kes.scaletta.internal.symbols.QualifiedName
-import software.kes.scaletta.types.{Type, TypeConstructor, TypeId, TypeParameter}
+import software.kes.scaletta.internal.types.{Type, TypeConstructor, TypeId, TypeParameter}
 import software.kes.scaletta.util.{NonEmptyVector, SettingsStack}
 
 //noinspection AccessorLikeMethodIsEmptyParen

@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.runtime
 
-import software.kes.scaletta.types.{Type, TypeId}
+import software.kes.scaletta.internal.types.{Type, TypeId}
 
 object CoreTypes {
   final val AnyT: Type.Nominal[TypeId] = Type.Nominal(TypeId(1))

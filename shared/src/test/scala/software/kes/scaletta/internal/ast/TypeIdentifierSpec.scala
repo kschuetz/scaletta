@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.ast
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.types.ConjunctionType
+import software.kes.scaletta.internal.types.ConjunctionType
 import software.kes.scaletta.util.functional.Id.Id
 import software.kes.scaletta.util.functional.{Id, ~>}
 
