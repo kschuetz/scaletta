@@ -2,7 +2,6 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.FunctionImpl.{doubleResult, floatResult, intResult, longResult}
 import software.kes.scaletta.api._
-import software.kes.scaletta.internal.builtins.FormalParameter
 import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.runtime.CoreTypes._
 
