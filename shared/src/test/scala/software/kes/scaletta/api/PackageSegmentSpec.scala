@@ -1,8 +1,7 @@
-package software.kes.scaletta.common
+package software.kes.scaletta.api
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.Name
 
 class PackageSegmentSpec extends AnyFunSpec with Matchers {
 

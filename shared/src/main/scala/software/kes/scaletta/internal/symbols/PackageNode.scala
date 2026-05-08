@@ -1,7 +1,6 @@
 package software.kes.scaletta.internal.symbols
 
-import software.kes.scaletta.api.Name
-import software.kes.scaletta.common.{PackagePath, PackageSegment}
+import software.kes.scaletta.api.{Name, PackagePath, PackageSegment}
 
 private[symbols] object PackageNode {
   def empty[A]: PackageNode[A] = new PackageNode(Map.empty, Map.empty)

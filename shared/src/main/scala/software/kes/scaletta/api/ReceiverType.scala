@@ -1,7 +1,5 @@
 package software.kes.scaletta.api
 
-import software.kes.scaletta.common.PackagePath
-
 import scala.language.implicitConversions
 
 sealed trait ReceiverType

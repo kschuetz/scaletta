@@ -1,7 +1,4 @@
-package software.kes.scaletta.internal.symbols
-
-import software.kes.scaletta.api.Name
-import software.kes.scaletta.common.{PackagePath, PackageSegment}
+package software.kes.scaletta.api
 
 sealed trait QualifiedName {
   def name: Name

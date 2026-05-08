@@ -1,4 +1,4 @@
-package software.kes.scaletta.common
+package software.kes.scaletta.api
 
 object Packages {
   val scaletta: PackagePath.Absolute = PackagePath.root / PackageSegment("scaletta")

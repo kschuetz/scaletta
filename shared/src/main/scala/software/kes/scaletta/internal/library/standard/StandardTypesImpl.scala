@@ -2,14 +2,13 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.runtime.CoreTypes
-import software.kes.scaletta.internal.symbols.QualifiedName
 import software.kes.scaletta.internal.types._
 
 private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   extends StandardTypes {
 
   import StandardTypes.names
-  import software.kes.scaletta.common.Packages
+  import software.kes.scaletta.api.Packages
 
   val AnyT: Type.Nominal[TypeId] =
     registry.registerCore(base(names.AnyT), CoreTypes.AnyT)

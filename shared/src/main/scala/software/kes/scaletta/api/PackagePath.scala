@@ -1,7 +1,4 @@
-package software.kes.scaletta.common
-
-import software.kes.scaletta.api.Name
-import software.kes.scaletta.internal.symbols.QualifiedName
+package software.kes.scaletta.api
 
 sealed trait PackagePath {
   def components: Vector[PackageSegment]

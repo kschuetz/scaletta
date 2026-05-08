@@ -1,6 +1,5 @@
-package software.kes.scaletta.common
+package software.kes.scaletta.api
 
-import software.kes.scaletta.api.Name
 import software.kes.scaletta.internal.scanner.CharacterClass.{isIdentifierInner, isIdentifierStart}
 import software.kes.scaletta.internal.scanner.Token
 
@@ -32,7 +31,7 @@ object PackageSegment {
   }
 
   // For use in tests only
-  private[common] def _unsafeCreate(name: String): PackageSegment =
+  private[api] def _unsafeCreate(name: String): PackageSegment =
     new PackageSegment(Name(name))
 }
 
