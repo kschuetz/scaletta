@@ -2,7 +2,8 @@ package software.kes.scaletta.internal.scanner
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.internal.reporting.{CharIndex, Position}
+import software.kes.scaletta.api.Position
+import software.kes.scaletta.internal.reporting.CharIndex
 import software.kes.scaletta.internal.scanner.CommentResult.{BlockComment, LineComment, NoComment, Unterminated}
 import software.kes.scaletta.testsupport.LineEndingInterpolators._
 import software.kes.scaletta.testsupport.TestReaderFactory

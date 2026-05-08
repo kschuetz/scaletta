@@ -1,5 +1,7 @@
 package software.kes.scaletta.internal.reporting
 
+import software.kes.scaletta.api._
+
 import scala.collection.immutable.TreeMap
 
 object LineMap {

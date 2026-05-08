@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.reporting
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.api.Position
 
 class PosSpec extends AnyFunSpec with Matchers {
   describe("Pos") {

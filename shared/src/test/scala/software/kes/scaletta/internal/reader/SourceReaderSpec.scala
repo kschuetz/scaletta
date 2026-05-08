@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.reader
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.internal.reporting.Position
+import software.kes.scaletta.api.Position
 import software.kes.scaletta.testsupport.TestReaderFactory
 
 class SourceReaderSpec extends AnyFunSpec with Matchers {
