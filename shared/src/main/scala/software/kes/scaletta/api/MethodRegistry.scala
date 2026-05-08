@@ -1,7 +1,7 @@
 package software.kes.scaletta.api
 
 import software.kes.scaletta.api.MethodRegistry.Settings
-import software.kes.scaletta.internal.builtins.{FormalParameter, FunctionImpl, NativeFunctionId, ParameterGroup}
+import software.kes.scaletta.internal.builtins.{FormalParameter, NativeFunctionId, ParameterGroup}
 
 object MethodRegistry {
   case class Settings(pureHint: Boolean = false,

@@ -1,6 +1,4 @@
-package software.kes.scaletta.internal.builtins
-
-import software.kes.scaletta.api.{ArgumentReader, RuntimeContextReader}
+package software.kes.scaletta.api
 
 sealed trait FunctionImpl
 
