@@ -1,8 +1,8 @@
 package software.kes.scaletta.common
 
+import software.kes.scaletta.api.Name
 import software.kes.scaletta.internal.scanner.CharacterClass.{isIdentifierInner, isIdentifierStart}
 import software.kes.scaletta.internal.scanner.Token
-import software.kes.scaletta.internal.symbols.Name
 
 object PackageSegment {
   /**

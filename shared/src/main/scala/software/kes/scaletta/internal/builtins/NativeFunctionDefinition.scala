@@ -1,7 +1,6 @@
 package software.kes.scaletta.internal.builtins
 
-import software.kes.scaletta.api.{RuntimeContextId, Type, TypeId}
-import software.kes.scaletta.internal.symbols.Name
+import software.kes.scaletta.api.{Name, RuntimeContextId, Type, TypeId}
 
 case class NativeFunctionDefinition(paramGroups: Vector[ParameterGroup],
                                     returnType: Type[TypeId],

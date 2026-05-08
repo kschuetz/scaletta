@@ -1,4 +1,4 @@
-package software.kes.scaletta.internal.symbols
+package software.kes.scaletta.api
 
 object Name {
   /**

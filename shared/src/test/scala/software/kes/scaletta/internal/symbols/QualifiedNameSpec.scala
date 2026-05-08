@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.symbols
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.api.Name
 import software.kes.scaletta.common.PackagePath
 
 class QualifiedNameSpec extends AnyFunSpec with Matchers {
