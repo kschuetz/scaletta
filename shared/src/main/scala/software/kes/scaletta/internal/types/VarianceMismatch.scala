@@ -1,5 +1,7 @@
 package software.kes.scaletta.internal.types
 
+import software.kes.scaletta.api.Variance
+
 sealed trait VarianceMismatch {
   def variance: Variance
 

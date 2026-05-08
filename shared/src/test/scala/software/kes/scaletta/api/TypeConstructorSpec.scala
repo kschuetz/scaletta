@@ -1,8 +1,7 @@
-package software.kes.scaletta.internal.types
+package software.kes.scaletta.api
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.Type
 import software.kes.scaletta.util.NonEmptyVector
 
 class TypeConstructorSpec extends AnyFunSpec with Matchers {

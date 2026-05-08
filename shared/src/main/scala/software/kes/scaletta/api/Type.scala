@@ -1,6 +1,5 @@
 package software.kes.scaletta.api
 
-import software.kes.scaletta.internal.types.TypeArgument
 import software.kes.scaletta.util.{NonEmptyVector, SetTwoPlus}
 
 sealed trait Type[+T] {

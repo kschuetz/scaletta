@@ -1,4 +1,4 @@
-package software.kes.scaletta.internal.types
+package software.kes.scaletta.api
 
 sealed trait Variance
 
