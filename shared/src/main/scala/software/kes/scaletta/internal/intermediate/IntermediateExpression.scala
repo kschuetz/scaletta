@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.intermediate
 
-import software.kes.scaletta.internal.builtins.NativeFunctionId
+import software.kes.scaletta.api.NativeFunctionId
 
 sealed trait IntermediateExpression
 

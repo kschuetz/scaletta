@@ -1,4 +1,4 @@
-package software.kes.scaletta.internal.builtins
+package software.kes.scaletta.api
 
 object NativeFunctionId {
   def apply(value: Int): NativeFunctionId = new NativeFunctionId(value)

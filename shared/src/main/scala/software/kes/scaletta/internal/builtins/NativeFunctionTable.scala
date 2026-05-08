@@ -1,5 +1,7 @@
 package software.kes.scaletta.internal.builtins
 
+import software.kes.scaletta.api.NativeFunctionId
+
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 
