@@ -3,7 +3,7 @@ package software.kes.scaletta.api
 object Scaletta {
 
   def builder: Builder =
-    software.kes.scaletta.internal.Scaletta.builder
+    software.kes.scaletta.internal.ScalettaFacade.builder
 
   trait Builder {
     /**

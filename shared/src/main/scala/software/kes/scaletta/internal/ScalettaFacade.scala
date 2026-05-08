@@ -1,18 +1,18 @@
 package software.kes.scaletta.internal
 
-import software.kes.scaletta.api
-import software.kes.scaletta.api.{ScalettaModule, Settings}
+import software.kes.scaletta.api.{Scaletta, ScalettaModule, Settings}
 
-object Scaletta {
+
+object ScalettaFacade {
 
   def builder: Builder = {
     val settings = Settings()
     new Builder(settings, Nil)
   }
 
-  final class Builder private[Scaletta](val settings: Settings,
-                                        private val modules: List[ScalettaModule[Unit]])
-    extends api.Scaletta.Builder {
+  final class Builder private[ScalettaFacade](val settings: Settings,
+                                              private val modules: List[ScalettaModule[Unit]])
+    extends Scaletta.Builder {
 
     def addModule[A](modulesToAdd: ScalettaModule[A]*): Builder =
       if (modules.isEmpty) this
@@ -25,11 +25,11 @@ object Scaletta {
       new Builder(updatedSettings, modules)
     }
 
-    def build: api.Scaletta = new Scaletta
+    def build: Scaletta = new ScalettaFacade
   }
 
 }
 
-final class Scaletta extends api.Scaletta {
+final class ScalettaFacade extends Scaletta {
 
 }
