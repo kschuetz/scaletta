@@ -2,7 +2,6 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.FunctionImpl.{doubleResult, floatResult, intResult, longResult}
 import software.kes.scaletta.api._
-import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.runtime.CoreTypes._
 
 object ArithmeticOps {
@@ -696,11 +695,11 @@ object ArithmeticOps {
   }
 
   private val rhsName = Name("x")
-  private val rhsInt = Vector(FormalParameter(rhsName, IntT))
-  private val rhsLong = Vector(FormalParameter(rhsName, LongT))
-  private val rhsShort = Vector(FormalParameter(rhsName, CoreTypes.ShortT))
-  private val rhsByte = Vector(FormalParameter(rhsName, CoreTypes.ByteT))
-  private val rhsChar = Vector(FormalParameter(rhsName, CoreTypes.CharT))
-  private val rhsDouble = Vector(FormalParameter(rhsName, DoubleT))
-  private val rhsFloat = Vector(FormalParameter(rhsName, FloatT))
+  private val rhsInt = Vector(FormalParameter.int(rhsName))
+  private val rhsLong = Vector(FormalParameter.long(rhsName))
+  private val rhsShort = Vector(FormalParameter.short(rhsName))
+  private val rhsByte = Vector(FormalParameter.byte(rhsName))
+  private val rhsChar = Vector(FormalParameter.char(rhsName))
+  private val rhsDouble = Vector(FormalParameter.double(rhsName))
+  private val rhsFloat = Vector(FormalParameter.float(rhsName))
 }
