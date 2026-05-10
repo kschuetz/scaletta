@@ -1,7 +1,9 @@
 package software.kes.scaletta.internal
 
 import software.kes.scaletta.api.{Scaletta, ScalettaModule, Settings}
-
+import software.kes.scaletta.internal.builtins.{MethodUniverse, MethodUniverseBuilder}
+import software.kes.scaletta.internal.library.standard.StandardTypesImpl
+import software.kes.scaletta.internal.types.{TypeRegistryImpl, TypeUniverse}
 
 object ScalettaFacade {
 
@@ -15,8 +17,7 @@ object ScalettaFacade {
     extends Scaletta.Builder {
 
     def addModule[A](modulesToAdd: ScalettaModule[A]*): Builder =
-      if (modules.isEmpty) this
-      else new Builder(settings, modulesToAdd.toList.map(_.unit) ++ modules)
+      new Builder(settings, modulesToAdd.toList.map(_.unit) ++ modules)
 
     def modifySettings(fns: Settings => Settings*): Builder = {
       val updatedSettings = fns.foldLeft(settings) {
@@ -25,11 +26,23 @@ object ScalettaFacade {
       new Builder(updatedSettings, modules)
     }
 
-    def build: Scaletta = new ScalettaFacade
+    def build: Scaletta = {
+      val methodRegistry = MethodUniverseBuilder.create()
+      val typeRegistry = new TypeRegistryImpl()
+      val runtimeContextRegistry = new RuntimeContextRegistryImpl()
+
+      new StandardTypesImpl(typeRegistry)
+
+      val setup = new SetupImpl(methodRegistry, typeRegistry, runtimeContextRegistry)
+      modules.reverse.foreach(_.configure(setup))
+
+      new ScalettaFacade(typeRegistry.build(), methodRegistry.build())
+    }
   }
 
 }
 
-final class ScalettaFacade extends Scaletta {
+final class ScalettaFacade(val typeUniverse: TypeUniverse,
+                           val methodUniverse: MethodUniverse) extends Scaletta {
 
 }

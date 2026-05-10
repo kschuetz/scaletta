@@ -6,10 +6,10 @@ sealed trait ConjunctionType {
 
 object ConjunctionType {
   case object Union extends ConjunctionType {
-    override def operator: String = "|"
+    def operator: String = "|"
   }
 
   case object Intersection extends ConjunctionType {
-    override def operator: String = "&"
+    def operator: String = "&"
   }
 }
