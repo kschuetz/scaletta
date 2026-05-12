@@ -29,10 +29,10 @@ object FunctionSymbolTable {
     def result(): FunctionSymbolTable = {
       val staticTable = staticFunctions.foldLeft(SymbolTable.empty[OverloadTable]) {
         case (acc, (name, definitions)) =>
-          acc.add(name, OverloadTable(definitions.toVector))
+          acc.add(name, OverloadTable(definitions.toList))
       }
       val instanceTable = instanceMethods.view.mapValues { methods =>
-        methods.view.mapValues(definitions => OverloadTable(definitions.toVector)).toMap
+        methods.view.mapValues(definitions => OverloadTable(definitions.toList)).toMap
       }.toMap
 
       new FunctionSymbolTable(staticTable, instanceTable)
