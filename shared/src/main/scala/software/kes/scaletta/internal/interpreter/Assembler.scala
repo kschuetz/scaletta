@@ -202,15 +202,15 @@ final class Assembler(private val writer: OpcodeWriter,
     emitBranch(Opcodes.BranchUnless, label)
 
   /**
-   * Peeks the value at the top of the operand stack. If truthy, the branch is taken, and the
-   * stack is unchanged. If not truthy, the value on the stack is popped.
+   * Peeks the value at the top of the operand stack. If not truthy, the branch is taken, and the
+   * stack is unchanged. If truthy, the value on the stack is popped.
    */
   def logicalAnd(label: Assembler.Label): Unit =
     emitBranch(Opcodes.LogicalAnd, label)
 
   /**
-   * Peeks the value at the top of the operand stack. If not truthy, the branch is taken, and the
-   * stack is unchanged. If truthy, the value on the stack is popped.
+   * Peeks the value at the top of the operand stack. If truthy, the branch is taken, and the
+   * stack is unchanged. If not truthy, the value on the stack is popped.
    */
   def logicalOr(label: Assembler.Label): Unit =
     emitBranch(Opcodes.LogicalOr, label)
