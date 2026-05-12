@@ -1,8 +1,7 @@
-package software.kes.scaletta.internal.symbols
+package software.kes.scaletta.api
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{Name, PackagePath, QualifiedName}
 
 class ImportScopeSpec extends AnyFunSpec with Matchers {
 

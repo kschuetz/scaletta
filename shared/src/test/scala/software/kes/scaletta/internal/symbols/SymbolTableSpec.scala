@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.symbols
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{Name, PackagePath, QualifiedName}
+import software.kes.scaletta.api.{ImportScope, Name, PackagePath, QualifiedName}
 
 class SymbolTableSpec extends AnyFunSpec with Matchers {
 

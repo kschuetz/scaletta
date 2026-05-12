@@ -1,6 +1,4 @@
-package software.kes.scaletta.internal.symbols
-
-import software.kes.scaletta.api.{Name, PackagePath, QualifiedName}
+package software.kes.scaletta.api
 
 object ImportScope {
   /**
@@ -105,5 +103,3 @@ final class ImportScope private(val symbols: Map[Name, PackagePath.Absolute],
   override def toString: String =
     s"ImportScope(symbols=$symbols, wildcards=$wildcards, packages=$packages)"
 }
-
-

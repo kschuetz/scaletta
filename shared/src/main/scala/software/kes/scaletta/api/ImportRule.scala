@@ -1,6 +1,4 @@
-package software.kes.scaletta.internal.symbols
-
-import software.kes.scaletta.api.{Name, PackagePath}
+package software.kes.scaletta.api
 
 sealed trait ImportRule
 

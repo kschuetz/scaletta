@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.symbols
 
-import software.kes.scaletta.api.{Name, PackagePath, QualifiedName}
+import software.kes.scaletta.api.{ImportScope, Name, PackagePath, QualifiedName}
 
 object SymbolTable {
   /**
