@@ -2,7 +2,7 @@ package software.kes.scaletta.internal
 
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins.{MethodUniverse, MethodUniverseBuilder}
-import software.kes.scaletta.internal.library.standard.StandardTypesImpl
+import software.kes.scaletta.internal.library.standard.{StandardLibrary, StandardTypesImpl}
 import software.kes.scaletta.internal.parser.{ParseOptions, Parser}
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{LineMapBuilder, Pos}
@@ -39,6 +39,9 @@ object ScalettaFacade {
       val standardTypes = new StandardTypesImpl(typeRegistry)
 
       val setup = new SetupImpl(methodRegistry, typeRegistry, runtimeContextRegistry, standardTypes)
+
+      StandardLibrary.module.configure(setup)
+
       modules.reverse.foreach(_.configure(setup))
 
       new ScalettaFacade(settings, typeRegistry.build(), methodRegistry.build(), runtimeContextRegistry)
