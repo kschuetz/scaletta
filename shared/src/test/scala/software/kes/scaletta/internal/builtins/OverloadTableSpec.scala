@@ -29,14 +29,14 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
       val query = SignatureQuery.of(numberT)
       val candidates = table.findCandidates(universe, query)
       candidates should contain(fn2)
-      candidates should not contain (fn1)
+      candidates should not contain fn1
     }
 
     it("should support Unknown parameter in query") {
       val query = SignatureQuery.of(SignatureQueryParameter.Unknown)
       val candidates = table.findCandidates(universe, query)
       candidates should contain allOf(fn1, fn2)
-      candidates should not contain (fn3) // fn3 has different group structure
+      candidates should not contain fn3 // fn3 has different group structure
     }
 
     it("should match multiple parameter groups") {
