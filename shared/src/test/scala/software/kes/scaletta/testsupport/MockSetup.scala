@@ -1,6 +1,8 @@
 package software.kes.scaletta.testsupport
 
 import software.kes.scaletta.api._
+import software.kes.scaletta.internal.library.standard.{StandardTypes, StandardTypesImpl}
+import software.kes.scaletta.internal.types.TypeRegistryBootstrap
 import software.kes.scaletta.util.{NonEmptyVector, SettingsStack}
 
 //noinspection AccessorLikeMethodIsEmptyParen
@@ -57,7 +59,7 @@ object MockSetup {
         settingsStack.pop()
     }
 
-    val typeRegistry: TypeRegistry = new TypeRegistry {
+    val typeRegistry: TypeRegistryBootstrap = new TypeRegistryBootstrap {
       def addValueType(name: QualifiedName.Full): Type.Nominal[TypeId] =
         Type.Nominal(getNextTypeId())
 
@@ -72,8 +74,12 @@ object MockSetup {
       def addRelationship(supertype: TypeConstructor[TypeId], subtype: TypeConstructor[TypeId]): Unit = ()
 
       def addRelationship(subtype: TypeConstructor[TypeId], supertypeApplication: Type.Applied[TypeId]): Unit = ()
+
+      def registerCore(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
     }
 
     val runtimeContextRegistry: RuntimeContextRegistry = () => getNextRuntimeContextId()
+
+    val standardTypes: StandardTypes = new StandardTypesImpl(typeRegistry)
   }
 }

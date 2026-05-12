@@ -37,4 +37,6 @@ object Scaletta {
     _.addModule(modules: _*)
 }
 
-trait Scaletta
+trait Scaletta {
+  def compile(input: String): CompileResult
+}
