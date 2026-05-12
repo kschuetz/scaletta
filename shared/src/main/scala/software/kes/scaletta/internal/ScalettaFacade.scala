@@ -6,7 +6,7 @@ import software.kes.scaletta.internal.library.standard.StandardTypesImpl
 import software.kes.scaletta.internal.parser.{ParseOptions, Parser}
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{LineMapBuilder, Pos}
-import software.kes.scaletta.internal.scanner.{IdentifierPolicy, Scanner}
+import software.kes.scaletta.internal.scanner.Scanner
 import software.kes.scaletta.internal.types.{TypeRegistryImpl, TypeUniverse}
 import software.kes.scaletta.util.NonEmptyVector
 
@@ -41,20 +41,21 @@ object ScalettaFacade {
       val setup = new SetupImpl(methodRegistry, typeRegistry, runtimeContextRegistry, standardTypes)
       modules.reverse.foreach(_.configure(setup))
 
-      new ScalettaFacade(typeRegistry.build(), methodRegistry.build(), runtimeContextRegistry)
+      new ScalettaFacade(settings, typeRegistry.build(), methodRegistry.build(), runtimeContextRegistry)
     }
   }
 
 }
 
-final class ScalettaFacade(val typeUniverse: TypeUniverse,
+final class ScalettaFacade(settings: Settings,
+                           val typeUniverse: TypeUniverse,
                            val methodUniverse: MethodUniverse,
                            val runtimeContextRegistry: RuntimeContextRegistry) extends Scaletta {
 
   def compile(input: String): CompileResult = {
     val lineMapBuilder = LineMapBuilder.create()
     val sourceReader = SourceReader.create(input.iterator, lineMapBuilder)
-    val scanner = Scanner.create(sourceReader, IdentifierPolicy.Default)
+    val scanner = Scanner.create(sourceReader, settings.identifierPolicy)
     val parser = Parser.create()
     val parseResult = parser.parse(scanner, ParseOptions(requireExhaustion = true))
 

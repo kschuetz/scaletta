@@ -1,3 +1,5 @@
 package software.kes.scaletta.api
 
-case class Settings()
+import software.kes.scaletta.internal.scanner.IdentifierPolicy
+
+case class Settings(identifierPolicy: IdentifierPolicy = IdentifierPolicy.Default)
