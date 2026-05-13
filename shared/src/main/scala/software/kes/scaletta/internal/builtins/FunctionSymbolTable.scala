@@ -45,7 +45,7 @@ final class FunctionSymbolTable private(private val staticFunctions: SymbolTable
   /**
    * Performs a direct lookup for a fully qualified static function.
    */
-  def getStatic(name: QualifiedName.Full): Option[OverloadTable] =
+  def getStaticFunction(name: QualifiedName.Full): Option[OverloadTable] =
     staticFunctions.get(name)
 
   /**
@@ -57,7 +57,8 @@ final class FunctionSymbolTable private(private val staticFunctions: SymbolTable
   /**
    * Resolves static functions matching the given name within the context of active imports.
    */
-  def resolve(name: QualifiedName,
-              imports: ImportScope): List[SymbolEntry[OverloadTable]] =
+  def resolveStaticFunction(name: QualifiedName,
+                            imports: ImportScope): List[SymbolEntry[OverloadTable]] =
     staticFunctions.resolve(name, imports)
+
 }
