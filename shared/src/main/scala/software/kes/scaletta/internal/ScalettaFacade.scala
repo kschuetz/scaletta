@@ -1,13 +1,13 @@
 package software.kes.scaletta.internal
 
 import software.kes.scaletta.api._
-import software.kes.scaletta.internal.builtins.{MethodUniverse, MethodUniverseBuilder}
+import software.kes.scaletta.internal.builtins.MethodUniverseBuilder
 import software.kes.scaletta.internal.library.standard.{StandardLibrary, StandardTypesImpl}
 import software.kes.scaletta.internal.parser.{ParseOptions, Parser}
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{LineMapBuilder, Pos}
 import software.kes.scaletta.internal.scanner.Scanner
-import software.kes.scaletta.internal.types.{TypeRegistryImpl, TypeUniverse}
+import software.kes.scaletta.internal.types.TypeRegistryImpl
 import software.kes.scaletta.util.NonEmptyVector
 
 object ScalettaFacade {
@@ -31,7 +31,7 @@ object ScalettaFacade {
       new Builder(updatedSettings, modules)
     }
 
-    def build: Scaletta = {
+    def build: ScalettaFacade = {
       val methodRegistry = MethodUniverseBuilder.create()
       val typeRegistry = new TypeRegistryImpl()
       val runtimeContextRegistry = new RuntimeContextRegistryImpl()
@@ -44,15 +44,15 @@ object ScalettaFacade {
 
       modules.reverse.foreach(_.configure(setup))
 
-      new ScalettaFacade(settings, typeRegistry.build(), methodRegistry.build(), runtimeContextRegistry)
+      val universe = Universe.create(typeRegistry.build(), methodRegistry.build())
+      new ScalettaFacade(settings, universe, runtimeContextRegistry)
     }
   }
 
 }
 
 final class ScalettaFacade(settings: Settings,
-                           val typeUniverse: TypeUniverse,
-                           val methodUniverse: MethodUniverse,
+                           val universe: Universe,
                            val runtimeContextRegistry: RuntimeContextRegistry) extends Scaletta {
 
   def compile(input: String): CompileResult = {

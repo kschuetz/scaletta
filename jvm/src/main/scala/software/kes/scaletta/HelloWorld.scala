@@ -16,6 +16,6 @@ object HelloWorld {
     val scaletta = Scaletta.create()
       .asInstanceOf[ScalettaFacade]
 
-    println(scaletta.methodUniverse.dispatchTable.size)
+    println(scaletta.universe.methodUniverse.dispatchTable.size)
   }
 }
