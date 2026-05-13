@@ -19,4 +19,14 @@ case class OverloadTable(variations: List[NativeFunctionDefinition]) {
         }
     }
   }
+
+  def resolveBestMatch(typeUniverse: TypeUniverse,
+                       query: SignatureQuery): Either[ResolutionError, NativeFunctionDefinition] = {
+    val candidates = findCandidates(typeUniverse, query)
+    candidates match {
+      case Nil => Left(ResolutionError.NotFound)
+      case bestMatch :: Nil => Right(bestMatch)
+      case _ => Left(ResolutionError.Ambiguous)
+    }
+  }
 }

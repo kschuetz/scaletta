@@ -68,6 +68,27 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
     }
   }
 
+  describe("OverloadTable.resolveBestMatch") {
+    it("should return the single matching candidate") {
+      val query = SignatureQuery.ofGroups(
+        SignatureQuery.Group(Vector(intT)),
+        SignatureQuery.Group(Vector(stringT))
+      )
+      table.resolveBestMatch(universe, query) shouldBe Right(fn3)
+    }
+
+    it("should return NotFound if no candidates match") {
+      val query = SignatureQuery.of(stringT)
+      table.resolveBestMatch(universe, query) shouldBe Left(ResolutionError.NotFound)
+    }
+
+    it("should return Ambiguous if multiple candidates match") {
+      // Both fn1 (Int) and fn2 (Number) match for Int input
+      val query = SignatureQuery.of(intT)
+      table.resolveBestMatch(universe, query) shouldBe Left(ResolutionError.Ambiguous)
+    }
+  }
+
   object Fixtures {
     val ns: PackagePath.Absolute = Packages.scaletta
     val registry: TypeRegistryImpl = new TypeRegistryImpl()
