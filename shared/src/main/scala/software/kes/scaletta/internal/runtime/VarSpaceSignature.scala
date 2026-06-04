@@ -47,6 +47,31 @@ final class VarSpaceSignature private(val slots: ArraySeq[VarAddress.Encoded],
 
   def stackOffsetOf(index: Int): Int = VarAddress.decodeStackOffset(slots(index))
 
+  def pushFrame(frame: FrameSignature): VarSpaceSignature = {
+    val newSize = frame.slotCount + this.slotCount
+    val newSlots = new Array[VarAddress.Encoded](newSize)
+
+    var i = 0
+    while (i < frame.slotCount) {
+      newSlots(i) = frame.slot(i)
+      i += 1
+    }
+
+    var j = 0
+    while (j < this.slotCount) {
+      val originalEncoded = this.slots(j)
+      val t = VarAddress.decodeBasicType(originalEncoded)
+      val originalOffset = VarAddress.decodeStackOffset(originalEncoded)
+      val shift = frame.countFor(t)
+
+      newSlots(i) = VarAddress.encode(t, originalOffset + shift)
+      i += 1
+      j += 1
+    }
+
+    new VarSpaceSignature(ArraySeq.unsafeWrapArray(newSlots), frame)
+  }
+
   override def equals(other: Any): Boolean = other match {
     case that: VarSpaceSignature =>
       slots == that.slots

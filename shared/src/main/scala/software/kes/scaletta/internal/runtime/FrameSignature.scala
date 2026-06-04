@@ -63,6 +63,20 @@ final class FrameSignature private(val slots: ArraySeq[VarAddress.Encoded],
 
   def stackOffsetOf(index: Int): Int = VarAddress.decodeStackOffset(slots(index))
 
+  def countFor(t: Byte): Int =
+    t match {
+      case BasicTypes.Object => objectCount
+      case BasicTypes.Boolean => booleanCount
+      case BasicTypes.Int => intCount
+      case BasicTypes.Long => longCount
+      case BasicTypes.Short => shortCount
+      case BasicTypes.Byte => byteCount
+      case BasicTypes.Char => charCount
+      case BasicTypes.Double => doubleCount
+      case BasicTypes.Float => floatCount
+      case _ => 0
+    }
+
   override def equals(other: Any): Boolean = other match {
     case that: FrameSignature =>
       slots == that.slots
