@@ -218,6 +218,12 @@ final class Assembler(private val writer: OpcodeWriter,
   def dup(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Dup, 0, 0))
 
+  def pop(): Unit =
+    writer.writeAndAdvance(makeOpcode(Opcodes.Pop, 0, 0))
+
+  def emitReturn(): Unit =
+    writer.writeAndAdvance(makeOpcode(Opcodes.Return, 0, 0))
+
   def swap(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Swap, 0, 0))
 
