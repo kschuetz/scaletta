@@ -207,5 +207,191 @@ class OperandStackSpec extends AnyFunSpec with Matchers {
 
       stack.isEmpty shouldBe true
     }
+
+    it("should correctly handle maybePopCondition") {
+      val stack = OperandStack.create()
+
+      // Objects: Truthy
+      stack.pushObject("not null")
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushObject("not null")
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.unsafePopObject() shouldBe "not null"
+
+      // Objects: Falsy
+      stack.pushObject(null)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushObject(null)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.unsafePopObject() shouldBe null
+
+      // Booleans: Truthy
+      stack.pushBoolean(true)
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushBoolean(true)
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe true
+
+      // Booleans: Falsy
+      stack.pushBoolean(false)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushBoolean(false)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe false
+
+      // Integers: Truthy
+      stack.pushInt(41)
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushInt(41)
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 41
+
+      // Integers: Falsy
+      stack.pushInt(0)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushInt(0)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 0
+
+      // Longs: Truthy
+      stack.pushLong(43L)
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushLong(43L)
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 43L
+
+      // Longs: Falsy
+      stack.pushLong(0L)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushLong(0L)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 0L
+
+      // Shorts: Truthy
+      stack.pushShort(41.toShort)
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushShort(41.toShort)
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 41.toShort
+
+      // Shorts: Falsy
+      stack.pushShort(0.toShort)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushShort(0.toShort)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 0.toShort
+
+      // Bytes: Truthy
+      stack.pushByte(43.toByte)
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushByte(43.toByte)
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 43.toByte
+
+      // Bytes: Falsy
+      stack.pushByte(0.toByte)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushByte(0.toByte)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 0.toByte
+
+      // Chars: Truthy
+      stack.pushChar('A')
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushChar('A')
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 'A'
+
+      // Chars: Falsy
+      stack.pushChar(0.toChar)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushChar(0.toChar)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 0.toChar
+
+      // Doubles: Truthy
+      stack.pushDouble(41.5)
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushDouble(41.5)
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 41.5
+
+      // Doubles: Falsy
+      stack.pushDouble(0.0)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushDouble(0.0)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 0.0
+
+      // Floats: Truthy
+      stack.pushFloat(43.5f)
+      stack.maybePopCondition(popIfEquals = true) shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.pushFloat(43.5f)
+      stack.maybePopCondition(popIfEquals = false) shouldBe true
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 43.5f
+
+      // Floats: Falsy
+      stack.pushFloat(0.0f)
+      stack.maybePopCondition(popIfEquals = false) shouldBe false
+      stack.isEmpty shouldBe true
+
+      stack.pushFloat(0.0f)
+      stack.maybePopCondition(popIfEquals = true) shouldBe false
+      stack.size() shouldBe 1
+      stack.pop() shouldBe 0.0f
+
+      stack.isEmpty shouldBe true
+    }
   }
 }

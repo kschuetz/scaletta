@@ -194,6 +194,90 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     }
   }
 
+  /**
+   * Peeks the top of the stack (regardless of type) and returns true if that value is "truthy".
+   *
+   * @param popIfEquals if the result on the top of the stack is equal to this value,
+   *                    then the value is popped from the stack, otherwise the stack is left unchanged
+   */
+  def maybePopCondition(popIfEquals: Boolean): Boolean = {
+    val basicType = control.unsafeRead(0)
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Object =>
+        val value = objects.unsafeRead(0)
+        val result = value != null
+        if (result == popIfEquals) {
+          objects.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Boolean =>
+        val result = booleans.unsafeRead(0)
+        if (result == popIfEquals) {
+          booleans.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Int =>
+        val value = ints.unsafeRead(0)
+        val result = value != 0
+        if (result == popIfEquals) {
+          ints.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Long =>
+        val value = longs.unsafeRead(0)
+        val result = value != 0L
+        if (result == popIfEquals) {
+          longs.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Short =>
+        val value = shorts.unsafeRead(0)
+        val result = value != 0
+        if (result == popIfEquals) {
+          shorts.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Byte =>
+        val value = bytes.unsafeRead(0)
+        val result = value != 0
+        if (result == popIfEquals) {
+          bytes.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Char =>
+        val value = chars.unsafeRead(0)
+        val result = value != 0
+        if (result == popIfEquals) {
+          chars.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Double =>
+        val value = doubles.unsafeRead(0)
+        val result = value != 0d
+        if (result == popIfEquals) {
+          doubles.contract(1)
+          control.contract(1)
+        }
+        result
+      case BasicTypes.Float =>
+        val value = floats.unsafeRead(0)
+        val result = value != 0f
+        if (result == popIfEquals) {
+          floats.contract(1)
+          control.contract(1)
+        }
+        result
+      case _ => throw new IllegalStateException(s"Unknown type: $basicType")
+    }
+  }
+
   def unsafePopObject(): AnyRef = {
     control.pop()
     objects.pop()
