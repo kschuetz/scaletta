@@ -120,15 +120,15 @@ final class Interpreter private(private val program: Program,
         case Opcodes.BranchIf =>
           val offset = rawOpcode & 0xFFFFFF
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          if (operandStack.pop().asInstanceOf[Boolean]) {
-            instructionPointer += (signedOffset - 1)
+          if (operandStack.popCondition()) {
+            instructionPointer += signedOffset
           }
 
         case Opcodes.BranchUnless =>
           val offset = rawOpcode & 0xFFFFFF
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          if (!operandStack.pop().asInstanceOf[Boolean]) {
-            instructionPointer += (signedOffset - 1)
+          if (!operandStack.popCondition()) {
+            instructionPointer += signedOffset
           }
 
         case Opcodes.CallNative =>
@@ -162,14 +162,18 @@ final class Interpreter private(private val program: Program,
           }
 
         case Opcodes.LogicalAnd =>
-          val b = operandStack.pop().asInstanceOf[Boolean]
-          val a = operandStack.pop().asInstanceOf[Boolean]
-          operandStack.pushBoolean(a && b)
+          val offset = rawOpcode & 0xFFFFFF
+          val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+          if (!operandStack.maybePopCondition(true)) {
+            instructionPointer += signedOffset
+          }
 
         case Opcodes.LogicalOr =>
-          val b = operandStack.pop().asInstanceOf[Boolean]
-          val a = operandStack.pop().asInstanceOf[Boolean]
-          operandStack.pushBoolean(a || b)
+          val offset = rawOpcode & 0xFFFFFF
+          val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+          if (operandStack.maybePopCondition(false)) {
+            instructionPointer += signedOffset
+          }
 
         case _ =>
           throw new RuntimeException(s"Unknown opcode: $opcode")
