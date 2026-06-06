@@ -338,4 +338,21 @@ final class OperandStack(private[interpreter] val control: ByteStack,
 
   def argumentReader(signature: ParamsSignature): ArgumentReader =
     new OperandStackArgumentReader(this, signature)
+
+  def contract(signature: ParamsSignature): Unit = {
+    val count = signature.paramCount
+    if (count > 0) {
+      val typeCounts = signature.typeCounts
+      objects.contract(typeCounts(BasicTypes.Object))
+      booleans.contract(typeCounts(BasicTypes.Boolean))
+      ints.contract(typeCounts(BasicTypes.Int))
+      longs.contract(typeCounts(BasicTypes.Long))
+      shorts.contract(typeCounts(BasicTypes.Short))
+      bytes.contract(typeCounts(BasicTypes.Byte))
+      chars.contract(typeCounts(BasicTypes.Char))
+      doubles.contract(typeCounts(BasicTypes.Double))
+      floats.contract(typeCounts(BasicTypes.Float))
+      control.contract(count)
+    }
+  }
 }

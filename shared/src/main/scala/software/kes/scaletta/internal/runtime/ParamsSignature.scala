@@ -11,20 +11,20 @@ object ParamsSignature {
 
   def fromSeq(params: Iterable[Type[TypeId]]): ParamsSignature = {
     val types = params.map(BasicTypes.fromType).toArray
-    val occ = Array.fill[Int](BasicTypes.MaxValue + 1)(0)
+    val counts = new Array[Int](BasicTypes.MaxValue + 1)
     val out = new Array[VarAddress.Encoded](params.size)
     var i = types.length - 1
     while (i >= 0) {
       val t = types(i)
-      val occCount = occ(t)
-      occ(t) += 1
+      val occCount = counts(t)
+      counts(t) += 1
       out(i) = VarAddress.encode(t, occCount)
       i -= 1
     }
-    new ParamsSignature(ArraySeq.unsafeWrapArray(out))
+    new ParamsSignature(ArraySeq.unsafeWrapArray(out), ArraySeq.unsafeWrapArray(counts))
   }
 
-  val empty: ParamsSignature = new ParamsSignature(ArraySeq.empty)
+  val empty: ParamsSignature = new ParamsSignature(ArraySeq.empty, ArraySeq.fill(BasicTypes.MaxValue + 1)(0))
 }
 
 /**
@@ -36,7 +36,8 @@ object ParamsSignature {
  * This assumes that arguments were pushed onto the stack from left to right.
  * (i.e., the top of the stack will contain the last argument)
  */
-final class ParamsSignature private(val params: ArraySeq[VarAddress.Encoded]) {
+final class ParamsSignature private(val params: ArraySeq[VarAddress.Encoded],
+                                    val typeCounts: ArraySeq[Int]) {
   def paramCount: Int = params.length
 
   def param(index: Int): VarAddress.Encoded = params(index)

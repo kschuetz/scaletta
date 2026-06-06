@@ -109,6 +109,33 @@ class OperandStackSpec extends AnyFunSpec with Matchers {
       stack.pop() shouldBe 3.0
       stack.pop() shouldBe "two"
       stack.pop() shouldBe 1
+    }
+
+    it("should contract correctly based on a ParamsSignature") {
+      import software.kes.scaletta.internal.runtime.{CoreTypes, ParamsSignature}
+
+      val stack = OperandStack.create()
+      stack.pushInt(11)
+      stack.pushObject("first")
+      stack.pushInt(13)
+      stack.pushObject("second")
+      stack.pushDouble(17.0)
+
+      // Signature with 3 parameters: (Object, Int, Double)
+      // These correspond to the last 3 elements pushed: "second", 13, 17.0
+      val signature = ParamsSignature.fromSeq(Seq(
+        CoreTypes.StringT,
+        CoreTypes.IntT,
+        CoreTypes.DoubleT
+      ))
+
+      stack.size() shouldBe 5
+      stack.contract(signature)
+      stack.size() shouldBe 2
+
+      // Remaining should be "first" and 11
+      stack.pop() shouldBe "first"
+      stack.pop() shouldBe 11
       stack.isEmpty shouldBe true
     }
 
