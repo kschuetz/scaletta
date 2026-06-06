@@ -192,5 +192,30 @@ class FloatStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = FloatStack.create()
+      stack.push(41.1f)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41.1f
+      stack.pop() shouldBe 41.1f
+      stack.isEmpty shouldBe true
+
+      stack.push(43.3f)
+      stack.push(47.7f)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe 47.7f
+      stack.pop() shouldBe 47.7f
+      stack.pop() shouldBe 43.3f
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = FloatStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

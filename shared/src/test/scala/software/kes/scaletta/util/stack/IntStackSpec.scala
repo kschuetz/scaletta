@@ -192,5 +192,30 @@ class IntStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = IntStack.create()
+      stack.push(41)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41
+      stack.pop() shouldBe 41
+      stack.isEmpty shouldBe true
+
+      stack.push(43)
+      stack.push(47)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe 47
+      stack.pop() shouldBe 47
+      stack.pop() shouldBe 43
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = IntStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

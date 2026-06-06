@@ -29,6 +29,11 @@ final class BooleanStack private(private val elements: BitArray) extends Primiti
     value
   }
 
+  def duplicate(): Unit = {
+    checkBeforeDuplicate()
+    push(elements.get(_size - 1))
+  }
+
   /**
    * Reads the value at the specified position from the top of the stack.
    *

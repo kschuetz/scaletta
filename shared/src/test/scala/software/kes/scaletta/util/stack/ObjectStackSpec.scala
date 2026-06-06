@@ -215,5 +215,33 @@ class ObjectStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = ObjectStack.create()
+      val v1 = "41"
+      stack.push(v1)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe v1
+      stack.pop() shouldBe v1
+      stack.isEmpty shouldBe true
+
+      val v2 = "43"
+      val v3 = "47"
+      stack.push(v2)
+      stack.push(v3)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe v3
+      stack.pop() shouldBe v3
+      stack.pop() shouldBe v2
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = ObjectStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

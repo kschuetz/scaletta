@@ -192,5 +192,30 @@ class ByteStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = ByteStack.create()
+      stack.push(41.toByte)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41.toByte
+      stack.pop() shouldBe 41.toByte
+      stack.isEmpty shouldBe true
+
+      stack.push(43.toByte)
+      stack.push(47.toByte)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe 47.toByte
+      stack.pop() shouldBe 47.toByte
+      stack.pop() shouldBe 43.toByte
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = ByteStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

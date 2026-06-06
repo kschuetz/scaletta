@@ -30,6 +30,11 @@ final class ByteStack private(private var elements: Array[Byte]) extends Primiti
     value
   }
 
+  def duplicate(): Unit = {
+    checkBeforeDuplicate()
+    push(elements(_size - 1))
+  }
+
   /**
    * Reads the value at the specified position from the top of the stack.
    *

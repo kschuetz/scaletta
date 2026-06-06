@@ -30,6 +30,11 @@ final class DoubleStack private(private var elements: Array[Double]) extends Pri
     value
   }
 
+  def duplicate(): Unit = {
+    checkBeforeDuplicate()
+    push(elements(_size - 1))
+  }
+
   /**
    * Reads the value at the specified position from the top of the stack.
    *

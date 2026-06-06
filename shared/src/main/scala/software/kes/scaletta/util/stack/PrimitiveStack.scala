@@ -34,4 +34,16 @@ protected abstract class PrimitiveStack(protected var _size: Int = 0) {
       throw new NoSuchElementException("pop() called on empty stack")
     }
   }
+
+  final protected def checkBeforeDuplicate(): Unit = {
+    if (_size == 0) {
+      throw new NoSuchElementException("duplicate() called on empty stack")
+    }
+  }
+
+  /**
+   * Duplicates the top value on the stack.
+   * Throws NoSuchElementException if the stack is empty.
+   */
+  def duplicate(): Unit
 }

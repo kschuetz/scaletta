@@ -192,5 +192,30 @@ class ShortStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = ShortStack.create()
+      stack.push(41.toShort)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41.toShort
+      stack.pop() shouldBe 41.toShort
+      stack.isEmpty shouldBe true
+
+      stack.push(43.toShort)
+      stack.push(47.toShort)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe 47.toShort
+      stack.pop() shouldBe 47.toShort
+      stack.pop() shouldBe 43.toShort
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = ShortStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

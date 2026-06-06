@@ -192,5 +192,30 @@ class CharStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = CharStack.create()
+      stack.push('A')
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 'A'
+      stack.pop() shouldBe 'A'
+      stack.isEmpty shouldBe true
+
+      stack.push('B')
+      stack.push('C')
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe 'C'
+      stack.pop() shouldBe 'C'
+      stack.pop() shouldBe 'B'
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = CharStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

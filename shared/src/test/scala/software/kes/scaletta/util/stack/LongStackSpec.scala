@@ -192,5 +192,30 @@ class LongStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = LongStack.create()
+      stack.push(41L)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41L
+      stack.pop() shouldBe 41L
+      stack.isEmpty shouldBe true
+
+      stack.push(43L)
+      stack.push(47L)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe 47L
+      stack.pop() shouldBe 47L
+      stack.pop() shouldBe 43L
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = LongStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

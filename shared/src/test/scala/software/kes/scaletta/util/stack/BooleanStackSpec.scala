@@ -203,5 +203,30 @@ class BooleanStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = BooleanStack.create()
+      stack.push(true)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe true
+      stack.pop() shouldBe true
+      stack.isEmpty shouldBe true
+
+      stack.push(false)
+      stack.push(true)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe true
+      stack.pop() shouldBe true
+      stack.pop() shouldBe false
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = BooleanStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }

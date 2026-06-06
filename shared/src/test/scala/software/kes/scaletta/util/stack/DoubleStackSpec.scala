@@ -192,5 +192,30 @@ class DoubleStackSpec extends AnyFunSpec with Matchers {
       stack.contract(100)
       stack.size() shouldBe 0
     }
+
+    it("should duplicate the top value") {
+      val stack = DoubleStack.create()
+      stack.push(41.1)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41.1
+      stack.pop() shouldBe 41.1
+      stack.isEmpty shouldBe true
+
+      stack.push(43.3)
+      stack.push(47.7)
+      stack.duplicate()
+      stack.size() shouldBe 3
+      stack.pop() shouldBe 47.7
+      stack.pop() shouldBe 47.7
+      stack.pop() shouldBe 43.3
+    }
+
+    it("should throw NoSuchElementException when duplicating an empty stack") {
+      val stack = DoubleStack.create()
+      assertThrows[NoSuchElementException] {
+        stack.duplicate()
+      }
+    }
   }
 }
