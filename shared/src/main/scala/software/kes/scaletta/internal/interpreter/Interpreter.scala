@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.api.{ArgumentReader, EvalResult, RuntimeContextReader}
+import software.kes.scaletta.api.{ArgumentReader, EvalResult, FunctionImpl, RuntimeContextReader}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.util.stack.IntStack
@@ -45,23 +45,25 @@ final class Interpreter private(private val program: Program,
 
         case Opcodes.PushConst =>
           val typeTag = (rawOpcode >> 16) & 0xFF
-          val poolIndex = rawOpcode & 0xFFFF
+          val value = rawOpcode & 0xFFFF
+          println(s"[DEBUG_LOG] PushConst typeTag=$typeTag poolIndex=$value")
           (typeTag: @annotation.switch) match {
-            case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(poolIndex))
-            case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(poolIndex))
-            case BasicTypes.Float => operandStack.pushFloat(program.constantPool.getFloat(poolIndex))
-            case BasicTypes.Boolean => operandStack.pushBoolean(poolIndex != 0)
-            case BasicTypes.Int => operandStack.pushInt(poolIndex)
-            case BasicTypes.Short => operandStack.pushShort(poolIndex.toShort)
-            case BasicTypes.Byte => operandStack.pushByte(poolIndex.toByte)
-            case BasicTypes.Char => operandStack.pushChar(poolIndex.toChar)
-            case _ => operandStack.pushObject(program.constantPool.getObject(poolIndex).asInstanceOf[AnyRef])
+            case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
+            case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
+            case BasicTypes.Float => operandStack.pushFloat(program.constantPool.getFloat(value))
+            case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
+            case BasicTypes.Int => operandStack.pushInt(value)
+            case BasicTypes.Short => operandStack.pushShort(value.toShort)
+            case BasicTypes.Byte => operandStack.pushByte(value.toByte)
+            case BasicTypes.Char => operandStack.pushChar(value.toChar)
+            case _ => operandStack.pushObject(program.constantPool.getObject(value).asInstanceOf[AnyRef])
           }
 
         case Opcodes.Push =>
           val typeTag = (rawOpcode >> 16) & 0xFF
           val value = currentFunction.fetch(instructionPointer)
           instructionPointer += 1
+          println(s"[DEBUG_LOG] Push typeTag=$typeTag value=$value")
           (typeTag: @annotation.switch) match {
             case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
             case BasicTypes.Int => operandStack.pushInt(value)
@@ -71,19 +73,23 @@ final class Interpreter private(private val program: Program,
           }
 
         case Opcodes.Pop =>
+          println("[DEBUG_LOG] Pop")
           operandStack.pop()
 
         case Opcodes.PopWide =>
+          println("[DEBUG_LOG] PopWide")
           operandStack.pop()
 
         case Opcodes.Dup =>
           val value = operandStack.pop()
+          println(s"[DEBUG_LOG] Dup $value")
           operandStack.push(value)
           operandStack.push(value)
 
         case Opcodes.Swap =>
           val b = operandStack.pop()
           val a = operandStack.pop()
+          println(s"[DEBUG_LOG] Swap $a, $b")
           operandStack.push(b)
           operandStack.push(a)
 
@@ -98,6 +104,7 @@ final class Interpreter private(private val program: Program,
           instructionPointer += 1
           val value = varSpace.read(varIndex)
           operandStack.push(value)
+          println(s"[DEBUG_LOG] PushFromVarWide index=$varIndex value=$value stackSize=${operandStack.size()}")
 
         case Opcodes.PopIntoVar =>
           val varIndex = rawOpcode & 0xFFFF
@@ -109,37 +116,117 @@ final class Interpreter private(private val program: Program,
           val varIndex = currentFunction.fetch(instructionPointer)
           instructionPointer += 1
           val value = operandStack.pop()
+          println(s"[DEBUG_LOG] PopIntoVarWide index=$varIndex value=$value stackSize=${operandStack.size()}")
           writeToVar(varIndex, value)
 
         case Opcodes.Branch =>
           val offset = rawOpcode & 0xFFFFFF
           // need to handle sign extension if offset can be negative
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+          println(s"[DEBUG_LOG] Branch offset=$signedOffset")
           instructionPointer += signedOffset
 
         case Opcodes.BranchIf =>
           val offset = rawOpcode & 0xFFFFFF
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          if (operandStack.popCondition()) {
+          val cond = operandStack.popCondition()
+          println(s"[DEBUG_LOG] BranchIf cond=$cond offset=$signedOffset")
+          if (cond) {
             instructionPointer += signedOffset
           }
 
         case Opcodes.BranchUnless =>
           val offset = rawOpcode & 0xFFFFFF
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          if (!operandStack.popCondition()) {
+          val cond = operandStack.popCondition()
+          println(s"[DEBUG_LOG] BranchUnless cond=$cond offset=$signedOffset")
+          if (!cond) {
             instructionPointer += signedOffset
           }
 
         case Opcodes.CallNative =>
           val nativeId = rawOpcode & 0xFFFFFF
           val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
+          println(s"[DEBUG_LOG] CallNative $nativeId paramCount=${nativeFunction.params.paramCount}")
           val args = new InterpreterArgumentReader(operandStack, nativeFunction.params)
-          val result = executeNative(nativeFunction, runtimeContexts, args)
-          operandStack.push(result)
+          nativeFunction.impl match {
+            case FunctionImpl.ObjectResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushObject(result)
+            case FunctionImpl.BooleanResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushBoolean(result)
+            case FunctionImpl.IntResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushInt(result)
+            case FunctionImpl.LongResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushLong(result)
+            case FunctionImpl.ShortResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushShort(result)
+            case FunctionImpl.ByteResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushByte(result)
+            case FunctionImpl.CharResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushChar(result)
+            case FunctionImpl.DoubleResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushDouble(result)
+            case FunctionImpl.FloatResult(body) =>
+              val result = body(args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushFloat(result)
+            case FunctionImpl.ObjectResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushObject(result)
+            case FunctionImpl.BooleanResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushBoolean(result)
+            case FunctionImpl.IntResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushInt(result)
+            case FunctionImpl.LongResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushLong(result)
+            case FunctionImpl.ShortResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushShort(result)
+            case FunctionImpl.ByteResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushByte(result)
+            case FunctionImpl.CharResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushChar(result)
+            case FunctionImpl.DoubleResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushDouble(result)
+            case FunctionImpl.FloatResultWithContext(body) =>
+              val result = body(runtimeContexts, args)
+              operandStack.contract(nativeFunction.params)
+              operandStack.pushFloat(result)
+          }
 
         case Opcodes.CallLocal =>
           val functionIndex = rawOpcode & 0xFFFFFF
+          println(s"[DEBUG_LOG] CallLocal $functionIndex")
           callStack.push(userFunctionIndex)
           callStack.push(instructionPointer)
           userFunctionIndex = functionIndex
@@ -150,9 +237,11 @@ final class Interpreter private(private val program: Program,
 
         case Opcodes.Return =>
           if (callStack.isEmpty) {
+            println(s"[DEBUG_LOG] Return from main. stackSize=${operandStack.size()}")
             evalResultContainer.loadFromOperandStack(operandStack)
             done = true
           } else {
+            println(s"[DEBUG_LOG] Return from local. stackSize=${operandStack.size()}")
             val prevFunction = currentFunction
             instructionPointer = callStack.pop()
             userFunctionIndex = callStack.pop()
@@ -193,32 +282,6 @@ final class Interpreter private(private val program: Program,
       case x: Double => varSpace.unsafeWriteDouble(index, x)
       case x: Float => varSpace.unsafeWriteFloat(index, x)
       case x: AnyRef => varSpace.unsafeWriteObject(index, x)
-    }
-  }
-
-  private def executeNative(nativeFunction: software.kes.scaletta.internal.builtins.NativeFunction,
-                            runtimeContexts: RuntimeContextReader,
-                            args: ArgumentReader): Any = {
-    import software.kes.scaletta.api.FunctionImpl._
-    nativeFunction.impl match {
-      case ObjectResult(body) => body(args)
-      case BooleanResult(body) => body(args)
-      case IntResult(body) => body(args)
-      case LongResult(body) => body(args)
-      case ShortResult(body) => body(args)
-      case ByteResult(body) => body(args)
-      case CharResult(body) => body(args)
-      case DoubleResult(body) => body(args)
-      case FloatResult(body) => body(args)
-      case ObjectResultWithContext(body) => body(runtimeContexts, args)
-      case BooleanResultWithContext(body) => body(runtimeContexts, args)
-      case IntResultWithContext(body) => body(runtimeContexts, args)
-      case LongResultWithContext(body) => body(runtimeContexts, args)
-      case ShortResultWithContext(body) => body(runtimeContexts, args)
-      case ByteResultWithContext(body) => body(runtimeContexts, args)
-      case CharResultWithContext(body) => body(runtimeContexts, args)
-      case DoubleResultWithContext(body) => body(runtimeContexts, args)
-      case FloatResultWithContext(body) => body(runtimeContexts, args)
     }
   }
 

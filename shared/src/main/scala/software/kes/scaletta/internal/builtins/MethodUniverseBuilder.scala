@@ -28,7 +28,11 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
                                returnType: Type[TypeId],
                                impl: FunctionImpl): NativeFunctionId = {
     val currentSettings = settings
-    val flattenedParams = paramGroups.flatMap(_.params).map(_.typ)
+    val receiverParam = methodName.receiverType match {
+      case Instance(typ) => Some(typ)
+      case _ => None
+    }
+    val flattenedParams = receiverParam.toVector ++ paramGroups.flatMap(_.params).map(_.typ)
     val nativeFunctionId = nativeFunctionTableBuilder.add(NativeFunction(ParamsSignature.fromSeq(flattenedParams), BasicTypes.fromType(returnType).toInt, impl))
 
     val definition = NativeFunctionDefinition(
