@@ -336,6 +336,54 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     control.clear()
   }
 
+  /**
+   * Duplicates the top value on the stack.
+   * This is used by the Dup opcode.
+   */
+  def duplicate(): Unit = {
+    if (control.isEmpty) {
+      throw new IllegalStateException("Cannot duplicate from an empty stack")
+    }
+    val basicType = control.unsafeRead(0)
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Object =>
+        pushObject(objects.unsafeRead(0))
+      case BasicTypes.Boolean =>
+        pushBoolean(booleans.unsafeRead(0))
+      case BasicTypes.Int =>
+        pushInt(ints.unsafeRead(0))
+      case BasicTypes.Long =>
+        pushLong(longs.unsafeRead(0))
+      case BasicTypes.Short =>
+        pushShort(shorts.unsafeRead(0))
+      case BasicTypes.Byte =>
+        pushByte(bytes.unsafeRead(0))
+      case BasicTypes.Char =>
+        pushChar(chars.unsafeRead(0))
+      case BasicTypes.Double =>
+        pushDouble(doubles.unsafeRead(0))
+      case BasicTypes.Float =>
+        pushFloat(floats.unsafeRead(0))
+      case _ =>
+        throw new IllegalStateException(s"Unknown type: $basicType")
+    }
+  }
+
+  /**
+   * Swaps the top two values on the stack.
+   * This is used by the Swap opcode.
+   */
+  def swap(): Unit = {
+    val size = control.size()
+    if (size < 2) {
+      throw new IllegalStateException("Cannot swap with fewer than 2 values on the stack")
+    }
+    val b = pop()
+    val a = pop()
+    push(b)
+    push(a)
+  }
+
   def argumentReader(signature: ParamsSignature): ArgumentReader =
     new OperandStackArgumentReader(this, signature)
 

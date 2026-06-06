@@ -81,17 +81,12 @@ final class Interpreter private(private val program: Program,
           operandStack.pop()
 
         case Opcodes.Dup =>
-          val value = operandStack.pop()
-          println(s"[DEBUG_LOG] Dup $value")
-          operandStack.push(value)
-          operandStack.push(value)
+          println(s"[DEBUG_LOG] Dup")
+          operandStack.duplicate()
 
         case Opcodes.Swap =>
-          val b = operandStack.pop()
-          val a = operandStack.pop()
-          println(s"[DEBUG_LOG] Swap $a, $b")
-          operandStack.push(b)
-          operandStack.push(a)
+          println(s"[DEBUG_LOG] Swap")
+          operandStack.swap()
 
         case Opcodes.PushFromVar =>
           val varIndex = rawOpcode & 0xFFFF

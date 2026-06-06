@@ -111,6 +111,46 @@ class OperandStackSpec extends AnyFunSpec with Matchers {
       stack.pop() shouldBe 1
     }
 
+    it("should duplicate the top value correctly") {
+      val stack = OperandStack.create()
+      stack.pushInt(41)
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41
+      stack.pop() shouldBe 41
+
+      stack.pushObject("43")
+      stack.duplicate()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe "43"
+      stack.pop() shouldBe "43"
+    }
+
+    it("should swap the top two values correctly") {
+      val stack = OperandStack.create()
+      stack.pushInt(41)
+      stack.pushObject("43")
+      stack.swap()
+      stack.size() shouldBe 2
+      stack.pop() shouldBe 41
+      stack.pop() shouldBe "43"
+    }
+
+    it("should throw exception when duplicating from an empty stack") {
+      val stack = OperandStack.create()
+      assertThrows[IllegalStateException] {
+        stack.duplicate()
+      }
+    }
+
+    it("should throw exception when swapping with fewer than 2 values") {
+      val stack = OperandStack.create()
+      stack.pushInt(41)
+      assertThrows[IllegalStateException] {
+        stack.swap()
+      }
+    }
+
     it("should contract correctly based on a ParamsSignature") {
       import software.kes.scaletta.internal.runtime.{CoreTypes, ParamsSignature}
 
