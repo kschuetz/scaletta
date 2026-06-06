@@ -111,19 +111,64 @@ class OperandStackSpec extends AnyFunSpec with Matchers {
       stack.pop() shouldBe 1
     }
 
-    it("should duplicate the top value correctly") {
+    it("should duplicate the top value correctly for all types") {
       val stack = OperandStack.create()
+
+      // Int
       stack.pushInt(41)
       stack.duplicate()
       stack.size() shouldBe 2
       stack.pop() shouldBe 41
       stack.pop() shouldBe 41
 
+      // Object
       stack.pushObject("43")
       stack.duplicate()
       stack.size() shouldBe 2
       stack.pop() shouldBe "43"
       stack.pop() shouldBe "43"
+
+      // Boolean
+      stack.pushBoolean(true)
+      stack.duplicate()
+      stack.pop() shouldBe true
+      stack.pop() shouldBe true
+
+      // Long
+      stack.pushLong(47L)
+      stack.duplicate()
+      stack.pop() shouldBe 47L
+      stack.pop() shouldBe 47L
+
+      // Short
+      stack.pushShort(53.toShort)
+      stack.duplicate()
+      stack.pop() shouldBe 53.toShort
+      stack.pop() shouldBe 53.toShort
+
+      // Byte
+      stack.pushByte(59.toByte)
+      stack.duplicate()
+      stack.pop() shouldBe 59.toByte
+      stack.pop() shouldBe 59.toByte
+
+      // Char
+      stack.pushChar('Z')
+      stack.duplicate()
+      stack.pop() shouldBe 'Z'
+      stack.pop() shouldBe 'Z'
+
+      // Double
+      stack.pushDouble(61.0)
+      stack.duplicate()
+      stack.pop() shouldBe 61.0
+      stack.pop() shouldBe 61.0
+
+      // Float
+      stack.pushFloat(67.0f)
+      stack.duplicate()
+      stack.pop() shouldBe 67.0f
+      stack.pop() shouldBe 67.0f
     }
 
     it("should swap the top two values correctly") {
@@ -138,7 +183,7 @@ class OperandStackSpec extends AnyFunSpec with Matchers {
 
     it("should throw exception when duplicating from an empty stack") {
       val stack = OperandStack.create()
-      assertThrows[IllegalStateException] {
+      assertThrows[NoSuchElementException] {
         stack.duplicate()
       }
     }

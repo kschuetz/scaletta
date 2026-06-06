@@ -341,29 +341,18 @@ final class OperandStack(private[interpreter] val control: ByteStack,
    * This is used by the Dup opcode.
    */
   def duplicate(): Unit = {
-    if (control.isEmpty) {
-      throw new IllegalStateException("Cannot duplicate from an empty stack")
-    }
+    control.duplicate()
     val basicType = control.unsafeRead(0)
     (basicType: @annotation.switch) match {
-      case BasicTypes.Object =>
-        pushObject(objects.unsafeRead(0))
-      case BasicTypes.Boolean =>
-        pushBoolean(booleans.unsafeRead(0))
-      case BasicTypes.Int =>
-        pushInt(ints.unsafeRead(0))
-      case BasicTypes.Long =>
-        pushLong(longs.unsafeRead(0))
-      case BasicTypes.Short =>
-        pushShort(shorts.unsafeRead(0))
-      case BasicTypes.Byte =>
-        pushByte(bytes.unsafeRead(0))
-      case BasicTypes.Char =>
-        pushChar(chars.unsafeRead(0))
-      case BasicTypes.Double =>
-        pushDouble(doubles.unsafeRead(0))
-      case BasicTypes.Float =>
-        pushFloat(floats.unsafeRead(0))
+      case BasicTypes.Object => objects.duplicate()
+      case BasicTypes.Boolean => booleans.duplicate()
+      case BasicTypes.Int => ints.duplicate()
+      case BasicTypes.Long => longs.duplicate()
+      case BasicTypes.Short => shorts.duplicate()
+      case BasicTypes.Byte => bytes.duplicate()
+      case BasicTypes.Char => chars.duplicate()
+      case BasicTypes.Double => doubles.duplicate()
+      case BasicTypes.Float => floats.duplicate()
       case _ =>
         throw new IllegalStateException(s"Unknown type: $basicType")
     }
