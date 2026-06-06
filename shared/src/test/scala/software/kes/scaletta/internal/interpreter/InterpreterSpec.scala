@@ -95,13 +95,13 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       result.intValue() shouldBe 41
     }
 
-    // TODO
-    ignore("should handle mixed-type arithmetic") {
+    it("should handle mixed-type arithmetic") {
       val builder = ProgramBuilder.create(BasicTypes.Long, VarSpaceSignature.empty)
       val assembler = builder.mainAssembler()
 
+      val largeLong = Int.MaxValue.toLong + 1
       assembler.pushImmediateInt(11)
-      assembler.pushImmediateLong(12L)
+      assembler.pushImmediateLong(largeLong)
       assembler.callNative(arithmetic.int.add.long)
       assembler.emitReturn()
 
@@ -111,7 +111,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val interpreter = Interpreter.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
-      result.longValue() shouldBe 23L
+      result.longValue() shouldBe (11L + largeLong)
     }
 
     it("should handle branching") {
@@ -163,6 +163,28 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 41
+    }
+    it("should handle all basic types via Push") {
+      val builder = ProgramBuilder.create(BasicTypes.Boolean, VarSpaceSignature.empty)
+      val assembler = builder.mainAssembler()
+
+      // We'll test push for types that use constant pool in pushImmediate
+      assembler.pushImmediateLong(1234567890123L)
+      assembler.pop()
+      assembler.pushImmediateDouble(1.23456789)
+      assembler.pop()
+      assembler.pushImmediateFloat(1.23f)
+      assembler.pop()
+      assembler.pushImmediateObject("test")
+      assembler.pop()
+      assembler.pushImmediateBoolean(true)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+
+      result.booleanValue() shouldBe true
     }
   }
 }

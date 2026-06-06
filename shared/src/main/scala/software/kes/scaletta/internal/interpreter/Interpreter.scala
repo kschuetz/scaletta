@@ -65,11 +65,15 @@ final class Interpreter private(private val program: Program,
           instructionPointer += 1
           println(s"[DEBUG_LOG] Push typeTag=$typeTag value=$value")
           (typeTag: @annotation.switch) match {
+            case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
+            case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
+            case BasicTypes.Float => operandStack.pushFloat(program.constantPool.getFloat(value))
             case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
             case BasicTypes.Int => operandStack.pushInt(value)
             case BasicTypes.Short => operandStack.pushShort(value.toShort)
             case BasicTypes.Byte => operandStack.pushByte(value.toByte)
             case BasicTypes.Char => operandStack.pushChar(value.toChar)
+            case _ => operandStack.pushObject(program.constantPool.getObject(value).asInstanceOf[AnyRef])
           }
 
         case Opcodes.Pop =>
