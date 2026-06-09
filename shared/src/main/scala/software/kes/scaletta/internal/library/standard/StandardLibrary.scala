@@ -6,5 +6,6 @@ object StandardLibrary {
   lazy val module: ScalettaModule[Unit] =
     ScalettaModule.composite(
       ArithmeticOps.module,
+      ComparisonOps.module,
     )
 }
