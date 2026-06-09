@@ -292,6 +292,9 @@ final class Interpreter private(private val program: Program,
     variableStack.clear()
     varSpace.setSignature(program.mainFunction.varSpaceSignature)
   }
+
+  private[interpreter] def readAllVariables(): Array[Any] =
+    varSpace.readAll()
 }
 
 private[interpreter] final class InterpreterArgumentReader(operandStack: OperandStack,
