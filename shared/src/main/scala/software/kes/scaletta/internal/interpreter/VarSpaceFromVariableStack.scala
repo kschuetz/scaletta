@@ -79,4 +79,17 @@ final class VarSpaceFromVariableStack private(stack: VariableStack,
 
   def unsafeWriteFloat(index: Int, value: Float): Unit =
     stack.floats.unsafeWrite(signature.stackOffsetOf(index), value)
+
+  def slotCount: Int = signature.slotCount
+
+  def readAll(): Array[Any] = {
+    val count = slotCount
+    val result = new Array[Any](count)
+    var i = 0
+    while (i < count) {
+      result(i) = read(i)
+      i += 1
+    }
+    result
+  }
 }

@@ -88,5 +88,49 @@ class VarSpaceFromVariableStackSpec extends AnyFunSpec with Matchers {
       varSpace.unsafeReadFloat(4) shouldBe 40.5f
       varSpace.unsafeReadDouble(5) shouldBe 50.5
     }
+
+    it("should read all values into an array") {
+      val stack = VariableStack.create()
+      val fs = FrameSignature.of(
+        CoreTypes.AnyT,
+        CoreTypes.AnyValT,
+        CoreTypes.AnyRefT,
+        CoreTypes.NullT,
+        CoreTypes.NothingT,
+        CoreTypes.UnitT,
+        CoreTypes.BooleanT,
+        CoreTypes.ByteT,
+        CoreTypes.CharT,
+        CoreTypes.DoubleT,
+        CoreTypes.FloatT,
+        CoreTypes.IntT,
+        CoreTypes.LongT,
+        CoreTypes.ShortT,
+        CoreTypes.StringT
+      )
+      stack.expandFrame(fs)
+      stack.objects.unsafeWrite(0, "any")
+      stack.objects.unsafeWrite(1, "anyval")
+      stack.objects.unsafeWrite(2, "anyref")
+      stack.objects.unsafeWrite(3, null)
+      stack.objects.unsafeWrite(4, "nothing")
+      stack.objects.unsafeWrite(5, "unit")
+      stack.booleans.unsafeWrite(0, true)
+      stack.bytes.unsafeWrite(0, 11)
+      stack.chars.unsafeWrite(0, 'z')
+      stack.doubles.unsafeWrite(0, 3.14)
+      stack.floats.unsafeWrite(0, 2.71f)
+      stack.ints.unsafeWrite(0, 41)
+      stack.longs.unsafeWrite(0, 123456789L)
+      stack.shorts.unsafeWrite(0, 31)
+      stack.objects.unsafeWrite(6, "test")
+
+      val signature = VarSpaceSignature.of(fs)
+      val varSpace = VarSpaceFromVariableStack.create(stack, signature)
+
+      val result = varSpace.readAll()
+      result shouldBe Array[Any]("any", "anyval", "anyref", null, "nothing", "unit", true, 11, 'z',
+        3.14, 2.71f, 41, 123456789L, 31, "test")
+    }
   }
 }
