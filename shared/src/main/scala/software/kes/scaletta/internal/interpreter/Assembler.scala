@@ -306,7 +306,7 @@ final class Assembler(private val writer: OpcodeWriter,
     val s = if (varIndex < 0) 0 else varIndex
     if (s < 65536) {
       if (!allowConst || s > 255 || value < -128 || value > 127) {
-        val opcode = makeOpcode(Opcodes.Store, typ, (s & 0xFF).toShort)
+        val opcode = makeOpcode(Opcodes.Store, typ, (s & 0xFFFF).toShort)
         writer.writeAndAdvance(opcode)
         writer.writeAndAdvance(value)
       } else {
@@ -330,9 +330,9 @@ final class Assembler(private val writer: OpcodeWriter,
       case Some(value) if s <= 255 =>
         val opcode = makeOpcode(Opcodes.StoreConst, typ, (s & 0xFF).toByte, value)
         writer.writeAndAdvance(opcode)
-      case None =>
+      case _ =>
         if (s < 65536) {
-          val opcode = makeOpcode(Opcodes.Store, typ, (s & 0xFF).toShort)
+          val opcode = makeOpcode(Opcodes.Store, typ, (s & 0xFFFF).toShort)
           writer.writeAndAdvance(opcode)
           writer.writeAndAdvance(intern)
         } else {

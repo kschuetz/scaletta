@@ -289,5 +289,61 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       vars(7) shouldBe 2.71828
       vars(8) shouldBe "Scaletta"
     }
+
+    it("should correctly store variables using StoreConst, Store, and StoreWide") {
+      // Index 17 (prime) for StoreConst (index < 256, value fits in 8 bits)
+      // Index 257 (prime) for Store (index < 65536)
+      // Index 65537 (prime) for StoreWide (index > 65535)
+
+      // Creating a very large signature using fromSeq might be slow but it's safe.
+      // 65538 Ints.
+      val types = Seq.fill(65538)(CoreTypes.IntT)
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(types))
+
+      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val assembler = builder.mainAssembler()
+
+      // StoreConst: var 17, value 43 (prime)
+      assembler.storeImmediateInt(17, 43)
+
+      // Store: var 257, value 41 (prime)
+      assembler.storeImmediateInt(257, 41)
+
+      // StoreWide: var 65537, value 47 (prime)
+      assembler.storeImmediateInt(65537, 47)
+
+      assembler.pushImmediateInt(0)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader)
+
+      val vars = interpreter.readAllVariables()
+      vars(17) shouldBe 43
+      vars(257) shouldBe 41
+      vars(65537) shouldBe 47
+    }
+
+    it("should correctly store non-primitive types using StoreConst and Store") {
+      val types = Seq.fill(258)(CoreTypes.AnyRefT)
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(types))
+      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val assembler = builder.mainAssembler()
+
+      assembler.storeImmediateObject(17, "SmallIndexObject")
+      assembler.storeImmediateObject(257, "LargeIndexObject")
+
+      assembler.pushImmediateInt(0)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader)
+
+      val vars = interpreter.readAllVariables()
+      vars(17) shouldBe "SmallIndexObject"
+      vars(257) shouldBe "LargeIndexObject"
+    }
   }
 }
