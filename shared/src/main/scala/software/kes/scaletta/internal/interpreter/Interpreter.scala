@@ -37,11 +37,19 @@ final class Interpreter private(private val program: Program,
 
     System.err.println(s"[DEBUG_LOG] Starting execution. Main function frame: ${program.mainFunction.frameSignature}")
 
+    var rawOpcode = 0
     while (!done) {
-      val rawOpcode = currentFunction.fetch(instructionPointer)
-      val opcode = (rawOpcode >> 24) & 0xFF
-      System.err.println(s"[DEBUG_LOG] Executing opcode $opcode at IP $instructionPointer")
-      instructionPointer += 1
+      val opcode = if (instructionPointer < currentFunction.instructions.length) {
+        rawOpcode = currentFunction.fetch(instructionPointer)
+        val op = (rawOpcode >> 24) & 0xFF
+        System.err.println(s"[DEBUG_LOG] Executing opcode $op at IP $instructionPointer")
+        instructionPointer += 1
+        op
+      } else {
+        rawOpcode = Opcodes.Return << 24
+        System.err.println(s"[DEBUG_LOG] End of instructions reached at IP $instructionPointer. Implicitly returning.")
+        Opcodes.Return
+      }
 
       (opcode: @annotation.switch) match {
         case Opcodes.Nop => ()
