@@ -36,6 +36,32 @@ object FrameSignature {
   }
 
   val empty: FrameSignature = new FrameSignature(ArraySeq.empty, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+  // This is only for tests
+  def unsafeCreate(objectCount: Int,
+                   booleanCount: Int,
+                   intCount: Int,
+                   longCount: Int,
+                   shortCount: Int,
+                   byteCount: Int,
+                   charCount: Int,
+                   doubleCount: Int,
+                   floatCount: Int): FrameSignature = {
+    // Note: this constructor doesn't populate 'slots', which is fine if we only use it for testing
+    // or if we only care about the counts for stack expansion.
+    new FrameSignature(
+      ArraySeq.empty,
+      objectCount,
+      booleanCount,
+      intCount,
+      longCount,
+      shortCount,
+      byteCount,
+      charCount,
+      doubleCount,
+      floatCount
+    )
+  }
 }
 
 /**

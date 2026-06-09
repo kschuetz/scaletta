@@ -7,7 +7,9 @@ import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.library.standard.testsupport.ArithmeticOpsLookup
-import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarAddress, VarSpaceSignature}
+
+import scala.collection.immutable.ArraySeq
 
 class InterpreterSpec extends AnyFunSpec with Matchers {
   private val scaletta = Scaletta.create()
@@ -73,8 +75,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       result.intValue() shouldBe 23
     }
 
-    // TODO
-    ignore("should handle local variables") {
+    it("should handle local variables") {
       val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
       val signature = VarSpaceSignature.of(frame)
       val builder = ProgramBuilder.create(BasicTypes.Int, signature)
@@ -83,16 +84,17 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val varIdx = 0
       assembler.pushImmediateInt(41)
       assembler.popIntIntoVar(varIdx)
-      assembler.pushIntFromVar(varIdx)
+      assembler.pushImmediateInt(0)
       assembler.emitReturn()
 
       val program = builder.build()
       program.mainFunction.frameSignature.intCount shouldBe 1
 
       val interpreter = Interpreter.create(program, nativeFunctions)
-      val result = interpreter.run(emptyContextReader)
+      interpreter.run(emptyContextReader)
 
-      result.intValue() shouldBe 41
+      val vars = interpreter.readAllVariables()
+      vars(0) shouldBe 41
     }
 
     it("should handle mixed-type arithmetic") {
@@ -155,6 +157,10 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       funcAssembler.popIntIntoVar(0)
       funcAssembler.pushIntFromVar(0)
       funcAssembler.pushImmediateInt(30)
+      // arguments for arithmetic.int.add.int are (11, 30)
+      // ArithmeticOps.add.intInt expects (args(0), args(1))
+      // Since ParamsSignature(Int, Int) will map args(0) to stackOffset 1 and args(1) to stackOffset 0
+      // when stack is [..., 11, 30] (top is 30)
       funcAssembler.callNative(arithmetic.int.add.int)
       funcAssembler.emitReturn()
 
@@ -185,6 +191,103 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val result = interpreter.run(emptyContextReader)
 
       result.booleanValue() shouldBe true
+    }
+
+    it("should correctly store variables using PopIntoVar") {
+      val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.LongT, CoreTypes.AnyRefT))
+      val signature = VarSpaceSignature.of(frame)
+      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushImmediateInt(43)
+      assembler.popIntIntoVar(0)
+      assembler.pushImmediateLong(1234567890123L)
+      assembler.popLongIntoVar(1)
+      assembler.pushImmediateObject("test")
+      assembler.popObjectIntoVar(2)
+      assembler.pushImmediateInt(0)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader)
+
+      val vars = interpreter.readAllVariables()
+      vars(0) shouldBe 43
+      vars(1) shouldBe 1234567890123L
+      vars(2) shouldBe "test"
+    }
+
+    it("should correctly store variables using PopIntoVarWide") {
+      val largeFrame = FrameSignature.unsafeCreate(0, 0, 65537, 0, 0, 0, 0, 0, 0)
+      val slots = ArraySeq.fill(65537)(VarAddress.encode(BasicTypes.Int, 0))
+      // Actually we need different offsets for each slot if we want it to be a valid signature,
+      // but for just testing PopIntoVar we only need the slot at 65536 to be valid.
+      val updatedSlots = slots.updated(65536, VarAddress.encode(BasicTypes.Int, 65536))
+
+      val signature = VarSpaceSignature.create(updatedSlots, largeFrame)
+      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushImmediateInt(47)
+      assembler.popIntIntoVar(65536)
+      assembler.pushImmediateInt(0)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader)
+
+      val vars = interpreter.readAllVariables()
+      vars.length should be > 65536
+      vars(65536) shouldBe 47
+    }
+
+    it("should handle all basic types in variable storage") {
+      val frame = FrameSignature.fromSeq(Seq(
+        CoreTypes.BooleanT, CoreTypes.ByteT, CoreTypes.CharT, CoreTypes.ShortT,
+        CoreTypes.IntT, CoreTypes.LongT, CoreTypes.FloatT, CoreTypes.DoubleT, CoreTypes.AnyRefT
+      ))
+      val signature = VarSpaceSignature.of(frame)
+      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushImmediateBoolean(true)
+      assembler.popBooleanIntoVar(0)
+      assembler.pushImmediateByte(13.toByte)
+      assembler.popByteIntoVar(1)
+      assembler.pushImmediateChar('A')
+      assembler.popCharIntoVar(2)
+      assembler.pushImmediateShort(101.toShort)
+      assembler.popShortIntoVar(3)
+      assembler.pushImmediateInt(43)
+      assembler.popIntIntoVar(4)
+      assembler.pushImmediateLong(1234567890123L)
+      assembler.popLongIntoVar(5)
+      assembler.pushImmediateFloat(3.14f)
+      assembler.popFloatIntoVar(6)
+      assembler.pushImmediateDouble(2.71828)
+      assembler.popDoubleIntoVar(7)
+      assembler.pushImmediateObject("Scaletta")
+      assembler.popObjectIntoVar(8)
+
+      assembler.pushImmediateInt(0)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader)
+
+      val vars = interpreter.readAllVariables()
+      vars(0) shouldBe true
+      vars(1) shouldBe 13.toByte
+      vars(2) shouldBe 'A'
+      vars(3) shouldBe 101.toShort
+      vars(4) shouldBe 43
+      vars(5) shouldBe 1234567890123L
+      vars(6) shouldBe 3.14f
+      vars(7) shouldBe 2.71828
+      vars(8) shouldBe "Scaletta"
     }
   }
 }

@@ -35,9 +35,12 @@ final class Interpreter private(private val program: Program,
     var currentFunction = program.mainFunction
     var done = false
 
+    System.err.println(s"[DEBUG_LOG] Starting execution. Main function frame: ${program.mainFunction.frameSignature}")
+
     while (!done) {
       val rawOpcode = currentFunction.fetch(instructionPointer)
       val opcode = (rawOpcode >> 24) & 0xFF
+      System.err.println(s"[DEBUG_LOG] Executing opcode $opcode at IP $instructionPointer")
       instructionPointer += 1
 
       (opcode: @annotation.switch) match {
@@ -46,7 +49,7 @@ final class Interpreter private(private val program: Program,
         case Opcodes.PushConst =>
           val typeTag = (rawOpcode >> 16) & 0xFF
           val value = rawOpcode & 0xFFFF
-          println(s"[DEBUG_LOG] PushConst typeTag=$typeTag poolIndex=$value")
+          println(s"[DEBUG_LOG] PushConst typeTag=$typeTag value=$value")
           (typeTag: @annotation.switch) match {
             case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
             case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
@@ -106,17 +109,23 @@ final class Interpreter private(private val program: Program,
           println(s"[DEBUG_LOG] PushFromVarWide index=$varIndex value=$value stackSize=${operandStack.size()}")
 
         case Opcodes.PopIntoVar =>
+          // bits 16-23:  type tag
+          // bits 0-15:   var index
+          // no operands
+          val typeTag = (rawOpcode >> 16) & 0xFF
           val varIndex = rawOpcode & 0xFFFF
-          val value = operandStack.pop()
-          println(s"[DEBUG_LOG] PopIntoVar index=$varIndex value=$value stackSize=${operandStack.size()}")
-          writeToVar(varIndex, value)
+          System.err.println(s"[DEBUG_LOG] PopIntoVar typeTag=$typeTag index=$varIndex stackSize=${operandStack.size()}")
+          popIntoVar(typeTag, varIndex)
 
         case Opcodes.PopIntoVarWide =>
+          // bits 16-23:    type tag
+          // bits 0-15:     ignored
+          // operand 1:     var index
+          val typeTag = (rawOpcode >> 16) & 0xFF
           val varIndex = currentFunction.fetch(instructionPointer)
           instructionPointer += 1
-          val value = operandStack.pop()
-          println(s"[DEBUG_LOG] PopIntoVarWide index=$varIndex value=$value stackSize=${operandStack.size()}")
-          writeToVar(varIndex, value)
+          System.err.println(s"[DEBUG_LOG] PopIntoVarWide typeTag=$typeTag index=$varIndex stackSize=${operandStack.size()}")
+          popIntoVar(typeTag, varIndex)
 
         case Opcodes.Branch =>
           val offset = rawOpcode & 0xFFFFFF
@@ -146,7 +155,8 @@ final class Interpreter private(private val program: Program,
         case Opcodes.CallNative =>
           val nativeId = rawOpcode & 0xFFFFFF
           val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
-          println(s"[DEBUG_LOG] CallNative $nativeId paramCount=${nativeFunction.params.paramCount}")
+          System.err.println(s"[DEBUG_LOG] CallNative $nativeId paramCount=${nativeFunction.params.paramCount}")
+          System.err.println(s"[DEBUG_LOG] OperandStack ints size=${operandStack.ints.size()}")
           val args = new InterpreterArgumentReader(operandStack, nativeFunction.params)
           nativeFunction.impl match {
             case FunctionImpl.ObjectResult(body) =>
@@ -270,19 +280,18 @@ final class Interpreter private(private val program: Program,
     evalResultContainer
   }
 
-  private def writeToVar(index: Int, value: Any): Unit = {
-    value match {
-      case x: Boolean => varSpace.unsafeWriteBoolean(index, x)
-      case x: Int => varSpace.unsafeWriteInt(index, x)
-      case x: Long => varSpace.unsafeWriteLong(index, x)
-      case x: Short => varSpace.unsafeWriteShort(index, x)
-      case x: Byte => varSpace.unsafeWriteByte(index, x)
-      case x: Char => varSpace.unsafeWriteChar(index, x)
-      case x: Double => varSpace.unsafeWriteDouble(index, x)
-      case x: Float => varSpace.unsafeWriteFloat(index, x)
-      case x: AnyRef => varSpace.unsafeWriteObject(index, x)
+  private def popIntoVar(typeTag: Int, varIndex: Int): Unit =
+    (typeTag: @annotation.switch) match {
+      case BasicTypes.Long => varSpace.unsafeWriteLong(varIndex, operandStack.unsafePopLong())
+      case BasicTypes.Double => varSpace.unsafeWriteDouble(varIndex, operandStack.unsafePopDouble())
+      case BasicTypes.Float => varSpace.unsafeWriteFloat(varIndex, operandStack.unsafePopFloat())
+      case BasicTypes.Boolean => varSpace.unsafeWriteBoolean(varIndex, operandStack.unsafePopBoolean())
+      case BasicTypes.Int => varSpace.unsafeWriteInt(varIndex, operandStack.unsafePopInt())
+      case BasicTypes.Short => varSpace.unsafeWriteShort(varIndex, operandStack.unsafePopShort())
+      case BasicTypes.Byte => varSpace.unsafeWriteByte(varIndex, operandStack.unsafePopByte())
+      case BasicTypes.Char => varSpace.unsafeWriteChar(varIndex, operandStack.unsafePopChar())
+      case _ => varSpace.unsafeWriteObject(varIndex, operandStack.unsafePopObject())
     }
-  }
 
   private def reset(): Unit = {
     userFunctionIndex = 0
@@ -290,6 +299,7 @@ final class Interpreter private(private val program: Program,
     callStack.clear()
     operandStack.clear()
     variableStack.clear()
+    variableStack.expandFrame(program.mainFunction.frameSignature)
     varSpace.setSignature(program.mainFunction.varSpaceSignature)
   }
 

@@ -34,6 +34,11 @@ object VarSpaceSignature {
     }
   }
 
+  def create(slots: ArraySeq[VarAddress.Encoded],
+             frameSignature: FrameSignature): VarSpaceSignature = {
+    new VarSpaceSignature(slots, frameSignature)
+  }
+
   val empty: VarSpaceSignature = new VarSpaceSignature(ArraySeq.empty, FrameSignature.empty)
 }
 
