@@ -67,7 +67,7 @@ final class Interpreter private(private val program: Program,
             case BasicTypes.Short => operandStack.pushShort(value.toShort)
             case BasicTypes.Byte => operandStack.pushByte(value.toByte)
             case BasicTypes.Char => operandStack.pushChar(value.toChar)
-            case _ => operandStack.pushObject(program.constantPool.getObject(value).asInstanceOf[AnyRef])
+            case _ => operandStack.pushObject(program.constantPool.getObject(value))
           }
 
         case Opcodes.Push =>
@@ -84,7 +84,7 @@ final class Interpreter private(private val program: Program,
             case BasicTypes.Short => operandStack.pushShort(value.toShort)
             case BasicTypes.Byte => operandStack.pushByte(value.toByte)
             case BasicTypes.Char => operandStack.pushChar(value.toChar)
-            case _ => operandStack.pushObject(program.constantPool.getObject(value).asInstanceOf[AnyRef])
+            case _ => operandStack.pushObject(program.constantPool.getObject(value))
           }
 
         case Opcodes.StoreConst =>
