@@ -129,10 +129,6 @@ final class Interpreter private(private val program: Program,
           println("[DEBUG_LOG] Pop")
           operandStack.pop()
 
-        case Opcodes.PopWide =>
-          println("[DEBUG_LOG] PopWide")
-          operandStack.pop()
-
         case Opcodes.Dup =>
           println(s"[DEBUG_LOG] Dup")
           operandStack.duplicate()
