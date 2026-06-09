@@ -87,6 +87,44 @@ final class Interpreter private(private val program: Program,
             case _ => operandStack.pushObject(program.constantPool.getObject(value).asInstanceOf[AnyRef])
           }
 
+        case Opcodes.StoreConst =>
+          // bits 16-23:  type tag
+          // bits 8-15:   var index
+          // bits 0-7:
+          //   if type is object, long, float, or double: constant pool index
+          //   otherwise, value
+          // no operands
+          val typeTag = (rawOpcode >> 16) & 0xFF
+          val varIndex = (rawOpcode >> 8) & 0xFF
+          val value = rawOpcode & 0xFF
+          storeInVar(typeTag, varIndex, value)
+
+        case Opcodes.Store =>
+          // bits 16-23:  type tag
+          // bits 0-15:   var index
+          // operand 1:
+          //   if type is object, long, float, or double: constant pool index
+          //   otherwise, value
+          val typeTag = (rawOpcode >> 16) & 0xFF
+          val varIndex = rawOpcode & 0xFFFF
+          val value = currentFunction.fetch(instructionPointer)
+          instructionPointer += 1
+          storeInVar(typeTag, varIndex, value)
+
+        case Opcodes.StoreWide =>
+          // bits 16-23:  type tag
+          // bits 0-15:   ignored
+          // operand 1:   var index
+          // operand 2:
+          //   if type is object, long, float, or double: constant pool index
+          //   otherwise, value
+          val typeTag = (rawOpcode >> 16) & 0xFF
+          val varIndex = currentFunction.fetch(instructionPointer)
+          instructionPointer += 1
+          val value = currentFunction.fetch(instructionPointer)
+          instructionPointer += 1
+          storeInVar(typeTag, varIndex, value)
+
         case Opcodes.Pop =>
           println("[DEBUG_LOG] Pop")
           operandStack.pop()
@@ -300,6 +338,20 @@ final class Interpreter private(private val program: Program,
       case BasicTypes.Char => varSpace.unsafeWriteChar(varIndex, operandStack.unsafePopChar())
       case _ => varSpace.unsafeWriteObject(varIndex, operandStack.unsafePopObject())
     }
+
+  private def storeInVar(typeTag: Int, varIndex: Int, value: Int): Unit =
+    (typeTag: @annotation.switch) match {
+      case BasicTypes.Long => varSpace.unsafeWriteLong(varIndex, program.constantPool.getLong(value))
+      case BasicTypes.Double => varSpace.unsafeWriteDouble(varIndex, program.constantPool.getDouble(value))
+      case BasicTypes.Float => varSpace.unsafeWriteFloat(varIndex, program.constantPool.getFloat(value))
+      case BasicTypes.Boolean => varSpace.unsafeWriteBoolean(varIndex, value != 0)
+      case BasicTypes.Int => varSpace.unsafeWriteInt(varIndex, value)
+      case BasicTypes.Short => varSpace.unsafeWriteShort(varIndex, value.toShort)
+      case BasicTypes.Byte => varSpace.unsafeWriteByte(varIndex, value.toByte)
+      case BasicTypes.Char => varSpace.unsafeWriteChar(varIndex, value.toChar)
+      case _ => varSpace.unsafeWriteObject(varIndex, program.constantPool.getObject(value).asInstanceOf[AnyRef])
+    }
+
 
   private def reset(): Unit = {
     userFunctionIndex = 0
