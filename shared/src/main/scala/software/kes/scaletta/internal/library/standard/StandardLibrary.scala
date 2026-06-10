@@ -7,5 +7,6 @@ object StandardLibrary {
     ScalettaModule.composite(
       ArithmeticOps.module,
       ComparisonOps.module,
+      EqualityOps.module,
     )
 }
