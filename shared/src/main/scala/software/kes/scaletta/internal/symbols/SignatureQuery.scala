@@ -12,6 +12,8 @@ object SignatureQuery {
   def ofGroups(group: Group*): SignatureQuery =
     new SignatureQuery(group.toVector)
 
+  val any: SignatureQuery = SignatureQuery.of(CoreTypes.AnyT)
+  val anyRef: SignatureQuery = SignatureQuery.of(CoreTypes.AnyRefT)
   val boolean: SignatureQuery = SignatureQuery.of(CoreTypes.BooleanT)
   val byte: SignatureQuery = SignatureQuery.of(CoreTypes.ByteT)
   val char: SignatureQuery = SignatureQuery.of(CoreTypes.CharT)
