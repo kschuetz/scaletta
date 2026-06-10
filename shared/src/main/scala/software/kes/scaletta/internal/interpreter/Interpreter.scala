@@ -324,7 +324,7 @@ final class Interpreter private(private val program: Program,
       case BasicTypes.Short => varSpace.unsafeWriteShort(varIndex, value.toShort)
       case BasicTypes.Byte => varSpace.unsafeWriteByte(varIndex, value.toByte)
       case BasicTypes.Char => varSpace.unsafeWriteChar(varIndex, value.toChar)
-      case _ => varSpace.unsafeWriteObject(varIndex, program.constantPool.getObject(value).asInstanceOf[AnyRef])
+      case _ => varSpace.unsafeWriteObject(varIndex, program.constantPool.getObject(value))
     }
 
   private def reset(initializer: Initializer): Unit = {

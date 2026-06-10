@@ -29,9 +29,8 @@ final class OperandStack(private[interpreter] val control: ByteStack,
 
   def isEmpty: Boolean = control.isEmpty
 
-  def push(value: Any): Unit =
+  def push(value: Any): Unit = 
     value match {
-      case x: AnyRef => pushObject(x)
       case x: Boolean => pushBoolean(x)
       case x: Int => pushInt(x)
       case x: Long => pushLong(x)
@@ -40,6 +39,7 @@ final class OperandStack(private[interpreter] val control: ByteStack,
       case x: Char => pushChar(x)
       case x: Double => pushDouble(x)
       case x: Float => pushFloat(x)
+      case x: AnyRef => pushObject(x)
     }
 
   def pushObject(value: AnyRef): Unit = {

@@ -34,7 +34,6 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       result.intValue() shouldBe 43
     }
 
-
     it("should perform basic arithmetic via a native call") {
       val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
       val assembler = builder.mainAssembler()
@@ -112,6 +111,103 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       result.longValue() shouldBe (11L + largeLong)
     }
 
+    it("should support a single parameter via the initializer") {
+      val signature = VarSpaceSignature.of(FrameSignature.of(CoreTypes.IntT))
+      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushIntFromVar(0)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
+        // Offset 0 in VarSpace corresponds to stack offset 0 in IntStack (which is top).
+        // Since FrameSignature.of(IntT) assigns offset 0 to the Int, this is correct.
+        vars.unsafeWriteInt(0, 41)
+        vars
+      })
+
+      result.intValue() shouldBe 41
+    }
+
+    it("should support multiple parameters of the same type via the initializer") {
+      val signature = VarSpaceSignature.of(FrameSignature.of(CoreTypes.LongT, CoreTypes.LongT))
+      val builder = ProgramBuilder.create(BasicTypes.Long, signature)
+      val assembler = builder.mainAssembler()
+
+      // var 0: Long at stack offset 0 (assigned first by FrameSignature)
+      // var 1: Long at stack offset 1
+      assembler.pushLongFromVar(0)
+      assembler.pushLongFromVar(1)
+      assembler.callNative(arithmetic.long.add.long)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
+        // stack.unsafeWrite(0, v) is TOP.
+        // If size is 2, elements(1) is top (offset 0), elements(0) is below top (offset 1).
+        // var 0 is offset 0 (TOP), var 1 is offset 1 (BOTTOM).
+        vars.unsafeWriteLong(0, 43L)
+        vars.unsafeWriteLong(1, 47L)
+        vars
+      })
+
+      result.longValue() shouldBe 90L
+    }
+
+    it("should support diverse mixed types via the initializer") {
+      val signature = VarSpaceSignature.of(FrameSignature.of(CoreTypes.IntT, CoreTypes.LongT, CoreTypes.StringT))
+      val builder = ProgramBuilder.create(BasicTypes.Object, signature)
+      val assembler = builder.mainAssembler()
+
+      // Int: offset 0
+      // Long: offset 0
+      // String: offset 0
+      assembler.pushObjectFromVar(2)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      val testString = "Scaletta"
+      val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
+        vars.unsafeWriteInt(0, 41)
+        vars.unsafeWriteLong(1, 43L)
+        vars.unsafeWriteObject(2, testString)
+        vars
+      })
+
+      result.value[String]() shouldBe testString
+    }
+
+    it("should support parameters spanning multiple frames via the initializer") {
+      val frame = FrameSignature.of(CoreTypes.IntT, CoreTypes.IntT)
+      val signature = VarSpaceSignature.of(frame)
+
+      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushIntFromVar(0)
+      assembler.pushIntFromVar(1)
+      assembler.callNative(arithmetic.int.add.int)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
+        vars.unsafeWriteInt(0, 13)
+        vars.unsafeWriteInt(1, 17)
+        vars
+      })
+
+      result.intValue() shouldBe 30
+    }
+
     it("should handle branching") {
       val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
       val assembler = builder.mainAssembler()
@@ -166,6 +262,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
 
       result.intValue() shouldBe 41
     }
+
     it("should handle all basic types via Push") {
       val builder = ProgramBuilder.create(BasicTypes.Boolean, VarSpaceSignature.empty)
       val assembler = builder.mainAssembler()
