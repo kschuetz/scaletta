@@ -29,9 +29,9 @@ final class Interpreter private(private val program: Program,
                                 private val evalResultContainer: EvalResultContainer,
                                 private var userFunctionIndex: Int,
                                 private var instructionPointer: Int) {
-  def run(runtimeContexts: RuntimeContextReader): EvalResult = {
-    reset()
-    variableStack.expandFrame(program.mainFunction.frameSignature)
+  def run(runtimeContexts: RuntimeContextReader,
+          initializer: Initializer = Initializer.none): EvalResult = {
+    reset(initializer)
     var currentFunction = program.mainFunction
     var done = false
 
@@ -327,8 +327,7 @@ final class Interpreter private(private val program: Program,
       case _ => varSpace.unsafeWriteObject(varIndex, program.constantPool.getObject(value).asInstanceOf[AnyRef])
     }
 
-
-  private def reset(): Unit = {
+  private def reset(initializer: Initializer): Unit = {
     userFunctionIndex = 0
     instructionPointer = 0
     callStack.clear()
@@ -336,6 +335,7 @@ final class Interpreter private(private val program: Program,
     variableStack.clear()
     variableStack.expandFrame(program.mainFunction.frameSignature)
     varSpace.setSignature(program.mainFunction.varSpaceSignature)
+    initializer(varSpace)
   }
 
   private[interpreter] def readAllVariables(): Array[Any] =
