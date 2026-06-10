@@ -6,12 +6,15 @@ import software.kes.scaletta.api.{RuntimeContextReader, Scaletta}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
-import software.kes.scaletta.internal.library.standard.testsupport.ArithmeticOpsLookup
+import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.VarSpaceSignature
 
 class ImplicitReturnSpec extends AnyFunSpec with Matchers {
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
-  private val arithmetic = new ArithmeticOpsLookup(scaletta.universe)
+  private val stdLib = StandardLibraryLookup.create(scaletta.universe)
+
+  import stdLib.arithmetic
+
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
 
   private val emptyContextReader = new RuntimeContextReader {
