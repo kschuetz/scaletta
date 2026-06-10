@@ -2,12 +2,12 @@ package software.kes.scaletta.internal.interpreter
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{RuntimeContextReader, Scaletta}
+import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
-import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarAddress, VarSpaceSignature}
+import software.kes.scaletta.testsupport.emptyContextReader
 
 import scala.collection.immutable.ArraySeq
 
@@ -20,13 +20,6 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
 
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
 
-  private val emptyContextReader = new RuntimeContextReader {
-    override def readRuntimeContext[A](runtimeContextId: software.kes.scaletta.api.RuntimeContextId): A =
-      throw new UnsupportedOperationException("No contexts")
-  }
-
-  private val emptyNativeFunctionTable = NativeFunctionTable.builder().result()
-
   describe("Interpreter") {
     it("should execute a program that returns a constant integer") {
       val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
@@ -35,7 +28,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, emptyNativeFunctionTable)
+      val interpreter = Interpreter.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 43
