@@ -35,19 +35,15 @@ final class Interpreter private(private val program: Program,
     var currentFunction = program.mainFunction
     var done = false
 
-    System.err.println(s"[DEBUG_LOG] Starting execution. Main function frame: ${program.mainFunction.frameSignature}")
-
     var rawOpcode = 0
     while (!done) {
       val opcode = if (instructionPointer < currentFunction.instructions.length) {
         rawOpcode = currentFunction.fetch(instructionPointer)
         val op = (rawOpcode >> 24) & 0xFF
-        System.err.println(s"[DEBUG_LOG] Executing opcode $op at IP $instructionPointer")
         instructionPointer += 1
         op
       } else {
         rawOpcode = Opcodes.Return << 24
-        System.err.println(s"[DEBUG_LOG] End of instructions reached at IP $instructionPointer. Implicitly returning.")
         Opcodes.Return
       }
 
@@ -57,7 +53,6 @@ final class Interpreter private(private val program: Program,
         case Opcodes.PushConst =>
           val typeTag = (rawOpcode >> 16) & 0xFF
           val value = rawOpcode & 0xFFFF
-          println(s"[DEBUG_LOG] PushConst typeTag=$typeTag value=$value")
           (typeTag: @annotation.switch) match {
             case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
             case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
@@ -74,7 +69,6 @@ final class Interpreter private(private val program: Program,
           val typeTag = (rawOpcode >> 16) & 0xFF
           val value = currentFunction.fetch(instructionPointer)
           instructionPointer += 1
-          println(s"[DEBUG_LOG] Push typeTag=$typeTag value=$value")
           (typeTag: @annotation.switch) match {
             case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
             case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
@@ -126,29 +120,24 @@ final class Interpreter private(private val program: Program,
           storeInVar(typeTag, varIndex, value)
 
         case Opcodes.Pop =>
-          println("[DEBUG_LOG] Pop")
           operandStack.pop()
 
         case Opcodes.Dup =>
-          println(s"[DEBUG_LOG] Dup")
           operandStack.duplicate()
 
         case Opcodes.Swap =>
-          println(s"[DEBUG_LOG] Swap")
           operandStack.swap()
 
         case Opcodes.PushFromVar =>
           val varIndex = rawOpcode & 0xFFFF
           val value = varSpace.read(varIndex)
           operandStack.push(value)
-          println(s"[DEBUG_LOG] PushFromVar index=$varIndex value=$value stackSize=${operandStack.size()}")
 
         case Opcodes.PushFromVarWide =>
           val varIndex = currentFunction.fetch(instructionPointer)
           instructionPointer += 1
           val value = varSpace.read(varIndex)
           operandStack.push(value)
-          println(s"[DEBUG_LOG] PushFromVarWide index=$varIndex value=$value stackSize=${operandStack.size()}")
 
         case Opcodes.PopIntoVar =>
           // bits 16-23:  type tag
@@ -156,7 +145,6 @@ final class Interpreter private(private val program: Program,
           // no operands
           val typeTag = (rawOpcode >> 16) & 0xFF
           val varIndex = rawOpcode & 0xFFFF
-          System.err.println(s"[DEBUG_LOG] PopIntoVar typeTag=$typeTag index=$varIndex stackSize=${operandStack.size()}")
           popIntoVar(typeTag, varIndex)
 
         case Opcodes.PopIntoVarWide =>
@@ -166,21 +154,18 @@ final class Interpreter private(private val program: Program,
           val typeTag = (rawOpcode >> 16) & 0xFF
           val varIndex = currentFunction.fetch(instructionPointer)
           instructionPointer += 1
-          System.err.println(s"[DEBUG_LOG] PopIntoVarWide typeTag=$typeTag index=$varIndex stackSize=${operandStack.size()}")
           popIntoVar(typeTag, varIndex)
 
         case Opcodes.Branch =>
           val offset = rawOpcode & 0xFFFFFF
           // need to handle sign extension if offset can be negative
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          println(s"[DEBUG_LOG] Branch offset=$signedOffset")
           instructionPointer += signedOffset
 
         case Opcodes.BranchIf =>
           val offset = rawOpcode & 0xFFFFFF
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
           val cond = operandStack.popCondition()
-          println(s"[DEBUG_LOG] BranchIf cond=$cond offset=$signedOffset")
           if (cond) {
             instructionPointer += signedOffset
           }
@@ -189,7 +174,6 @@ final class Interpreter private(private val program: Program,
           val offset = rawOpcode & 0xFFFFFF
           val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
           val cond = operandStack.popCondition()
-          println(s"[DEBUG_LOG] BranchUnless cond=$cond offset=$signedOffset")
           if (!cond) {
             instructionPointer += signedOffset
           }
@@ -197,8 +181,6 @@ final class Interpreter private(private val program: Program,
         case Opcodes.CallNative =>
           val nativeId = rawOpcode & 0xFFFFFF
           val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
-          System.err.println(s"[DEBUG_LOG] CallNative $nativeId paramCount=${nativeFunction.params.paramCount}")
-          System.err.println(s"[DEBUG_LOG] OperandStack ints size=${operandStack.ints.size()}")
           val args = new InterpreterArgumentReader(operandStack, nativeFunction.params)
           nativeFunction.impl match {
             case FunctionImpl.ObjectResult(body) =>
@@ -277,7 +259,6 @@ final class Interpreter private(private val program: Program,
 
         case Opcodes.CallLocal =>
           val functionIndex = rawOpcode & 0xFFFFFF
-          println(s"[DEBUG_LOG] CallLocal $functionIndex")
           callStack.push(userFunctionIndex)
           callStack.push(instructionPointer)
           userFunctionIndex = functionIndex
@@ -288,11 +269,9 @@ final class Interpreter private(private val program: Program,
 
         case Opcodes.Return =>
           if (callStack.isEmpty) {
-            println(s"[DEBUG_LOG] Return from main. stackSize=${operandStack.size()}")
             evalResultContainer.loadFromOperandStack(operandStack)
             done = true
           } else {
-            println(s"[DEBUG_LOG] Return from local. stackSize=${operandStack.size()}")
             val prevFunction = currentFunction
             instructionPointer = callStack.pop()
             userFunctionIndex = callStack.pop()
@@ -365,9 +344,9 @@ final class Interpreter private(private val program: Program,
 
 private[interpreter] final class InterpreterArgumentReader(operandStack: OperandStack,
                                                            params: software.kes.scaletta.internal.runtime.ParamsSignature) extends ArgumentReader {
-  override def argCount: Int = params.paramCount
+  def argCount: Int = params.paramCount
 
-  override def read(index: Int): Any = {
+  def read(index: Int): Any = {
     val basicType = params.basicTypeOf(index)
     val stackOffset = params.stackOffsetOf(index)
     basicType match {
@@ -383,60 +362,60 @@ private[interpreter] final class InterpreterArgumentReader(operandStack: Operand
     }
   }
 
-  override def toVector: Vector[Any] =
+  def toVector: Vector[Any] =
     (0 until argCount).map(read).toVector
 
-  override def toArray: Array[Any] =
+  def toArray: Array[Any] =
     (0 until argCount).map(read).toArray
 
-  override def unsafeReadBoolean(index: Int): Boolean =
+  def unsafeReadBoolean(index: Int): Boolean =
     operandStack.booleans.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadByte(index: Int): Byte =
+  def unsafeReadByte(index: Int): Byte =
     operandStack.bytes.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadChar(index: Int): Char =
+  def unsafeReadChar(index: Int): Char =
     operandStack.chars.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadDouble(index: Int): Double =
+  def unsafeReadDouble(index: Int): Double =
     operandStack.doubles.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadFloat(index: Int): Float =
+  def unsafeReadFloat(index: Int): Float =
     operandStack.floats.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadInt(index: Int): Int =
+  def unsafeReadInt(index: Int): Int =
     operandStack.ints.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadLong(index: Int): Long =
+  def unsafeReadLong(index: Int): Long =
     operandStack.longs.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadShort(index: Int): Short =
+  def unsafeReadShort(index: Int): Short =
     operandStack.shorts.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadObject(index: Int): AnyRef =
+  def unsafeReadObject(index: Int): AnyRef =
     operandStack.objects.unsafeRead(params.stackOffsetOf(index))
 
-  override def unsafeReadBooleanArray(index: Int): ArraySeq[Boolean] =
+  def unsafeReadBooleanArray(index: Int): ArraySeq[Boolean] =
     read(index).asInstanceOf[ArraySeq[Boolean]]
 
-  override def unsafeReadByteArray(index: Int): ArraySeq[Byte] =
+  def unsafeReadByteArray(index: Int): ArraySeq[Byte] =
     read(index).asInstanceOf[ArraySeq[Byte]]
 
-  override def unsafeReadCharArray(index: Int): ArraySeq[Char] =
+  def unsafeReadCharArray(index: Int): ArraySeq[Char] =
     read(index).asInstanceOf[ArraySeq[Char]]
 
-  override def unsafeReadDoubleArray(index: Int): ArraySeq[Double] =
+  def unsafeReadDoubleArray(index: Int): ArraySeq[Double] =
     read(index).asInstanceOf[ArraySeq[Double]]
 
-  override def unsafeReadFloatArray(index: Int): ArraySeq[Float] =
+  def unsafeReadFloatArray(index: Int): ArraySeq[Float] =
     read(index).asInstanceOf[ArraySeq[Float]]
 
-  override def unsafeReadIntArray(index: Int): ArraySeq[Int] =
+  def unsafeReadIntArray(index: Int): ArraySeq[Int] =
     read(index).asInstanceOf[ArraySeq[Int]]
 
-  override def unsafeReadLongArray(index: Int): ArraySeq[Long] =
+  def unsafeReadLongArray(index: Int): ArraySeq[Long] =
     read(index).asInstanceOf[ArraySeq[Long]]
 
-  override def unsafeReadShortArray(index: Int): ArraySeq[Short] =
+  def unsafeReadShortArray(index: Int): ArraySeq[Short] =
     read(index).asInstanceOf[ArraySeq[Short]]
 }
