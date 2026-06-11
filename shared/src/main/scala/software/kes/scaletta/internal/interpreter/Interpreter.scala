@@ -350,15 +350,15 @@ private[interpreter] final class InterpreterArgumentReader(operandStack: Operand
     val basicType = params.basicTypeOf(index)
     val stackOffset = params.stackOffsetOf(index)
     basicType match {
-      case BasicTypes.Boolean => unsafeReadBoolean(index)
-      case BasicTypes.Int => unsafeReadInt(index)
-      case BasicTypes.Long => unsafeReadLong(index)
-      case BasicTypes.Short => unsafeReadShort(index)
-      case BasicTypes.Byte => unsafeReadByte(index)
-      case BasicTypes.Char => unsafeReadChar(index)
-      case BasicTypes.Double => unsafeReadDouble(index)
-      case BasicTypes.Float => unsafeReadFloat(index)
-      case _ => unsafeReadObject(index)
+      case BasicTypes.Boolean => unsafeReadBoolean(stackOffset)
+      case BasicTypes.Int => unsafeReadInt(stackOffset)
+      case BasicTypes.Long => unsafeReadLong(stackOffset)
+      case BasicTypes.Short => unsafeReadShort(stackOffset)
+      case BasicTypes.Byte => unsafeReadByte(stackOffset)
+      case BasicTypes.Char => unsafeReadChar(stackOffset)
+      case BasicTypes.Double => unsafeReadDouble(stackOffset)
+      case BasicTypes.Float => unsafeReadFloat(stackOffset)
+      case _ => unsafeReadObject(stackOffset)
     }
   }
 
