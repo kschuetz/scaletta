@@ -14,7 +14,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     .asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
 
-  import stdLib.{arithmetic, comparison}
+  import stdLib.{arithmetic, comparison, equality}
 
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
 
@@ -446,4 +446,66 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     }
   }
 
+  test("GCD (recursive Euclidean algorithm)") {
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+
+    val gcdFuncIdx = 1
+    val aVar = 0
+    val bVar = 1
+
+    // Main function: calls gcd(a, b)
+    val mainAssembler = builder.mainAssembler()
+    mainAssembler.pushIntFromVar(aVar)
+    mainAssembler.pushIntFromVar(bVar)
+    mainAssembler.callLocal(gcdFuncIdx)
+    mainAssembler.emitReturn()
+
+    // GCD function implementation
+    val gcdAssembler = builder.addFunction(signature)
+
+    // pop arguments
+    gcdAssembler.popIntIntoVar(bVar)
+    gcdAssembler.popIntIntoVar(aVar)
+
+    // if (b == 0) return a
+    gcdAssembler.pushIntFromVar(bVar)
+    gcdAssembler.pushImmediateInt(0)
+    //    gcdAssembler.callNative(equality.eq)
+    gcdAssembler.callNative(comparison.int.le.int) // TODO: use equality.eq
+    gcdAssembler.ifTrue {
+      gcdAssembler.pushIntFromVar(aVar)
+      gcdAssembler.emitReturn()
+    }
+
+    // return gcd(b, a % b)
+    gcdAssembler.pushIntFromVar(aVar)
+    gcdAssembler.pushIntFromVar(bVar)
+    gcdAssembler.callNative(arithmetic.int.modulo.int) // stack: [a % b]
+    gcdAssembler.pushIntFromVar(bVar) // stack: [a % b, b]
+    gcdAssembler.swap() // stack: [b, a % b]
+    gcdAssembler.callLocal(gcdFuncIdx)
+    gcdAssembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Test Cases: (a, b) -> result
+    val testCases = Seq(
+      (48, 18) -> 6,
+      (101, 103) -> 1,
+      (56, 42) -> 14,
+      (7, 0) -> 7,
+      (0, 5) -> 5
+    )
+
+    testCases.foreach { case ((a, b), expected) =>
+      val result = interpreter.run(emptyContextReader, Initializer { vs =>
+        vs.unsafeWriteInt(aVar, a)
+        vs.unsafeWriteInt(bVar, b)
+      })
+      result.intValue() shouldBe expected
+    }
+  }
 }
