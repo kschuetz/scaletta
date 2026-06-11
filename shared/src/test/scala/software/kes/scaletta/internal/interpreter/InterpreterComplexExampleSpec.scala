@@ -92,6 +92,96 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     }
   }
 
+  test("short-circuiting logical AND") {
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Boolean, signature)
+    val assembler = builder.mainAssembler()
+    val xVar = 0
+    val exitLabel = assembler.label()
+
+    // Logic: x > 0 && (10 / x) > 2
+    // If x > 0 is false, result is false, short-circuit
+    // If x > 0 is true, check second condition
+
+    assembler.pushIntFromVar(xVar)
+    assembler.pushImmediateInt(0)
+    assembler.callNative(comparison.int.gt.int)
+
+    // Short-circuit: if false, jump to exit (stack still has false)
+    // If true, pop true and continue
+    assembler.logicalAnd(exitLabel)
+
+    assembler.pushImmediateInt(10)
+    assembler.pushIntFromVar(xVar)
+    assembler.callNative(arithmetic.int.divide.int)
+    assembler.pushImmediateInt(2)
+    assembler.callNative(comparison.int.gt.int)
+
+    exitLabel.bind()
+    assembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Test Case: x = 0 should return false and NOT throw ArithmeticException
+    val result = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 0)))
+    result.booleanValue() shouldBe false
+
+    // Test Case: x = 2 should return true (2 > 0 && (10 / 2) > 2)
+    val result2 = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 2)))
+    result2.booleanValue() shouldBe true
+
+    // Test Case: x = 5 should return false (5 > 0 && (10 / 5) > 2)
+    val result3 = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 5)))
+    result2.booleanValue() shouldBe false
+  }
+
+  test("short-circuiting logical OR") {
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Boolean, signature)
+    val assembler = builder.mainAssembler()
+    val xVar = 0
+    val exitLabel = assembler.label()
+
+    // Logic: x < 1 || (10 / x) < 5
+    // If x < 1, result is true, short-circuit
+    // If x >= 1, check second condition
+
+    assembler.pushIntFromVar(xVar)
+    assembler.pushImmediateInt(1)
+    assembler.callNative(comparison.int.lt.int)
+
+    // Short-circuit: if true, jump to exit (stack still has true)
+    // If false, pop true and continue
+    assembler.logicalOr(exitLabel)
+
+    assembler.pushImmediateInt(10)
+    assembler.pushIntFromVar(xVar)
+    assembler.callNative(arithmetic.int.divide.int)
+    assembler.pushImmediateInt(5)
+    assembler.callNative(comparison.int.lt.int)
+
+    exitLabel.bind()
+    assembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Case 1: x = 0 should return true and NOT throw ArithmeticException
+    val result1 = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 0)))
+    result1.booleanValue() shouldBe true
+
+    // Case 2: x = 5. (5 < 1) is false. (10 / 5) = 2. 2 < 5 is true. Result true.
+    val result2 = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 5)))
+    result2.booleanValue() shouldBe true
+
+    // Case 3: x = 2. (2 < 1) is false. (10 / 2) = 5. 5 < 5 is false. Result false.
+    val result3 = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 2)))
+    result3.booleanValue() shouldBe false
+  }
+
   test("fibonacci (iterative)") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
