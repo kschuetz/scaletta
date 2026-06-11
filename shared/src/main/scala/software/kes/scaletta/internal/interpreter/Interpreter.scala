@@ -3,6 +3,7 @@ package software.kes.scaletta.internal.interpreter
 import software.kes.scaletta.api.{ArgumentReader, EvalResult, FunctionImpl, RuntimeContextReader}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
+import software.kes.scaletta.internal.runtime.ParamsSignature
 import software.kes.scaletta.util.stack.IntStack
 
 import scala.collection.immutable.ArraySeq
@@ -31,6 +32,8 @@ final class Interpreter private(private val program: Program,
                                 private var instructionPointer: Int) {
   def run(runtimeContexts: RuntimeContextReader,
           initializer: Initializer = Initializer.none): EvalResult = {
+    val argumentReader = new InterpreterArgumentReader(operandStack, ParamsSignature.empty)
+
     reset(initializer)
     var currentFunction = program.mainFunction
     var done = false
@@ -181,78 +184,78 @@ final class Interpreter private(private val program: Program,
         case Opcodes.CallNative =>
           val nativeId = rawOpcode & 0xFFFFFF
           val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
-          val args = new InterpreterArgumentReader(operandStack, nativeFunction.params)
+          argumentReader.params = nativeFunction.params
           nativeFunction.impl match {
             case FunctionImpl.ObjectResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushObject(result)
             case FunctionImpl.BooleanResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushBoolean(result)
             case FunctionImpl.IntResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushInt(result)
             case FunctionImpl.LongResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushLong(result)
             case FunctionImpl.ShortResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushShort(result)
             case FunctionImpl.ByteResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushByte(result)
             case FunctionImpl.CharResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushChar(result)
             case FunctionImpl.DoubleResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushDouble(result)
             case FunctionImpl.FloatResult(body) =>
-              val result = body(args)
+              val result = body(argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushFloat(result)
             case FunctionImpl.ObjectResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushObject(result)
             case FunctionImpl.BooleanResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushBoolean(result)
             case FunctionImpl.IntResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushInt(result)
             case FunctionImpl.LongResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushLong(result)
             case FunctionImpl.ShortResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushShort(result)
             case FunctionImpl.ByteResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushByte(result)
             case FunctionImpl.CharResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushChar(result)
             case FunctionImpl.DoubleResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushDouble(result)
             case FunctionImpl.FloatResultWithContext(body) =>
-              val result = body(runtimeContexts, args)
+              val result = body(runtimeContexts, argumentReader)
               operandStack.contract(nativeFunction.params)
               operandStack.pushFloat(result)
           }
@@ -342,8 +345,11 @@ final class Interpreter private(private val program: Program,
     varSpace.readAll()
 }
 
+/**
+ * Mutable. The same instance will be reused for every native call.
+ */
 private[interpreter] final class InterpreterArgumentReader(operandStack: OperandStack,
-                                                           params: software.kes.scaletta.internal.runtime.ParamsSignature) extends ArgumentReader {
+                                                           var params: ParamsSignature) extends ArgumentReader {
   def argCount: Int = params.paramCount
 
   def read(index: Int): Any = {
