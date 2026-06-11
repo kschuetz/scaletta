@@ -7,8 +7,14 @@ import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.symbols.SignatureQuery
 
 final class ComparisonOpsLookup(methodResolver: MethodResolver) {
-  abstract class MethodBase(typ: Type.Nominal[TypeId], name: Name) {
-    val boolean: NativeFunctionId = resolve(CoreTypes.BooleanT)
+  abstract class MethodBase1(typ: Type.Nominal[TypeId], name: Name) {
+    final protected def resolve(rhs: Type[TypeId]): NativeFunctionId =
+      methodResolver.resolveBestMethod(typ, name, SignatureQuery.of(rhs))
+        .getOrElse(throw new AssertionError(s"Could not resolve method $name for types $typ and $rhs"))
+        .nativeFunctionId
+  }
+
+  abstract class MethodBase2(typ: Type.Nominal[TypeId], name: Name) extends MethodBase1(typ, name) {
     val byte: NativeFunctionId = resolve(CoreTypes.ByteT)
     val char: NativeFunctionId = resolve(CoreTypes.CharT)
     val double: NativeFunctionId = resolve(CoreTypes.DoubleT)
@@ -16,25 +22,35 @@ final class ComparisonOpsLookup(methodResolver: MethodResolver) {
     val int: NativeFunctionId = resolve(CoreTypes.IntT)
     val long: NativeFunctionId = resolve(CoreTypes.LongT)
     val short: NativeFunctionId = resolve(CoreTypes.ShortT)
-    val string: NativeFunctionId = resolve(CoreTypes.StringT)
-
-    private def resolve(rhs: Type[TypeId]): NativeFunctionId =
-      methodResolver.resolveBestMethod(typ, name, SignatureQuery.of(rhs))
-        .getOrElse(throw new AssertionError(s"Could not resolve method $name for types $typ and $rhs"))
-        .nativeFunctionId
   }
 
   abstract class TypeBase(typ: Type.Nominal[TypeId]) {
-    object lt extends MethodBase(typ, ComparisonOps.lt.name)
+    object lt extends MethodBase2(typ, ComparisonOps.lt.name)
 
-    object gt extends MethodBase(typ, ComparisonOps.gt.name)
+    object gt extends MethodBase2(typ, ComparisonOps.gt.name)
 
-    object le extends MethodBase(typ, ComparisonOps.le.name)
+    object le extends MethodBase2(typ, ComparisonOps.le.name)
 
-    object ge extends MethodBase(typ, ComparisonOps.ge.name)
+    object ge extends MethodBase2(typ, ComparisonOps.ge.name)
   }
 
-  object boolean extends TypeBase(CoreTypes.BooleanT)
+  abstract class BooleanBase(name: Name) extends MethodBase1(CoreTypes.BooleanT, name) {
+    val boolean: NativeFunctionId = resolve(CoreTypes.BooleanT)
+  }
+
+  abstract class StringBase(name: Name) extends MethodBase1(CoreTypes.StringT, name) {
+    val string: NativeFunctionId = resolve(CoreTypes.StringT)
+  }
+
+  object boolean {
+    object lt extends BooleanBase(ComparisonOps.lt.name)
+
+    object gt extends BooleanBase(ComparisonOps.gt.name)
+
+    object le extends BooleanBase(ComparisonOps.le.name)
+
+    object ge extends BooleanBase(ComparisonOps.ge.name)
+  }
 
   object byte extends TypeBase(CoreTypes.ByteT)
 
@@ -50,5 +66,13 @@ final class ComparisonOpsLookup(methodResolver: MethodResolver) {
 
   object short extends TypeBase(CoreTypes.ShortT)
 
-  object string extends TypeBase(CoreTypes.StringT)
+  object string {
+    object lt extends StringBase(ComparisonOps.lt.name)
+
+    object gt extends StringBase(ComparisonOps.gt.name)
+
+    object le extends StringBase(ComparisonOps.le.name)
+
+    object ge extends StringBase(ComparisonOps.ge.name)
+  }
 }
