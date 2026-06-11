@@ -29,7 +29,7 @@ final class OperandStack(private[interpreter] val control: ByteStack,
 
   def isEmpty: Boolean = control.isEmpty
 
-  def push(value: Any): Unit = 
+  def push(value: Any): Unit =
     value match {
       case x: Boolean => pushBoolean(x)
       case x: Int => pushInt(x)
@@ -372,66 +372,21 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     control.push(bType)
     control.push(aType)
 
-    val b = popValue(bType)
-    val a = popValue(aType)
-    pushValue(bType, b)
-    pushValue(aType, a)
-  }
-
-  private def popValue(basicType: Byte): Any = {
-    (basicType: @annotation.switch) match {
-      case BasicTypes.Object =>
-        val value = objects.unsafeRead(0)
-        objects.contract(1)
-        value
-      case BasicTypes.Boolean =>
-        val value = booleans.unsafeRead(0)
-        booleans.contract(1)
-        value
-      case BasicTypes.Int =>
-        val value = ints.unsafeRead(0)
-        ints.contract(1)
-        value
-      case BasicTypes.Long =>
-        val value = longs.unsafeRead(0)
-        longs.contract(1)
-        value
-      case BasicTypes.Short =>
-        val value = shorts.unsafeRead(0)
-        shorts.contract(1)
-        value
-      case BasicTypes.Byte =>
-        val value = bytes.unsafeRead(0)
-        bytes.contract(1)
-        value
-      case BasicTypes.Char =>
-        val value = chars.unsafeRead(0)
-        chars.contract(1)
-        value
-      case BasicTypes.Double =>
-        val value = doubles.unsafeRead(0)
-        doubles.contract(1)
-        value
-      case BasicTypes.Float =>
-        val value = floats.unsafeRead(0)
-        floats.contract(1)
-        value
-      case _ => throw new IllegalStateException(s"Unknown type: $basicType")
-    }
-  }
-
-  private def pushValue(basicType: Byte, value: Any): Unit = {
-    (basicType: @annotation.switch) match {
-      case BasicTypes.Object => objects.push(value.asInstanceOf[AnyRef])
-      case BasicTypes.Boolean => booleans.push(value.asInstanceOf[Boolean])
-      case BasicTypes.Int => ints.push(value.asInstanceOf[Int])
-      case BasicTypes.Long => longs.push(value.asInstanceOf[Long])
-      case BasicTypes.Short => shorts.push(value.asInstanceOf[Short])
-      case BasicTypes.Byte => bytes.push(value.asInstanceOf[Byte])
-      case BasicTypes.Char => chars.push(value.asInstanceOf[Char])
-      case BasicTypes.Double => doubles.push(value.asInstanceOf[Double])
-      case BasicTypes.Float => floats.push(value.asInstanceOf[Float])
-      case _ => throw new IllegalStateException(s"Unknown type: $basicType")
+    // Since we've already swapped the control stack, we only need to swap the values on the
+    // operand stack if both values are of the same type.
+    if (aType == bType) {
+      (aType: @annotation.switch) match {
+        case BasicTypes.Object => objects.swap()
+        case BasicTypes.Boolean => booleans.swap()
+        case BasicTypes.Int => ints.swap()
+        case BasicTypes.Long => longs.swap()
+        case BasicTypes.Short => shorts.swap()
+        case BasicTypes.Byte => bytes.swap()
+        case BasicTypes.Char => chars.swap()
+        case BasicTypes.Double => doubles.swap()
+        case BasicTypes.Float => floats.swap()
+        case _ => ()
+      }
     }
   }
 
