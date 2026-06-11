@@ -183,4 +183,108 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     }
   }
 
+  test("recursive power (exponentiation by squaring)") {
+    /*
+       Scala equivalent:
+          def power(base: Int, exp: Int): Int = {
+            if (exp == 0) 1
+            else {
+              val half = power(base, exp / 2)
+              val squared = half * half  // Use 'dup' here
+              if (exp % 2 == 0) squared
+              else base * squared       // Use 'swap' here
+            }
+          }
+     */
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+
+    val powerFuncIdx = 1
+    val baseVar = 0
+    val expVar = 1
+
+    // Main function: just calls power(base, exp)
+    val mainAssembler = builder.mainAssembler()
+    mainAssembler.pushIntFromVar(baseVar)
+    mainAssembler.pushIntFromVar(expVar)
+    mainAssembler.callLocal(powerFuncIdx)
+    mainAssembler.emitReturn()
+
+    // Power function implementation
+    val powerAssembler = builder.addFunction(signature)
+    val oddLabel = powerAssembler.label()
+
+    // pop arguments into local variables
+    powerAssembler.popIntIntoVar(expVar)
+    powerAssembler.popIntIntoVar(baseVar)
+
+    // if (exp <= 0) return 1
+    powerAssembler.pushIntFromVar(expVar)
+    powerAssembler.pushImmediateInt(0)
+    powerAssembler.callNative(comparison.int.le.int)
+    powerAssembler.ifTrue {
+      powerAssembler.pushImmediateInt(1)
+      powerAssembler.emitReturn()
+    }
+
+    // val half = power(base, exp / 2)
+    powerAssembler.pushIntFromVar(baseVar)
+    powerAssembler.pushIntFromVar(expVar)
+    powerAssembler.pushImmediateInt(2)
+    powerAssembler.callNative(arithmetic.int.divide.int)
+    powerAssembler.callLocal(powerFuncIdx)
+
+    // stack: [half]
+    powerAssembler.dup()
+    // stack: [half, half]
+    powerAssembler.callNative(arithmetic.int.multiply.int)
+    // stack: [squared]
+
+    // if (exp % 2 != 0) goto odd
+    powerAssembler.pushIntFromVar(expVar)
+    powerAssembler.pushImmediateInt(2)
+    powerAssembler.callNative(arithmetic.int.modulo.int)
+    powerAssembler.pushImmediateInt(0)
+    powerAssembler.callNative(comparison.int.gt.int) // exp % 2 > 0
+    powerAssembler.branchIf(oddLabel)
+
+    // Even case: return squared
+    powerAssembler.emitReturn()
+
+    // Odd case: return base * squared
+    oddLabel.bind()
+    // stack: [squared]
+    powerAssembler.pushIntFromVar(baseVar)
+    // stack: [squared, base]
+    powerAssembler.swap()
+    // stack: [base, squared]
+    powerAssembler.callNative(arithmetic.int.multiply.int)
+    powerAssembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Test cases: (base, exp) -> result
+    val testCases = Seq(
+      (2, 0) -> 1,
+      (2, 1) -> 2,
+      (2, 2) -> 4,
+      (2, 3) -> 8,
+      (2, 10) -> 1024,
+      (3, 3) -> 27,
+      (5, 3) -> 125,
+      (10, 5) -> 100000,
+    )
+
+    testCases.foreach { case ((base, exp), expected) =>
+      val initializer = Initializer { vs =>
+        vs.unsafeWriteInt(baseVar, base)
+        vs.unsafeWriteInt(expVar, exp)
+      }
+      val result = interpreter.run(emptyContextReader, initializer)
+      result.intValue() shouldBe expected
+    }
+  }
+
 }
