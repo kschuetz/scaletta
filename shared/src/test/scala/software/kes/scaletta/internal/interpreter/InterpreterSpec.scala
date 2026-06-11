@@ -126,7 +126,6 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         // Offset 0 in VarSpace corresponds to stack offset 0 in IntStack (which is top).
         // Since FrameSignature.of(IntT) assigns offset 0 to the Int, this is correct.
         vars.unsafeWriteInt(0, 41)
-        vars
       })
 
       result.intValue() shouldBe 41
@@ -153,7 +152,6 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         // var 0 is offset 0 (TOP), var 1 is offset 1 (BOTTOM).
         vars.unsafeWriteLong(0, 43L)
         vars.unsafeWriteLong(1, 47L)
-        vars
       })
 
       result.longValue() shouldBe 90L
@@ -178,7 +176,6 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         vars.unsafeWriteInt(0, 41)
         vars.unsafeWriteLong(1, 43L)
         vars.unsafeWriteObject(2, testString)
-        vars
       })
 
       result.value[String]() shouldBe testString
@@ -202,7 +199,6 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
         vars.unsafeWriteInt(0, 13)
         vars.unsafeWriteInt(1, 17)
-        vars
       })
 
       result.intValue() shouldBe 30

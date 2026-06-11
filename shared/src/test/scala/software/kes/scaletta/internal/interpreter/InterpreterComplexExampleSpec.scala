@@ -88,7 +88,6 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     testCases.foreach { case (input, expected) =>
       val initializer = Initializer { vs =>
         vs.unsafeWriteInt(nVar, input)
-        vs
       }
       val result = interpreter.run(emptyContextReader, initializer)
       result.intValue() shouldBe expected
