@@ -92,6 +92,75 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     }
   }
 
+  test("Newton's method for square root (Double)") {
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.DoubleT, CoreTypes.DoubleT, CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Double, signature)
+    val assembler = builder.mainAssembler()
+
+    val nVar = 0
+    val guessVar = 1
+    val iterVar = 2
+
+    val loopStart = assembler.label()
+    val loopExit = assembler.label()
+
+    // guess = n / 2.0
+    assembler.pushDoubleFromVar(nVar)
+    assembler.pushImmediateDouble(2.0)
+    assembler.callNative(arithmetic.double.divide.double)
+    assembler.popDoubleIntoVar(guessVar)
+
+    // iter = 10
+    assembler.pushImmediateInt(10)
+    assembler.popIntIntoVar(iterVar)
+
+    loopStart.bind()
+
+    // if (iter <= 0) goto loopExit
+    assembler.pushIntFromVar(iterVar)
+    assembler.pushImmediateInt(0)
+    assembler.callNative(comparison.int.le.int)
+    assembler.branchIf(loopExit)
+
+    // guess = (guess + n / guess) / 2.0
+    assembler.pushDoubleFromVar(guessVar)
+    assembler.pushDoubleFromVar(nVar)
+    assembler.pushDoubleFromVar(guessVar)
+    assembler.callNative(arithmetic.double.divide.double)
+    assembler.callNative(arithmetic.double.add.double)
+    assembler.pushImmediateDouble(2.0)
+    assembler.callNative(arithmetic.double.divide.double)
+    assembler.popDoubleIntoVar(guessVar)
+
+    // iter = iter - 1
+    assembler.pushIntFromVar(iterVar)
+    assembler.pushImmediateInt(1)
+    assembler.callNative(arithmetic.int.subtract.int)
+    assembler.popIntIntoVar(iterVar)
+
+    assembler.branch(loopStart)
+
+    loopExit.bind()
+    assembler.pushDoubleFromVar(guessVar)
+    assembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Test Case: sqrt(25.0)
+    val result1 = interpreter.run(emptyContextReader, Initializer { vs =>
+      vs.unsafeWriteDouble(nVar, 25.0)
+    })
+    result1.doubleValue() shouldBe 5.0 +- 1e-9
+
+    // Test Case: sqrt(2.0)
+    val result2 = interpreter.run(emptyContextReader, Initializer { vs =>
+      vs.unsafeWriteDouble(nVar, 2.0)
+    })
+    result2.doubleValue() shouldBe math.sqrt(2.0) +- 1e-9
+  }
+
   test("short-circuiting logical AND") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)

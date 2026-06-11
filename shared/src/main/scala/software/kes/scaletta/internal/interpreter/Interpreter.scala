@@ -55,17 +55,17 @@ final class Interpreter private(private val program: Program,
 
         case Opcodes.PushConst =>
           val typeTag = (rawOpcode >> 16) & 0xFF
-          val value = rawOpcode & 0xFFFF
+          val value = (rawOpcode & 0xFFFF).toShort
           (typeTag: @annotation.switch) match {
-            case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
-            case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
-            case BasicTypes.Float => operandStack.pushFloat(program.constantPool.getFloat(value))
+            case BasicTypes.Long => operandStack.pushLong(value.toLong)
+            case BasicTypes.Double => operandStack.pushDouble(value.toDouble)
+            case BasicTypes.Float => operandStack.pushFloat(value.toFloat)
             case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
-            case BasicTypes.Int => operandStack.pushInt(value)
-            case BasicTypes.Short => operandStack.pushShort(value.toShort)
+            case BasicTypes.Int => operandStack.pushInt(value.toInt)
+            case BasicTypes.Short => operandStack.pushShort(value)
             case BasicTypes.Byte => operandStack.pushByte(value.toByte)
             case BasicTypes.Char => operandStack.pushChar(value.toChar)
-            case _ => operandStack.pushObject(program.constantPool.getObject(value))
+            case _ => operandStack.pushObject(program.constantPool.getObject(value & 0xFFFF))
           }
 
         case Opcodes.Push =>

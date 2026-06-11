@@ -163,7 +163,7 @@ final class Assembler(private val writer: OpcodeWriter,
     store(BasicTypes.Int, varIndex, value)
 
   def storeImmediateLong(varIndex: Int, value: Long): Unit =
-    storeInternable(BasicTypes.Int, varIndex, maybeConst(value), interner.internLong(value))
+    storeInternable(BasicTypes.Long, varIndex, maybeConst(value), interner.internLong(value))
 
   def storeImmediateShort(varIndex: Int, value: Short): Unit =
     store(BasicTypes.Short, varIndex, value)
@@ -175,10 +175,10 @@ final class Assembler(private val writer: OpcodeWriter,
     store(BasicTypes.Char, varIndex, value)
 
   def storeImmediateDouble(varIndex: Int, value: Double): Unit =
-    storeInternable(BasicTypes.Int, varIndex, maybeConst(value), interner.internDouble(value))
+    storeInternable(BasicTypes.Double, varIndex, maybeConst(value), interner.internDouble(value))
 
   def storeImmediateFloat(varIndex: Int, value: Float): Unit =
-    storeInternable(BasicTypes.Int, varIndex, maybeConst(value), interner.internFloat(value))
+    storeInternable(BasicTypes.Float, varIndex, maybeConst(value), interner.internFloat(value))
 
   def storeNull(varIndex: Int): Unit =
     store(BasicTypes.Object, varIndex, 0)
