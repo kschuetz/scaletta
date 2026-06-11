@@ -217,5 +217,29 @@ class CharStackSpec extends AnyFunSpec with Matchers {
         stack.duplicate()
       }
     }
+
+    it("should swap top two elements") {
+      val stack = CharStack.create()
+      stack.push('A')
+      stack.push('B')
+      stack.swap()
+      stack.pop() shouldBe 'A'
+      stack.pop() shouldBe 'B'
+    }
+
+    it("should do nothing on swap if stack has 1 element") {
+      val stack = CharStack.create()
+      stack.push('A')
+      stack.swap()
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some('A')
+    }
+
+    it("should do nothing on swap if stack is empty") {
+      val stack = CharStack.create()
+      stack.swap()
+      stack.size() shouldBe 0
+      stack.isEmpty shouldBe true
+    }
   }
 }

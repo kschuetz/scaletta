@@ -35,6 +35,15 @@ final class DoubleStack private(private var elements: Array[Double]) extends Pri
     push(elements(_size - 1))
   }
 
+  def swap(): Unit = {
+    if (_size >= 2) {
+      val v1 = elements(_size - 1)
+      val v2 = elements(_size - 2)
+      elements(_size - 1) = v2
+      elements(_size - 2) = v1
+    }
+  }
+
   /**
    * Reads the value at the specified position from the top of the stack.
    *

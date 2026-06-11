@@ -228,5 +228,29 @@ class BooleanStackSpec extends AnyFunSpec with Matchers {
         stack.duplicate()
       }
     }
+
+    it("should swap top two elements") {
+      val stack = BooleanStack.create()
+      stack.push(true)
+      stack.push(false)
+      stack.swap()
+      stack.pop() shouldBe true
+      stack.pop() shouldBe false
+    }
+
+    it("should do nothing on swap if stack has 1 element") {
+      val stack = BooleanStack.create()
+      stack.push(true)
+      stack.swap()
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(true)
+    }
+
+    it("should do nothing on swap if stack is empty") {
+      val stack = BooleanStack.create()
+      stack.swap()
+      stack.size() shouldBe 0
+      stack.isEmpty shouldBe true
+    }
   }
 }

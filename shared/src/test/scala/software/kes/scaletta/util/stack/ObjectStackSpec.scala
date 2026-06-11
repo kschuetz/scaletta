@@ -243,5 +243,32 @@ class ObjectStackSpec extends AnyFunSpec with Matchers {
         stack.duplicate()
       }
     }
+
+    it("should swap top two elements") {
+      val stack = ObjectStack.create()
+      val v1 = "41"
+      val v2 = "43"
+      stack.push(v1)
+      stack.push(v2)
+      stack.swap()
+      stack.pop() shouldBe v1
+      stack.pop() shouldBe v2
+    }
+
+    it("should do nothing on swap if stack has 1 element") {
+      val stack = ObjectStack.create()
+      val v1 = "41"
+      stack.push(v1)
+      stack.swap()
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(v1)
+    }
+
+    it("should do nothing on swap if stack is empty") {
+      val stack = ObjectStack.create()
+      stack.swap()
+      stack.size() shouldBe 0
+      stack.isEmpty shouldBe true
+    }
   }
 }

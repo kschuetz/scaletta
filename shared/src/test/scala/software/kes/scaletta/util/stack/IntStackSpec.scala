@@ -217,5 +217,29 @@ class IntStackSpec extends AnyFunSpec with Matchers {
         stack.duplicate()
       }
     }
+
+    it("should swap top two elements") {
+      val stack = IntStack.create()
+      stack.push(41)
+      stack.push(43)
+      stack.swap()
+      stack.pop() shouldBe 41
+      stack.pop() shouldBe 43
+    }
+
+    it("should do nothing on swap if stack has 1 element") {
+      val stack = IntStack.create()
+      stack.push(41)
+      stack.swap()
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(41)
+    }
+
+    it("should do nothing on swap if stack is empty") {
+      val stack = IntStack.create()
+      stack.swap()
+      stack.size() shouldBe 0
+      stack.isEmpty shouldBe true
+    }
   }
 }

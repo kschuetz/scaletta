@@ -34,6 +34,16 @@ final class BooleanStack private(private val elements: BitArray) extends Primiti
     push(elements.get(_size - 1))
   }
 
+  def swap(): Unit = {
+    if (_size < 2) {
+      return
+    }
+    val value1 = elements.get(_size - 1)
+    val value2 = elements.get(_size - 2)
+    elements.update(_size - 1, value2)
+    elements.update(_size - 2, value1)
+  }
+
   /**
    * Reads the value at the specified position from the top of the stack.
    *

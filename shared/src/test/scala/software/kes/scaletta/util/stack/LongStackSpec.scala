@@ -217,5 +217,29 @@ class LongStackSpec extends AnyFunSpec with Matchers {
         stack.duplicate()
       }
     }
+
+    it("should swap top two elements") {
+      val stack = LongStack.create()
+      stack.push(41L)
+      stack.push(43L)
+      stack.swap()
+      stack.pop() shouldBe 41L
+      stack.pop() shouldBe 43L
+    }
+
+    it("should do nothing on swap if stack has 1 element") {
+      val stack = LongStack.create()
+      stack.push(41L)
+      stack.swap()
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(41L)
+    }
+
+    it("should do nothing on swap if stack is empty") {
+      val stack = LongStack.create()
+      stack.swap()
+      stack.size() shouldBe 0
+      stack.isEmpty shouldBe true
+    }
   }
 }

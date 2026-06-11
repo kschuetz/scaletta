@@ -217,5 +217,29 @@ class DoubleStackSpec extends AnyFunSpec with Matchers {
         stack.duplicate()
       }
     }
+
+    it("should swap top two elements") {
+      val stack = DoubleStack.create()
+      stack.push(41.0)
+      stack.push(43.0)
+      stack.swap()
+      stack.pop() shouldBe 41.0
+      stack.pop() shouldBe 43.0
+    }
+
+    it("should do nothing on swap if stack has 1 element") {
+      val stack = DoubleStack.create()
+      stack.push(41.0)
+      stack.swap()
+      stack.size() shouldBe 1
+      stack.peek() shouldBe Some(41.0)
+    }
+
+    it("should do nothing on swap if stack is empty") {
+      val stack = DoubleStack.create()
+      stack.swap()
+      stack.size() shouldBe 0
+      stack.isEmpty shouldBe true
+    }
   }
 }

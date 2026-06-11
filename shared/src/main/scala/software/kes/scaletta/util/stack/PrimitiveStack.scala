@@ -46,4 +46,11 @@ protected abstract class PrimitiveStack(protected var _size: Int = 0) {
    * Throws NoSuchElementException if the stack is empty.
    */
   def duplicate(): Unit
+
+
+  /**
+   * Swaps the top two values on the stack.
+   * If there are fewer than two values on the stack, does nothing.
+   */
+  def swap(): Unit
 }
