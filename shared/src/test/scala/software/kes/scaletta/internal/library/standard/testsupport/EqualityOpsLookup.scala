@@ -11,6 +11,12 @@ final class EqualityOpsLookup(methodResolver: MethodResolver) {
   val neq: NativeFunctionId = resolve(CoreTypes.AnyT, EqualityOps.neq.name, SignatureQuery.any)
   val refEq: NativeFunctionId = resolve(CoreTypes.AnyRefT, EqualityOps.refEq.name, SignatureQuery.anyRef)
 
+  object int {
+    object eq {
+      val int: NativeFunctionId = resolve(CoreTypes.IntT, EqualityOps.eq.name, SignatureQuery.int)
+    }
+  }
+
   private def resolve(typ: Type.Nominal[TypeId],
                       name: Name,
                       signatureQuery: SignatureQuery): NativeFunctionId =

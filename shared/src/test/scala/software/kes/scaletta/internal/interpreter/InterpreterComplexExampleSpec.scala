@@ -474,10 +474,8 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
 
     // if (b == 0) return a
     gcdAssembler.pushIntFromVar(bVar)
-    gcdAssembler.box()
     gcdAssembler.pushImmediateInt(0)
-    gcdAssembler.box()
-    gcdAssembler.callNative(equality.eq)
+    gcdAssembler.callNative(equality.int.eq.int)
     gcdAssembler.ifTrue {
       gcdAssembler.pushIntFromVar(aVar)
       gcdAssembler.emitReturn()

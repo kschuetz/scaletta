@@ -3,6 +3,9 @@ package software.kes.scaletta.api
 import software.kes.scaletta.internal.runtime.CoreTypes
 
 object FormalParameter {
+  def any(name: Name, default: Option[Any] = None): FormalParameter =
+    FormalParameter(name, CoreTypes.AnyT, default)
+
   def boolean(name: Name, default: Option[Boolean] = None): FormalParameter =
     FormalParameter(name, CoreTypes.BooleanT, default)
 
