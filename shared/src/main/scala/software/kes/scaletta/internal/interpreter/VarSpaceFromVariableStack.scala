@@ -26,6 +26,21 @@ final class VarSpaceFromVariableStack private(stack: VariableStack,
       case _ => unsafeReadObject(index)
     }
 
+  def pushIntoOperandStack(index: Int,
+                           operandStack: OperandStack): Unit = {
+    signature.basicTypeOf(index) match {
+      case BasicTypes.Boolean => operandStack.pushBoolean(unsafeReadBoolean(index))
+      case BasicTypes.Int => operandStack.pushInt(unsafeReadInt(index))
+      case BasicTypes.Long => operandStack.pushLong(unsafeReadLong(index))
+      case BasicTypes.Short => operandStack.pushShort(unsafeReadShort(index))
+      case BasicTypes.Byte => operandStack.pushByte(unsafeReadByte(index))
+      case BasicTypes.Char => operandStack.pushChar(unsafeReadChar(index))
+      case BasicTypes.Double => operandStack.pushDouble(unsafeReadDouble(index))
+      case BasicTypes.Float => operandStack.pushFloat(unsafeReadFloat(index))
+      case _ => operandStack.pushObject(unsafeReadObject(index))
+    }
+  }
+
   def unsafeReadObject(index: Int): AnyRef =
     stack.objects.unsafeRead(signature.stackOffsetOf(index))
 

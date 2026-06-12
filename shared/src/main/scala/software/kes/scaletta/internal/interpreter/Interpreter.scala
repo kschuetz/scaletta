@@ -133,14 +133,12 @@ final class Interpreter private(private val program: Program,
 
         case Opcodes.PushFromVar =>
           val varIndex = rawOpcode & 0xFFFF
-          val value = varSpace.read(varIndex)
-          operandStack.push(value)
+          varSpace.pushIntoOperandStack(varIndex, operandStack)
 
         case Opcodes.PushFromVarWide =>
           val varIndex = currentFunction.fetch(instructionPointer)
           instructionPointer += 1
-          val value = varSpace.read(varIndex)
-          operandStack.push(value)
+          varSpace.pushIntoOperandStack(varIndex, operandStack)
 
         case Opcodes.PopIntoVar =>
           // bits 16-23:  type tag
@@ -386,8 +384,11 @@ private[interpreter] final class InterpreterArgumentReader(operandStack: Operand
   def unsafeReadChar(index: Int): Char =
     operandStack.chars.unsafeRead(params.stackOffsetOf(index))
 
-  def unsafeReadDouble(index: Int): Double =
+  def unsafeReadDouble(index: Int): Double = {
+    println(s"doubles size: ${operandStack.doubles.size()}")
+
     operandStack.doubles.unsafeRead(params.stackOffsetOf(index))
+  }
 
   def unsafeReadFloat(index: Int): Float =
     operandStack.floats.unsafeRead(params.stackOffsetOf(index))

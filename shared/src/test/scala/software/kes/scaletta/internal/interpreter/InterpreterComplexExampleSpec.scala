@@ -92,8 +92,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     }
   }
 
-  // TODO: fix for Scala.js
-  ignore("Newton's method for square root (Double)") {
+  test("Newton's method for square root (Double)") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.DoubleT, CoreTypes.DoubleT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
     val builder = ProgramBuilder.create(BasicTypes.Double, signature)
