@@ -297,6 +297,9 @@ final class Interpreter private(private val program: Program,
             instructionPointer += signedOffset
           }
 
+        case Opcodes.Box =>
+          operandStack.box()
+
         case _ =>
           throw new RuntimeException(s"Unknown opcode: $opcode")
       }

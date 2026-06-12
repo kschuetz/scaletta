@@ -22,4 +22,5 @@ object Opcodes {
   final val Pop = 18
   final val LogicalAnd = 19
   final val LogicalOr = 20
+  final val Box = 21
 }

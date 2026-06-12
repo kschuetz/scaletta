@@ -221,6 +221,13 @@ final class Assembler(private val writer: OpcodeWriter,
   def pop(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Pop, 0, 0))
 
+  /**
+   * Boxes the top value on the operand stack if it is a primitive.
+   * If it is already an object, it is left unchanged.
+   */
+  def box(): Unit =
+    writer.writeAndAdvance(makeOpcode(Opcodes.Box, 0, 0))
+
   def emitReturn(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Return, 0, 0))
 

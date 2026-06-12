@@ -390,6 +390,31 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     }
   }
 
+  /**
+   * Boxes the top value on the operand stack. If it is already an object, it is left unchanged.
+   */
+  def box(): Unit = {
+    control.pop() match {
+      case BasicTypes.Boolean =>
+        pushObject(Boolean.box(booleans.pop()))
+      case BasicTypes.Int =>
+        pushObject(Int.box(ints.pop()))
+      case BasicTypes.Long =>
+        pushObject(Long.box(longs.pop()))
+      case BasicTypes.Short =>
+        pushObject(Short.box(shorts.pop()))
+      case BasicTypes.Byte =>
+        pushObject(Byte.box(bytes.pop()))
+      case BasicTypes.Char =>
+        pushObject(Char.box(chars.pop()))
+      case BasicTypes.Double =>
+        pushObject(Double.box(doubles.pop()))
+      case BasicTypes.Float =>
+        pushObject(Float.box(floats.pop()))
+      case other => control.push(other) // already an object
+    }
+  }
+
   def argumentReader(signature: ParamsSignature): ArgumentReader =
     new OperandStackArgumentReader(this, signature)
 
