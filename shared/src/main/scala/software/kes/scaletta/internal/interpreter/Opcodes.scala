@@ -23,4 +23,5 @@ object Opcodes {
   final val LogicalAnd = 19
   final val LogicalOr = 20
   final val Box = 21
+  final val Convert = 22
 }

@@ -228,6 +228,13 @@ final class Assembler(private val writer: OpcodeWriter,
   def box(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Box, 0, 0))
 
+  /**
+   * Converts the top value on the operand stack to the specified type.
+   * Always makes the best effort; if conversion is not possible, the value is set to zero.
+   */
+  def convert(typ: Byte): Unit =
+    writer.writeAndAdvance(makeOpcode(Opcodes.Convert, typ, 0))
+
   def emitReturn(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Return, 0, 0))
 

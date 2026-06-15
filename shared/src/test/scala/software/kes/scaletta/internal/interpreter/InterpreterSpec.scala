@@ -111,6 +111,66 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       result.longValue() shouldBe (11L + largeLong)
     }
 
+    it("should handle conversions between primitive types") {
+      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushImmediateDouble(43.7)
+      assembler.convert(BasicTypes.Int)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+
+      result.intValue() shouldBe 43
+    }
+
+    it("should handle boxing conversions") {
+      val builder = ProgramBuilder.create(BasicTypes.Object, VarSpaceSignature.empty)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushImmediateInt(47)
+      assembler.convert(BasicTypes.Object)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+
+      result.value[java.lang.Integer]() shouldBe java.lang.Integer.valueOf(47)
+    }
+
+    it("should handle unboxing conversions") {
+      val builder = ProgramBuilder.create(BasicTypes.Long, VarSpaceSignature.empty)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushImmediateObject(java.lang.Long.valueOf(53L))
+      assembler.convert(BasicTypes.Long)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+
+      result.longValue() shouldBe 53L
+    }
+
+    it("should handle best-effort conversion from non-numeric objects") {
+      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val assembler = builder.mainAssembler()
+
+      assembler.pushImmediateObject("not a number")
+      assembler.convert(BasicTypes.Int)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+
+      result.intValue() shouldBe 0
+    }
+
     it("should support a single parameter via the initializer") {
       val signature = VarSpaceSignature.of(FrameSignature.of(CoreTypes.IntT))
       val builder = ProgramBuilder.create(BasicTypes.Int, signature)

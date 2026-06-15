@@ -298,6 +298,10 @@ final class Interpreter private(private val program: Program,
         case Opcodes.Box =>
           operandStack.box()
 
+        case Opcodes.Convert =>
+          val typeTag = (rawOpcode >> 16) & 0xFF
+          operandStack.convert(typeTag.toByte)
+
         case _ =>
           throw new RuntimeException(s"Unknown opcode: $opcode")
       }
