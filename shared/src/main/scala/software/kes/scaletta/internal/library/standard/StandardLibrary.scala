@@ -8,5 +8,6 @@ object StandardLibrary {
       ArithmeticOps.module,
       ComparisonOps.module,
       EqualityOps.module,
+      Math.module,
     )
 }
