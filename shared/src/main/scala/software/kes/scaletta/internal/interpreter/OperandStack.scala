@@ -415,6 +415,159 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     }
   }
 
+  /**
+   * Converts the value on the type of the stack to the specified type.
+   * Always makes the best effort; if conversion is not possible, the value is set to zero.
+   */
+  def convert(toType: Byte): Unit =
+    control.pop() match {
+      case BasicTypes.Boolean => toType match {
+        case BasicTypes.Boolean => control.push(BasicTypes.Boolean)
+        case BasicTypes.Int => pushInt(if (booleans.pop()) 1 else 0)
+        case BasicTypes.Long => pushLong(if (booleans.pop()) 1L else 0L)
+        case BasicTypes.Short => pushShort(if (booleans.pop()) 1.toShort else 0.toShort)
+        case BasicTypes.Byte => pushByte(if (booleans.pop()) 1.toByte else 0.toByte)
+        case BasicTypes.Char => pushChar(if (booleans.pop()) 1.toChar else 0.toChar)
+        case BasicTypes.Double => pushDouble(if (booleans.pop()) 1.0d else 0.0d)
+        case BasicTypes.Float => pushFloat(if (booleans.pop()) 1.0f else 0.0f)
+        case _ => pushObject(Boolean.box(booleans.pop()))
+      }
+      case BasicTypes.Int => toType match {
+        case BasicTypes.Boolean => pushBoolean(ints.pop() != 0)
+        case BasicTypes.Int => control.push(BasicTypes.Int)
+        case BasicTypes.Long => pushLong(ints.pop().toLong)
+        case BasicTypes.Short => pushShort(ints.pop().toShort)
+        case BasicTypes.Byte => pushByte(ints.pop().toByte)
+        case BasicTypes.Char => pushChar(ints.pop().toChar)
+        case BasicTypes.Double => pushDouble(ints.pop().toDouble)
+        case BasicTypes.Float => pushFloat(ints.pop().toFloat)
+        case _ => pushObject(Int.box(ints.pop()))
+      }
+      case BasicTypes.Long => toType match {
+        case BasicTypes.Boolean => pushBoolean(longs.pop() != 0)
+        case BasicTypes.Int => pushInt(longs.pop().toInt)
+        case BasicTypes.Long => control.push(BasicTypes.Long)
+        case BasicTypes.Short => pushShort(longs.pop().toShort)
+        case BasicTypes.Byte => pushByte(longs.pop().toByte)
+        case BasicTypes.Char => pushChar(longs.pop().toChar)
+        case BasicTypes.Double => pushDouble(longs.pop().toDouble)
+        case BasicTypes.Float => pushFloat(longs.pop().toFloat)
+        case _ => pushObject(Long.box(longs.pop()))
+      }
+      case BasicTypes.Short => toType match {
+        case BasicTypes.Boolean => pushBoolean(shorts.pop() != 0)
+        case BasicTypes.Int => pushInt(shorts.pop().toInt)
+        case BasicTypes.Long => pushLong(shorts.pop().toLong)
+        case BasicTypes.Short => control.push(BasicTypes.Short)
+        case BasicTypes.Byte => pushByte(shorts.pop().toByte)
+        case BasicTypes.Char => pushChar(shorts.pop().toChar)
+        case BasicTypes.Double => pushDouble(shorts.pop().toDouble)
+        case BasicTypes.Float => pushFloat(shorts.pop().toFloat)
+        case _ => pushObject(Short.box(shorts.pop()))
+      }
+      case BasicTypes.Byte => toType match {
+        case BasicTypes.Boolean => pushBoolean(bytes.pop() != 0)
+        case BasicTypes.Int => pushInt(bytes.pop().toInt)
+        case BasicTypes.Long => pushLong(bytes.pop().toLong)
+        case BasicTypes.Short => pushShort(bytes.pop().toShort)
+        case BasicTypes.Byte => control.push(BasicTypes.Byte)
+        case BasicTypes.Char => pushChar(bytes.pop().toChar)
+        case BasicTypes.Double => pushDouble(bytes.pop().toDouble)
+        case BasicTypes.Float => pushFloat(bytes.pop().toFloat)
+        case _ => pushObject(Byte.box(bytes.pop()))
+      }
+      case BasicTypes.Char => toType match {
+        case BasicTypes.Boolean => pushBoolean(chars.pop() != 0)
+        case BasicTypes.Int => pushInt(chars.pop().toInt)
+        case BasicTypes.Long => pushLong(chars.pop().toLong)
+        case BasicTypes.Short => pushShort(chars.pop().toShort)
+        case BasicTypes.Byte => pushByte(chars.pop().toByte)
+        case BasicTypes.Char => control.push(BasicTypes.Char)
+        case BasicTypes.Double => pushDouble(chars.pop().toDouble)
+        case BasicTypes.Float => pushFloat(chars.pop().toFloat)
+        case _ => pushObject(Char.box(chars.pop()))
+      }
+      case BasicTypes.Double => toType match {
+        case BasicTypes.Boolean => pushBoolean(doubles.pop() != 0)
+        case BasicTypes.Int => pushInt(doubles.pop().toInt)
+        case BasicTypes.Long => pushLong(doubles.pop().toLong)
+        case BasicTypes.Short => pushShort(doubles.pop().toShort)
+        case BasicTypes.Byte => pushByte(doubles.pop().toByte)
+        case BasicTypes.Char => pushChar(doubles.pop().toChar)
+        case BasicTypes.Double => control.push(BasicTypes.Double)
+        case BasicTypes.Float => pushFloat(doubles.pop().toFloat)
+        case _ => pushObject(Double.box(doubles.pop()))
+      }
+      case BasicTypes.Float => toType match {
+        case BasicTypes.Boolean => pushBoolean(floats.pop() != 0)
+        case BasicTypes.Int => pushInt(floats.pop().toInt)
+        case BasicTypes.Long => pushLong(floats.pop().toLong)
+        case BasicTypes.Short => pushShort(floats.pop().toShort)
+        case BasicTypes.Byte => pushByte(floats.pop().toByte)
+        case BasicTypes.Char => pushChar(floats.pop().toChar)
+        case BasicTypes.Double => pushDouble(floats.pop().toDouble)
+        case BasicTypes.Float => control.push(BasicTypes.Float)
+        case _ => pushObject(Float.box(floats.pop()))
+      }
+      case _ => toType match {
+        case BasicTypes.Boolean =>
+          pushBoolean(objects.pop() match {
+            case value: java.lang.Boolean => value.booleanValue()
+            case _ => false
+          })
+        case BasicTypes.Int =>
+          pushInt(objects.pop() match {
+            case number: java.lang.Number => number.intValue()
+            case char: java.lang.Character => char.charValue()
+            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
+            case _ => 0
+          })
+        case BasicTypes.Long =>
+          pushLong(objects.pop() match {
+            case number: java.lang.Number => number.longValue()
+            case char: java.lang.Character => char.charValue()
+            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
+            case _ => 0
+          })
+        case BasicTypes.Short =>
+          pushShort(objects.pop() match {
+            case number: java.lang.Number => number.shortValue()
+            case char: java.lang.Character => char.charValue().toShort
+            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
+            case _ => 0
+          })
+        case BasicTypes.Byte =>
+          pushByte(objects.pop() match {
+            case number: java.lang.Number => number.byteValue()
+            case char: java.lang.Character => char.charValue().toByte
+            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
+            case _ => 0
+          })
+        case BasicTypes.Char =>
+          pushChar(objects.pop() match {
+            case number: java.lang.Number => number.intValue().toChar
+            case char: java.lang.Character => char.charValue()
+            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
+            case _ => 0
+          })
+        case BasicTypes.Double =>
+          pushDouble(objects.pop() match {
+            case number: java.lang.Number => number.doubleValue()
+            case char: java.lang.Character => char.charValue()
+            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
+            case _ => 0
+          })
+        case BasicTypes.Float =>
+          pushFloat(objects.pop() match {
+            case number: java.lang.Number => number.floatValue()
+            case char: java.lang.Character => char.charValue()
+            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
+            case _ => 0
+          })
+        case _ => control.push(BasicTypes.Object)
+      }
+    }
+
   def argumentReader(signature: ParamsSignature): ArgumentReader =
     new OperandStackArgumentReader(this, signature)
 

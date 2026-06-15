@@ -505,5 +505,105 @@ class OperandStackSpec extends AnyFunSpec with Matchers {
 
       stack.isEmpty shouldBe true
     }
+
+    describe("convert") {
+      it("should handle primitive to primitive conversions") {
+        val stack = OperandStack.create()
+
+        // Int to Long
+        stack.pushInt(41)
+        stack.convert(BasicTypes.Long)
+        stack.pop() shouldBe 41L
+
+        // Long to Int
+        stack.pushLong(43L)
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 43
+
+        // Double to Int
+        stack.pushDouble(47.9)
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 47
+
+        // Boolean to Int
+        stack.pushBoolean(true)
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 1
+
+        stack.pushBoolean(false)
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 0
+
+        // Int to Boolean
+        stack.pushInt(1)
+        stack.convert(BasicTypes.Boolean)
+        stack.pop() shouldBe true
+
+        stack.pushInt(0)
+        stack.convert(BasicTypes.Boolean)
+        stack.pop() shouldBe false
+      }
+
+      it("should handle boxing (primitive to Object)") {
+        val stack = OperandStack.create()
+
+        stack.pushInt(53)
+        stack.convert(BasicTypes.Object)
+        val result = stack.pop()
+        result shouldBe 53
+        result shouldBe a[java.lang.Integer]
+      }
+
+      it("should handle unboxing and Object to primitive conversions") {
+        val stack = OperandStack.create()
+
+        // Integer to Int
+        stack.pushObject(java.lang.Integer.valueOf(59))
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 59
+
+        // Double to Int (via Object)
+        stack.pushObject(java.lang.Double.valueOf(61.7))
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 61
+
+        // Character to Int
+        stack.pushObject(java.lang.Character.valueOf('A'))
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 65
+
+        // Boolean to Int (via Object)
+        stack.pushObject(java.lang.Boolean.TRUE)
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 1
+      }
+
+      it("should handle identity conversions") {
+        val stack = OperandStack.create()
+
+        stack.pushInt(67)
+        stack.convert(BasicTypes.Int)
+        stack.pop() shouldBe 67
+
+        val obj = "test"
+        stack.pushObject(obj)
+        stack.convert(BasicTypes.Object)
+        stack.pop() shouldBe obj
+      }
+
+      it("should handle Float/Double edge cases") {
+        val stack = OperandStack.create()
+
+        // Float to Double
+        stack.pushFloat(71.5f)
+        stack.convert(BasicTypes.Double)
+        stack.pop() shouldBe 71.5d
+
+        // Double to Float
+        stack.pushDouble(73.5d)
+        stack.convert(BasicTypes.Float)
+        stack.pop() shouldBe 73.5f
+      }
+    }
   }
 }
