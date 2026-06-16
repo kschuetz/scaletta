@@ -14,7 +14,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     .asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
 
-  import stdLib.{arithmetic, comparison, equality}
+  import stdLib.{arithmetic, comparison, equality, math}
 
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
 
@@ -160,7 +160,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
       vs.unsafeWriteDouble(nVar, 2.0)
     })
     val d2 = result2.doubleValue()
-    d2 shouldBe math.sqrt(2.0) +- 1e-8
+    d2 shouldBe scala.math.sqrt(2.0) +- 1e-8
   }
 
   test("short-circuiting logical AND") {
@@ -205,7 +205,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
 
     // Test Case: x = 5 should return false (5 > 0 && (10 / 5) > 2)
     val result3 = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 5)))
-    result2.booleanValue() shouldBe false
+    result3.booleanValue() shouldBe false
   }
 
   test("short-circuiting logical OR") {
@@ -508,5 +508,62 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
       })
       result.intValue() shouldBe expected
     }
+  }
+
+  test("Quadratic formula stress test (Double)") {
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.DoubleT, CoreTypes.DoubleT, CoreTypes.DoubleT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Double, signature)
+    val assembler = builder.mainAssembler()
+
+    val aVar = 0
+    val bVar = 1
+    val cVar = 2
+
+    // Goal: (-b + sqrt(b*b - 4*a*c)) / (2*a)
+
+    // 1. Calculate discriminant: b*b - 4*a*c
+    assembler.pushDoubleFromVar(bVar)
+    assembler.pushDoubleFromVar(bVar)
+    assembler.callNative(arithmetic.double.multiply.double) // b^2
+
+    assembler.pushImmediateDouble(4.0)
+    assembler.pushDoubleFromVar(aVar)
+    assembler.callNative(arithmetic.double.multiply.double) // 4a
+    assembler.pushDoubleFromVar(cVar)
+    assembler.callNative(arithmetic.double.multiply.double) // 4ac
+
+    assembler.callNative(arithmetic.double.subtract.double) // b^2 - 4ac
+
+    // 2. sqrt(discriminant)
+    assembler.callNative(math.sqrt)
+
+    // 3. -b + sqrt(...)
+    assembler.pushImmediateDouble(0.0)
+    assembler.pushDoubleFromVar(bVar)
+    assembler.callNative(arithmetic.double.subtract.double) // -b
+    assembler.swap()
+    assembler.callNative(arithmetic.double.add.double) // -b + sqrt(...)
+
+    // 4. Divide by 2a
+    assembler.pushImmediateDouble(2.0)
+    assembler.pushDoubleFromVar(aVar)
+    assembler.callNative(arithmetic.double.multiply.double) // 2a
+
+    assembler.callNative(arithmetic.double.divide.double) // (-b + sqrt(...)) / 2a
+
+    assembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Test Case: x^2 - 5x + 6 = 0 -> roots are 2 and 3. Positive root from formula is 3.
+    // a=1, b=-5, c=6
+    val result = interpreter.run(emptyContextReader, Initializer { vs =>
+      vs.unsafeWriteDouble(aVar, 1.0)
+      vs.unsafeWriteDouble(bVar, -5.0)
+      vs.unsafeWriteDouble(cVar, 6.0)
+    })
+    result.doubleValue() shouldBe 3.0 +- 1e-9
   }
 }
