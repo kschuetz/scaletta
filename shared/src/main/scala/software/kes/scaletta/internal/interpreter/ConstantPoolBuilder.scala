@@ -8,7 +8,7 @@ object ConstantPoolBuilder {
 }
 
 final class ConstantPoolBuilder private() extends ConstantInterner {
-  private val objectPool = mutable.ArrayBuffer.empty[AnyRef]
+  private val objectPool = mutable.ArrayBuffer[AnyRef](null)
   private val stringIndices = mutable.Map.empty[String, Int]
   private val longPool = mutable.ArrayBuffer.empty[Long]
   private val longIndices = mutable.Map.empty[Long, Int]
@@ -18,20 +18,24 @@ final class ConstantPoolBuilder private() extends ConstantInterner {
   private val floatIndices = mutable.Map.empty[Float, Int]
 
   def internObject(value: AnyRef): Int = {
-    value match {
-      case s: String =>
-        stringIndices.get(s) match {
-          case Some(index) => index
-          case None =>
-            val index = objectPool.size
-            objectPool += s
-            stringIndices += (s -> index)
-            index
-        }
-      case _ =>
-        val index = objectPool.size
-        objectPool += value
-        index
+    if (value == null) {
+      0
+    } else {
+      value match {
+        case s: String =>
+          stringIndices.get(s) match {
+            case Some(index) => index
+            case None =>
+              val index = objectPool.size
+              objectPool += s
+              stringIndices += (s -> index)
+              index
+          }
+        case _ =>
+          val index = objectPool.size
+          objectPool += value
+          index
+      }
     }
   }
 

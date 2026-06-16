@@ -60,23 +60,35 @@ class ConstantPoolBuilderSpec extends AnyFunSpec with Matchers {
       val idx2 = builder.internObject(s2)
       val idx3 = builder.internObject(s3)
 
-      idx1 shouldBe 0
-      idx2 shouldBe 1
-      idx3 shouldBe 0 // Interned
+      idx1 shouldBe 1
+      idx2 shouldBe 2
+      idx3 shouldBe 1 // Interned
 
       val obj1 = List(1)
       val obj2 = List(1)
       val idx4 = builder.internObject(obj1)
       val idx5 = builder.internObject(obj2)
 
-      idx4 shouldBe 2
-      idx5 shouldBe 3 // Not interned
+      idx4 shouldBe 3
+      idx5 shouldBe 4 // Not interned
 
       val pool = builder.build()
-      pool.getObject(0) shouldBe "hello"
-      pool.getObject(1) shouldBe "world"
-      pool.getObject(2) shouldBe List(1)
+      pool.getObject(0) shouldBe null
+      pool.getObject(1) shouldBe "hello"
+      pool.getObject(2) shouldBe "world"
       pool.getObject(3) shouldBe List(1)
+      pool.getObject(4) shouldBe List(1)
+    }
+
+    it("should intern null at index 0") {
+      val builder = ConstantPoolBuilder.create()
+      builder.internObject(null) shouldBe 0
+      builder.internObject("hello") shouldBe 1
+      builder.internObject(null) shouldBe 0
+
+      val pool = builder.build()
+      pool.getObject(0) shouldBe null
+      pool.getObject(1) shouldBe "hello"
     }
 
     it("should keep different types separate") {
@@ -84,13 +96,14 @@ class ConstantPoolBuilderSpec extends AnyFunSpec with Matchers {
       builder.internLong(41L) shouldBe 0
       builder.internDouble(41.0) shouldBe 0
       builder.internFloat(41.0f) shouldBe 0
-      builder.internObject("41") shouldBe 0
+      builder.internObject("41") shouldBe 1
 
       val pool = builder.build()
       pool.getLong(0) shouldBe 41L
       pool.getDouble(0) shouldBe 41.0
       pool.getFloat(0) shouldBe 41.0f
-      pool.getObject(0) shouldBe "41"
+      pool.getObject(0) shouldBe null
+      pool.getObject(1) shouldBe "41"
     }
   }
 }
