@@ -267,6 +267,7 @@ final class Interpreter private(private val program: Program,
           currentFunction = program.functions(userFunctionIndex)
           variableStack.expandFrame(currentFunction.frameSignature)
           varSpace.setSignature(currentFunction.varSpaceSignature)
+          transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
 
         case Opcodes.TailCallLocal =>
           val functionIndex = rawOpcode & 0xFFFFFF
@@ -282,6 +283,7 @@ final class Interpreter private(private val program: Program,
             variableStack.expandFrame(currentFunction.frameSignature)
             varSpace.setSignature(currentFunction.varSpaceSignature)
           }
+          transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
 
         case Opcodes.Return =>
           if (callStack.isEmpty) {
@@ -322,6 +324,16 @@ final class Interpreter private(private val program: Program,
       }
     }
     evalResultContainer
+  }
+
+  private def transferParameters(frameSignature: software.kes.scaletta.internal.runtime.FrameSignature,
+                                 parameterCount: Int): Unit = {
+    var i = parameterCount - 1
+    while (i >= 0) {
+      val typeTag = frameSignature.basicTypeOf(i)
+      popIntoVar(typeTag, i)
+      i -= 1
+    }
   }
 
   private def popIntoVar(typeTag: Int, varIndex: Int): Unit =

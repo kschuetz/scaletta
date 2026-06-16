@@ -783,4 +783,69 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     val result = interpreter.run(emptyContextReader, initializer)
     result.longValue() shouldBe finalExpected
   }
+
+  test("mutual recursion (isEven/isOdd)") {
+    val mainFrame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
+    val mainSignature = VarSpaceSignature.of(mainFrame)
+    val recursiveFrame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
+    val recursiveSignature = VarSpaceSignature.of(recursiveFrame)
+
+    val builder = ProgramBuilder.create(BasicTypes.Boolean, mainSignature, 1)
+
+    // Function 0 (Main)
+    val mainAssembler = builder.mainAssembler()
+    mainAssembler.pushIntFromVar(0)
+    mainAssembler.callLocal(1) // Call isEven
+    mainAssembler.emitReturn()
+
+    // Function 1 (isEven)
+    val isEvenAssembler = builder.addFunction(recursiveSignature, 1)
+    val evenExit = isEvenAssembler.label()
+    isEvenAssembler.pushIntFromVar(0)
+    isEvenAssembler.pushImmediateInt(0)
+    isEvenAssembler.callNative(equality.int.eq.int)
+    isEvenAssembler.branchUnless(evenExit)
+    isEvenAssembler.pushImmediateBoolean(true)
+    isEvenAssembler.emitReturn()
+    evenExit.bind()
+    isEvenAssembler.pushIntFromVar(0)
+    isEvenAssembler.pushImmediateInt(1)
+    isEvenAssembler.callNative(arithmetic.int.subtract.int)
+    isEvenAssembler.tailCallLocal(2) // Tail call isOdd
+
+    // Function 2 (isOdd)
+    val isOddAssembler = builder.addFunction(recursiveSignature, 1)
+    val oddExit = isOddAssembler.label()
+    isOddAssembler.pushIntFromVar(0)
+    isOddAssembler.pushImmediateInt(0)
+    isOddAssembler.callNative(equality.int.eq.int)
+    isOddAssembler.branchUnless(oddExit)
+    isOddAssembler.pushImmediateBoolean(false)
+    isOddAssembler.emitReturn()
+    oddExit.bind()
+    isOddAssembler.pushIntFromVar(0)
+    isOddAssembler.pushImmediateInt(1)
+    isOddAssembler.callNative(arithmetic.int.subtract.int)
+    isOddAssembler.tailCallLocal(1) // Tail call isEven
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val testCases = Seq(
+      0 -> true,
+      1 -> false,
+      2 -> true,
+      3 -> false,
+      41 -> false, // Prime number test
+      1000 -> true // Stress test for TailCallLocal
+    )
+
+    testCases.foreach { case (n, expected) =>
+      val initializer = Initializer { vs =>
+        vs.unsafeWriteInt(0, n)
+      }
+      val result = interpreter.run(emptyContextReader, initializer)
+      result.booleanValue() shouldBe expected
+    }
+  }
 }

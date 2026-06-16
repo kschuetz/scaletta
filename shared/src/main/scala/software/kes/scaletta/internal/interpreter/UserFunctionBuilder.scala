@@ -6,12 +6,16 @@ import software.kes.scaletta.util.array.ArrayUtil
 import scala.collection.immutable.ArraySeq
 
 object UserFunctionBuilder {
-  def create(signature: VarSpaceSignature): UserFunctionBuilder = {
-    new UserFunctionBuilder(signature, new Array[Int](16), 0)
+  def create(signature: VarSpaceSignature): UserFunctionBuilder =
+    create(signature, 0)
+
+  def create(signature: VarSpaceSignature, parameterCount: Int): UserFunctionBuilder = {
+    new UserFunctionBuilder(signature, parameterCount, new Array[Int](16), 0)
   }
 }
 
 final class UserFunctionBuilder private(private val signature: VarSpaceSignature,
+                                        private val parameterCount: Int,
                                         private var buffer: Array[Int],
                                         private var writePtr: Int) extends OpcodeWriter {
 
@@ -36,7 +40,7 @@ final class UserFunctionBuilder private(private val signature: VarSpaceSignature
 
   def build(): UserFunction = {
     val instructions = ArraySeq.unsafeWrapArray(buffer.take(writePtr))
-    UserFunction(signature, instructions)
+    UserFunction(signature, parameterCount, instructions)
   }
 
   private def ensureCapacity(minCapacity: Int): Unit = {

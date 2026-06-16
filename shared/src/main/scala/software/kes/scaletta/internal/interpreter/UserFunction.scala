@@ -5,6 +5,7 @@ import software.kes.scaletta.internal.runtime.{FrameSignature, VarSpaceSignature
 import scala.collection.immutable.ArraySeq
 
 case class UserFunction(varSpaceSignature: VarSpaceSignature,
+                        parameterCount: Int,
                         instructions: ArraySeq[Int]) {
   def frameSignature: FrameSignature = varSpaceSignature.frameSignature
 
