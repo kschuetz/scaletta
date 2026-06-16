@@ -369,8 +369,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     val mainAssembler = builder.mainAssembler()
     mainAssembler.pushIntFromVar(baseVar)
     mainAssembler.pushIntFromVar(expVar)
-    mainAssembler.callLocal(powerFuncIdx)
-    mainAssembler.emitReturn()
+    mainAssembler.tailCallLocal(powerFuncIdx)
 
     // Power function implementation
     val powerAssembler = builder.addFunction(signature)
@@ -461,8 +460,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     val mainAssembler = builder.mainAssembler()
     mainAssembler.pushIntFromVar(aVar)
     mainAssembler.pushIntFromVar(bVar)
-    mainAssembler.callLocal(gcdFuncIdx)
-    mainAssembler.emitReturn()
+    mainAssembler.tailCallLocal(gcdFuncIdx)
 
     // GCD function implementation
     val gcdAssembler = builder.addFunction(signature)
@@ -486,8 +484,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     gcdAssembler.callNative(arithmetic.int.modulo.int) // stack: [a % b]
     gcdAssembler.pushIntFromVar(bVar) // stack: [a % b, b]
     gcdAssembler.swap() // stack: [b, a % b]
-    gcdAssembler.callLocal(gcdFuncIdx)
-    gcdAssembler.emitReturn()
+    gcdAssembler.tailCallLocal(gcdFuncIdx)
 
     val program = builder.build()
     val interpreter = Interpreter.create(program, nativeFunctions)
@@ -580,8 +577,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     val mainAssembler = builder.mainAssembler()
     mainAssembler.pushIntFromVar(mVar)
     mainAssembler.pushIntFromVar(nVar)
-    mainAssembler.callLocal(ackFuncIdx)
-    mainAssembler.emitReturn()
+    mainAssembler.tailCallLocal(ackFuncIdx)
 
     // Ackermann function implementation
     val ackAssembler = builder.addFunction(signature)
@@ -610,8 +606,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
       ackAssembler.pushImmediateInt(1)
       ackAssembler.callNative(arithmetic.int.subtract.int)
       ackAssembler.pushImmediateInt(1)
-      ackAssembler.callLocal(ackFuncIdx)
-      ackAssembler.emitReturn()
+      ackAssembler.tailCallLocal(ackFuncIdx)
     }
 
     // default: return A(m - 1, A(m, n - 1))
@@ -628,8 +623,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     ackAssembler.callLocal(ackFuncIdx)
 
     // Final call
-    ackAssembler.callLocal(ackFuncIdx)
-    ackAssembler.emitReturn()
+    ackAssembler.tailCallLocal(ackFuncIdx)
 
     val program = builder.build()
     val interpreter = Interpreter.create(program, nativeFunctions)
