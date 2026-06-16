@@ -287,8 +287,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       result.intValue() shouldBe 41
     }
 
-    // TODO
-    ignore("should handle nested local function calls with their own variables") {
+    it("should handle nested local function calls with their own variables") {
       val mainFrame = FrameSignature.empty
       val mainSignature = VarSpaceSignature.of(mainFrame)
       val builder = ProgramBuilder.create(BasicTypes.Int, mainSignature)
