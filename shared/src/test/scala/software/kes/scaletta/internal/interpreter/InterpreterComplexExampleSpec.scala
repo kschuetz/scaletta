@@ -566,4 +566,90 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     })
     result.doubleValue() shouldBe 3.0 +- 1e-9
   }
+
+  test("Ackermann function A(m, n) stress test") {
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+
+    val ackFuncIdx = 1
+    val mVar = 0
+    val nVar = 1
+
+    // Main function: calls ack(m, n)
+    val mainAssembler = builder.mainAssembler()
+    mainAssembler.pushIntFromVar(mVar)
+    mainAssembler.pushIntFromVar(nVar)
+    mainAssembler.callLocal(ackFuncIdx)
+    mainAssembler.emitReturn()
+
+    // Ackermann function implementation
+    val ackAssembler = builder.addFunction(signature)
+
+    // pop arguments
+    ackAssembler.popIntIntoVar(nVar)
+    ackAssembler.popIntIntoVar(mVar)
+
+    // if (m == 0) return n + 1
+    ackAssembler.pushIntFromVar(mVar)
+    ackAssembler.pushImmediateInt(0)
+    ackAssembler.callNative(equality.int.eq.int)
+    ackAssembler.ifTrue {
+      ackAssembler.pushIntFromVar(nVar)
+      ackAssembler.pushImmediateInt(1)
+      ackAssembler.callNative(arithmetic.int.add.int)
+      ackAssembler.emitReturn()
+    }
+
+    // if (n == 0) return A(m - 1, 1)
+    ackAssembler.pushIntFromVar(nVar)
+    ackAssembler.pushImmediateInt(0)
+    ackAssembler.callNative(equality.int.eq.int)
+    ackAssembler.ifTrue {
+      ackAssembler.pushIntFromVar(mVar)
+      ackAssembler.pushImmediateInt(1)
+      ackAssembler.callNative(arithmetic.int.subtract.int)
+      ackAssembler.pushImmediateInt(1)
+      ackAssembler.callLocal(ackFuncIdx)
+      ackAssembler.emitReturn()
+    }
+
+    // default: return A(m - 1, A(m, n - 1))
+    // Outer call args: (m - 1, ...)
+    ackAssembler.pushIntFromVar(mVar)
+    ackAssembler.pushImmediateInt(1)
+    ackAssembler.callNative(arithmetic.int.subtract.int)
+
+    // Inner call args: A(m, n - 1)
+    ackAssembler.pushIntFromVar(mVar)
+    ackAssembler.pushIntFromVar(nVar)
+    ackAssembler.pushImmediateInt(1)
+    ackAssembler.callNative(arithmetic.int.subtract.int)
+    ackAssembler.callLocal(ackFuncIdx)
+
+    // Final call
+    ackAssembler.callLocal(ackFuncIdx)
+    ackAssembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Test Cases: (m, n) -> result
+    val testCases = Seq(
+      (0, 5) -> 6,
+      (1, 0) -> 2,
+      (1, 2) -> 4,
+      (2, 2) -> 7,
+      (3, 2) -> 29,
+      (3, 3) -> 61
+    )
+
+    testCases.foreach { case ((m, n), expected) =>
+      val result = interpreter.run(emptyContextReader, Initializer { vs =>
+        vs.unsafeWriteInt(mVar, m)
+        vs.unsafeWriteInt(nVar, n)
+      })
+      result.intValue() shouldBe expected
+    }
+  }
 }
