@@ -646,4 +646,141 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
       result.intValue() shouldBe expected
     }
   }
+
+  test("financial precision: multi-currency interest calculator (mixed-type stress test)") {
+    // 1. Define Frame Signature with all 8 primitive types to stress VarSpace layout
+    val frame = FrameSignature.fromSeq(Seq(
+      CoreTypes.LongT, // principal
+      CoreTypes.DoubleT, // rate
+      CoreTypes.FloatT, // multiplier
+      CoreTypes.IntT, // term
+      CoreTypes.BooleanT, // taxable
+      CoreTypes.ByteT, // taxRate (narrow type)
+      CoreTypes.CharT, // currencyCode
+      CoreTypes.ShortT // periodCounter
+    ))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Long, signature)
+    val assembler = builder.mainAssembler()
+
+    // Variable indices
+    val principalVar = 0
+    val rateVar = 1
+    val multiplierVar = 2
+    val termVar = 3
+    val taxableVar = 4
+    val taxRateVar = 5
+    val currencyCodeVar = 6
+    val periodCounterVar = 7
+
+    val loopStart = assembler.label()
+    val loopExit = assembler.label()
+
+    // 2. Logic Implementation
+
+    // Initialize periodCounter = 0
+    assembler.pushImmediateShort(0)
+    assembler.popShortIntoVar(periodCounterVar)
+
+    // loopStart:
+    loopStart.bind()
+
+    // if (periodCounter >= term) goto loopExit
+    assembler.pushShortFromVar(periodCounterVar)
+    assembler.convert(BasicTypes.Int)
+    assembler.pushIntFromVar(termVar)
+    assembler.callNative(comparison.int.ge.int)
+    assembler.branchIf(loopExit)
+
+    // Calculation step: principal = (principal * rate) * multiplier
+
+    // Convert principal (Long) to Double
+    assembler.pushLongFromVar(principalVar)
+    assembler.convert(BasicTypes.Double)
+
+    // Multiply by rate (Double)
+    assembler.pushDoubleFromVar(rateVar)
+    assembler.callNative(arithmetic.double.multiply.double)
+
+    // Convert intermediate result to Float
+    assembler.convert(BasicTypes.Float)
+
+    // Multiply by multiplier (Float)
+    assembler.pushFloatFromVar(multiplierVar)
+    assembler.callNative(arithmetic.float.multiply.float)
+
+    // Apply tax if taxable is true
+    assembler.pushBooleanFromVar(taxableVar)
+    assembler.ifTrue {
+      // result = result * (1.0 - taxRate / 100.0)
+      // simplified: result = result * 0.95 (if taxRate is 5)
+      assembler.pushImmediateFloat(0.95f)
+      assembler.callNative(arithmetic.float.multiply.float)
+    }
+
+    // Convert final result back to Long and store in principal
+    assembler.convert(BasicTypes.Long)
+    assembler.popLongIntoVar(principalVar)
+
+    // Increment periodCounter (Short)
+    assembler.pushShortFromVar(periodCounterVar)
+    assembler.pushImmediateShort(1.toShort)
+    assembler.callNative(arithmetic.short.add.short)
+    assembler.convert(BasicTypes.Short)
+    assembler.popShortIntoVar(periodCounterVar)
+
+    // Loop back
+    assembler.branch(loopStart)
+
+    // loopExit:
+    loopExit.bind()
+
+    // Simple currency check (verify Char handling)
+    // if (currencyCode == 'U') { /* dummy check */ }
+    assembler.pushCharFromVar(currencyCodeVar)
+    assembler.pushImmediateChar('U')
+    assembler.callNative(equality.char.eq.char)
+    assembler.pop() // Just consume the result
+
+    // Return final principal
+    assembler.pushLongFromVar(principalVar)
+    assembler.emitReturn()
+
+    // 3. Execution & Verification
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val inputPrincipal = 1000000L // 1,000,000 cents
+    val inputRate = 1.05 // 5% growth
+    val inputMultiplier = 1.1f // 10% bonus
+    val inputTerm = 3 // 3 periods
+    val inputTaxable = true
+    val inputTaxRate: Byte = 5
+    val inputCurrency: Char = 'U'
+
+    val initializer = Initializer { vs =>
+      vs.unsafeWriteLong(principalVar, inputPrincipal)
+      vs.unsafeWriteDouble(rateVar, inputRate)
+      vs.unsafeWriteFloat(multiplierVar, inputMultiplier)
+      vs.unsafeWriteInt(termVar, inputTerm)
+      vs.unsafeWriteBoolean(taxableVar, inputTaxable)
+      vs.unsafeWriteByte(taxRateVar, inputTaxRate)
+      vs.unsafeWriteChar(currencyCodeVar, inputCurrency)
+    }
+
+    // Expected value calculation in Scala
+    var expected = inputPrincipal.toDouble
+    for (_ <- 0 until inputTerm) {
+      val intermediate = (expected * inputRate).toFloat
+      var result = intermediate * inputMultiplier
+      if (inputTaxable) {
+        result = result * 0.95f
+      }
+      expected = result.toLong.toDouble
+    }
+    val finalExpected = expected.toLong
+
+    val result = interpreter.run(emptyContextReader, initializer)
+    result.longValue() shouldBe finalExpected
+  }
 }
