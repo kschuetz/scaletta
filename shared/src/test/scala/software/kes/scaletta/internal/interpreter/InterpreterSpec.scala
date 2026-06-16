@@ -439,6 +439,121 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       vars(8) shouldBe "Scaletta"
     }
 
+    describe("TailCallLocal") {
+      it("should support tail recursion (self-call)") {
+        val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
+        val signature = VarSpaceSignature.of(frame)
+        val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+
+        // Function 0: Main entry point
+        val mainAssembler = builder.mainAssembler()
+        mainAssembler.pushImmediateInt(0) // initial acc
+        mainAssembler.pushImmediateInt(5) // initial n
+        mainAssembler.callLocal(1)
+        mainAssembler.emitReturn()
+
+        // Function 1: Recursive sum
+        val recAssembler = builder.addFunction(signature)
+        val nVar = 0
+        val accVar = 1
+
+        recAssembler.popIntIntoVar(nVar)
+        recAssembler.popIntIntoVar(accVar)
+
+        // if (n == 0) return acc
+        recAssembler.pushIntFromVar(nVar)
+        recAssembler.pushImmediateInt(0)
+        recAssembler.callNative(stdLib.equality.int.eq.int)
+        recAssembler.ifTrue {
+          recAssembler.pushIntFromVar(accVar)
+          recAssembler.emitReturn()
+        }
+
+        // return tailCall(acc + n, n - 1)
+        recAssembler.pushIntFromVar(accVar)
+        recAssembler.pushIntFromVar(nVar)
+        recAssembler.callNative(arithmetic.int.add.int) // new acc
+        recAssembler.pushIntFromVar(nVar)
+        recAssembler.pushImmediateInt(1)
+        recAssembler.callNative(arithmetic.int.subtract.int) // new n
+        // Stack: [new acc, new n]
+        recAssembler.tailCallLocal(1) // self-recursion
+
+        val program = builder.build()
+        val interpreter = Interpreter.create(program, nativeFunctions)
+
+        // Sum of numbers from 1 to 5 = 15
+        val result = interpreter.run(emptyContextReader)
+
+        result.intValue() shouldBe 15
+      }
+
+      it("should support tail calling another function") {
+        val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
+        val signature = VarSpaceSignature.of(frame)
+        val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+
+        // Function 0 (main): tail calls function 1
+        val mainAssembler = builder.mainAssembler()
+        mainAssembler.pushImmediateInt(43)
+        mainAssembler.tailCallLocal(1)
+
+        // Function 1: returns the incremented value
+        val otherAssembler = builder.addFunction(signature)
+        otherAssembler.popIntIntoVar(0)
+        otherAssembler.pushIntFromVar(0)
+        otherAssembler.pushImmediateInt(1)
+        otherAssembler.callNative(arithmetic.int.add.int)
+        otherAssembler.emitReturn()
+
+        val program = builder.build()
+        val interpreter = Interpreter.create(program, nativeFunctions)
+        val result = interpreter.run(emptyContextReader)
+
+        result.intValue() shouldBe 44
+      }
+
+      it("should maintain constant stack space for deep recursion") {
+        val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
+        val signature = VarSpaceSignature.of(frame)
+        val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+
+        // Function 0: Main entry point
+        val mainAssembler = builder.mainAssembler()
+        mainAssembler.pushImmediateInt(1000)
+        mainAssembler.callLocal(1)
+        mainAssembler.emitReturn()
+
+        // Function 1: Recursive function
+        val recAssembler = builder.addFunction(signature)
+        // Pop n from stack
+        recAssembler.popIntIntoVar(0)
+
+        // if (n == 0) return 0
+        recAssembler.pushIntFromVar(0)
+        recAssembler.pushImmediateInt(0)
+        recAssembler.callNative(stdLib.equality.int.eq.int)
+        recAssembler.ifTrue {
+          recAssembler.pushImmediateInt(0)
+          recAssembler.emitReturn()
+        }
+
+        // tailCall(n - 1)
+        recAssembler.pushIntFromVar(0)
+        recAssembler.pushImmediateInt(1)
+        recAssembler.callNative(arithmetic.int.subtract.int)
+        recAssembler.tailCallLocal(1)
+
+        val program = builder.build()
+        val interpreter = Interpreter.create(program, nativeFunctions)
+
+        // Run with a large number of iterations to ensure no stack overflow
+        val result = interpreter.run(emptyContextReader)
+
+        result.intValue() shouldBe 0
+      }
+    }
+
     it("should correctly store variables using StoreConst, Store, and StoreWide") {
       // Index 17 (prime) for StoreConst (index < 256, value fits in 8 bits)
       // Index 257 (prime) for Store (index < 65536)

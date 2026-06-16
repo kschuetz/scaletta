@@ -268,6 +268,21 @@ final class Interpreter private(private val program: Program,
           variableStack.expandFrame(currentFunction.frameSignature)
           varSpace.setSignature(currentFunction.varSpaceSignature)
 
+        case Opcodes.TailCallLocal =>
+          val functionIndex = rawOpcode & 0xFFFFFF
+          instructionPointer = 0
+
+          if (functionIndex != userFunctionIndex) {
+            val prevFunction = currentFunction
+            userFunctionIndex = functionIndex
+            currentFunction = program.functions(userFunctionIndex)
+
+            // Only manipulate the stack if we are changing functions
+            variableStack.contractFrame(prevFunction.frameSignature)
+            variableStack.expandFrame(currentFunction.frameSignature)
+            varSpace.setSignature(currentFunction.varSpaceSignature)
+          }
+
         case Opcodes.Return =>
           if (callStack.isEmpty) {
             evalResultContainer.loadFromOperandStack(operandStack)

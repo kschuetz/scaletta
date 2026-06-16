@@ -18,10 +18,11 @@ object Opcodes {
   final val Swap = 14
   final val CallNative = 15
   final val CallLocal = 16
-  final val Return = 17
-  final val Pop = 18
-  final val LogicalAnd = 19
-  final val LogicalOr = 20
-  final val Box = 21
-  final val Convert = 22
+  final val TailCallLocal = 17
+  final val Return = 18
+  final val Pop = 19
+  final val LogicalAnd = 20
+  final val LogicalOr = 21
+  final val Box = 22
+  final val Convert = 23
 }

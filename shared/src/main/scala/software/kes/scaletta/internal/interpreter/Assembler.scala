@@ -247,6 +247,9 @@ final class Assembler(private val writer: OpcodeWriter,
   def callLocal(userFunctionIndex: Int): Unit =
     writer.writeAndAdvance(makeOpcode24(Opcodes.CallLocal, userFunctionIndex))
 
+  def tailCallLocal(userFunctionIndex: Int): Unit =
+    writer.writeAndAdvance(makeOpcode24(Opcodes.TailCallLocal, userFunctionIndex))
+
   def label(): Assembler.Label = new LabelImpl()
 
   /**
