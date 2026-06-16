@@ -6,9 +6,11 @@ object StandardLibraryLookup {
   def create(methodResolver: MethodResolver): StandardLibraryLookup =
     new StandardLibraryLookup(new ArithmeticOpsLookup(methodResolver),
       new ComparisonOpsLookup(methodResolver),
-      new EqualityOpsLookup(methodResolver))
+      new EqualityOpsLookup(methodResolver),
+      new MathLookup(methodResolver))
 }
 
 final class StandardLibraryLookup private(val arithmetic: ArithmeticOpsLookup,
                                           val comparison: ComparisonOpsLookup,
-                                          val equality: EqualityOpsLookup)
+                                          val equality: EqualityOpsLookup,
+                                          val math: MathLookup)
