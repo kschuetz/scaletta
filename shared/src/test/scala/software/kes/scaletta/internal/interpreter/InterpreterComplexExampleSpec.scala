@@ -848,4 +848,66 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
       result.booleanValue() shouldBe expected
     }
   }
+
+  test("wide variable and constant pool access stress test") {
+    val varCount = 70000
+    val constantCount = 70000
+
+    // 1. Frame Setup: Create 70,000 Int slots
+    val frame = FrameSignature.fromSeq(Seq.fill(varCount)(CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Long, signature)
+    val assembler = builder.mainAssembler()
+
+    // 2. Constant Loading: Intern 70,000 unique Long values to stress the ConstantPool
+    // We use a loop to ensure we reach indices > 65535.
+    // The last constant will be at index 69,999.
+    (0 until constantCount).foreach { i =>
+      assembler.pushImmediateLong(1000000L + i)
+      assembler.pop() // Just to intern them, we'll push the one we need later
+    }
+
+    val nVarLow = 10
+    val nVarHigh = 68000
+    val constantToUse = 1000000L + 69999L // The last interned constant
+
+    // 3. Logic:
+    // a. Retrieve value from index 10 (stored via Initializer)
+    assembler.pushIntFromVar(nVarLow)
+
+    // b. Retrieve value from index 68,000 (stored via Initializer) - Exercises PushFromVarWide
+    assembler.pushIntFromVar(nVarHigh)
+
+    // c. Add them
+    assembler.callNative(arithmetic.int.add.int)
+
+    // d. Convert sum to Long
+    assembler.convert(BasicTypes.Long)
+
+    // e. Push a Long constant from a wide pool index - Exercises Push with 32-bit index
+    assembler.pushImmediateLong(constantToUse)
+
+    // f. Add the wide Long constant
+    assembler.callNative(arithmetic.long.add.long)
+
+    // g. Return result
+    assembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // 4. Verification:
+    // Store known prime values at the boundaries
+    val valLow = 41
+    val valHigh = 43
+    val expected = (valLow + valHigh).toLong + constantToUse
+
+    val initializer = Initializer { vs =>
+      vs.unsafeWriteInt(nVarLow, valLow)
+      vs.unsafeWriteInt(nVarHigh, valHigh)
+    }
+
+    val result = interpreter.run(emptyContextReader, initializer)
+    result.longValue() shouldBe expected
+  }
 }
