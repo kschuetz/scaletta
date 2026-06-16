@@ -388,11 +388,8 @@ private[interpreter] final class InterpreterArgumentReader(operandStack: Operand
   def unsafeReadChar(index: Int): Char =
     operandStack.chars.unsafeRead(params.stackOffsetOf(index))
 
-  def unsafeReadDouble(index: Int): Double = {
-    println(s"doubles size: ${operandStack.doubles.size()}")
-
+  def unsafeReadDouble(index: Int): Double =
     operandStack.doubles.unsafeRead(params.stackOffsetOf(index))
-  }
 
   def unsafeReadFloat(index: Int): Float =
     operandStack.floats.unsafeRead(params.stackOffsetOf(index))
