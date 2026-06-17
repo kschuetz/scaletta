@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.runtime
 
-import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.common.{BasicType, BasicTypes}
 
 import scala.collection.immutable.ArraySeq
 
@@ -48,7 +48,7 @@ final class VarSpaceSignature private(val slots: ArraySeq[VarAddress.Encoded],
 
   def slot(index: Int): VarAddress.Encoded = slots(index)
 
-  def basicTypeOf(index: Int): Byte = VarAddress.decodeBasicType(slots(index))
+  def basicTypeOf(index: Int): BasicType = VarAddress.decodeBasicType(slots(index))
 
   def stackOffsetOf(index: Int): Int = VarAddress.decodeStackOffset(slots(index))
 

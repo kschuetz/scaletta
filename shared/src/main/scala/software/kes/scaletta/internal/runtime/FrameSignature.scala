@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.runtime
 
 import software.kes.scaletta.api.{Type, TypeId}
-import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.common.{BasicType, BasicTypes}
 
 import scala.collection.immutable.ArraySeq
 
@@ -85,11 +85,11 @@ final class FrameSignature private(val slots: ArraySeq[VarAddress.Encoded],
 
   def slot(index: Int): VarAddress.Encoded = slots(index)
 
-  def basicTypeOf(index: Int): Byte = VarAddress.decodeBasicType(slots(index))
+  def basicTypeOf(index: Int): BasicType = VarAddress.decodeBasicType(slots(index))
 
   def stackOffsetOf(index: Int): Int = VarAddress.decodeStackOffset(slots(index))
 
-  def countFor(t: Byte): Int =
+  def countFor(t: BasicType): Int =
     t match {
       case BasicTypes.Object => objectCount
       case BasicTypes.Boolean => booleanCount

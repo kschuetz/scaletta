@@ -4,17 +4,17 @@ import software.kes.scaletta.api.{Type, TypeId}
 import software.kes.scaletta.internal.runtime.CoreTypes
 
 object BasicTypes {
-  final val Object: Byte = 0
-  final val Boolean: Byte = 1
-  final val Int: Byte = 2
-  final val Long: Byte = 3
-  final val Short: Byte = 4
-  final val Byte: Byte = 5
-  final val Char: Byte = 6
-  final val Double: Byte = 7
-  final val Float: Byte = 8
+  final val Object: BasicType = 0
+  final val Boolean: BasicType = 1
+  final val Int: BasicType = 2
+  final val Long: BasicType = 3
+  final val Short: BasicType = 4
+  final val Byte: BasicType = 5
+  final val Char: BasicType = 6
+  final val Double: BasicType = 7
+  final val Float: BasicType = 8
 
-  def fromType(typ: Type[TypeId]): Byte =
+  def fromType(typ: Type[TypeId]): BasicType =
     typ match {
       case CoreTypes.BooleanT => Boolean
       case CoreTypes.IntT => Int
@@ -27,7 +27,7 @@ object BasicTypes {
       case _ => Object
     }
 
-  def friendlyName(value: Byte): String =
+  def friendlyName(value: BasicType): String =
     value match {
       case Boolean => "Boolean"
       case Int => "Int"
@@ -40,6 +40,6 @@ object BasicTypes {
       case _ => "Object"
     }
 
-  private[scaletta] val MaxValue: Byte = Float
+  private[scaletta] val MaxValue: BasicType = Float
 }
 

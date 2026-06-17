@@ -1,14 +1,14 @@
 package software.kes.scaletta.internal.interpreter
 
 import software.kes.scaletta.api.EvalResult
-import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.common.{BasicType, BasicTypes}
 
 trait EvalResultContainer extends EvalResult {
   def loadFromOperandStack(operandStack: OperandStack): Unit
 }
 
 private[interpreter] object EvalResultContainer {
-  def create(basicType: Byte): EvalResultContainer =
+  def create(basicType: BasicType): EvalResultContainer =
     basicType match {
       case BasicTypes.Boolean => new BooleanEvalResult(false)
       case BasicTypes.Int => new IntEvalResult(0)

@@ -1,5 +1,6 @@
 package software.kes.scaletta.internal.interpreter
 
+import software.kes.scaletta.common.BasicType
 import software.kes.scaletta.internal.runtime.{FrameSignature, UserFunctionSignature, VarSpaceSignature}
 
 import scala.collection.immutable.ArraySeq
@@ -10,7 +11,7 @@ case class UserFunction(signature: UserFunctionSignature,
 
   def frameSignature: FrameSignature = varSpaceSignature.frameSignature
 
-  def returnType: Byte = signature.returnType
+  def returnType: BasicType = signature.returnType
 
   def parameterCount: Int = signature.parameterCount
 

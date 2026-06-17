@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.interpreter
 
 import software.kes.scaletta.api.NativeFunctionId
-import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.common.{BasicType, BasicTypes}
 import software.kes.scaletta.util.stack.IntStack
 
 object Assembler {
@@ -232,7 +232,7 @@ final class Assembler(private val writer: OpcodeWriter,
    * Converts the top value on the operand stack to the specified type.
    * Always makes the best effort; if conversion is not possible, the value is set to zero.
    */
-  def convert(typ: Byte): Unit =
+  def convert(typ: BasicType): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Convert, typ, 0))
 
   def emitReturn(): Unit =
@@ -305,18 +305,18 @@ final class Assembler(private val writer: OpcodeWriter,
     }
   }
 
-  private def pushConst(typ: Byte, value: Short): Unit = {
+  private def pushConst(typ: BasicType, value: Short): Unit = {
     val opcode = makeOpcode(Opcodes.PushConst, typ, value)
     writer.writeAndAdvance(opcode)
   }
 
-  private def push(typ: Byte, value: Int): Unit = {
+  private def push(typ: BasicType, value: Int): Unit = {
     val opcode = makeOpcode(Opcodes.Push, typ, 0)
     writer.writeAndAdvance(opcode)
     writer.writeAndAdvance(value)
   }
 
-  private def store(typ: Byte,
+  private def store(typ: BasicType,
                     varIndex: Int,
                     value: Int,
                     allowConst: Boolean = true): Unit = {
@@ -338,7 +338,7 @@ final class Assembler(private val writer: OpcodeWriter,
     }
   }
 
-  private def storeInternable(typ: Byte,
+  private def storeInternable(typ: BasicType,
                               varIndex: Int,
                               constValue: Option[Byte],
                               intern: => Int): Unit = {
@@ -361,13 +361,13 @@ final class Assembler(private val writer: OpcodeWriter,
     }
   }
 
-  private def pushFromVar(typ: Byte, varIndex: Int): Unit =
+  private def pushFromVar(typ: BasicType, varIndex: Int): Unit =
     pushPop(Opcodes.PushFromVar, Opcodes.PushFromVarWide, typ, varIndex)
 
-  private def popIntoVar(typ: Byte, varIndex: Int): Unit =
+  private def popIntoVar(typ: BasicType, varIndex: Int): Unit =
     pushPop(Opcodes.PopIntoVar, Opcodes.PopIntoVarWide, typ, varIndex)
 
-  private def pushPop(narrow: Int, wide: Int, typ: Byte, varIndex: Int): Unit = {
+  private def pushPop(narrow: Int, wide: Int, typ: BasicType, varIndex: Int): Unit = {
     val s = if (varIndex < 0) 0 else varIndex
     if (s < 65536) {
       val opcode = makeOpcode(narrow, typ, (s & 0xFFFF).toShort)
@@ -391,10 +391,10 @@ final class Assembler(private val writer: OpcodeWriter,
     if (value.isWhole && value >= Byte.MinValue && value <= Byte.MaxValue) Some(value.toByte)
     else None
 
-  private def makeOpcode(instruction: Int, typ: Byte, value: Short): Int =
+  private def makeOpcode(instruction: Int, typ: BasicType, value: Short): Int =
     (instruction << 24) | ((typ & 0xFF) << 16) | (value & 0xFFFF)
 
-  private def makeOpcode(instruction: Int, typ: Byte, varIndex: Byte, value: Byte): Int =
+  private def makeOpcode(instruction: Int, typ: BasicType, varIndex: Byte, value: Byte): Int =
     (instruction << 24) | ((typ & 0xFF) << 16) | (varIndex << 8) | value
 
   private def makeOpcode24(baseInstruction: Int, operand: Int): Int =

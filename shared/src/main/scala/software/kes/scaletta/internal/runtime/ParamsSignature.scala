@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.runtime
 
 import software.kes.scaletta.api.{Type, TypeId}
-import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.common.{BasicType, BasicTypes}
 
 import scala.collection.immutable.ArraySeq
 
@@ -42,7 +42,7 @@ final class ParamsSignature private(val params: ArraySeq[VarAddress.Encoded],
 
   def param(index: Int): VarAddress.Encoded = params(index)
 
-  def basicTypeOf(index: Int): Byte = VarAddress.decodeBasicType(params(index))
+  def basicTypeOf(index: Int): BasicType = VarAddress.decodeBasicType(params(index))
 
   def stackOffsetOf(index: Int): Int = VarAddress.decodeStackOffset(params(index))
 

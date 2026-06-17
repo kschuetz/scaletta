@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.interpreter
 
 import software.kes.scaletta.api.ArgumentReader
-import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.common.{BasicType, BasicTypes}
 import software.kes.scaletta.internal.runtime.ParamsSignature
 import software.kes.scaletta.util.stack._
 
@@ -419,7 +419,7 @@ final class OperandStack(private[interpreter] val control: ByteStack,
    * Converts the value on the type of the stack to the specified type.
    * Always makes the best effort; if conversion is not possible, the value is set to zero.
    */
-  def convert(toType: Byte): Unit =
+  def convert(toType: BasicType): Unit =
     control.pop() match {
       case BasicTypes.Boolean => toType match {
         case BasicTypes.Boolean => control.push(BasicTypes.Boolean)
