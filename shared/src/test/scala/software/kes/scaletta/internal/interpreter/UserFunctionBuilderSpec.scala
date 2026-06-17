@@ -2,13 +2,14 @@ package software.kes.scaletta.internal.interpreter
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarSpaceSignature}
+import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 
 class UserFunctionBuilderSpec extends AnyFunSpec with Matchers {
   describe("UserFunctionBuilder") {
     it("should write and advance") {
       val sig = VarSpaceSignature.of(FrameSignature.of(CoreTypes.IntT))
-      val builder = UserFunctionBuilder.create(sig)
+      val builder = UserFunctionBuilder.create(UserFunctionSignature(sig, BasicTypes.Int, 0))
       builder.currentAddress shouldBe 0
 
       builder.writeAndAdvance(101)
@@ -22,7 +23,7 @@ class UserFunctionBuilderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should allow writing to an existing address") {
-      val sig = VarSpaceSignature.empty
+      val sig = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0)
       val builder = UserFunctionBuilder.create(sig)
       builder.writeAndAdvance(10)
       builder.writeAndAdvance(20)
@@ -33,7 +34,7 @@ class UserFunctionBuilderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should throw exception when writing to an out-of-bounds address") {
-      val sig = VarSpaceSignature.empty
+      val sig = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0)
       val builder = UserFunctionBuilder.create(sig)
       builder.writeAndAdvance(10)
 
@@ -49,7 +50,7 @@ class UserFunctionBuilderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should grow the buffer when needed") {
-      val sig = VarSpaceSignature.empty
+      val sig = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0)
       val builder = UserFunctionBuilder.create(sig)
       // Initial capacity is 16, so let's write 17 elements
       for (i <- 0 until 17) {
@@ -65,7 +66,7 @@ class UserFunctionBuilderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should support bitmasking in write") {
-      val sig = VarSpaceSignature.empty
+      val sig = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0)
       val builder = UserFunctionBuilder.create(sig)
       builder.writeAndAdvance(0x12345678)
       builder.write(0, 0x0000ABCD, 0x0000FFFF)

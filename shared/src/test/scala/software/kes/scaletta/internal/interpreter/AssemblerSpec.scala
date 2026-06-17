@@ -3,10 +3,10 @@ package software.kes.scaletta.internal.interpreter
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.internal.runtime.VarSpaceSignature
+import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarSpaceSignature}
 
 class AssemblerSpec extends AnyFunSpec with Matchers {
-  private val defaultSignature = VarSpaceSignature.empty
+  private val defaultSignature = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0)
 
   describe("Assembler") {
     describe("Labels") {
@@ -169,7 +169,7 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
                                  userFunctionBuilder: UserFunctionBuilder,
                                  constantPoolBuilder: ConstantPoolBuilder)
 
-  private def withEnvironment(signature: VarSpaceSignature)
+  private def withEnvironment(signature: UserFunctionSignature)
                              (f: Environment => Unit): Unit = {
     val userFunctionBuilder = UserFunctionBuilder.create(signature)
     val constantPoolBuilder = ConstantPoolBuilder.create()

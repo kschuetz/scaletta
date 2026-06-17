@@ -6,7 +6,7 @@ import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
-import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class InterpreterNodeTraversalExampleSpec extends AnyFunSuite with Matchers {
@@ -52,7 +52,7 @@ class InterpreterNodeTraversalExampleSpec extends AnyFunSuite with Matchers {
     // Var 0: current node (Object), Var 1: sum (Int)
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
     val assembler = builder.mainAssembler()
 
     val nodeVar = 0

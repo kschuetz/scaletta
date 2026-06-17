@@ -1,21 +1,17 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.internal.runtime.VarSpaceSignature
+import software.kes.scaletta.internal.runtime.UserFunctionSignature
 import software.kes.scaletta.util.array.ArrayUtil
 
 import scala.collection.immutable.ArraySeq
 
 object UserFunctionBuilder {
-  def create(signature: VarSpaceSignature): UserFunctionBuilder =
-    create(signature, 0)
-
-  def create(signature: VarSpaceSignature, parameterCount: Int): UserFunctionBuilder = {
-    new UserFunctionBuilder(signature, parameterCount, new Array[Int](16), 0)
+  def create(signature: UserFunctionSignature): UserFunctionBuilder = {
+    new UserFunctionBuilder(signature, new Array[Int](16), 0)
   }
 }
 
-final class UserFunctionBuilder private(private val signature: VarSpaceSignature,
-                                        private val parameterCount: Int,
+final class UserFunctionBuilder private(private val signature: UserFunctionSignature,
                                         private var buffer: Array[Int],
                                         private var writePtr: Int) extends OpcodeWriter {
 
@@ -40,7 +36,7 @@ final class UserFunctionBuilder private(private val signature: VarSpaceSignature
 
   def build(): UserFunction = {
     val instructions = ArraySeq.unsafeWrapArray(buffer.take(writePtr))
-    UserFunction(signature, parameterCount, instructions)
+    UserFunction(signature, instructions)
   }
 
   private def ensureCapacity(minCapacity: Int): Unit = {

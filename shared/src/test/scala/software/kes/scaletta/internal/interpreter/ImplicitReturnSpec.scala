@@ -6,7 +6,7 @@ import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
-import software.kes.scaletta.internal.runtime.VarSpaceSignature
+import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class ImplicitReturnSpec extends AnyFunSpec with Matchers {
@@ -19,7 +19,7 @@ class ImplicitReturnSpec extends AnyFunSpec with Matchers {
 
   describe("Interpreter with implicit returns") {
     it("should allow a top-level function to return without an explicit Return opcode") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
       assembler.pushImmediateInt(47)
       // No emitReturn() here
@@ -32,14 +32,14 @@ class ImplicitReturnSpec extends AnyFunSpec with Matchers {
     }
 
     it("should allow a local function to return without an explicit Return opcode") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val mainAssembler = builder.mainAssembler()
 
       mainAssembler.pushImmediateInt(11)
       mainAssembler.callLocal(1)
       mainAssembler.emitReturn()
 
-      val localAssembler = builder.addFunction(VarSpaceSignature.empty)
+      val localAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       localAssembler.pushImmediateInt(31)
       localAssembler.pushImmediateInt(12)
       localAssembler.callNative(arithmetic.int.add.int)
@@ -53,14 +53,14 @@ class ImplicitReturnSpec extends AnyFunSpec with Matchers {
     }
 
     it("should allow a local function with an explicit Return to work correctly alongside implicit return") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val mainAssembler = builder.mainAssembler()
 
       mainAssembler.pushImmediateInt(11)
       mainAssembler.callLocal(1)
       // Implicit return here
 
-      val localAssembler = builder.addFunction(VarSpaceSignature.empty)
+      val localAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       localAssembler.pushImmediateInt(12)
       localAssembler.emitReturn() // Explicit return
 

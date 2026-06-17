@@ -6,7 +6,7 @@ import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
-import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarAddress, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarAddress, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 import scala.collection.immutable.ArraySeq
@@ -22,7 +22,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
 
   describe("Interpreter") {
     it("should execute a program that returns a constant integer") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
       assembler.pushImmediateInt(43)
       assembler.emitReturn()
@@ -35,7 +35,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should perform basic arithmetic via a native call") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateInt(11)
@@ -51,14 +51,14 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should perform basic arithmetic via a local function call") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val mainAssembler = builder.mainAssembler()
 
       mainAssembler.pushImmediateInt(11)
       mainAssembler.callLocal(1)
       mainAssembler.emitReturn()
 
-      val addTwelveAssembler = builder.addFunction(VarSpaceSignature.empty)
+      val addTwelveAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       addTwelveAssembler.pushImmediateInt(12)
       addTwelveAssembler.callNative(arithmetic.int.add.int)
       addTwelveAssembler.emitReturn()
@@ -73,7 +73,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     it("should handle local variables") {
       val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
       val signature = VarSpaceSignature.of(frame)
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       val varIdx = 0
@@ -93,7 +93,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle mixed-type arithmetic") {
-      val builder = ProgramBuilder.create(BasicTypes.Long, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Long, 0))
       val assembler = builder.mainAssembler()
 
       val largeLong = Int.MaxValue.toLong + 1
@@ -112,7 +112,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle conversions between primitive types") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateDouble(43.7)
@@ -127,7 +127,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle boxing conversions") {
-      val builder = ProgramBuilder.create(BasicTypes.Object, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateInt(47)
@@ -142,7 +142,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle unboxing conversions") {
-      val builder = ProgramBuilder.create(BasicTypes.Long, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Long, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateObject(java.lang.Long.valueOf(53L))
@@ -157,7 +157,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle best-effort conversion from non-numeric objects") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateObject("not a number")
@@ -173,7 +173,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
 
     it("should support a single parameter via the initializer") {
       val signature = VarSpaceSignature.of(FrameSignature.of(CoreTypes.IntT))
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushIntFromVar(0)
@@ -193,7 +193,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
 
     it("should support multiple parameters of the same type via the initializer") {
       val signature = VarSpaceSignature.of(FrameSignature.of(CoreTypes.LongT, CoreTypes.LongT))
-      val builder = ProgramBuilder.create(BasicTypes.Long, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Long, 0))
       val assembler = builder.mainAssembler()
 
       // var 0: Long at stack offset 0 (assigned first by FrameSignature)
@@ -219,7 +219,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
 
     it("should support diverse mixed types via the initializer") {
       val signature = VarSpaceSignature.of(FrameSignature.of(CoreTypes.IntT, CoreTypes.LongT, CoreTypes.StringT))
-      val builder = ProgramBuilder.create(BasicTypes.Object, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Object, 0))
       val assembler = builder.mainAssembler()
 
       // Int: offset 0
@@ -245,7 +245,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val frame = FrameSignature.of(CoreTypes.IntT, CoreTypes.IntT)
       val signature = VarSpaceSignature.of(frame)
 
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushIntFromVar(0)
@@ -265,7 +265,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle branching") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       val elseLabel = assembler.label()
@@ -290,7 +290,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     it("should handle nested local function calls with their own variables") {
       val mainFrame = FrameSignature.empty
       val mainSignature = VarSpaceSignature.of(mainFrame)
-      val builder = ProgramBuilder.create(BasicTypes.Int, mainSignature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(mainSignature, BasicTypes.Int, 0))
       val mainAssembler = builder.mainAssembler()
 
       mainAssembler.pushImmediateInt(11)
@@ -299,7 +299,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
 
       val funcFrame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
       val funcSignature = VarSpaceSignature.of(funcFrame)
-      val funcAssembler = builder.addFunction(funcSignature)
+      val funcAssembler = builder.addFunction(UserFunctionSignature(funcSignature, BasicTypes.Int, 0))
       // argument (11) is on operand stack
       funcAssembler.popIntIntoVar(0)
       funcAssembler.pushIntFromVar(0)
@@ -319,7 +319,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     }
 
     it("should handle all basic types via Push") {
-      val builder = ProgramBuilder.create(BasicTypes.Boolean, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Boolean, 0))
       val assembler = builder.mainAssembler()
 
       // We'll test push for types that use constant pool in pushImmediate
@@ -344,7 +344,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     it("should correctly store variables using PopIntoVar") {
       val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.LongT, CoreTypes.AnyRefT))
       val signature = VarSpaceSignature.of(frame)
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateInt(43)
@@ -374,7 +374,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val updatedSlots = slots.updated(65536, VarAddress.encode(BasicTypes.Int, 65536))
 
       val signature = VarSpaceSignature.create(updatedSlots, largeFrame)
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateInt(47)
@@ -397,7 +397,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         CoreTypes.IntT, CoreTypes.LongT, CoreTypes.FloatT, CoreTypes.DoubleT, CoreTypes.AnyRefT
       ))
       val signature = VarSpaceSignature.of(frame)
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.pushImmediateBoolean(true)
@@ -442,7 +442,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       it("should support tail recursion (self-call)") {
         val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
         val signature = VarSpaceSignature.of(frame)
-        val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+        val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
 
         // Function 0: Main entry point
         val mainAssembler = builder.mainAssembler()
@@ -452,7 +452,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         mainAssembler.emitReturn()
 
         // Function 1: Recursive sum
-        val recAssembler = builder.addFunction(signature)
+        val recAssembler = builder.addFunction(UserFunctionSignature(signature, BasicTypes.Int, 0))
         val nVar = 0
         val accVar = 1
 
@@ -490,7 +490,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       it("should support tail calling another function") {
         val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
         val signature = VarSpaceSignature.of(frame)
-        val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+        val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
 
         // Function 0 (main): tail calls function 1
         val mainAssembler = builder.mainAssembler()
@@ -498,7 +498,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         mainAssembler.tailCallLocal(1)
 
         // Function 1: returns the incremented value
-        val otherAssembler = builder.addFunction(signature)
+        val otherAssembler = builder.addFunction(UserFunctionSignature(signature, BasicTypes.Int, 0))
         otherAssembler.popIntIntoVar(0)
         otherAssembler.pushIntFromVar(0)
         otherAssembler.pushImmediateInt(1)
@@ -515,7 +515,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       it("should maintain constant stack space for deep recursion") {
         val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
         val signature = VarSpaceSignature.of(frame)
-        val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+        val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
 
         // Function 0: Main entry point
         val mainAssembler = builder.mainAssembler()
@@ -524,7 +524,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         mainAssembler.emitReturn()
 
         // Function 1: Recursive function
-        val recAssembler = builder.addFunction(signature)
+        val recAssembler = builder.addFunction(UserFunctionSignature(signature, BasicTypes.Int, 0))
         // Pop n from stack
         recAssembler.popIntIntoVar(0)
 
@@ -563,7 +563,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val types = Seq.fill(65538)(CoreTypes.IntT)
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(types))
 
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       // StoreConst: var 17, value 43 (prime)
@@ -591,7 +591,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
     it("should correctly store non-primitive types using StoreConst and Store") {
       val types = Seq.fill(258)(CoreTypes.AnyRefT)
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(types))
-      val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+      val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
 
       assembler.storeImmediateObject(17, "SmallIndexObject")

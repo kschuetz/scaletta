@@ -3,12 +3,12 @@ package software.kes.scaletta.internal.interpreter
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.internal.runtime.VarSpaceSignature
+import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarSpaceSignature}
 
 class ProgramBuilderSpec extends AnyFunSpec with Matchers {
   describe("ProgramBuilder") {
     it("should build a program with a main function") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
       assembler.pushImmediateInt(43)
 
@@ -19,12 +19,12 @@ class ProgramBuilderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should build a program with additional functions") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val mainAssembler = builder.mainAssembler()
       mainAssembler.pushImmediateInt(11)
       mainAssembler.callLocal(1)
 
-      val otherAssembler = builder.addFunction(VarSpaceSignature.empty)
+      val otherAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       otherAssembler.pushImmediateInt(13)
 
       val program = builder.build()
@@ -33,12 +33,12 @@ class ProgramBuilderSpec extends AnyFunSpec with Matchers {
     }
 
     it("should share the constant pool across all functions") {
-      val builder = ProgramBuilder.create(BasicTypes.Int, VarSpaceSignature.empty)
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val mainAssembler = builder.mainAssembler()
       val longValue = 123456789L
       mainAssembler.pushImmediateLong(longValue)
 
-      val otherAssembler = builder.addFunction(VarSpaceSignature.empty)
+      val otherAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       otherAssembler.pushImmediateLong(longValue)
 
       val program = builder.build()

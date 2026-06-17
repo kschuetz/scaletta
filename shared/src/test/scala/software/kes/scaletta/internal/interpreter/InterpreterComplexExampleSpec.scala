@@ -6,7 +6,7 @@ import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
-import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
@@ -21,7 +21,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("factorial") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
     val assembler = builder.mainAssembler()
 
     // Variable layout:
@@ -95,7 +95,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("Newton's method for square root (Double)") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.DoubleT, CoreTypes.DoubleT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Double, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Double, 0))
     val assembler = builder.mainAssembler()
 
     val nVar = 0
@@ -166,7 +166,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("short-circuiting logical AND") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Boolean, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Boolean, 0))
     val assembler = builder.mainAssembler()
     val xVar = 0
     val exitLabel = assembler.label()
@@ -211,7 +211,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("short-circuiting logical OR") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Boolean, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Boolean, 0))
     val assembler = builder.mainAssembler()
     val xVar = 0
     val exitLabel = assembler.label()
@@ -256,7 +256,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("fibonacci (iterative)") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
     val assembler = builder.mainAssembler()
 
     // Variable layout:
@@ -359,7 +359,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
      */
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
 
     val powerFuncIdx = 1
     val baseVar = 0
@@ -372,7 +372,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     mainAssembler.tailCallLocal(powerFuncIdx)
 
     // Power function implementation
-    val powerAssembler = builder.addFunction(signature)
+    val powerAssembler = builder.addFunction(UserFunctionSignature(signature, BasicTypes.Int, 0))
     val oddLabel = powerAssembler.label()
 
     // pop arguments into local variables
@@ -450,7 +450,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("GCD (recursive Euclidean algorithm)") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
 
     val gcdFuncIdx = 1
     val aVar = 0
@@ -463,7 +463,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     mainAssembler.tailCallLocal(gcdFuncIdx)
 
     // GCD function implementation
-    val gcdAssembler = builder.addFunction(signature)
+    val gcdAssembler = builder.addFunction(UserFunctionSignature(signature, BasicTypes.Int, 0))
 
     // pop arguments
     gcdAssembler.popIntIntoVar(bVar)
@@ -510,7 +510,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("Quadratic formula stress test (Double)") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.DoubleT, CoreTypes.DoubleT, CoreTypes.DoubleT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Double, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Double, 0))
     val assembler = builder.mainAssembler()
 
     val aVar = 0
@@ -567,7 +567,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("Ackermann function A(m, n) stress test") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
 
     val ackFuncIdx = 1
     val mVar = 0
@@ -580,7 +580,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     mainAssembler.tailCallLocal(ackFuncIdx)
 
     // Ackermann function implementation
-    val ackAssembler = builder.addFunction(signature)
+    val ackAssembler = builder.addFunction(UserFunctionSignature(signature, BasicTypes.Int, 0))
 
     // pop arguments
     ackAssembler.popIntIntoVar(nVar)
@@ -660,7 +660,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
       CoreTypes.ShortT // periodCounter
     ))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Long, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Long, 0))
     val assembler = builder.mainAssembler()
 
     // Variable indices
@@ -790,7 +790,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     val recursiveFrame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
     val recursiveSignature = VarSpaceSignature.of(recursiveFrame)
 
-    val builder = ProgramBuilder.create(BasicTypes.Boolean, mainSignature, 1)
+    val builder = ProgramBuilder.create(UserFunctionSignature(mainSignature, BasicTypes.Boolean, 1))
 
     // Function 0 (Main)
     val mainAssembler = builder.mainAssembler()
@@ -799,7 +799,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     mainAssembler.emitReturn()
 
     // Function 1 (isEven)
-    val isEvenAssembler = builder.addFunction(recursiveSignature, 1)
+    val isEvenAssembler = builder.addFunction(UserFunctionSignature(recursiveSignature, BasicTypes.Boolean, 1))
     val evenExit = isEvenAssembler.label()
     isEvenAssembler.pushIntFromVar(0)
     isEvenAssembler.pushImmediateInt(0)
@@ -814,7 +814,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     isEvenAssembler.tailCallLocal(2) // Tail call isOdd
 
     // Function 2 (isOdd)
-    val isOddAssembler = builder.addFunction(recursiveSignature, 1)
+    val isOddAssembler = builder.addFunction(UserFunctionSignature(recursiveSignature, BasicTypes.Boolean, 1))
     val oddExit = isOddAssembler.label()
     isOddAssembler.pushIntFromVar(0)
     isOddAssembler.pushImmediateInt(0)
@@ -856,7 +856,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     // 1. Frame Setup: Create 70,000 Int slots
     val frame = FrameSignature.fromSeq(Seq.fill(varCount)(CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Long, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Long, 0))
     val assembler = builder.mainAssembler()
 
     // 2. Constant Loading: Intern 70,000 unique Long values to stress the ConstantPool
@@ -914,7 +914,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
   test("complex stack reorganization (RPN evaluator)") {
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)
-    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val builder = ProgramBuilder.create(UserFunctionSignature(signature, BasicTypes.Int, 0))
     val assembler = builder.mainAssembler()
 
     // Variable layout:
