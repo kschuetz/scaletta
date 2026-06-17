@@ -15,9 +15,8 @@ object Interpreter {
     val operandStack = OperandStack.create()
     val variableStack = VariableStack.create()
     val varSpace = VarSpaceFromVariableStack.create(variableStack, program.mainFunction.varSpaceSignature)
-    val evalResultContainer = EvalResultContainer.create(program.returnType)
     new Interpreter(program, functionTable, callStack, operandStack, variableStack,
-      varSpace, evalResultContainer, 0, 0)
+      varSpace, 0, 0)
   }
 }
 
@@ -27,11 +26,11 @@ final class Interpreter private(private val program: Program,
                                 private val operandStack: OperandStack,
                                 private val variableStack: VariableStack,
                                 private val varSpace: VarSpaceFromVariableStack,
-                                private val evalResultContainer: EvalResultContainer,
                                 private var userFunctionIndex: Int,
                                 private var instructionPointer: Int) {
   def run(runtimeContexts: RuntimeContextReader,
           initializer: Initializer = Initializer.none): EvalResult = {
+    val evalResultContainer = EvalResultContainer.create(program.returnType)
     val argumentReader = new InterpreterArgumentReader(operandStack, ParamsSignature.empty)
 
     reset(initializer)
