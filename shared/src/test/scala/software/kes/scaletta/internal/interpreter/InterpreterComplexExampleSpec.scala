@@ -910,4 +910,43 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     val result = interpreter.run(emptyContextReader, initializer)
     result.longValue() shouldBe expected
   }
+
+  test("complex stack reorganization (RPN evaluator)") {
+    val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))
+    val signature = VarSpaceSignature.of(frame)
+    val builder = ProgramBuilder.create(BasicTypes.Int, signature)
+    val assembler = builder.mainAssembler()
+
+    // Variable layout:
+    // var 0: a
+    // var 1: b
+    val aVar = 0
+    val bVar = 1
+
+    // Evaluate (a + b) * (a - b) using RPN-style stack manipulation
+    assembler.pushIntFromVar(aVar) // [a]
+    assembler.dup() // [a, a]
+    assembler.pushIntFromVar(bVar) // [a, a, b]
+    assembler.callNative(arithmetic.int.add.int) // [a, a + b]
+    assembler.swap() // [a + b, a]
+    assembler.pushIntFromVar(bVar) // [a + b, a, b]
+    assembler.callNative(arithmetic.int.subtract.int) // [a + b, a - b]
+    assembler.callNative(arithmetic.int.multiply.int) // [(a + b) * (a - b)]
+    assembler.emitReturn()
+
+    val program = builder.build()
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val a = 43
+    val b = 41
+    val expected = (a + b) * (a - b)
+
+    val initializer = Initializer { vs =>
+      vs.unsafeWriteInt(aVar, a)
+      vs.unsafeWriteInt(bVar, b)
+    }
+
+    val result = interpreter.run(emptyContextReader, initializer)
+    result.intValue() shouldBe expected
+  }
 }
