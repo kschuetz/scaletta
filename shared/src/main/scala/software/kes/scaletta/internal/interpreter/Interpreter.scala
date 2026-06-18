@@ -29,12 +29,15 @@ final class Interpreter private(private val program: Program,
                                 private var userFunctionIndex: Int,
                                 private var instructionPointer: Int) {
   def run(runtimeContexts: RuntimeContextReader,
-          initializer: Initializer = Initializer.none): EvalResult = {
-    val evalResultContainer = EvalResultContainer.create(program.returnType)
+          initializer: Initializer = Initializer.none,
+          initialUserFunctionIndex: Int = 0): EvalResult = {
+    val targetFunction = program.functions(initialUserFunctionIndex)
+    val evalResultContainer = EvalResultContainer.create(targetFunction.returnType)
     val argumentReader = new InterpreterArgumentReader(operandStack, ParamsSignature.empty)
 
-    reset(initializer)
-    var currentFunction = program.mainFunction
+    reset(initializer, targetFunction)
+    userFunctionIndex = initialUserFunctionIndex
+    var currentFunction = targetFunction
     var done = false
 
     var rawOpcode = 0
@@ -361,14 +364,14 @@ final class Interpreter private(private val program: Program,
       case _ => varSpace.unsafeWriteObject(varIndex, program.constantPool.getObject(value))
     }
 
-  private def reset(initializer: Initializer): Unit = {
-    userFunctionIndex = 0
+  private def reset(initializer: Initializer,
+                    targetFunction: UserFunction): Unit = {
     instructionPointer = 0
     callStack.clear()
     operandStack.clear()
     variableStack.clear()
-    variableStack.expandFrame(program.mainFunction.frameSignature)
-    varSpace.setSignature(program.mainFunction.varSpaceSignature)
+    variableStack.expandFrame(targetFunction.frameSignature)
+    varSpace.setSignature(targetFunction.varSpaceSignature)
     initializer(varSpace)
   }
 

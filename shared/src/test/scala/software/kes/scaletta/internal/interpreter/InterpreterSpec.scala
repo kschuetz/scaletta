@@ -264,6 +264,26 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       result.intValue() shouldBe 30
     }
 
+    it("should allow running a specific function by index") {
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
+      val mainAssembler = builder.mainAssembler()
+      mainAssembler.pushImmediateInt(1)
+      mainAssembler.emitReturn()
+
+      val otherFunctionAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
+      otherFunctionAssembler.pushImmediateInt(47)
+      otherFunctionAssembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      val result0 = interpreter.run(emptyContextReader, initialUserFunctionIndex = 0)
+      result0.intValue() shouldBe 1
+
+      val result1 = interpreter.run(emptyContextReader, initialUserFunctionIndex = 1)
+      result1.intValue() shouldBe 47
+    }
+
     it("should handle branching") {
       val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
       val assembler = builder.mainAssembler()
