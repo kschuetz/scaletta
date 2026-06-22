@@ -628,5 +628,61 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       vars(17) shouldBe "SmallIndexObject"
       vars(257) shouldBe "LargeIndexObject"
     }
+
+    it("should allow stepping through instructions") {
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
+      val assembler = builder.mainAssembler()
+      assembler.pushImmediateInt(41)
+      assembler.pushImmediateInt(2)
+      assembler.callNative(arithmetic.int.add.int)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.initialize(emptyContextReader)
+
+      interpreter.isDone shouldBe false
+
+      // Step 1: push 41
+      interpreter.step() shouldBe true
+      interpreter.isDone shouldBe false
+
+      // Step 2: push 2
+      interpreter.step() shouldBe true
+      interpreter.isDone shouldBe false
+
+      // Step 3: call native add
+      interpreter.step() shouldBe true
+      interpreter.isDone shouldBe false
+
+      // Step 4: return
+      interpreter.step() shouldBe false
+      interpreter.isDone shouldBe true
+
+      interpreter.getResult.intValue() shouldBe 43
+    }
+
+    it("should allow stepping with a batch size") {
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
+      val assembler = builder.mainAssembler()
+      assembler.pushImmediateInt(41)
+      assembler.pushImmediateInt(2)
+      assembler.callNative(arithmetic.int.add.int)
+      assembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.initialize(emptyContextReader)
+
+      // Step 2 instructions at once
+      interpreter.step(2) shouldBe true
+      interpreter.isDone shouldBe false
+
+      // Step until completion
+      interpreter.step(0) shouldBe false
+      interpreter.isDone shouldBe true
+
+      interpreter.getResult.intValue() shouldBe 43
+    }
   }
 }

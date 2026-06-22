@@ -28,302 +28,363 @@ final class Interpreter private(private val program: Program,
                                 private val varSpace: VarSpaceFromVariableStack,
                                 private var userFunctionIndex: Int,
                                 private var instructionPointer: Int) {
+  private var runtimeContexts: RuntimeContextReader = _
+  private var evalResultContainer: EvalResultContainer = _
+  private var currentFunction: UserFunction = _
+  private var done: Boolean = true
+  private val argumentReader = new InterpreterArgumentReader(operandStack, ParamsSignature.empty)
+
+  /**
+   * Initializes the interpreter and runs the program to completion.
+   */
   def run(runtimeContexts: RuntimeContextReader,
           initializer: Initializer = Initializer.none,
           initialUserFunctionIndex: Int = 0): EvalResult = {
+    initialize(runtimeContexts, initializer, initialUserFunctionIndex)
+    step(0)
+    getResult
+  }
+
+  /**
+   * Initializes the interpreter for execution.
+   * This is only needed if you will be calling [[step]] manually.
+   * Calling [[run]] will automatically initialize the interpreter.
+   */
+  def initialize(runtimeContexts: RuntimeContextReader,
+                 initializer: Initializer = Initializer.none,
+                 initialUserFunctionIndex: Int = 0): Unit = {
     val targetFunction = program.functions(initialUserFunctionIndex)
-    val evalResultContainer = EvalResultContainer.create(targetFunction.returnType)
-    val argumentReader = new InterpreterArgumentReader(operandStack, ParamsSignature.empty)
+    this.evalResultContainer = EvalResultContainer.create(targetFunction.returnType)
+    this.runtimeContexts = runtimeContexts
 
     reset(initializer, targetFunction)
-    userFunctionIndex = initialUserFunctionIndex
-    var currentFunction = targetFunction
-    var done = false
+    this.userFunctionIndex = initialUserFunctionIndex
+    this.currentFunction = targetFunction
+    this.done = false
+  }
 
-    var rawOpcode = 0
-    while (!done) {
-      val opcode = if (instructionPointer < currentFunction.instructions.length) {
-        rawOpcode = currentFunction.fetch(instructionPointer)
-        val op = (rawOpcode >> 24) & 0xFF
-        instructionPointer += 1
-        op
-      } else {
-        rawOpcode = Opcodes.Return << 24
-        Opcodes.Return
+  /**
+   * Executes up to `maxSteps` instructions.
+   *
+   * @param maxSteps The maximum number of instructions to execute.
+   *                 If 0, runs until the program completes.
+   *                 Defaults to 1.
+   * @return true if the program is still running; false if it has completed.
+   */
+  def step(maxSteps: Int = 1): Boolean = {
+    if (done) return false
+
+    if (maxSteps <= 0) {
+      while (!done) {
+        executeOne()
       }
+    } else {
+      var count = 0
+      while (count < maxSteps && !done) {
+        executeOne()
+        count += 1
+      }
+    }
+    !done
+  }
 
-      (opcode: @annotation.switch) match {
-        case Opcodes.Nop => ()
+  private def executeOne(): Unit = {
+    var rawOpcode = 0
+    val opcode = if (instructionPointer < currentFunction.instructions.length) {
+      rawOpcode = currentFunction.fetch(instructionPointer)
+      val op = (rawOpcode >> 24) & 0xFF
+      instructionPointer += 1
+      op
+    } else {
+      rawOpcode = Opcodes.Return << 24
+      Opcodes.Return
+    }
 
-        case Opcodes.PushConst =>
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          val value = (rawOpcode & 0xFFFF).toShort
-          (typeTag: @annotation.switch) match {
-            case BasicTypes.Long => operandStack.pushLong(value.toLong)
-            case BasicTypes.Double => operandStack.pushDouble(value.toDouble)
-            case BasicTypes.Float => operandStack.pushFloat(value.toFloat)
-            case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
-            case BasicTypes.Int => operandStack.pushInt(value.toInt)
-            case BasicTypes.Short => operandStack.pushShort(value)
-            case BasicTypes.Byte => operandStack.pushByte(value.toByte)
-            case BasicTypes.Char => operandStack.pushChar(value.toChar)
-            case _ => operandStack.pushObject(program.constantPool.getObject(value & 0xFFFF))
-          }
+    (opcode: @annotation.switch) match {
+      case Opcodes.Nop => ()
 
-        case Opcodes.Push =>
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          val value = currentFunction.fetch(instructionPointer)
-          instructionPointer += 1
-          (typeTag: @annotation.switch) match {
-            case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
-            case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
-            case BasicTypes.Float => operandStack.pushFloat(program.constantPool.getFloat(value))
-            case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
-            case BasicTypes.Int => operandStack.pushInt(value)
-            case BasicTypes.Short => operandStack.pushShort(value.toShort)
-            case BasicTypes.Byte => operandStack.pushByte(value.toByte)
-            case BasicTypes.Char => operandStack.pushChar(value.toChar)
-            case _ => operandStack.pushObject(program.constantPool.getObject(value))
-          }
+      case Opcodes.PushConst =>
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        val value = (rawOpcode & 0xFFFF).toShort
+        (typeTag: @annotation.switch) match {
+          case BasicTypes.Long => operandStack.pushLong(value.toLong)
+          case BasicTypes.Double => operandStack.pushDouble(value.toDouble)
+          case BasicTypes.Float => operandStack.pushFloat(value.toFloat)
+          case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
+          case BasicTypes.Int => operandStack.pushInt(value.toInt)
+          case BasicTypes.Short => operandStack.pushShort(value)
+          case BasicTypes.Byte => operandStack.pushByte(value.toByte)
+          case BasicTypes.Char => operandStack.pushChar(value.toChar)
+          case _ => operandStack.pushObject(program.constantPool.getObject(value & 0xFFFF))
+        }
 
-        case Opcodes.StoreConst =>
-          // bits 16-23:  type tag
-          // bits 8-15:   var index
-          // bits 0-7:
-          //   if type is object, long, float, or double: constant pool index
-          //   otherwise, value
-          // no operands
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          val varIndex = (rawOpcode >> 8) & 0xFF
-          val value = rawOpcode & 0xFF
-          storeInVar(typeTag, varIndex, value)
+      case Opcodes.Push =>
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        val value = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        (typeTag: @annotation.switch) match {
+          case BasicTypes.Long => operandStack.pushLong(program.constantPool.getLong(value))
+          case BasicTypes.Double => operandStack.pushDouble(program.constantPool.getDouble(value))
+          case BasicTypes.Float => operandStack.pushFloat(program.constantPool.getFloat(value))
+          case BasicTypes.Boolean => operandStack.pushBoolean(value != 0)
+          case BasicTypes.Int => operandStack.pushInt(value)
+          case BasicTypes.Short => operandStack.pushShort(value.toShort)
+          case BasicTypes.Byte => operandStack.pushByte(value.toByte)
+          case BasicTypes.Char => operandStack.pushChar(value.toChar)
+          case _ => operandStack.pushObject(program.constantPool.getObject(value))
+        }
 
-        case Opcodes.Store =>
-          // bits 16-23:  type tag
-          // bits 0-15:   var index
-          // operand 1:
-          //   if type is object, long, float, or double: constant pool index
-          //   otherwise, value
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          val varIndex = rawOpcode & 0xFFFF
-          val value = currentFunction.fetch(instructionPointer)
-          instructionPointer += 1
-          storeInVar(typeTag, varIndex, value)
+      case Opcodes.StoreConst =>
+        // bits 16-23:  type tag
+        // bits 8-15:   var index
+        // bits 0-7:
+        //   if type is object, long, float, or double: constant pool index
+        //   otherwise, value
+        // no operands
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        val varIndex = (rawOpcode >> 8) & 0xFF
+        val value = rawOpcode & 0xFF
+        storeInVar(typeTag, varIndex, value)
 
-        case Opcodes.StoreWide =>
-          // bits 16-23:  type tag
-          // bits 0-15:   ignored
-          // operand 1:   var index
-          // operand 2:
-          //   if type is object, long, float, or double: constant pool index
-          //   otherwise, value
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          val varIndex = currentFunction.fetch(instructionPointer)
-          instructionPointer += 1
-          val value = currentFunction.fetch(instructionPointer)
-          instructionPointer += 1
-          storeInVar(typeTag, varIndex, value)
+      case Opcodes.Store =>
+        // bits 16-23:  type tag
+        // bits 0-15:   var index
+        // operand 1:
+        //   if type is object, long, float, or double: constant pool index
+        //   otherwise, value
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        val varIndex = rawOpcode & 0xFFFF
+        val value = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        storeInVar(typeTag, varIndex, value)
 
-        case Opcodes.Pop =>
-          operandStack.pop()
+      case Opcodes.StoreWide =>
+        // bits 16-23:  type tag
+        // bits 0-15:   ignored
+        // operand 1:   var index
+        // operand 2:
+        //   if type is object, long, float, or double: constant pool index
+        //   otherwise, value
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        val varIndex = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        val value = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        storeInVar(typeTag, varIndex, value)
 
-        case Opcodes.Dup =>
-          operandStack.duplicate()
+      case Opcodes.Pop =>
+        operandStack.pop()
 
-        case Opcodes.Swap =>
-          operandStack.swap()
+      case Opcodes.Dup =>
+        operandStack.duplicate()
 
-        case Opcodes.PushFromVar =>
-          val varIndex = rawOpcode & 0xFFFF
-          varSpace.pushIntoOperandStack(varIndex, operandStack)
+      case Opcodes.Swap =>
+        operandStack.swap()
 
-        case Opcodes.PushFromVarWide =>
-          val varIndex = currentFunction.fetch(instructionPointer)
-          instructionPointer += 1
-          varSpace.pushIntoOperandStack(varIndex, operandStack)
+      case Opcodes.PushFromVar =>
+        val varIndex = rawOpcode & 0xFFFF
+        varSpace.pushIntoOperandStack(varIndex, operandStack)
 
-        case Opcodes.PopIntoVar =>
-          // bits 16-23:  type tag
-          // bits 0-15:   var index
-          // no operands
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          val varIndex = rawOpcode & 0xFFFF
-          popIntoVar(typeTag, varIndex)
+      case Opcodes.PushFromVarWide =>
+        val varIndex = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        varSpace.pushIntoOperandStack(varIndex, operandStack)
 
-        case Opcodes.PopIntoVarWide =>
-          // bits 16-23:    type tag
-          // bits 0-15:     ignored
-          // operand 1:     var index
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          val varIndex = currentFunction.fetch(instructionPointer)
-          instructionPointer += 1
-          popIntoVar(typeTag, varIndex)
+      case Opcodes.PopIntoVar =>
+        // bits 16-23:  type tag
+        // bits 0-15:   var index
+        // no operands
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        val varIndex = rawOpcode & 0xFFFF
+        popIntoVar(typeTag, varIndex)
 
-        case Opcodes.Branch =>
-          val offset = rawOpcode & 0xFFFFFF
-          // need to handle sign extension if offset can be negative
-          val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+      case Opcodes.PopIntoVarWide =>
+        // bits 16-23:    type tag
+        // bits 0-15:     ignored
+        // operand 1:     var index
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        val varIndex = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        popIntoVar(typeTag, varIndex)
+
+      case Opcodes.Branch =>
+        val offset = rawOpcode & 0xFFFFFF
+        // need to handle sign extension if offset can be negative
+        val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+        instructionPointer += signedOffset
+
+      case Opcodes.BranchIf =>
+        val offset = rawOpcode & 0xFFFFFF
+        val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+        val cond = operandStack.popCondition()
+        if (cond) {
           instructionPointer += signedOffset
+        }
 
-        case Opcodes.BranchIf =>
-          val offset = rawOpcode & 0xFFFFFF
-          val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          val cond = operandStack.popCondition()
-          if (cond) {
-            instructionPointer += signedOffset
-          }
+      case Opcodes.BranchUnless =>
+        val offset = rawOpcode & 0xFFFFFF
+        val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+        val cond = operandStack.popCondition()
+        if (!cond) {
+          instructionPointer += signedOffset
+        }
 
-        case Opcodes.BranchUnless =>
-          val offset = rawOpcode & 0xFFFFFF
-          val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          val cond = operandStack.popCondition()
-          if (!cond) {
-            instructionPointer += signedOffset
-          }
+      case Opcodes.CallNative =>
+        val nativeId = rawOpcode & 0xFFFFFF
+        val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
+        argumentReader.params = nativeFunction.params
+        nativeFunction.impl match {
+          case FunctionImpl.ObjectResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushObject(result)
+          case FunctionImpl.BooleanResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushBoolean(result)
+          case FunctionImpl.IntResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushInt(result)
+          case FunctionImpl.LongResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushLong(result)
+          case FunctionImpl.ShortResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushShort(result)
+          case FunctionImpl.ByteResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushByte(result)
+          case FunctionImpl.CharResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushChar(result)
+          case FunctionImpl.DoubleResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushDouble(result)
+          case FunctionImpl.FloatResult(body) =>
+            val result = body(argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushFloat(result)
+          case FunctionImpl.ObjectResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushObject(result)
+          case FunctionImpl.BooleanResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushBoolean(result)
+          case FunctionImpl.IntResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushInt(result)
+          case FunctionImpl.LongResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushLong(result)
+          case FunctionImpl.ShortResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushShort(result)
+          case FunctionImpl.ByteResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushByte(result)
+          case FunctionImpl.CharResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushChar(result)
+          case FunctionImpl.DoubleResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushDouble(result)
+          case FunctionImpl.FloatResultWithContext(body) =>
+            val result = body(runtimeContexts, argumentReader)
+            operandStack.contract(nativeFunction.params)
+            operandStack.pushFloat(result)
+        }
 
-        case Opcodes.CallNative =>
-          val nativeId = rawOpcode & 0xFFFFFF
-          val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
-          argumentReader.params = nativeFunction.params
-          nativeFunction.impl match {
-            case FunctionImpl.ObjectResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushObject(result)
-            case FunctionImpl.BooleanResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushBoolean(result)
-            case FunctionImpl.IntResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushInt(result)
-            case FunctionImpl.LongResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushLong(result)
-            case FunctionImpl.ShortResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushShort(result)
-            case FunctionImpl.ByteResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushByte(result)
-            case FunctionImpl.CharResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushChar(result)
-            case FunctionImpl.DoubleResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushDouble(result)
-            case FunctionImpl.FloatResult(body) =>
-              val result = body(argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushFloat(result)
-            case FunctionImpl.ObjectResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushObject(result)
-            case FunctionImpl.BooleanResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushBoolean(result)
-            case FunctionImpl.IntResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushInt(result)
-            case FunctionImpl.LongResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushLong(result)
-            case FunctionImpl.ShortResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushShort(result)
-            case FunctionImpl.ByteResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushByte(result)
-            case FunctionImpl.CharResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushChar(result)
-            case FunctionImpl.DoubleResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushDouble(result)
-            case FunctionImpl.FloatResultWithContext(body) =>
-              val result = body(runtimeContexts, argumentReader)
-              operandStack.contract(nativeFunction.params)
-              operandStack.pushFloat(result)
-          }
+      case Opcodes.CallLocal =>
+        val functionIndex = rawOpcode & 0xFFFFFF
+        callStack.push(userFunctionIndex)
+        callStack.push(instructionPointer)
+        userFunctionIndex = functionIndex
+        instructionPointer = 0
+        currentFunction = program.functions(userFunctionIndex)
+        variableStack.expandFrame(currentFunction.frameSignature)
+        varSpace.setSignature(currentFunction.varSpaceSignature)
+        transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
 
-        case Opcodes.CallLocal =>
-          val functionIndex = rawOpcode & 0xFFFFFF
-          callStack.push(userFunctionIndex)
-          callStack.push(instructionPointer)
+      case Opcodes.TailCallLocal =>
+        val functionIndex = rawOpcode & 0xFFFFFF
+        instructionPointer = 0
+
+        if (functionIndex != userFunctionIndex) {
+          val prevFunction = currentFunction
           userFunctionIndex = functionIndex
-          instructionPointer = 0
           currentFunction = program.functions(userFunctionIndex)
+
+          // Only manipulate the stack if we are changing functions
+          variableStack.contractFrame(prevFunction.frameSignature)
           variableStack.expandFrame(currentFunction.frameSignature)
           varSpace.setSignature(currentFunction.varSpaceSignature)
-          transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
+        }
+        transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
 
-        case Opcodes.TailCallLocal =>
-          val functionIndex = rawOpcode & 0xFFFFFF
-          instructionPointer = 0
+      case Opcodes.Return =>
+        if (callStack.isEmpty) {
+          evalResultContainer.loadFromOperandStack(operandStack)
+          done = true
+        } else {
+          val prevFunction = currentFunction
+          instructionPointer = callStack.pop()
+          userFunctionIndex = callStack.pop()
+          currentFunction = program.functions(userFunctionIndex)
+          variableStack.contractFrame(prevFunction.frameSignature)
+          varSpace.setSignature(currentFunction.varSpaceSignature)
+        }
 
-          if (functionIndex != userFunctionIndex) {
-            val prevFunction = currentFunction
-            userFunctionIndex = functionIndex
-            currentFunction = program.functions(userFunctionIndex)
+      case Opcodes.LogicalAnd =>
+        val offset = rawOpcode & 0xFFFFFF
+        val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+        if (!operandStack.maybePopCondition(true)) {
+          instructionPointer += signedOffset
+        }
 
-            // Only manipulate the stack if we are changing functions
-            variableStack.contractFrame(prevFunction.frameSignature)
-            variableStack.expandFrame(currentFunction.frameSignature)
-            varSpace.setSignature(currentFunction.varSpaceSignature)
-          }
-          transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
+      case Opcodes.LogicalOr =>
+        val offset = rawOpcode & 0xFFFFFF
+        val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
+        if (operandStack.maybePopCondition(false)) {
+          instructionPointer += signedOffset
+        }
 
-        case Opcodes.Return =>
-          if (callStack.isEmpty) {
-            evalResultContainer.loadFromOperandStack(operandStack)
-            done = true
-          } else {
-            val prevFunction = currentFunction
-            instructionPointer = callStack.pop()
-            userFunctionIndex = callStack.pop()
-            currentFunction = program.functions(userFunctionIndex)
-            variableStack.contractFrame(prevFunction.frameSignature)
-            varSpace.setSignature(currentFunction.varSpaceSignature)
-          }
+      case Opcodes.Box =>
+        operandStack.box()
 
-        case Opcodes.LogicalAnd =>
-          val offset = rawOpcode & 0xFFFFFF
-          val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          if (!operandStack.maybePopCondition(true)) {
-            instructionPointer += signedOffset
-          }
+      case Opcodes.Convert =>
+        val typeTag = (rawOpcode >> 16) & 0xFF
+        operandStack.convert(typeTag.toByte)
 
-        case Opcodes.LogicalOr =>
-          val offset = rawOpcode & 0xFFFFFF
-          val signedOffset = if ((offset & 0x800000) != 0) offset | 0xFF000000 else offset
-          if (operandStack.maybePopCondition(false)) {
-            instructionPointer += signedOffset
-          }
+      case _ =>
+        throw new RuntimeException(s"Unknown opcode: $opcode")
+    }
+  }
 
-        case Opcodes.Box =>
-          operandStack.box()
+  /**
+   * Returns true if the program has finished execution.
+   */
+  def isDone: Boolean = done
 
-        case Opcodes.Convert =>
-          val typeTag = (rawOpcode >> 16) & 0xFF
-          operandStack.convert(typeTag.toByte)
-
-        case _ =>
-          throw new RuntimeException(s"Unknown opcode: $opcode")
-      }
+  /**
+   * Returns the result of the evaluation. Should only be called when isDone is true.
+   */
+  def getResult: EvalResult = {
+    if (!done) {
+      throw new IllegalStateException("Cannot get result: program is still running")
     }
     evalResultContainer
   }
