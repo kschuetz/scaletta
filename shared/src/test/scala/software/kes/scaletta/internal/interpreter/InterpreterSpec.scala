@@ -679,7 +679,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       interpreter.isDone shouldBe false
 
       // Step until completion
-      interpreter.step(0) shouldBe false
+      interpreter.runUntilDone()
       interpreter.isDone shouldBe true
 
       interpreter.getResult.intValue() shouldBe 43

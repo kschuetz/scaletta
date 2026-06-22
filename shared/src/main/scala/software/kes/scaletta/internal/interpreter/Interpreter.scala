@@ -41,13 +41,13 @@ final class Interpreter private(private val program: Program,
           initializer: Initializer = Initializer.none,
           initialUserFunctionIndex: Int = 0): EvalResult = {
     initialize(runtimeContexts, initializer, initialUserFunctionIndex)
-    step(0)
+    runUntilDone()
     getResult
   }
 
   /**
    * Initializes the interpreter for execution.
-   * This is only needed if you will be calling [[step]] manually.
+   * This is only needed if you will be calling [[step]] or [[runUntilDone]] manually.
    * Calling [[run]] will automatically initialize the interpreter.
    */
   def initialize(runtimeContexts: RuntimeContextReader,
@@ -64,26 +64,28 @@ final class Interpreter private(private val program: Program,
   }
 
   /**
+   * Runs the program until completion.
+   */
+  def runUntilDone(): Unit = {
+    while (!done) {
+      executeOne()
+    }
+  }
+
+  /**
    * Executes up to `maxSteps` instructions.
    *
-   * @param maxSteps The maximum number of instructions to execute.
-   *                 If 0, runs until the program completes.
+   * @param maxSteps The maximum number of instructions to execute. Must be greater than 0 for any work to be done.
    *                 Defaults to 1.
    * @return true if the program is still running; false if it has completed.
    */
   def step(maxSteps: Int = 1): Boolean = {
     if (done) return false
 
-    if (maxSteps <= 0) {
-      while (!done) {
-        executeOne()
-      }
-    } else {
-      var count = 0
-      while (count < maxSteps && !done) {
-        executeOne()
-        count += 1
-      }
+    var count = 0
+    while (count < maxSteps && !done) {
+      executeOne()
+      count += 1
     }
     !done
   }
