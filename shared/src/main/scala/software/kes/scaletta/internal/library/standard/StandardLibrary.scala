@@ -9,5 +9,6 @@ object StandardLibrary {
       ComparisonOps.module,
       EqualityOps.module,
       Math.module,
+      Collections.module,
     )
 }

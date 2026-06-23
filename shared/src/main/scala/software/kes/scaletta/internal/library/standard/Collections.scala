@@ -1,10 +1,41 @@
 package software.kes.scaletta.internal.library.standard
 
-import software.kes.scaletta.api.{ArgumentReader, NativeStep}
-
+import software.kes.scaletta.api._
 import scala.collection.mutable
 
 object Collections {
+
+  lazy val module: ScalettaModule[Unit] =
+    ScalettaModule { setup =>
+      val st = setup.standardTypes
+      val registry = setup.methodRegistry
+
+      def registerMethods(constructor: TypeConstructor[TypeId], base: IterableBase): Unit = {
+        val typeA = Type.variable(0)
+        val typeB = Type.variable(1)
+
+        val receiverType = ReceiverType.Instance(Type.Nominal(constructor.name))
+
+        // map[B](f: A => B): List[B]
+        registry.addMethod(
+          MethodName(receiverType, Name("map")),
+          Vector(FormalParameter.any(Name("f"))),
+          constructor.applyAll(typeB),
+          FunctionImpl.higherOrder(base.mapImpl)
+        )
+
+        // filter(f: A => Boolean): List[A]
+        registry.addMethod(
+          MethodName(receiverType, Name("filter")),
+          Vector(FormalParameter.any(Name("p"))),
+          constructor.applyAll(typeA),
+          FunctionImpl.higherOrder(base.filterImpl)
+        )
+      }
+
+      registerMethods(st.ListT, list)
+      registerMethods(st.VectorT, vector)
+    }
 
   trait IterableBase {
     type C <: Iterable[_]
