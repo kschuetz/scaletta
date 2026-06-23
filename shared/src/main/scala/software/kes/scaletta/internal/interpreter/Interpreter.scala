@@ -272,6 +272,8 @@ final class Interpreter private(private val program: Program,
             val result = body(argumentReader)
             operandStack.contract(nativeFunction.params)
             operandStack.pushFloat(result)
+          case FunctionImpl.HigherOrder(body) =>
+            throw new UnsupportedOperationException("Higher order functions are not supported yet")
           case FunctionImpl.ObjectResultWithContext(body) =>
             val result = body(runtimeContexts, argumentReader)
             operandStack.contract(nativeFunction.params)
@@ -308,6 +310,8 @@ final class Interpreter private(private val program: Program,
             val result = body(runtimeContexts, argumentReader)
             operandStack.contract(nativeFunction.params)
             operandStack.pushFloat(result)
+          case FunctionImpl.HigherOrderWithContext(body) =>
+            throw new UnsupportedOperationException("Higher order functions are not supported yet")
         }
 
       case Opcodes.CallLocal =>

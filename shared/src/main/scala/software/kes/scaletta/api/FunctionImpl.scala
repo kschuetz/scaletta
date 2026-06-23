@@ -49,6 +49,12 @@ object FunctionImpl {
   def floatResult(body: ArgumentReader => Float): FunctionImpl = FloatResult(body)
 
   /**
+   * Higher order function that returns a step for the interpreter to execute.
+   * Does not require access to a runtime context.
+   */
+  def higherOrder(body: ArgumentReader => NativeStep): FunctionImpl = HigherOrder(body)
+
+  /**
    * Returns an object as a result. Requires access to a runtime context.
    */
   def objectResultWithContext(body: (RuntimeContextReader, ArgumentReader) => AnyRef): FunctionImpl =
@@ -102,6 +108,13 @@ object FunctionImpl {
   def floatResultWithContext(body: (RuntimeContextReader, ArgumentReader) => Float): FunctionImpl =
     FloatResultWithContext(body)
 
+  /**
+   * Higher order function that returns a step for the interpreter to execute.
+   * Requires access to a runtime context.
+   */
+  def higherOrderWithContext(body: (RuntimeContextReader, ArgumentReader) => NativeStep): FunctionImpl =
+    HigherOrderWithContext(body)
+
   case class ObjectResult(body: ArgumentReader => AnyRef) extends FunctionImpl
 
   case class BooleanResult(body: ArgumentReader => Boolean) extends FunctionImpl
@@ -120,6 +133,8 @@ object FunctionImpl {
 
   case class FloatResult(body: ArgumentReader => Float) extends FunctionImpl
 
+  case class HigherOrder(body: ArgumentReader => NativeStep) extends FunctionImpl
+
   case class ObjectResultWithContext(body: (RuntimeContextReader, ArgumentReader) => AnyRef) extends FunctionImpl
 
   case class BooleanResultWithContext(body: (RuntimeContextReader, ArgumentReader) => Boolean) extends FunctionImpl
@@ -137,4 +152,6 @@ object FunctionImpl {
   case class DoubleResultWithContext(body: (RuntimeContextReader, ArgumentReader) => Double) extends FunctionImpl
 
   case class FloatResultWithContext(body: (RuntimeContextReader, ArgumentReader) => Float) extends FunctionImpl
+
+  case class HigherOrderWithContext(body: (RuntimeContextReader, ArgumentReader) => NativeStep) extends FunctionImpl
 }

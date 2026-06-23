@@ -165,4 +165,11 @@ trait ArgumentReader {
   def unsafeReadThunk[A](index: Int): () => A =
     read(index).asInstanceOf[() => A]
 
+  /**
+   * Read the argument at index as a function (CallTarget).
+   * Use only if you are sure the argument is a function, otherwise a RuntimeException will be thrown.
+   */
+  def unsafeReadFunction(index: Int): CallTarget =
+    read(index).asInstanceOf[CallTarget]
+
 }
