@@ -26,6 +26,10 @@ object Type {
     def isGround: Boolean = types.forall(_.isGround)
   }
 
+  case class Function[T](parameters: Vector[Type[T]], result: Type[T]) extends ConcreteType[T] {
+    def isGround: Boolean = parameters.forall(_.isGround) && result.isGround
+  }
+
   case class Variable(scopeIndex: Int,
                       paramIndex: Int) extends Type[Nothing] {
     def isGround: Boolean = false

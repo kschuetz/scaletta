@@ -19,7 +19,7 @@ object Collections {
         // map[B](f: A => B): List[B]
         registry.addMethod(
           MethodName(receiverType, Name("map")),
-          Vector(FormalParameter.any(Name("f"))),
+          Vector(FormalParameter(Name("f"), Type.Function(Vector(typeA), typeB))),
           constructor.applyAll(typeB),
           FunctionImpl.higherOrder(base.mapImpl)
         )
@@ -27,7 +27,7 @@ object Collections {
         // filter(f: A => Boolean): List[A]
         registry.addMethod(
           MethodName(receiverType, Name("filter")),
-          Vector(FormalParameter.any(Name("p"))),
+          Vector(FormalParameter(Name("p"), Type.Function(Vector(typeA), st.BooleanT))),
           constructor.applyAll(typeA),
           FunctionImpl.higherOrder(base.filterImpl)
         )
