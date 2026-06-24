@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api._
+
 import scala.collection.mutable
 
 object Collections {
@@ -19,7 +20,7 @@ object Collections {
         // map[B](f: A => B): List[B]
         registry.addMethod(
           MethodName(receiverType, Name("map")),
-          Vector(FormalParameter(Name("f"), Type.Function(Vector(typeA), typeB))),
+          Vector(FormalParameter(Name("f"), Type.function(typeA)(typeB))),
           constructor.applyAll(typeB),
           FunctionImpl.higherOrder(base.mapImpl)
         )
@@ -27,7 +28,7 @@ object Collections {
         // filter(f: A => Boolean): List[A]
         registry.addMethod(
           MethodName(receiverType, Name("filter")),
-          Vector(FormalParameter(Name("p"), Type.Function(Vector(typeA), st.BooleanT))),
+          Vector(FormalParameter(Name("p"), Type.function(typeA)(st.BooleanT))),
           constructor.applyAll(typeA),
           FunctionImpl.higherOrder(base.filterImpl)
         )
