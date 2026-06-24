@@ -66,6 +66,10 @@ object SetTwoPlus {
     } else None
   }
 
+  /**
+   * Creates a SetTwoPlus from an Iterable.
+   * Throws an exception if the Iterable has fewer than two elements.
+   */
   def from[A](elems: Iterable[A]): SetTwoPlus[A] =
     tryFrom(elems)
       .getOrElse(throw new IllegalArgumentException("Cannot create SetTwoPlus from Iterable with fewer than two elements"))

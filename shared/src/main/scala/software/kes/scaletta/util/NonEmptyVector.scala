@@ -2,11 +2,17 @@ package software.kes.scaletta.util
 
 object NonEmptyVector {
   def apply[A](first: A, rest: A*): NonEmptyVector[A] =
-    new NonEmptyVector(first +: rest.toVector)
+    if (rest.nonEmpty) {
+      new VectorTwoPlus(first +: rest.toVector)
+    } else {
+      new NonEmptyVector(Vector(first))
+    }
 
   def tryFrom[A](elems: Iterable[A]): Option[NonEmptyVector[A]] =
     elems match {
+      case x: VectorTwoPlus[A @unchecked] => Some(x)
       case x: NonEmptyVector[A @unchecked] => Some(x)
+      case other if other.size >= 2 => Some(new VectorTwoPlus(other.toVector))
       case other if other.nonEmpty => Some(new NonEmptyVector(other.toVector))
       case _ => None
     }
@@ -17,10 +23,10 @@ object NonEmptyVector {
    */
   def from[A](elems: Iterable[A]): NonEmptyVector[A] =
     tryFrom(elems)
-      .getOrElse(throw new IllegalArgumentException("Vector must be non-empty"))
+      .getOrElse(throw new IllegalArgumentException("Cannot create NonEmptyVector from empty Iterable"))
 }
 
-final class NonEmptyVector[+A] private(val underlying: Vector[A]) extends IndexedSeq[A] {
+sealed class NonEmptyVector[+A] private[util](val underlying: Vector[A]) extends IndexedSeq[A] {
   override def apply(index: Int): A = underlying(index)
 
   override def length: Int = underlying.length
@@ -70,5 +76,37 @@ final class NonEmptyVector[+A] private(val underlying: Vector[A]) extends Indexe
 
   override def hashCode(): Int = underlying.hashCode()
 
-  override def toString(): String = s"NonEmpty${underlying.toString()}"
+  override def toString(): String = s"NonEmptyVector(${underlying.mkString(", ")})"
+}
+
+object VectorTwoPlus {
+  def apply[A](first: A, second: A, rest: A*): VectorTwoPlus[A] =
+    new VectorTwoPlus(Vector(first, second) ++ rest)
+
+  def tryFrom[A](elems: Iterable[A]): Option[VectorTwoPlus[A]] = {
+    if (elems.size >= 2) Some(new VectorTwoPlus(elems.toVector))
+    else None
+  }
+
+  /**
+   * Creates a VectorTwoPlus from an Iterable.
+   * Throws an exception if the Iterable has fewer than two elements.
+   */
+  def from[A](elems: Iterable[A]): VectorTwoPlus[A] =
+    tryFrom(elems)
+      .getOrElse(throw new IllegalArgumentException("Cannot create VectorTwoPlus from Iterable with fewer than two elements"))
+}
+
+final class VectorTwoPlus[+A] private[util](underlying: Vector[A]) extends NonEmptyVector[A](underlying) {
+  override def updated[B >: A](index: Int, elem: B): VectorTwoPlus[B] =
+    new VectorTwoPlus(underlying.updated(index, elem))
+
+  override def map[B](f: A => B): VectorTwoPlus[B] =
+    new VectorTwoPlus(underlying.map(f))
+
+  def prependV2[B >: A](elem: B): VectorTwoPlus[B] = new VectorTwoPlus(elem +: underlying)
+
+  def appendV2[B >: A](elem: B): VectorTwoPlus[B] = new VectorTwoPlus(underlying :+ elem)
+
+  override def toString(): String = s"VectorTwoPlus(${underlying.mkString(", ")})"
 }

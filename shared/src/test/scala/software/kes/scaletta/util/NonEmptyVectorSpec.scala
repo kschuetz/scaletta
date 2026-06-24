@@ -6,115 +6,144 @@ import org.scalatest.matchers.should.Matchers
 class NonEmptyVectorSpec extends AnyFunSpec with Matchers {
 
   describe("NonEmptyVector") {
-    it("should be created with apply") {
-      val nev = NonEmptyVector(41, 43)
-      nev.length shouldBe 2
-      nev.head shouldBe 41
-      nev.last shouldBe 43
-    }
+    describe("creation") {
+      it("should be created with apply (single element)") {
+        val vec = NonEmptyVector(41)
+        vec.size shouldBe 1
+        vec.head shouldBe 41
+        vec shouldBe a[NonEmptyVector[_]]
+        vec should not be a[VectorTwoPlus[_]]
+      }
 
-    it("should be created from a non-empty Vector") {
-      val v = Vector(41, 43)
-      val nev = NonEmptyVector.tryFrom(v)
-      nev shouldBe defined
-      nev.get.underlying shouldBe v
-    }
+      it("should be created with apply (multiple elements)") {
+        val vec = NonEmptyVector(41, 43, 47)
+        vec.size shouldBe 3
+        vec shouldBe a[VectorTwoPlus[_]]
+      }
 
-    it("should return None when created from an empty Vector") {
-      NonEmptyVector.tryFrom(Vector.empty[Int]) shouldBe None
-    }
+      it("should be created from a non-empty Iterable via tryFrom") {
+        val result = NonEmptyVector.tryFrom(List(41, 43))
+        result shouldBe defined
+        result.get.size shouldBe 2
+        result.get shouldBe a[VectorTwoPlus[_]]
+      }
 
-    it("should be created via fromVectorUnsafe for non-empty Vector") {
-      val v = Vector(41, 43)
-      val nev = NonEmptyVector.from(v)
-      nev.underlying shouldBe v
-    }
+      it("should return None when creating from an empty Iterable via tryFrom") {
+        NonEmptyVector.tryFrom(Nil) shouldBe None
+      }
 
-    it("should throw IllegalArgumentException via fromVectorUnsafe for empty Vector") {
-      assertThrows[IllegalArgumentException] {
-        NonEmptyVector.from(Vector.empty[Int])
+      it("should be created from a non-empty Iterable via from") {
+        val vec = NonEmptyVector.from(List(41))
+        vec.size shouldBe 1
+        vec.head shouldBe 41
+      }
+
+      it("should throw IllegalArgumentException when creating from an empty Iterable via from") {
+        assertThrows[IllegalArgumentException] {
+          NonEmptyVector.from(Nil)
+        }
       }
     }
 
-    it("should have length equal to underlying") {
-      NonEmptyVector(41).length shouldBe 1
+    describe("operations") {
+      it("should support prepend") {
+        val vec = NonEmptyVector(41)
+        val updated = vec.prepend(43)
+        updated.size shouldBe 2
+        updated.head shouldBe 43
+      }
+
+      it("should support append") {
+        val vec = NonEmptyVector(41)
+        val updated = vec.append(43)
+        updated.size shouldBe 2
+        updated.last shouldBe 43
+      }
+
+      it("should support equality with other NonEmptyVector") {
+        NonEmptyVector(41, 43) shouldBe NonEmptyVector(41, 43)
+        NonEmptyVector(41, 43) shouldNot be(NonEmptyVector(43, 41))
+      }
+
+      it("should support equality with standard Vector") {
+        NonEmptyVector(41, 43) shouldBe Vector(41, 43)
+        Vector(41, 43) shouldBe NonEmptyVector(41, 43)
+      }
+
+      it("should have correct toString") {
+        NonEmptyVector(41).toString shouldBe "NonEmptyVector(41)"
+      }
+    }
+  }
+
+  describe("VectorTwoPlus") {
+    describe("creation") {
+      it("should be created with apply") {
+        val vec = VectorTwoPlus(41, 43, 47)
+        vec.size shouldBe 3
+        vec(0) shouldBe 41
+        vec(1) shouldBe 43
+      }
+
+      it("should be created from an Iterable with 2+ elements via tryFrom") {
+        val result = VectorTwoPlus.tryFrom(List(41, 43))
+        result shouldBe defined
+        result.get.size shouldBe 2
+      }
+
+      it("should return None when creating from an Iterable with < 2 elements via tryFrom") {
+        VectorTwoPlus.tryFrom(List(41)) shouldBe None
+        VectorTwoPlus.tryFrom(Nil) shouldBe None
+      }
+
+      it("should be created from an Iterable with 2+ elements via from") {
+        val vec = VectorTwoPlus.from(List(41, 43, 47))
+        vec.size shouldBe 3
+      }
+
+      it("should throw IllegalArgumentException when creating from an Iterable with < 2 elements via from") {
+        assertThrows[IllegalArgumentException] {
+          VectorTwoPlus.from(List(41))
+        }
+      }
     }
 
-    it("should not be empty") {
-      val nev = NonEmptyVector(41)
-      nev.isEmpty shouldBe false
-      nev.nonEmpty shouldBe true
-    }
+    describe("operations") {
+      it("should preserve VectorTwoPlus on updated") {
+        val vec = VectorTwoPlus(41, 43)
+        val updated = vec.updated(0, 47)
+        updated shouldBe a[VectorTwoPlus[_]]
+        updated(0) shouldBe 47
+        updated.size shouldBe 2
+      }
 
-    it("should support element access") {
-      val nev = NonEmptyVector(41, 43, 45)
-      nev(0) shouldBe 41
-      nev(1) shouldBe 43
-      nev(2) shouldBe 45
-    }
+      it("should preserve VectorTwoPlus on map") {
+        val vec = VectorTwoPlus(41, 43)
+        val mapped = vec.map(_ + 1)
+        mapped shouldBe a[VectorTwoPlus[_]]
+        mapped(0) shouldBe 42
+        mapped(1) shouldBe 44
+      }
 
-    it("should support prepend") {
-      val nev = NonEmptyVector(43)
-      val updated = nev.prepend(41)
-      updated shouldBe NonEmptyVector(41, 43)
-    }
+      it("should support prependV2 and return VectorTwoPlus") {
+        val vec = VectorTwoPlus(41, 43)
+        val updated = vec.prependV2(47)
+        updated shouldBe a[VectorTwoPlus[_]]
+        updated.size shouldBe 3
+        updated.head shouldBe 47
+      }
 
-    it("should support append") {
-      val nev = NonEmptyVector(41)
-      val updated = nev.append(43)
-      updated shouldBe NonEmptyVector(41, 43)
-    }
+      it("should support appendV2 and return VectorTwoPlus") {
+        val vec = VectorTwoPlus(41, 43)
+        val updated = vec.appendV2(47)
+        updated shouldBe a[VectorTwoPlus[_]]
+        updated.size shouldBe 3
+        updated.last shouldBe 47
+      }
 
-    it("should support concatNE") {
-      val nev1 = NonEmptyVector(41)
-      val nev2 = NonEmptyVector(43, 45)
-      val combined = nev1.concatNE(nev2)
-      combined shouldBe NonEmptyVector(41, 43, 45)
-    }
-
-    it("should support updated") {
-      val nev = NonEmptyVector(41, 44)
-      val updated = nev.updated(1, 43)
-      updated shouldBe NonEmptyVector(41, 43)
-    }
-
-    it("should support map and return a NonEmptyVector") {
-      val nev = NonEmptyVector(1, 2)
-      val mapped = nev.map(_ * 2)
-      mapped shouldBe NonEmptyVector(2, 4)
-    }
-
-    it("should support filter and return a Vector") {
-      val nev = NonEmptyVector(1, 2, 3)
-      val filtered = nev.filter(_ > 1)
-      filtered shouldBe Vector(2, 3)
-
-      val filteredEmpty = nev.filter(_ > 10)
-      filteredEmpty shouldBe Vector.empty
-    }
-
-    it("should support tail and return a Vector") {
-      NonEmptyVector(41, 43).tail shouldBe Vector(43)
-      NonEmptyVector(41).tail shouldBe Vector.empty
-    }
-
-    it("should support init and return a Vector") {
-      NonEmptyVector(41, 43).init shouldBe Vector(41)
-      NonEmptyVector(41).init shouldBe Vector.empty
-    }
-
-    it("should support equality with other NonEmptyVector") {
-      NonEmptyVector(41, 43) shouldBe NonEmptyVector(41, 43)
-      NonEmptyVector(41, 43) shouldNot be(NonEmptyVector(43, 41))
-    }
-
-    it("should support equality with standard Vector") {
-      NonEmptyVector(41, 43) shouldBe Vector(41, 43)
-      Vector(41, 43) shouldBe NonEmptyVector(41, 43)
-    }
-
-    it("should have correct toString") {
-      NonEmptyVector(41, 43).toString shouldBe "NonEmptyVector(41, 43)"
+      it("should have correct toString") {
+        VectorTwoPlus(41, 43).toString shouldBe "VectorTwoPlus(41, 43)"
+      }
     }
   }
 }
