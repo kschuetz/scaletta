@@ -1,13 +1,33 @@
 package software.kes.scaletta.util
 
-sealed class NonEmptySet[A](underlying: Set[A]) extends Set[A] {
+object NonEmptySet {
+  def apply[A](elem: A, more: A*): NonEmptySet[A] =
+    if (more.nonEmpty) {
+      new SetTwoPlus(Set(elem) ++ more)
+    } else {
+      new NonEmptySet(Set(elem))
+    }
+
+  def tryFrom[A](elems: Iterable[A]): Option[NonEmptySet[A]] =
+    if (elems.nonEmpty) Some {
+      val set = elems.toSet
+      if (set.size >= 2) new SetTwoPlus(set)
+      else new NonEmptySet(set)
+    } else None
+
+  def from[A](elems: Iterable[A]): NonEmptySet[A] =
+    tryFrom(elems)
+      .getOrElse(throw new IllegalArgumentException("Cannot create NonEmptySet from empty Iterable"))
+}
+
+sealed class NonEmptySet[A] private[util](val underlying: Set[A]) extends Set[A] {
   def incl(elem: A): NonEmptySet[A] =
     new NonEmptySet(underlying.incl(elem))
 
   def excl(elem: A): Set[A] = {
     val updated = underlying.excl(elem)
     if (updated eq underlying) this
-    else if (updated.isEmpty) underlying
+    else if (updated.isEmpty) updated
     else new NonEmptySet(updated)
   }
 
@@ -21,10 +41,37 @@ sealed class NonEmptySet[A](underlying: Set[A]) extends Set[A] {
     else new NonEmptySet(updated)
   }
 
-  override def isEmpty: Boolean = false
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: NonEmptySet[_] => this.underlying == that.underlying
+      case that: Set[_] => this.underlying == that
+      case _ => false
+    }
+
+  override def hashCode(): Int = underlying.hashCode()
+
+  override def toString(): String = s"NonEmptySet(${underlying.mkString(", ")})"
 }
 
-sealed class SetTwoPlus[A](underlying: Set[A]) extends NonEmptySet[A](underlying) {
+object SetTwoPlus {
+  def apply[A](elem1: A, elem2: A, more: A*): SetTwoPlus[A] =
+    new SetTwoPlus(Set(elem1, elem2) ++ more)
+
+  def tryFrom[A](elems: Iterable[A]): Option[SetTwoPlus[A]] = {
+    val iter = elems.iterator
+    if (iter.hasNext) {
+      iter.next()
+      if (iter.hasNext) Some(new SetTwoPlus(elems.toSet))
+      else None
+    } else None
+  }
+
+  def from[A](elems: Iterable[A]): SetTwoPlus[A] =
+    tryFrom(elems)
+      .getOrElse(throw new IllegalArgumentException("Cannot create SetTwoPlus from Iterable with fewer than two elements"))
+}
+
+sealed class SetTwoPlus[A] private[util](underlying: Set[A]) extends NonEmptySet[A](underlying) {
   override def incl(elem: A): SetTwoPlus[A] =
     new SetTwoPlus(underlying.incl(elem))
 
@@ -41,4 +88,5 @@ sealed class SetTwoPlus[A](underlying: Set[A]) extends NonEmptySet[A](underlying
     else new SetTwoPlus(updated)
   }
 
+  override def toString(): String = s"SetTwoPlus(${underlying.mkString(", ")})"
 }
