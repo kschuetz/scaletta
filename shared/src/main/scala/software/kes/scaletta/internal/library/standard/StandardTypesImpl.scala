@@ -26,7 +26,7 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.registerCore(base(names.NothingT), CoreTypes.NothingT)
 
   val UnitT: Type[TypeId] = {
-    registry.addValueType(base(names.UnitT)) // Keep the name reserved
+    registry.addTypeAlias(base(names.UnitT), CoreTypes.UnitT)
     CoreTypes.UnitT
   }
 

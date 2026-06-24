@@ -17,8 +17,8 @@ class TypeUniverseSpec extends AnyFunSpec with Matchers {
       val type2 = registry.addValueType(name2)
 
       type1.name should not be type2.name
-      registry.build().nameIndex.get(name1) shouldBe Some(type1.name)
-      registry.build().nameIndex.get(name2) shouldBe Some(type2.name)
+      registry.build().nameIndex.get(name1) shouldBe Some(type1)
+      registry.build().nameIndex.get(name2) shouldBe Some(type2)
     }
 
     it("should maintain subtype relationships") {

@@ -43,7 +43,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
       val name = QualifiedName.parseFull("scaletta.lang.Int")
       val (index, id) = TypeNameIndex.empty.intern(name)
 
-      index.get(name) shouldBe Some(id)
+      index.get(name) shouldBe Some(Type.Nominal(id))
       index.get(QualifiedName.parseFull("other.Type")) shouldBe None
     }
 
@@ -55,7 +55,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
         val results = index.resolve(nameInt, ImportScope.empty)
 
         results should have size 1
-        results.head.value shouldBe idInt
+        results.head.value shouldBe Type.Nominal(idInt)
         results.head.name shouldBe Name("Int")
         results.head.qualifier shouldBe nameInt.qualifier
       }
@@ -68,7 +68,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
         val results = index.resolve(QualifiedName.local(Name("A")), imports)
 
         results should have size 1
-        results.head.value shouldBe idA
+        results.head.value shouldBe Type.Nominal(idA)
         results.head.qualifier shouldBe PackagePath.parseAbsolute("pkg")
       }
 
@@ -79,8 +79,8 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
         val (index2, idB) = index1.intern(nameB)
         val imports = ImportScope.importWildcard(PackagePath.parseAbsolute("pkg"))
 
-        index2.resolve(QualifiedName.local(Name("A")), imports).map(_.value) should contain only idA
-        index2.resolve(QualifiedName.local(Name("B")), imports).map(_.value) should contain only idB
+        index2.resolve(QualifiedName.local(Name("A")), imports).map(_.value) should contain only Type.Nominal(idA)
+        index2.resolve(QualifiedName.local(Name("B")), imports).map(_.value) should contain only Type.Nominal(idB)
       }
 
       it("should handle shadowing: specific import wins over wildcard") {
@@ -95,7 +95,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
 
         val results = index2.resolve(QualifiedName.local(Name("A")), imports)
         results should have size 1
-        results.head.value shouldBe idOtherA
+        results.head.value shouldBe Type.Nominal(idOtherA)
       }
 
       it("should handle ambiguity: multiple matches from different wildcards") {
@@ -109,7 +109,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
           .importWildcard(PackagePath.parseAbsolute("pkg2"))
 
         val results = index2.resolve(QualifiedName.local(Name("A")), imports)
-        results.map(_.value) should contain theSameElementsAs List(id1, id2)
+        results.map(_.value) should contain theSameElementsAs List(Type.Nominal(id1), Type.Nominal(id2))
       }
 
       it("should support resolution via package import and relative path") {
@@ -120,7 +120,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
         val results = index.resolve(QualifiedName.tryParsePartial("sub.A").getOrElse(fail("failed to parse")), imports)
 
         results should have size 1
-        results.head.value shouldBe idA
+        results.head.value shouldBe Type.Nominal(idA)
         results.head.qualifier shouldBe PackagePath.parseAbsolute("pkg.sub")
       }
 
@@ -135,7 +135,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
         val results = index2.resolve(QualifiedName.local(Name("A")), imports)
         // Root package has priority over wildcard imports in resolveGlobal
         results should have size 1
-        results.head.value shouldBe idRootA
+        results.head.value shouldBe Type.Nominal(idRootA)
       }
     }
 
@@ -158,7 +158,7 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
         val (index, id) = maybeResult.get
         index.size shouldBe 1
         id.value shouldBe 0
-        index.get(name) shouldBe Some(id)
+        index.get(name) shouldBe Some(Type.Nominal(id))
       }
 
       it("should return None when adding a name that already exists") {
@@ -173,6 +173,24 @@ class TypeNameIndexSpec extends AnyFunSpec with Matchers {
       val index = TypeNameIndex.empty
       intercept[IndexOutOfBoundsException] {
         index.getName(TypeId(41))
+      }
+    }
+
+    it("should support adding type aliases") {
+      val name = QualifiedName.parseFull("scaletta.lang.Unit")
+      val target = Type.Unit
+      val index = TypeNameIndex.empty.addAlias(name, target)
+
+      index.get(name) shouldBe Some(target)
+      index.size shouldBe 0 // Aliases don't increment nextId or size (of nominal types)
+    }
+
+    it("should throw an exception when interning a name already used as an alias") {
+      val name = QualifiedName.parseFull("scaletta.lang.Unit")
+      val index = TypeNameIndex.empty.addAlias(name, Type.Unit)
+
+      intercept[IllegalStateException] {
+        index.intern(name)
       }
     }
   }

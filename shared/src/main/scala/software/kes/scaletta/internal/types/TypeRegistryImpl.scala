@@ -47,10 +47,13 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
     addRelationship(supertypeApplication, subType)
   }
 
+  def addTypeAlias(name: QualifiedName.Full, target: Type[TypeId]): Unit = {
+    nameIndex = nameIndex.addAlias(name, target)
+  }
+
   def registerCore(name: QualifiedName.Full,
                    typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
-    val (newIndex, _) = nameIndex.intern(name)
-    nameIndex = newIndex
+    nameIndex = nameIndex.addAlias(name, typ)
     typ
   }
 

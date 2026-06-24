@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.types
 
-import software.kes.scaletta.api.{ImportScope, QualifiedName, TypeId}
+import software.kes.scaletta.api.{ImportScope, QualifiedName, Type, TypeId}
 import software.kes.scaletta.internal.symbols.{SymbolEntry, SymbolIndex}
 
 object TypeNameIndex {
@@ -19,31 +19,32 @@ object TypeNameIndex {
  * This index ensures that each unique QualifiedName.Full maps to a single, unique TypeId.
  * It is immutable and persistent.
  */
-final class TypeNameIndex private(symbolIndex: SymbolIndex[TypeId],
+final class TypeNameIndex private(symbolIndex: SymbolIndex[Type[TypeId]],
                                   val allNames: Vector[QualifiedName.Full],
                                   nextId: Int) {
   /**
    * Performs a direct lookup for a fully qualified type name.
    *
    * @param name The fully qualified name to look up.
-   * @return Some(TypeId) if the type name is registered, None otherwise.
+   * @return Some(Type[TypeId]) if the type name is registered, None otherwise.
    */
-  def get(name: QualifiedName.Full): Option[TypeId] = symbolIndex.get(name)
+  def get(name: QualifiedName.Full): Option[Type[TypeId]] = symbolIndex.get(name)
 
   /**
    * Finds type entries matching the given query within the context of active imports.
    *
    * @param name    The QualifiedName (Full or Partial) to resolve.
    * @param imports The active implicit imports in the current scope.
-   * @return A List of matching SymbolEntry.Global[TypeId] objects.
+   * @return A List of matching SymbolEntry.Global[Type[TypeId]] objects.
    */
   def resolve(name: QualifiedName,
-              imports: ImportScope): List[SymbolEntry.Global[TypeId]] =
+              imports: ImportScope): List[SymbolEntry.Global[Type[TypeId]]] =
     symbolIndex.resolve(name, imports)
 
   /**
-   * Registers a type name and returns its TypeId.
-   * If the name is already registered, the existing TypeId is returned along with this index.
+   * Registers a nominal type name and returns its TypeId.
+   * If the name is already registered as a nominal type, the existing TypeId is returned along with this index.
+   * If the name is already registered as an alias, an exception is thrown.
    * If the name is new, a new TypeId is assigned and an updated index is returned.
    *
    * @param name The fully qualified type name to intern.
@@ -51,12 +52,24 @@ final class TypeNameIndex private(symbolIndex: SymbolIndex[TypeId],
    */
   def intern(name: QualifiedName.Full): (TypeNameIndex, TypeId) =
     symbolIndex.get(name) match {
-      case Some(value) => (this, value)
+      case Some(Type.Nominal(id)) => (this, id)
+      case Some(_) => throw new IllegalStateException(s"Name $name is already registered as an alias")
       case None => addName(name)
     }
 
   /**
-   * Adds a type name only if it doesn't already exist in the index.
+   * Adds a type name as an alias to an arbitrary type structure.
+   *
+   * @param name   The fully qualified name for the alias.
+   * @param target The type structure the name should alias.
+   * @return An updated TypeNameIndex.
+   */
+  def addAlias(name: QualifiedName.Full, target: Type[TypeId]): TypeNameIndex = {
+    new TypeNameIndex(symbolIndex.add(name, target), allNames, nextId)
+  }
+
+  /**
+   * Adds a nominal type name only if it doesn't already exist in the index.
    *
    * @param name The fully qualified type name to add.
    * @return Some((updatedIndex, typeId)) if the name was added, None if it already existed.
@@ -83,6 +96,7 @@ final class TypeNameIndex private(symbolIndex: SymbolIndex[TypeId],
 
   private def addName(name: QualifiedName.Full): (TypeNameIndex, TypeId) = {
     val id = TypeId(nextId)
-    (new TypeNameIndex(symbolIndex.add(name, id), allNames :+ name, nextId + 1), id)
+    val entry = Type.Nominal(id)
+    (new TypeNameIndex(symbolIndex.add(name, entry), allNames :+ name, nextId + 1), id)
   }
 }
