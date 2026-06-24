@@ -65,6 +65,8 @@ object Literal {
 
   def string[F[_]](value: String): Literal[F] = StringLiteral(value)
 
+  def unit[F[_]](): Literal[F] = UnitLiteral()
+
   case class IntLiteral[F[_]](value: Int) extends Literal[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): IntLiteral[G] = IntLiteral(value)
   }
@@ -107,6 +109,10 @@ object Literal {
 
   case class StringLiteral[F[_]](value: String) extends Literal[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): StringLiteral[G] = StringLiteral(value)
+  }
+
+  case class UnitLiteral[F[_]]() extends Literal[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): UnitLiteral[G] = UnitLiteral()
   }
 }
 

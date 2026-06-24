@@ -76,7 +76,7 @@ trait StandardTypes {
 
   def StringT: Type.Nominal[TypeId]
 
-  def UnitT: Type.Nominal[TypeId]
+  def UnitT: Type[TypeId]
 
   def VectorT: TypeConstructor[TypeId]
 }

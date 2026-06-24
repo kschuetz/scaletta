@@ -25,8 +25,10 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val NothingT: Type.Nominal[TypeId] =
     registry.registerCore(base(names.NothingT), CoreTypes.NothingT)
 
-  val UnitT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.UnitT), CoreTypes.UnitT)
+  val UnitT: Type[TypeId] = {
+    registry.addValueType(base(names.UnitT)) // Keep the name reserved
+    CoreTypes.UnitT
+  }
 
   val BooleanT: Type.Nominal[TypeId] =
     registry.registerCore(base(names.BooleanT), CoreTypes.BooleanT)

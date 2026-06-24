@@ -18,6 +18,8 @@ object AstBuilders {
 
   def litNull: Expression[Id] = Literal.null_()
 
+  def litUnit: Expression[Id] = Literal.unit()
+
   def errExpr(error: ParseError): Expression[Id] = Expression.Error[Id](error)
 
   def errMissing(context: String): Expression[Id] = errExpr(ParseError.MissingExpression(context))

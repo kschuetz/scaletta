@@ -26,9 +26,15 @@ object Type {
   def union[T](t1: Type[T], t2: Type[T], more: Type[T]*): ConcreteType[T] =
     Union(SetTwoPlus(t1, t2, more: _*))
 
+  def unit[T]: ConcreteType[T] = Unit.asInstanceOf[ConcreteType[T]]
+
   def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 
   case class Nominal[T](name: T) extends ConcreteType[T] {
+    def isGround: Boolean = true
+  }
+
+  case object Unit extends ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 

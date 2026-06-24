@@ -3,6 +3,7 @@ package software.kes.scaletta.internal.parser
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
+import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.ast.AstBuilders._
 import software.kes.scaletta.internal.scanner.Token
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
@@ -27,6 +28,7 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
           ("true", lit(true)),
           ("false", lit(false)),
           ("null", litNull),
+          ("()", litUnit),
           ("foo", ref("foo"))
         )
 
@@ -166,6 +168,10 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
       it("should parse a typed val declaration") {
         "{ val x: Int = 1; x }" shouldParseTo block(ref("x"), valTypedId("x", "Int", lit(1)))
+      }
+
+      it("should parse a val declaration with a unit pattern") {
+        "{ val () = (); () }" shouldParseTo block(litUnit, valDecl(pLit(Literal.unit[software.kes.scaletta.util.functional.Id.Id]()), litUnit))
       }
 
       it("should parse a lazy val declaration") {

@@ -129,9 +129,14 @@ final class Parser private() {
     }
 
     private def parseParenthesizedExpression(token: Pos[Token]): ExprResult[Pos] = {
-      val result = parseExpression(BindingPower.Minimum)
-      val next = expect(Token.RParen, "parenthesized expression", Some(token.begin))
-      processParenthesizedResult(token, result, next)
+      if (scanner.peek(1).value == Token.RParen) {
+        val rParen = scanner.get()
+        ParseResult.create(Pos(Literal.unit(), token.begin, rParen.end))
+      } else {
+        val result = parseExpression(BindingPower.Minimum)
+        val next = expect(Token.RParen, "parenthesized expression", Some(token.begin))
+        processParenthesizedResult(token, result, next)
+      }
     }
 
     private def processParenthesizedResult(token: Pos[Token], result: ExprResult[Pos], next: Pos[Token]): ExprResult[Pos] = {
@@ -439,6 +444,16 @@ final class Parser private() {
           ParseResult.create(firstToken.as(Pattern.Identifier(id)))
         case Token.Underscore =>
           ParseResult.create(firstToken.as(Pattern.Wildcard()))
+        case Token.LParen =>
+          if (scanner.peek(1).value == Token.RParen) {
+            val rParen = scanner.get()
+            val lit = Pos(Literal.unit[Pos](), firstToken.begin, rParen.end)
+            ParseResult.create(Pos(Pattern.Literal(lit), firstToken.begin, rParen.end))
+          } else {
+            // Future: Tuples in patterns
+            reportError(Pos(ParseError.ExpectedIdentifier(firstToken.value, "pattern"), firstToken.begin, firstToken.end))
+            ParseResult.empty
+          }
         case _ =>
           reportError(Pos(ParseError.ExpectedIdentifier(firstToken.value, "pattern"), firstToken.begin, firstToken.end))
           ParseResult.empty
