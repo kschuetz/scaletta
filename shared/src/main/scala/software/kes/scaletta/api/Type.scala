@@ -31,6 +31,10 @@ object Type {
 
   def unit[T]: ConcreteType[T] = Unit.asInstanceOf[ConcreteType[T]]
 
+  def bottom[T]: ConcreteType[T] = Bottom.asInstanceOf[ConcreteType[T]]
+
+  def bottomRef[T]: ConcreteType[T] = BottomRef.asInstanceOf[ConcreteType[T]]
+
   def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 
   case class Nominal[T](name: T) extends ConcreteType[T] {
@@ -60,6 +64,14 @@ object Type {
 
   case class Tuple[T](elements: VectorTwoPlus[Type[T]]) extends ConcreteType[T] {
     def isGround: Boolean = elements.forall(_.isGround)
+  }
+
+  case object BottomRef extends ConcreteType[Nothing] {
+    def isGround: Boolean = true
+  }
+
+  case object Bottom extends ConcreteType[Nothing] {
+    def isGround: Boolean = true
   }
 
   case class Variable(scopeIndex: Int,

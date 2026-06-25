@@ -62,9 +62,9 @@ trait StandardTypes {
 
   def NoneT: Type.Applied[TypeId]
 
-  def NothingT: Type.Nominal[TypeId]
+  def NothingT: Type[TypeId]
 
-  def NullT: Type.Nominal[TypeId]
+  def NullT: Type[TypeId]
 
   def OptionT: TypeConstructor[TypeId]
 

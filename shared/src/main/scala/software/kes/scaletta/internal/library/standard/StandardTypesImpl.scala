@@ -19,11 +19,15 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val AnyRefT: Type.Nominal[TypeId] =
     registry.registerCore(base(names.AnyRefT), CoreTypes.AnyRefT)
 
-  val NullT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.NullT), CoreTypes.NullT)
+  val NullT: Type[TypeId] = {
+    registry.addTypeAlias(base(names.NullT), CoreTypes.NullT)
+    CoreTypes.NullT
+  }
 
-  val NothingT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.NothingT), CoreTypes.NothingT)
+  val NothingT: Type[TypeId] = {
+    registry.addTypeAlias(base(names.NothingT), CoreTypes.NothingT)
+    CoreTypes.NothingT
+  }
 
   val UnitT: Type[TypeId] = {
     registry.addTypeAlias(base(names.UnitT), CoreTypes.UnitT)

@@ -45,6 +45,18 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
    * Checks if `lhs` is a subtype of `rhs`.
    */
   private def isSubtypeOf(lhs: Type[T], rhs: Type[T]): Boolean = {
+    if (lhs == Type.Bottom) {
+      true
+    } else if (lhs == Type.BottomRef) {
+      // TODO: Handle BottomRef O(1) subtype check for AnyRef
+      // For now, it will fall back to the BFS logic if not handled here
+      bfsSubtypeCheck(lhs, rhs)
+    } else {
+      bfsSubtypeCheck(lhs, rhs)
+    }
+  }
+
+  private def bfsSubtypeCheck(lhs: Type[T], rhs: Type[T]): Boolean = {
     @tailrec
     def go(queue: Queue[Type[T]], visited: Set[Type[T]]): Boolean = {
       queue.dequeueOption match {
