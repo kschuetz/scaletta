@@ -1,6 +1,6 @@
 package software.kes.scaletta.api
 
-import software.kes.scaletta.util.{NonEmptyVector, SetTwoPlus}
+import software.kes.scaletta.util.{NonEmptyVector, SetTwoPlus, VectorTwoPlus}
 
 sealed trait Type[+T] {
   def isGround: Boolean
@@ -23,6 +23,9 @@ object Type {
   def intersection[T](t1: Type[T], t2: Type[T], more: Type[T]*): ConcreteType[T] =
     Intersection(SetTwoPlus(t1, t2, more: _*))
 
+  def tuple[T](t1: Type[T], t2: Type[T], more: Type[T]*): ConcreteType[T] =
+    Tuple(VectorTwoPlus(t1, t2, more: _*))
+
   def union[T](t1: Type[T], t2: Type[T], more: Type[T]*): ConcreteType[T] =
     Union(SetTwoPlus(t1, t2, more: _*))
 
@@ -31,10 +34,6 @@ object Type {
   def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 
   case class Nominal[T](name: T) extends ConcreteType[T] {
-    def isGround: Boolean = true
-  }
-
-  case object Unit extends ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 
@@ -53,6 +52,14 @@ object Type {
 
   case class Function[T](parameters: Vector[Type[T]], result: Type[T]) extends ConcreteType[T] {
     def isGround: Boolean = parameters.forall(_.isGround) && result.isGround
+  }
+
+  case object Unit extends ConcreteType[Nothing] {
+    def isGround: Boolean = true
+  }
+
+  case class Tuple[T](elements: VectorTwoPlus[Type[T]]) extends ConcreteType[T] {
+    def isGround: Boolean = elements.forall(_.isGround)
   }
 
   case class Variable(scopeIndex: Int,

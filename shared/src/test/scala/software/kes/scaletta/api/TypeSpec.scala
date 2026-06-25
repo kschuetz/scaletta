@@ -88,5 +88,28 @@ class TypeSpec extends AnyFunSpec with Matchers {
         t.isGround shouldBe false
       }
     }
+
+    describe("tuple") {
+      it("should create a Tuple type") {
+        val t = Type.tuple(typeInt, typeString)
+        t shouldBe a[Type.Tuple[_]]
+        t.asInstanceOf[Type.Tuple[String]].elements.toVector shouldBe Vector(typeInt, typeString)
+        t.isGround shouldBe true
+      }
+
+      it("should handle more than two elements") {
+        val t = Type.tuple(typeInt, typeString, typeBoolean)
+        t shouldBe a[Type.Tuple[_]]
+        t.asInstanceOf[Type.Tuple[String]].elements.toVector shouldBe Vector(typeInt, typeString, typeBoolean)
+      }
+
+      it("should be ground only if all elements are ground") {
+        val groundTuple = Type.tuple(typeInt, typeString)
+        groundTuple.isGround shouldBe true
+
+        val nonGroundTuple = Type.tuple(typeInt, Type.variable(43))
+        nonGroundTuple.isGround shouldBe false
+      }
+    }
   }
 }
