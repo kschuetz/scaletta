@@ -77,7 +77,9 @@ object MockSetup {
 
       def addTypeAlias(name: QualifiedName.Full, target: Type[TypeId]): Unit = ()
 
-      def registerCore(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
+      def registerCoreValueType(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
+
+      def registerCoreRefType(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
     }
 
     val runtimeContextRegistry: RuntimeContextRegistry = () => getNextRuntimeContextId()

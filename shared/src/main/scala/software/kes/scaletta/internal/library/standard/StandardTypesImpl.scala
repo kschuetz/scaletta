@@ -11,13 +11,13 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   import software.kes.scaletta.api.Packages
 
   val AnyT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.AnyT), CoreTypes.AnyT)
+    registry.registerCoreValueType(base(names.AnyT), CoreTypes.AnyT)
 
   val AnyValT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.AnyValT), CoreTypes.AnyValT)
+    registry.registerCoreValueType(base(names.AnyValT), CoreTypes.AnyValT)
 
   val AnyRefT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.AnyRefT), CoreTypes.AnyRefT)
+    registry.registerCoreValueType(base(names.AnyRefT), CoreTypes.AnyRefT)
 
   val NullT: Type[TypeId] = {
     registry.addTypeAlias(base(names.NullT), CoreTypes.NullT)
@@ -35,31 +35,31 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   }
 
   val BooleanT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.BooleanT), CoreTypes.BooleanT)
+    registry.registerCoreValueType(base(names.BooleanT), CoreTypes.BooleanT)
 
   val ByteT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.ByteT), CoreTypes.ByteT)
+    registry.registerCoreValueType(base(names.ByteT), CoreTypes.ByteT)
 
   val CharT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.CharT), CoreTypes.CharT)
+    registry.registerCoreValueType(base(names.CharT), CoreTypes.CharT)
 
   val DoubleT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.DoubleT), CoreTypes.DoubleT)
+    registry.registerCoreValueType(base(names.DoubleT), CoreTypes.DoubleT)
 
   val FloatT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.FloatT), CoreTypes.FloatT)
+    registry.registerCoreValueType(base(names.FloatT), CoreTypes.FloatT)
 
   val IntT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.IntT), CoreTypes.IntT)
+    registry.registerCoreValueType(base(names.IntT), CoreTypes.IntT)
 
   val LongT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.LongT), CoreTypes.LongT)
+    registry.registerCoreValueType(base(names.LongT), CoreTypes.LongT)
 
   val ShortT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.ShortT), CoreTypes.ShortT)
+    registry.registerCoreValueType(base(names.ShortT), CoreTypes.ShortT)
 
   val StringT: Type.Nominal[TypeId] =
-    registry.registerCore(base(names.StringT), CoreTypes.StringT)
+    registry.registerCoreRefType(base(names.StringT), CoreTypes.StringT)
 
   val OptionT: TypeConstructor[TypeId] =
     registry.addTypeConstructor(base(names.OptionT), TypeParameter.covariant)

@@ -51,8 +51,14 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
     nameIndex = nameIndex.addAlias(name, target)
   }
 
-  def registerCore(name: QualifiedName.Full,
-                   typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
+  def registerCoreValueType(name: QualifiedName.Full,
+                            typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
+    nameIndex = nameIndex.addAlias(name, typ)
+    typ
+  }
+
+  def registerCoreRefType(name: QualifiedName.Full,
+                          typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
     nameIndex = nameIndex.addAlias(name, typ)
     typ
   }
