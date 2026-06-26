@@ -82,10 +82,28 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
       table.resolveBestMatch(universe, query) shouldBe Left(ResolutionError.NotFound)
     }
 
-    it("should return Ambiguous if multiple candidates match") {
-      // Both fn1 (Int) and fn2 (Number) match for Int input
+    it("should resolve to the most specific candidate") {
+      // Both fn1 (Int) and fn2 (Number) match for Int input, but fn1 is more specific
       val query = SignatureQuery.of(intT)
-      table.resolveBestMatch(universe, query) shouldBe Left(ResolutionError.Ambiguous)
+      table.resolveBestMatch(universe, query) shouldBe Right(fn1)
+    }
+
+    it("should return Ambiguous if multiple candidates match and none is more specific") {
+      val fnAmb1 = NativeFunctionDefinition(
+        paramGroups = ParameterGroup.single(FormalParameter(Name("a"), anyT)),
+        returnType = intT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(43)
+      )
+      val fnAmb2 = NativeFunctionDefinition(
+        paramGroups = ParameterGroup.single(FormalParameter(Name("a"), anyT)),
+        returnType = stringT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(47)
+      )
+      val tableAmb = OverloadTable(List(fnAmb1, fnAmb2))
+      val query = SignatureQuery.of(intT)
+      tableAmb.resolveBestMatch(universe, query) shouldBe Left(ResolutionError.Ambiguous)
     }
   }
 
