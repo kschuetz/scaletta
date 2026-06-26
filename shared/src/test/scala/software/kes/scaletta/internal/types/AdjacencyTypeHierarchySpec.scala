@@ -79,5 +79,5 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
     toNominal(ParentB) -> Set(toNominal(Root))
   )
 
-  private lazy val hierarchy = AdjacencyTypeHierarchy.fromMap(hierarchyMap)
+  private lazy val hierarchy = AdjacencyTypeHierarchy.fromMap(hierarchyMap, Set.empty[Type.Nominal[TestType]])
 }

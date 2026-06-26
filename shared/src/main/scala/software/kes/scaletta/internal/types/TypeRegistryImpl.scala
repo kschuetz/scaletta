@@ -7,11 +7,14 @@ import scala.collection.mutable
 private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
   private var nameIndex = TypeNameIndex.empty
   private val supertypeMap = mutable.Map[Type[TypeId], mutable.Set[Type[TypeId]]]()
+  private val valueTypes = mutable.Set[Type.Nominal[TypeId]]()
 
   def addValueType(name: QualifiedName.Full): Type.Nominal[TypeId] = {
     val (newIndex, id) = nameIndex.intern(name)
     nameIndex = newIndex
-    Type.Nominal(id)
+    val typ = Type.Nominal(id)
+    valueTypes += typ
+    typ
   }
 
   def addRefType(name: QualifiedName.Full): Type.Nominal[TypeId] = {
@@ -54,6 +57,7 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
   def registerCoreValueType(name: QualifiedName.Full,
                             typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
     nameIndex = nameIndex.addAlias(name, typ)
+    valueTypes += typ
     typ
   }
 
@@ -68,7 +72,8 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
    */
   def build(): TypeUniverse = {
     val hierarchy = AdjacencyTypeHierarchy.fromMap[TypeId](
-      supertypeMap.view.mapValues(_.toSet).toMap
+      supertypeMap.view.mapValues(_.toSet).toMap,
+      valueTypes.toSet
     )
     new TypeUniverse(nameIndex, hierarchy)
   }

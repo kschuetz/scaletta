@@ -9,13 +9,14 @@ object AdjacencyTypeHierarchy {
   /**
    * Creates an empty [[AdjacencyTypeHierarchy]].
    */
-  def empty[T]: AdjacencyTypeHierarchy[T] = new AdjacencyTypeHierarchy(Map.empty)
+  def empty[T]: AdjacencyTypeHierarchy[T] = new AdjacencyTypeHierarchy(Map.empty, Set.empty)
 
   /**
    * Creates an [[AdjacencyTypeHierarchy]] from the given supertype mappings.
    */
-  def fromMap[T](supertypes: Map[Type[T], Set[Type[T]]]): AdjacencyTypeHierarchy[T] =
-    new AdjacencyTypeHierarchy(supertypes)
+  def fromMap[T](supertypes: Map[Type[T], Set[Type[T]]],
+                 valueTypes: Set[Type.Nominal[T]]): AdjacencyTypeHierarchy[T] =
+    new AdjacencyTypeHierarchy(supertypes, valueTypes)
 }
 
 /**
@@ -24,7 +25,8 @@ object AdjacencyTypeHierarchy {
  *
  * @tparam T The type of the identifier used for types (e.g., [[TypeId]]).
  */
-final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T], Set[Type[T]]]) extends TypeHierarchy[T] {
+final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T], Set[Type[T]]],
+                                              private val valueTypes: Set[Type.Nominal[T]]) extends TypeHierarchy[T] {
 
   def relationshipFor(lhs: Type[T], rhs: Type[T]): TypeRelationship[T] = {
     if (lhs == rhs) {
@@ -48,9 +50,11 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     if (lhs == Type.Bottom) {
       true
     } else if (lhs == Type.BottomRef) {
-      // TODO: Handle BottomRef O(1) subtype check for AnyRef
-      // For now, it will fall back to the BFS logic if not handled here
-      bfsSubtypeCheck(lhs, rhs)
+      rhs match {
+        case Type.Bottom => false
+        case t: Type.Nominal[T] => !valueTypes.contains(t)
+        case _ => true
+      }
     } else {
       bfsSubtypeCheck(lhs, rhs)
     }
