@@ -13,11 +13,19 @@ object Universe {
 
 final class Universe private(val typeUniverse: TypeUniverse,
                              val methodUniverse: MethodUniverse) extends MethodResolver {
-  def getMethodCandidates(typ: Type.Nominal[TypeId],
+  def getMethodCandidates(typ: Type[TypeId],
                           name: Name,
                           signatureQuery: SignatureQuery): List[NativeFunctionDefinition] = {
     methodUniverse.symbolTable.getMethod(typ, name) match {
-      case Some(overloads) => overloads.findCandidates(typeUniverse, signatureQuery)
+      case Some(overloads) =>
+        val updatedQuery = signatureQuery.groups match {
+          case groups if groups.isEmpty => SignatureQuery.of(typ)
+          case groups =>
+            val firstGroup = groups(0)
+            val updatedFirstGroup = SignatureQuery.Group(typ +: firstGroup.parameters)
+            SignatureQuery.ofGroups(updatedFirstGroup +: groups.tail: _*)
+        }
+        overloads.findCandidates(typeUniverse, updatedQuery)
       case None => List.empty[NativeFunctionDefinition]
     }
   }
@@ -38,11 +46,19 @@ final class Universe private(val typeUniverse: TypeUniverse,
     }
   }
 
-  def resolveBestMethod(typ: Type.Nominal[TypeId],
+  def resolveBestMethod(typ: Type[TypeId],
                         name: Name,
                         signatureQuery: SignatureQuery): Either[ResolutionError, NativeFunctionDefinition] = {
     methodUniverse.symbolTable.getMethod(typ, name) match {
-      case Some(overloads) => overloads.resolveBestMatch(typeUniverse, signatureQuery)
+      case Some(overloads) =>
+        val updatedQuery = signatureQuery.groups match {
+          case groups if groups.isEmpty => SignatureQuery.of(typ)
+          case groups =>
+            val firstGroup = groups(0)
+            val updatedFirstGroup = SignatureQuery.Group(typ +: firstGroup.parameters)
+            SignatureQuery.ofGroups(updatedFirstGroup +: groups.tail: _*)
+        }
+        overloads.resolveBestMatch(typeUniverse, updatedQuery)
       case None => Left(ResolutionError.NotFound)
     }
   }

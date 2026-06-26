@@ -15,7 +15,7 @@ object Collections {
         val typeA = Type.variable(0)
         val typeB = Type.variable(1)
 
-        val receiverType = ReceiverType.Instance(Type.Nominal(constructor.name))
+        val receiverType = ReceiverType.instance(Type.Nominal(constructor.name))
 
         // map[B](f: A => B): List[B]
         registry.addMethod(

@@ -29,14 +29,21 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
                                impl: FunctionImpl): NativeFunctionId = {
     val currentSettings = settings
     val receiverParam = methodName.receiverType match {
-      case Instance(typ) => Some(typ)
+      case Instance(typ) => Some(FormalParameter(Name("this"), typ))
       case _ => None
     }
-    val flattenedParams = receiverParam.toVector ++ paramGroups.flatMap(_.params).map(_.typ)
+    val updatedParamGroups = receiverParam match {
+      case Some(p) =>
+        if (paramGroups.isEmpty) Vector(ParameterGroup(Vector(p)))
+        else paramGroups.updated(0, ParameterGroup(p +: paramGroups(0).params))
+      case None => paramGroups
+    }
+
+    val flattenedParams = updatedParamGroups.flatMap(_.params).map(_.typ)
     val nativeFunctionId = nativeFunctionTableBuilder.add(NativeFunction(ParamsSignature.fromSeq(flattenedParams), BasicTypes.fromType(returnType).toInt, impl))
 
     val definition = NativeFunctionDefinition(
-      paramGroups = paramGroups,
+      paramGroups = updatedParamGroups,
       returnType = returnType,
       pure = currentSettings.pureHint,
       nativeFunctionId = nativeFunctionId,

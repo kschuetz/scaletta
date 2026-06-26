@@ -20,7 +20,7 @@ object EqualityOps {
     val name: Name = Name("eq")
 
     def register(registry: MethodRegistry): Unit = {
-      registry.addMethod(MethodName(ReceiverType.Instance(CoreTypes.AnyRefT), name),
+      registry.addMethod(MethodName(ReceiverType.instance(CoreTypes.AnyRefT), name),
         Vector(FormalParameter(Name("x"), CoreTypes.AnyRefT)), CoreTypes.BooleanT,
         booleanResult(impl))
     }

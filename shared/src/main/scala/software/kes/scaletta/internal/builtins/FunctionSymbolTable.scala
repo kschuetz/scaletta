@@ -13,14 +13,14 @@ object FunctionSymbolTable {
 
   final class Builder private[FunctionSymbolTable]() {
     private val staticFunctions = mutable.Map.empty[QualifiedName.Full, mutable.Buffer[NativeFunctionDefinition]]
-    private val instanceMethods = mutable.Map.empty[Type.Nominal[TypeId], mutable.Map[Name, mutable.Buffer[NativeFunctionDefinition]]]
+    private val instanceMethods = mutable.Map.empty[Type[TypeId], mutable.Map[Name, mutable.Buffer[NativeFunctionDefinition]]]
 
     def addStatic(name: QualifiedName.Full, definition: NativeFunctionDefinition): Unit = {
       val overloads = staticFunctions.getOrElseUpdate(name, mutable.Buffer.empty)
       overloads += definition
     }
 
-    def addInstance(receiverType: Type.Nominal[TypeId], name: Name, definition: NativeFunctionDefinition): Unit = {
+    def addInstance(receiverType: Type[TypeId], name: Name, definition: NativeFunctionDefinition): Unit = {
       val methodsForType = instanceMethods.getOrElseUpdate(receiverType, mutable.Map.empty)
       val overloads = methodsForType.getOrElseUpdate(name, mutable.Buffer.empty)
       overloads += definition
@@ -41,7 +41,7 @@ object FunctionSymbolTable {
 }
 
 final class FunctionSymbolTable private(private val staticFunctions: SymbolTable[OverloadTable],
-                                        private val instanceMethods: Map[Type.Nominal[TypeId], Map[Name, OverloadTable]]) {
+                                        private val instanceMethods: Map[Type[TypeId], Map[Name, OverloadTable]]) {
   /**
    * Performs a direct lookup for a fully qualified static function.
    */
@@ -49,9 +49,9 @@ final class FunctionSymbolTable private(private val staticFunctions: SymbolTable
     staticFunctions.get(name)
 
   /**
-   * Performs a lookup for a method on a specific nominal type.
+   * Performs a lookup for a method on a specific type.
    */
-  def getMethod(typ: Type.Nominal[TypeId], name: Name): Option[OverloadTable] =
+  def getMethod(typ: Type[TypeId], name: Name): Option[OverloadTable] =
     instanceMethods.get(typ).flatMap(_.get(name))
 
   /**
