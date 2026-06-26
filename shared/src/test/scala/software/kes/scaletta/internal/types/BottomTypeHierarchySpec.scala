@@ -36,6 +36,14 @@ class BottomTypeHierarchySpec extends AnyFunSpec with Matchers {
     it("should treat BottomRef as a supertype of Bottom") {
       hierarchy.relationshipFor(Type.bottomRef, Type.bottom) shouldBe TypeRelationship.StrictSupertype
     }
+
+    it("should correctly identify subtypes via isSubtype") {
+      hierarchy.isSubtype(Type.bottom, toNominal(Root)) shouldBe true
+      hierarchy.isSubtype(Type.bottom, Type.bottomRef) shouldBe true
+      hierarchy.isSubtype(Type.bottom, Type.bottom) shouldBe true
+      hierarchy.isSubtype(Type.bottomRef, Type.bottom) shouldBe false
+      hierarchy.isSubtype(toNominal(Root), Type.bottom) shouldBe false
+    }
   }
 
   sealed trait TestType

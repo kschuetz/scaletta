@@ -12,7 +12,7 @@ case class OverloadTable(variations: List[NativeFunctionDefinition]) {
           formalGroup.params.size == queryGroup.parameters.size &&
             formalGroup.params.zip(queryGroup.parameters).forall {
               case (formalParam, SignatureQueryParameter.OfType(queryType)) =>
-                typeUniverse.hierarchy.relationshipFor(queryType, formalParam.typ).isSubtype
+                typeUniverse.hierarchy.isSubtype(queryType, formalParam.typ)
               case (_, SignatureQueryParameter.Unknown) =>
                 true
             }
@@ -55,7 +55,7 @@ object OverloadTable {
       val allSubtypes = v1.paramGroups.zip(v2.paramGroups).forall { case (g1, g2) =>
         g1.params.size == g2.params.size &&
           g1.params.zip(g2.params).forall { case (p1, p2) =>
-            typeUniverse.hierarchy.relationshipFor(p1.typ, p2.typ).isSubtype
+            typeUniverse.hierarchy.isSubtype(p1.typ, p2.typ)
           }
       }
 

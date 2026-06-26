@@ -36,6 +36,14 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       hierarchy.relationshipFor(toNominal(ChildA1), toNominal(Unrelated)) shouldBe TypeRelationship.Unrelated
     }
 
+    it("should correctly identify subtypes via isSubtype") {
+      hierarchy.isSubtype(toNominal(ChildA1), toNominal(ParentA)) shouldBe true
+      hierarchy.isSubtype(toNominal(ChildA1), toNominal(Root)) shouldBe true
+      hierarchy.isSubtype(toNominal(Root), toNominal(Root)) shouldBe true
+      hierarchy.isSubtype(toNominal(ParentA), toNominal(ChildA1)) shouldBe false
+      hierarchy.isSubtype(toNominal(ChildA1), toNominal(Unrelated)) shouldBe false
+    }
+
     describe("immediateSupertypes") {
       it("should return correct immediate supertypes") {
         hierarchy.immediateSupertypes(toNominal(DiamondChild)) should contain theSameElementsAs Set(toNominal(ChildA1), toNominal(ChildB1))

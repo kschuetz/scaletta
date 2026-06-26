@@ -92,6 +92,9 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    def isSubtype(lhs: Type[TestType], rhs: Type[TestType]): Boolean =
+      relationshipFor(lhs, rhs).isSubtype
+
     def immediateSupertypes(t: Type[TestType]): Iterable[Type[TestType]] =
       t match {
         case Type.Nominal(name) =>

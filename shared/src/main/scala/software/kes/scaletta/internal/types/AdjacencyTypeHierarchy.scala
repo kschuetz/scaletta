@@ -29,9 +29,9 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
   def relationshipFor(lhs: Type[T], rhs: Type[T]): TypeRelationship[T] = {
     if (lhs == rhs) {
       TypeRelationship.Same
-    } else if (isSubtypeOf(lhs, rhs)) {
+    } else if (isSubtype(lhs, rhs)) {
       TypeRelationship.StrictSubtype
-    } else if (isSubtypeOf(rhs, lhs)) {
+    } else if (isSubtype(rhs, lhs)) {
       TypeRelationship.StrictSupertype
     } else {
       findCommonSupertype(lhs, rhs).fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
@@ -44,7 +44,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
   /**
    * Checks if `lhs` is a subtype of `rhs`.
    */
-  private def isSubtypeOf(lhs: Type[T], rhs: Type[T]): Boolean = {
+  def isSubtype(lhs: Type[T], rhs: Type[T]): Boolean = {
     if (lhs == Type.Bottom) {
       true
     } else if (lhs == Type.BottomRef) {

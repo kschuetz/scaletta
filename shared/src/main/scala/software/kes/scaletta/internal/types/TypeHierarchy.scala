@@ -11,4 +11,9 @@ trait TypeHierarchy[T] {
    * hierarchy level-by-level.
    */
   def immediateSupertypes(t: Type[T]): Iterable[Type[T]]
+
+  /**
+   * Returns true if the first type is a subtype of the second type.
+   */
+  def isSubtype(lhs: Type[T], rhs: Type[T]): Boolean
 }
