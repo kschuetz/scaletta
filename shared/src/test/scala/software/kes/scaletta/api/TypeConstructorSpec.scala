@@ -38,7 +38,7 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
       it("should return Type.Applied when given the correct number of args") {
         val arg = Type.Nominal("Int")
         val result = tc.applyAll(arg)
-        result.constructorName shouldBe typeName
+        result.constructor shouldBe Type.Constructor(typeName, NonEmptyVector(param))
         result.arguments.head.value shouldBe arg
       }
 
@@ -63,7 +63,7 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
       it("should work correctly with a sequence of arguments") {
         val args = Seq(Type.Nominal("Int"))
         val result = tc.applyAllFromSeq(args)
-        result.constructorName shouldBe typeName
+        result.constructor shouldBe Type.Constructor(typeName, NonEmptyVector(param))
         result.arguments.head.value shouldBe args.head
       }
     }
@@ -84,7 +84,7 @@ class TypeConstructorSpec extends AnyFunSpec with Matchers {
 
         result shouldBe a[Right[_, _]]
         val applied = result.toOption.getOrElse(fail("Expected Right"))
-        applied.constructorName shouldBe typeName
+        applied.constructor shouldBe Type.Constructor(typeName, NonEmptyVector(param))
         applied.arguments.head.value shouldBe Type.Nominal("String")
       }
 

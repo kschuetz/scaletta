@@ -5,14 +5,18 @@ import software.kes.scaletta.util.NonEmptyVector
 import scala.annotation.tailrec
 
 object TypeConstructor {
+  def fromNode[T](node: Type.Constructor[T]): TypeConstructor[T] =
+    new TypeConstructor(node.name, node.parameters, Vector.empty)
+
   def create[T](name: T,
                 parameters: NonEmptyVector[TypeParameter[T]]): TypeConstructor[T] =
     new TypeConstructor(name, parameters, Vector.empty)
 }
 
 final class TypeConstructor[T] private(val name: T,
-                                       val parameters: NonEmptyVector[TypeParameter[T]],
+                                       val parameters: software.kes.scaletta.util.NonEmptyVector[TypeParameter[T]],
                                        private val applied: Vector[TypeArgument[T]]) {
+  private def constructorNode: Type.Constructor[T] = Type.Constructor(name, parameters)
   /**
    * Constructs a type from the given arguments.
    * There must be enough arguments to fill all remaining type parameters, or an IllegalArgumentException
@@ -63,7 +67,7 @@ final class TypeConstructor[T] private(val name: T,
           Left(new TypeConstructor(name, remainingParams, builder.result()))
         }
       } else {
-        Right(Type.Applied(name, NonEmptyVector.from(builder.result())))
+        Right(Type.Applied(constructorNode, NonEmptyVector.from(builder.result())))
       }
     }
 

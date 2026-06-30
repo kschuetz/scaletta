@@ -20,19 +20,21 @@ class TypeSpec extends AnyFunSpec with Matchers {
 
     describe("applied") {
       it("should create an Applied type") {
-        val param = TypeParameter.invariant[String]
-        val arg = TypeArgument(param, typeInt)
-        val t = Type.applied("Option", arg)
-        t shouldBe Type.Applied("Option", NonEmptyVector(arg))
+        val params = NonEmptyVector(TypeParameter.invariant[String])
+        val c = Type.constructor("Option", params)
+        val arg = TypeArgument(params.head, typeInt)
+        val t = Type.applied(c, arg)
+        t shouldBe Type.Applied(c, NonEmptyVector(arg))
         t.isGround shouldBe true
       }
 
       it("should handle multiple arguments") {
-        val param = TypeParameter.invariant[String]
-        val arg1 = TypeArgument(param, typeInt)
-        val arg2 = TypeArgument(param, typeString)
-        val t = Type.applied("Map", arg1, arg2)
-        t shouldBe Type.Applied("Map", NonEmptyVector(arg1, arg2))
+        val params = NonEmptyVector(TypeParameter.invariant[String], TypeParameter.invariant[String])
+        val c = Type.constructor("Map", params)
+        val arg1 = TypeArgument(params.head, typeInt)
+        val arg2 = TypeArgument(params.last, typeString)
+        val t = Type.applied(c, arg1, arg2)
+        t shouldBe Type.Applied(c, NonEmptyVector(arg1, arg2))
         t.isGround shouldBe true
       }
     }

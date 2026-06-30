@@ -44,7 +44,7 @@ trait StandardTypes {
 
   def CharT: Type.Nominal[TypeId]
 
-  def ConsT: TypeConstructor[TypeId]
+  def ConsT: Type.Constructor[TypeId]
 
   def DoubleT: Type.Nominal[TypeId]
 
@@ -52,11 +52,11 @@ trait StandardTypes {
 
   def IntT: Type.Nominal[TypeId]
 
-  def ListT: TypeConstructor[TypeId]
+  def ListT: Type.Constructor[TypeId]
 
   def LongT: Type.Nominal[TypeId]
 
-  def MapT: TypeConstructor[TypeId]
+  def MapT: Type.Constructor[TypeId]
 
   def NilT: Type.Applied[TypeId]
 
@@ -66,17 +66,17 @@ trait StandardTypes {
 
   def NullT: Type[TypeId]
 
-  def OptionT: TypeConstructor[TypeId]
+  def OptionT: Type.Constructor[TypeId]
 
-  def SetT: TypeConstructor[TypeId]
+  def SetT: Type.Constructor[TypeId]
 
   def ShortT: Type.Nominal[TypeId]
 
-  def SomeT: TypeConstructor[TypeId]
+  def SomeT: Type.Constructor[TypeId]
 
   def StringT: Type.Nominal[TypeId]
 
   def UnitT: Type[TypeId]
 
-  def VectorT: TypeConstructor[TypeId]
+  def VectorT: Type.Constructor[TypeId]
 }

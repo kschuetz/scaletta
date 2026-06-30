@@ -25,10 +25,11 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
 
   def addTypeConstructor(name: QualifiedName.Full,
                          first: TypeParameter[TypeId],
-                         more: TypeParameter[TypeId]*): TypeConstructor[TypeId] = {
-    val (newIndex, id) = nameIndex.intern(name)
+                         more: TypeParameter[TypeId]*): Type.Constructor[TypeId] = {
+    val params = software.kes.scaletta.util.NonEmptyVector(first, more: _*)
+    val (newIndex, id) = nameIndex.internConstructor(name, params)
     nameIndex = newIndex
-    TypeConstructor.create(id, software.kes.scaletta.util.NonEmptyVector(first, more: _*))
+    Type.Constructor(id, params)
   }
 
   def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit = {
@@ -36,21 +37,7 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
     entries += supertype
   }
 
-  def addRelationship(supertype: TypeConstructor[TypeId], subtype: TypeConstructor[TypeId]): Unit = {
-    // For simplicity in this iteration, we treat type constructors as nominal types in the hierarchy
-    // but applying them to variables to represent the general relationship.
-    // This might need refinement in future iterations.
-    val superType = Type.Nominal(supertype.name)
-    val subType = Type.Nominal(subtype.name)
-    addRelationship(superType, subType)
-  }
-
-  def addRelationship(subtype: TypeConstructor[TypeId], supertypeApplication: Type.Applied[TypeId]): Unit = {
-    val subType = Type.Nominal(subtype.name)
-    addRelationship(supertypeApplication, subType)
-  }
-
-  def addTypeAlias(name: QualifiedName.Full, target: Type[TypeId]): Unit = {
+  def addRelationship(name: QualifiedName.Full, target: Type[TypeId]): Unit = {
     nameIndex = nameIndex.addAlias(name, target)
   }
 

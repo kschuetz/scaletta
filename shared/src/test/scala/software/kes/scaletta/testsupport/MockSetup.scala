@@ -66,16 +66,14 @@ object MockSetup {
       def addRefType(name: QualifiedName.Full): Type.Nominal[TypeId] =
         Type.Nominal(getNextTypeId())
 
-      def addTypeConstructor(name: QualifiedName.Full, first: TypeParameter[TypeId], more: TypeParameter[TypeId]*): TypeConstructor[TypeId] =
-        TypeConstructor.create(getNextTypeId(), NonEmptyVector(first, more: _*))
+      def addTypeConstructor(name: QualifiedName.Full, first: TypeParameter[TypeId], more: TypeParameter[TypeId]*): Type.Constructor[TypeId] = {
+        val params = NonEmptyVector(first, more: _*)
+        Type.Constructor(getNextTypeId(), params)
+      }
 
       def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit = ()
 
-      def addRelationship(supertype: TypeConstructor[TypeId], subtype: TypeConstructor[TypeId]): Unit = ()
-
-      def addRelationship(subtype: TypeConstructor[TypeId], supertypeApplication: Type.Applied[TypeId]): Unit = ()
-
-      def addTypeAlias(name: QualifiedName.Full, target: Type[TypeId]): Unit = ()
+      def addRelationship(name: QualifiedName.Full, target: Type[TypeId]): Unit = ()
 
       def registerCoreValueType(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
 

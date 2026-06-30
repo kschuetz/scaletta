@@ -11,10 +11,13 @@ sealed trait ConcreteType[T] extends Type[T]
 object Type {
   def nominal[T](name: T): ConcreteType[T] = Nominal(name)
 
-  def applied[T](constructorName: T,
+  def constructor[T](name: T, parameters: NonEmptyVector[TypeParameter[T]]): ConcreteType[T] =
+    Constructor(name, parameters)
+
+  def applied[T](constructor: Type[T],
                  arg1: TypeArgument[T],
                  moreArgs: TypeArgument[T]*): ConcreteType[T] =
-    Applied(constructorName, NonEmptyVector(arg1, moreArgs: _*))
+    Applied(constructor, NonEmptyVector(arg1, moreArgs: _*))
 
   def function[T](parameters: Type[T]*)
                  (returnType: Type[T]): ConcreteType[T] =
@@ -41,9 +44,14 @@ object Type {
     def isGround: Boolean = true
   }
 
-  case class Applied[T](constructorName: T,
+  case class Constructor[T](name: T,
+                            parameters: NonEmptyVector[TypeParameter[T]]) extends ConcreteType[T] {
+    def isGround: Boolean = true
+  }
+
+  case class Applied[T](constructor: Type[T],
                         arguments: NonEmptyVector[TypeArgument[T]]) extends ConcreteType[T] {
-    def isGround: Boolean = arguments.forall(_.value.isGround)
+    def isGround: Boolean = constructor.isGround && arguments.forall(_.value.isGround)
   }
 
   case class Union[T](types: SetTwoPlus[Type[T]]) extends ConcreteType[T] {

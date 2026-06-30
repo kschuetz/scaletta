@@ -42,6 +42,27 @@ final class TypeNameIndex private(symbolIndex: SymbolIndex[Type[TypeId]],
     symbolIndex.resolve(name, imports)
 
   /**
+   * Registers a type constructor and returns its TypeId.
+   *
+   * @param name       The fully qualified type name to intern.
+   * @param parameters The type parameters for the constructor.
+   * @return A tuple containing the (potentially updated) TypeNameIndex and the TypeId.
+   */
+  def internConstructor(name: QualifiedName.Full,
+                        parameters: software.kes.scaletta.util.NonEmptyVector[software.kes.scaletta.api.TypeParameter[TypeId]]): (TypeNameIndex, TypeId) = {
+    symbolIndex.get(name) match {
+      case Some(Type.Constructor(_, existingParams)) if existingParams == parameters =>
+        val id = TypeId(allNames.indexOf(name))
+        (this, id)
+      case Some(_) => throw new IllegalStateException(s"Name $name is already registered with a different definition")
+      case None =>
+        val id = TypeId(nextId)
+        val entry = Type.Constructor(id, parameters)
+        (new TypeNameIndex(symbolIndex.add(name, entry), allNames :+ name, nextId + 1), id)
+    }
+  }
+
+  /**
    * Registers a nominal type name and returns its TypeId.
    * If the name is already registered as a nominal type, the existing TypeId is returned along with this index.
    * If the name is already registered as an alias, an exception is thrown.

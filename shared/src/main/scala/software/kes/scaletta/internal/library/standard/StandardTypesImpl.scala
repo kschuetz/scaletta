@@ -20,17 +20,17 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.registerCoreValueType(base(names.AnyRefT), CoreTypes.AnyRefT)
 
   val NullT: Type[TypeId] = {
-    registry.addTypeAlias(base(names.NullT), CoreTypes.NullT)
+    registry.addRelationship(base(names.NullT), CoreTypes.NullT)
     CoreTypes.NullT
   }
 
   val NothingT: Type[TypeId] = {
-    registry.addTypeAlias(base(names.NothingT), CoreTypes.NothingT)
+    registry.addRelationship(base(names.NothingT), CoreTypes.NothingT)
     CoreTypes.NothingT
   }
 
   val UnitT: Type[TypeId] = {
-    registry.addTypeAlias(base(names.UnitT), CoreTypes.UnitT)
+    registry.addRelationship(base(names.UnitT), CoreTypes.UnitT)
     CoreTypes.UnitT
   }
 
@@ -61,35 +61,35 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val StringT: Type.Nominal[TypeId] =
     registry.registerCoreRefType(base(names.StringT), CoreTypes.StringT)
 
-  val OptionT: TypeConstructor[TypeId] =
+  val OptionT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(base(names.OptionT), TypeParameter.covariant)
 
-  val SomeT: TypeConstructor[TypeId] =
+  val SomeT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(base(names.SomeT), TypeParameter.covariant)
 
   val NoneT: Type.Applied[TypeId] =
-    OptionT.applyAll(NothingT)
+    TypeConstructor.fromNode(OptionT).applyAll(NothingT)
 
-  val VectorT: TypeConstructor[TypeId] =
+  val VectorT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.VectorT), TypeParameter.covariant)
 
-  val SetT: TypeConstructor[TypeId] =
+  val SetT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.SetT), TypeParameter.covariant)
 
-  val ListT: TypeConstructor[TypeId] =
+  val ListT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.ListT), TypeParameter.covariant)
 
-  val ConsT: TypeConstructor[TypeId] =
+  val ConsT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.ConsT), TypeParameter.covariant)
 
   val NilT: Type.Applied[TypeId] =
-    ListT.applyAll(NothingT)
+    TypeConstructor.fromNode(ListT).applyAll(NothingT)
 
-  val MapT: TypeConstructor[TypeId] =
+  val MapT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
 
-  registry.addRelationship(SomeT, OptionT.applyAll(Type.variable(0)))
-  registry.addRelationship(ConsT, ListT.applyAll(Type.variable(0)))
+  registry.addRelationship(base(names.SomeT), TypeConstructor.fromNode(OptionT).applyAll(Type.variable(0)))
+  registry.addRelationship(collection(names.ConsT), TypeConstructor.fromNode(ListT).applyAll(Type.variable(0)))
 
   private def base(name: Name): QualifiedName.Full =
     Packages.scaletta.qualify(name)
