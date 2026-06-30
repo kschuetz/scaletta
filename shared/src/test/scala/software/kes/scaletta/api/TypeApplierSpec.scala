@@ -37,7 +37,7 @@ class TypeApplierSpec extends AnyFunSpec with Matchers {
     describe("applyAll") {
       it("should return Type.Applied when given the correct number of args") {
         val arg = Type.Nominal("Int")
-        val result = tc.applyAll(arg)
+        val result = tc.applyAll(arg).asInstanceOf[Type.Applied[String]]
         result.constructor shouldBe Type.Constructor(typeName, NonEmptyVector(param))
         result.arguments.head.value shouldBe arg
       }
@@ -45,7 +45,7 @@ class TypeApplierSpec extends AnyFunSpec with Matchers {
       it("should ignore extra arguments") {
         val arg1 = Type.Nominal("Int")
         val arg2 = Type.Nominal("String")
-        val result = tc.applyAll(arg1, arg2)
+        val result = tc.applyAll(arg1, arg2).asInstanceOf[Type.Applied[String]]
         result.arguments.length shouldBe 1
         result.arguments.head.value shouldBe arg1
       }
@@ -62,7 +62,7 @@ class TypeApplierSpec extends AnyFunSpec with Matchers {
     describe("applyAllFromSeq") {
       it("should work correctly with a sequence of arguments") {
         val args = Seq(Type.Nominal("Int"))
-        val result = tc.applyAllFromSeq(args)
+        val result = tc.applyAllFromSeq(args).asInstanceOf[Type.Applied[String]]
         result.constructor shouldBe Type.Constructor(typeName, NonEmptyVector(param))
         result.arguments.head.value shouldBe args.head
       }
@@ -83,7 +83,7 @@ class TypeApplierSpec extends AnyFunSpec with Matchers {
         val result = tc.applyArgs(Type.Nominal("String"))
 
         result shouldBe a[Right[_, _]]
-        val applied = result.toOption.getOrElse(fail("Expected Right"))
+        val applied = result.toOption.getOrElse(fail("Expected Right")).asInstanceOf[Type.Applied[String]]
         applied.constructor shouldBe Type.Constructor(typeName, NonEmptyVector(param))
         applied.arguments.head.value shouldBe Type.Nominal("String")
       }
@@ -105,7 +105,7 @@ class TypeApplierSpec extends AnyFunSpec with Matchers {
 
         val result2 = partialTc.applyArgs(Type.Nominal("String"))
         result2 shouldBe a[Right[_, _]]
-        val applied = result2.toOption.getOrElse(fail("Expected Right"))
+        val applied = result2.toOption.getOrElse(fail("Expected Right")).asInstanceOf[Type.Applied[String]]
         applied.arguments.map(_.value) shouldBe NonEmptyVector(Type.Nominal("Int"), Type.Nominal("String"))
       }
     }

@@ -86,4 +86,32 @@ object Type {
                       paramIndex: Int) extends Type[Nothing] {
     def isGround: Boolean = false
   }
+
+  implicit class TypeOps[T](val self: Type[T]) extends AnyVal {
+    def substitute(arguments: IndexedSeq[Type[T]], scopeIndex: Int = 0): Type[T] = {
+      def go(t: Type[T]): Type[T] = t match {
+        case v: Variable if v.scopeIndex == scopeIndex =>
+          if (v.paramIndex >= 0 && v.paramIndex < arguments.length) arguments(v.paramIndex)
+          else v
+        case Nominal(name) => Nominal(name)
+        case Constructor(name, params) => Constructor(name, params)
+        case a: Applied[T] @unchecked =>
+          Applied[T](go(a.constructor), a.arguments.map(arg => arg.copy(value = go(arg.value))))
+        case Union(types) =>
+          Union(SetTwoPlus.from(types.map(go)))
+        case Intersection(types) =>
+          Intersection(SetTwoPlus.from(types.map(go)))
+        case Function(params, result) =>
+          Function(params.map(go), go(result))
+        case Tuple(elements) =>
+          Tuple(VectorTwoPlus.from(elements.map(go)))
+        case Unit => Unit
+        case BottomRef => BottomRef
+        case Bottom => Bottom
+        case other => other
+      }
+
+      go(self)
+    }
+  }
 }
