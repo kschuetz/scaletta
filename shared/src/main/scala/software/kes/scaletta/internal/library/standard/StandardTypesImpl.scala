@@ -68,7 +68,7 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(base(names.SomeT), TypeParameter.covariant)
 
   val NoneT: Type.Applied[TypeId] =
-    TypeConstructor.fromNode(OptionT).applyAll(NothingT)
+    TypeApplier.fromNode(OptionT).applyAll(NothingT)
 
   val VectorT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.VectorT), TypeParameter.covariant)
@@ -83,13 +83,13 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(collection(names.ConsT), TypeParameter.covariant)
 
   val NilT: Type.Applied[TypeId] =
-    TypeConstructor.fromNode(ListT).applyAll(NothingT)
+    TypeApplier.fromNode(ListT).applyAll(NothingT)
 
   val MapT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
 
-  registry.addRelationship(base(names.SomeT), TypeConstructor.fromNode(OptionT).applyAll(Type.variable(0)))
-  registry.addRelationship(collection(names.ConsT), TypeConstructor.fromNode(ListT).applyAll(Type.variable(0)))
+  registry.addRelationship(base(names.SomeT), TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)))
+  registry.addRelationship(collection(names.ConsT), TypeApplier.fromNode(ListT).applyAll(Type.variable(0)))
 
   private def base(name: Name): QualifiedName.Full =
     Packages.scaletta.qualify(name)

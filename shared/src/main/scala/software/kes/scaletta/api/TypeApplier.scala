@@ -4,18 +4,18 @@ import software.kes.scaletta.util.NonEmptyVector
 
 import scala.annotation.tailrec
 
-object TypeConstructor {
-  def fromNode[T](node: Type.Constructor[T]): TypeConstructor[T] =
-    new TypeConstructor(node.name, node.parameters, Vector.empty)
+object TypeApplier {
+  def fromNode[T](node: Type.Constructor[T]): TypeApplier[T] =
+    new TypeApplier(node.name, node.parameters, Vector.empty)
 
   def create[T](name: T,
-                parameters: NonEmptyVector[TypeParameter[T]]): TypeConstructor[T] =
-    new TypeConstructor(name, parameters, Vector.empty)
+                parameters: NonEmptyVector[TypeParameter[T]]): TypeApplier[T] =
+    new TypeApplier(name, parameters, Vector.empty)
 }
 
-final class TypeConstructor[T] private(val name: T,
-                                       val parameters: software.kes.scaletta.util.NonEmptyVector[TypeParameter[T]],
-                                       private val applied: Vector[TypeArgument[T]]) {
+final class TypeApplier[T] private(val name: T,
+                                   val parameters: software.kes.scaletta.util.NonEmptyVector[TypeParameter[T]],
+                                   private val applied: Vector[TypeArgument[T]]) {
   private def constructorNode: Type.Constructor[T] = Type.Constructor(name, parameters)
   /**
    * Constructs a type from the given arguments.
@@ -43,10 +43,10 @@ final class TypeConstructor[T] private(val name: T,
   /**
    * Applies the given arguments to the type constructor.
    * If all arguments are provided, the resulting type will be returned in a Right.
-   * If not enough arguments are provided, a new partially applied TypeConstructor will be
+   * If not enough arguments are provided, a new partially applied TypeApplier will be
    * returned in a Left.
    */
-  def applyArgs(args: Type[T]*): Either[TypeConstructor[T], Type.Applied[T]] = {
+  def applyArgs(args: Type[T]*): Either[TypeApplier[T], Type.Applied[T]] = {
     val argsIter = args.iterator
     val totalParamsCount = applied.length + parameters.length
 
@@ -54,7 +54,7 @@ final class TypeConstructor[T] private(val name: T,
     builder ++= applied
 
     @tailrec
-    def go(paramIdx: Int): Either[TypeConstructor[T], Type.Applied[T]] = {
+    def go(paramIdx: Int): Either[TypeApplier[T], Type.Applied[T]] = {
       if (paramIdx < totalParamsCount) {
         if (argsIter.hasNext) {
           val param = parameters(paramIdx - applied.length)
@@ -64,7 +64,7 @@ final class TypeConstructor[T] private(val name: T,
         } else {
           // not enough
           val remainingParams = NonEmptyVector.from(parameters.drop(paramIdx - applied.length))
-          Left(new TypeConstructor(name, remainingParams, builder.result()))
+          Left(new TypeApplier(name, remainingParams, builder.result()))
         }
       } else {
         Right(Type.Applied(constructorNode, NonEmptyVector.from(builder.result())))
@@ -77,7 +77,7 @@ final class TypeConstructor[T] private(val name: T,
   def arity: Int = parameters.length
 
   override def equals(other: Any): Boolean = other match {
-    case that: TypeConstructor[T @unchecked] =>
+    case that: TypeApplier[T @unchecked] =>
       name == that.name &&
         parameters == that.parameters &&
         applied == that.applied
@@ -92,5 +92,5 @@ final class TypeConstructor[T] private(val name: T,
   }
 
   override def toString: String =
-    s"TypeConstructor($name, ${parameters.length})"
+    s"TypeApplier($name, ${parameters.length})"
 }
