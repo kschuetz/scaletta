@@ -79,6 +79,14 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       }
     } else {
       (lhs, rhs) match {
+        case (Type.Union(types), _) =>
+          types.forall(t => isSubtype(t, rhs))
+        case (_, Type.Intersection(types)) =>
+          types.forall(t => isSubtype(lhs, t))
+        case (Type.Intersection(types), _) =>
+          types.exists(t => isSubtype(t, rhs))
+        case (_, Type.Union(types)) =>
+          types.exists(t => isSubtype(lhs, t))
         case (Type.Function(p1, r1), Type.Function(p2, r2)) =>
           p1.size == p2.size &&
             p1.zip(p2).forall { case (a, b) => isSubtype(b, a) } && // Contravariant

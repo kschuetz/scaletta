@@ -126,6 +126,71 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Union types") {
+      it("should identify a union as Same as itself") {
+        val u = Type.union(toNominal(ParentA), toNominal(ParentB))
+        hierarchy.relationshipFor(u, u) shouldBe TypeRelationship.Same
+      }
+
+      it("should identify a type as a strict subtype of a union containing it") {
+        val u = Type.union(toNominal(ParentA), toNominal(ParentB))
+        hierarchy.isSubtype(toNominal(ParentA), u) shouldBe true
+        hierarchy.relationshipFor(toNominal(ParentA), u) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should identify a union as a strict supertype of any of its components") {
+        val u = Type.union(toNominal(ParentA), toNominal(ParentB))
+        hierarchy.isSubtype(u, toNominal(ParentA)) shouldBe false
+        hierarchy.relationshipFor(u, toNominal(ParentA)) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should identify a union as a subtype of a wider union") {
+        val unionAB = Type.union(toNominal(ParentA), toNominal(ParentB))
+        val unionABC = Type.union(toNominal(ParentA), toNominal(ParentB), toNominal(Unrelated))
+
+        hierarchy.isSubtype(unionAB, unionABC) shouldBe true
+        hierarchy.relationshipFor(unionAB, unionABC) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should identify a union as a subtype of a common supertype") {
+        val u = Type.union(toNominal(ChildA1), toNominal(ParentA))
+        hierarchy.isSubtype(u, toNominal(Root)) shouldBe true
+      }
+    }
+
+    describe("Intersection types") {
+      it("should identify an intersection as Same as itself") {
+        val i = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        hierarchy.relationshipFor(i, i) shouldBe TypeRelationship.Same
+      }
+
+      it("should identify an intersection as a strict subtype of its components") {
+        val i = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        hierarchy.isSubtype(i, toNominal(ParentA)) shouldBe true
+        hierarchy.relationshipFor(i, toNominal(ParentA)) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should identify a component as a strict supertype of an intersection") {
+        val i = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        hierarchy.isSubtype(toNominal(ParentA), i) shouldBe false
+        hierarchy.relationshipFor(toNominal(ParentA), i) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should identify a narrower intersection as a subtype of a wider intersection") {
+        val iABC = Type.intersection(toNominal(ParentA), toNominal(ParentB), toNominal(Root))
+        val iAB = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        // iABC has more constraints, so it is a subtype of iAB
+        hierarchy.isSubtype(iABC, iAB) shouldBe true
+      }
+
+      it("should handle nested unions and intersections") {
+        val u = Type.union(toNominal(ParentA), toNominal(ParentB))
+        val i = Type.intersection(u, toNominal(Unrelated))
+        hierarchy.isSubtype(i, u) shouldBe true
+        hierarchy.isSubtype(i, toNominal(Unrelated)) shouldBe true
+      }
+    }
+
     describe("Tuple types") {
       it("should be a subtype of itself") {
         val t1 = Type.tuple(toNominal(ParentA), toNominal(ParentB))
