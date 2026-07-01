@@ -51,6 +51,80 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         hierarchy.immediateSupertypes(toNominal(Root)) shouldBe empty
       }
     }
+
+    describe("Function types") {
+      it("should be a subtype of itself") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        hierarchy.isSubtype(f1, f1) shouldBe true
+      }
+
+      it("should be covariant in return type") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ParentA)), toNominal(ParentA))
+        hierarchy.isSubtype(f1, f2) shouldBe true
+        hierarchy.isSubtype(f2, f1) shouldBe false
+      }
+
+      it("should be contravariant in parameter types") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        val f2 = Type.Function(Vector(toNominal(ChildA1)), toNominal(Root))
+        hierarchy.isSubtype(f1, f2) shouldBe true
+        hierarchy.isSubtype(f2, f1) shouldBe false
+      }
+
+      it("should handle mixed variance") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ChildA1)), toNominal(ParentA))
+        hierarchy.isSubtype(f1, f2) shouldBe true
+        hierarchy.isSubtype(f2, f1) shouldBe false
+      }
+
+      it("should handle multiple parameters") {
+        val f1 = Type.Function(Vector(toNominal(ParentA), toNominal(ParentB)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ChildA1), toNominal(ChildB1)), toNominal(ParentA))
+        hierarchy.isSubtype(f1, f2) shouldBe true
+      }
+
+      it("should not be a subtype or supertype for different arity") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        val f2 = Type.Function(Vector(toNominal(ParentA), toNominal(ParentA)), toNominal(Root))
+        hierarchy.isSubtype(f1, f2) shouldBe false
+        hierarchy.isSubtype(f2, f1) shouldBe false
+      }
+
+      it("should be a subtype of Top and TopRef") {
+        val f = Type.Function(Vector(toNominal(Root)), toNominal(Root))
+        hierarchy.isSubtype(f, Type.Top) shouldBe true
+        hierarchy.isSubtype(f, Type.TopRef) shouldBe true
+      }
+
+      it("should not be a subtype of TopValue") {
+        val f = Type.Function(Vector(toNominal(Root)), toNominal(Root))
+        hierarchy.isSubtype(f, Type.TopValue) shouldBe false
+      }
+
+      it("should be a supertype of Bottom") {
+        val f = Type.Function(Vector(toNominal(Root)), toNominal(Root))
+        hierarchy.isSubtype(Type.Bottom, f) shouldBe true
+      }
+
+      it("should be a supertype of BottomRef") {
+        val f = Type.Function(Vector(toNominal(Root)), toNominal(Root))
+        hierarchy.isSubtype(Type.BottomRef, f) shouldBe true
+      }
+
+      it("should correctly identify strict subtyping for functions") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ChildA1)), toNominal(ParentA))
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should correctly identify same relationship for functions") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.Same
+      }
+    }
   }
 
   sealed trait TestType

@@ -78,7 +78,14 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case _ => true
       }
     } else {
-      bfsSubtypeCheck(lhs, rhs)
+      (lhs, rhs) match {
+        case (Type.Function(p1, r1), Type.Function(p2, r2)) =>
+          p1.size == p2.size &&
+            p1.zip(p2).forall { case (a, b) => isSubtype(b, a) } && // Contravariant
+            isSubtype(r1, r2) // Covariant
+        case _ =>
+          bfsSubtypeCheck(lhs, rhs)
+      }
     }
   }
 
