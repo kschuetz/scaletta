@@ -31,13 +31,13 @@ class TopTypeHierarchySpec extends AnyFunSpec with Matchers {
 
     it("should treat value types as subtypes of TopValue") {
       hierarchy.isSubtype(toNominal(ValueType), topValue) shouldBe true
+      hierarchy.isSubtype(unit, topValue) shouldBe true
       hierarchy.isSubtype(bottom, topValue) shouldBe true
       hierarchy.isSubtype(topValue, topValue) shouldBe true
     }
 
     it("should NOT treat reference types as subtypes of TopValue") {
       hierarchy.isSubtype(toNominal(Root), topValue) shouldBe false
-      hierarchy.isSubtype(unit, topValue) shouldBe false
       hierarchy.isSubtype(bottomRef, topValue) shouldBe false
       hierarchy.isSubtype(topRef, topValue) shouldBe false
       hierarchy.isSubtype(Type.function(toNominal(Root))(toNominal(Root)), topValue) shouldBe false
@@ -46,7 +46,6 @@ class TopTypeHierarchySpec extends AnyFunSpec with Matchers {
     it("should treat reference types as subtypes of TopRef") {
       hierarchy.isSubtype(toNominal(Root), topRef) shouldBe true
       hierarchy.isSubtype(toNominal(ParentA), topRef) shouldBe true
-      hierarchy.isSubtype(unit, topRef) shouldBe true
       hierarchy.isSubtype(bottom, topRef) shouldBe true
       hierarchy.isSubtype(bottomRef, topRef) shouldBe true
       hierarchy.isSubtype(topRef, topRef) shouldBe true
@@ -56,6 +55,7 @@ class TopTypeHierarchySpec extends AnyFunSpec with Matchers {
 
     it("should NOT treat value types as subtypes of TopRef") {
       hierarchy.isSubtype(toNominal(ValueType), topRef) shouldBe false
+      hierarchy.isSubtype(unit, topRef) shouldBe false
       hierarchy.isSubtype(topValue, topRef) shouldBe false
     }
 

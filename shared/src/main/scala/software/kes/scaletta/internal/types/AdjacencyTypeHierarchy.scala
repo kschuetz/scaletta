@@ -58,6 +58,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       lhs match {
         case Type.Bottom => true
         case Type.TopValue => true
+        case Type.Unit => true
         case t: Type.Nominal[T] => valueTypes.contains(t)
         case _ => false
       }
@@ -65,7 +66,6 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       lhs match {
         case Type.Bottom | Type.BottomRef | Type.TopRef => true
         case _: Type.Function[T] | _: Type.Tuple[T] => true
-        case Type.Unit => true
         case t: Type.Nominal[T] => !valueTypes.contains(t)
         case _ => false
       }
