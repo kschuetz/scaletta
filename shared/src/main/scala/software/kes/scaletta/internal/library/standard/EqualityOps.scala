@@ -212,6 +212,16 @@ object EqualityOps {
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(shortDouble))
       overloads.addOverload(rhsFloat, BooleanT, booleanResult(shortFloat))
 
+      overloads = registry.overloadRegistryFor(MethodName(ByteT, name))
+      overloads.addOverload(rhsAny, BooleanT, booleanResult(byteAny))
+      overloads.addOverload(rhsInt, BooleanT, booleanResult(byteInt))
+      overloads.addOverload(rhsLong, BooleanT, booleanResult(byteLong))
+      overloads.addOverload(rhsShort, BooleanT, booleanResult(byteShort))
+      overloads.addOverload(rhsByte, BooleanT, booleanResult(byteByte))
+      overloads.addOverload(rhsChar, BooleanT, booleanResult(byteChar))
+      overloads.addOverload(rhsDouble, BooleanT, booleanResult(byteDouble))
+      overloads.addOverload(rhsFloat, BooleanT, booleanResult(byteFloat))
+
       overloads = registry.overloadRegistryFor(MethodName(CharT, name))
       overloads.addOverload(rhsAny, BooleanT, booleanResult(charAny))
       overloads.addOverload(rhsInt, BooleanT, booleanResult(charInt))
