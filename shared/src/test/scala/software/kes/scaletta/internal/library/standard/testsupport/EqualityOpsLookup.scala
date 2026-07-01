@@ -11,7 +11,7 @@ final class EqualityOpsLookup(methodResolver: MethodResolver) {
   val neq: NativeFunctionId = resolve(CoreTypes.AnyT, EqualityOps.neq.name, SignatureQuery.any)
   val refEq: NativeFunctionId = resolve(CoreTypes.AnyRefT, EqualityOps.refEq.name, SignatureQuery.anyRef)
 
-  abstract class MethodBase(typ: Type.Nominal[TypeId], name: Name) {
+  abstract class MethodBase(typ: Type[TypeId], name: Name) {
     val byte: NativeFunctionId = resolve(typ, name, SignatureQuery.byte)
     val char: NativeFunctionId = resolve(typ, name, SignatureQuery.char)
     val double: NativeFunctionId = resolve(typ, name, SignatureQuery.double)
@@ -22,7 +22,7 @@ final class EqualityOpsLookup(methodResolver: MethodResolver) {
     val any: NativeFunctionId = resolve(typ, name, SignatureQuery.any)
   }
 
-  abstract class TypeBase(typ: Type.Nominal[TypeId]) {
+  abstract class TypeBase(typ: Type[TypeId]) {
     object eq extends MethodBase(typ, EqualityOps.eq.name)
 
     object neq extends MethodBase(typ, EqualityOps.neq.name)
@@ -44,7 +44,7 @@ final class EqualityOpsLookup(methodResolver: MethodResolver) {
 
   object string extends TypeBase(CoreTypes.StringT)
 
-  private def resolve(typ: Type.Nominal[TypeId],
+  private def resolve(typ: Type[TypeId],
                       name: Name,
                       signatureQuery: SignatureQuery): NativeFunctionId =
     methodResolver.resolveBestMethod(typ, name, signatureQuery)

@@ -37,7 +37,7 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
     entries += supertype
   }
 
-  def addRelationship(name: QualifiedName.Full, target: Type[TypeId]): Unit = {
+  def addAlias(name: QualifiedName.Full, target: Type[TypeId]): Unit = {
     nameIndex = nameIndex.addAlias(name, target)
   }
 

@@ -3,9 +3,9 @@ package software.kes.scaletta.internal.runtime
 import software.kes.scaletta.api.{Type, TypeId}
 
 object CoreTypes {
-  final val AnyT: Type.Nominal[TypeId] = Type.Nominal(TypeId(1))
-  final val AnyValT: Type.Nominal[TypeId] = Type.Nominal(TypeId(2))
-  final val AnyRefT: Type.Nominal[TypeId] = Type.Nominal(TypeId(3))
+  final val AnyT: Type[TypeId] = Type.Top
+  final val AnyValT: Type[TypeId] = Type.TopValue
+  final val AnyRefT: Type[TypeId] = Type.TopRef
   final val BooleanT: Type.Nominal[TypeId] = Type.Nominal(TypeId(4))
   final val ByteT: Type.Nominal[TypeId] = Type.Nominal(TypeId(5))
   final val CharT: Type.Nominal[TypeId] = Type.Nominal(TypeId(6))

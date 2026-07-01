@@ -34,6 +34,12 @@ object Type {
 
   def unit[T]: ConcreteType[T] = Unit.asInstanceOf[ConcreteType[T]]
 
+  def top[T]: ConcreteType[T] = Top.asInstanceOf[ConcreteType[T]]
+
+  def topValue[T]: ConcreteType[T] = TopValue.asInstanceOf[ConcreteType[T]]
+
+  def topRef[T]: ConcreteType[T] = TopRef.asInstanceOf[ConcreteType[T]]
+
   def bottom[T]: ConcreteType[T] = Bottom.asInstanceOf[ConcreteType[T]]
 
   def bottomRef[T]: ConcreteType[T] = BottomRef.asInstanceOf[ConcreteType[T]]
@@ -74,6 +80,18 @@ object Type {
     def isGround: Boolean = elements.forall(_.isGround)
   }
 
+  case object Top extends ConcreteType[Nothing] {
+    def isGround: Boolean = true
+  }
+
+  case object TopValue extends ConcreteType[Nothing] {
+    def isGround: Boolean = true
+  }
+
+  case object TopRef extends ConcreteType[Nothing] {
+    def isGround: Boolean = true
+  }
+
   case object BottomRef extends ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
@@ -106,6 +124,9 @@ object Type {
         case Tuple(elements) =>
           Tuple(VectorTwoPlus.from(elements.map(go)))
         case Unit => Unit
+        case Top => Top
+        case TopValue => TopValue
+        case TopRef => TopRef
         case BottomRef => BottomRef
         case Bottom => Bottom
         case other => other

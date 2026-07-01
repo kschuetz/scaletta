@@ -73,7 +73,7 @@ object MockSetup {
 
       def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit = ()
 
-      def addRelationship(name: QualifiedName.Full, target: Type[TypeId]): Unit = ()
+      def addAlias(name: QualifiedName.Full, target: Type[TypeId]): Unit = ()
 
       def registerCoreValueType(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
 

@@ -10,27 +10,33 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   import StandardTypes.names
   import software.kes.scaletta.api.Packages
 
-  val AnyT: Type.Nominal[TypeId] =
-    registry.registerCoreValueType(base(names.AnyT), CoreTypes.AnyT)
+  val AnyT: Type[TypeId] = {
+    registry.addAlias(base(names.AnyT), CoreTypes.AnyT)
+    CoreTypes.AnyT
+  }
 
-  val AnyValT: Type.Nominal[TypeId] =
-    registry.registerCoreValueType(base(names.AnyValT), CoreTypes.AnyValT)
+  val AnyValT: Type[TypeId] = {
+    registry.addAlias(base(names.AnyValT), CoreTypes.AnyValT)
+    CoreTypes.AnyValT
+  }
 
-  val AnyRefT: Type.Nominal[TypeId] =
-    registry.registerCoreValueType(base(names.AnyRefT), CoreTypes.AnyRefT)
+  val AnyRefT: Type[TypeId] = {
+    registry.addAlias(base(names.AnyRefT), CoreTypes.AnyRefT)
+    CoreTypes.AnyRefT
+  }
 
   val NullT: Type[TypeId] = {
-    registry.addRelationship(base(names.NullT), CoreTypes.NullT)
+    registry.addAlias(base(names.NullT), CoreTypes.NullT)
     CoreTypes.NullT
   }
 
   val NothingT: Type[TypeId] = {
-    registry.addRelationship(base(names.NothingT), CoreTypes.NothingT)
+    registry.addAlias(base(names.NothingT), CoreTypes.NothingT)
     CoreTypes.NothingT
   }
 
   val UnitT: Type[TypeId] = {
-    registry.addRelationship(base(names.UnitT), CoreTypes.UnitT)
+    registry.addAlias(base(names.UnitT), CoreTypes.UnitT)
     CoreTypes.UnitT
   }
 
@@ -88,8 +94,8 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val MapT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
 
-  registry.addRelationship(base(names.SomeT), TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)))
-  registry.addRelationship(collection(names.ConsT), TypeApplier.fromNode(ListT).applyAll(Type.variable(0)))
+  registry.addAlias(base(names.SomeT), TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)))
+  registry.addAlias(collection(names.ConsT), TypeApplier.fromNode(ListT).applyAll(Type.variable(0)))
 
   private def base(name: Name): QualifiedName.Full =
     Packages.scaletta.qualify(name)

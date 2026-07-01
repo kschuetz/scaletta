@@ -41,13 +41,35 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
   }
 
   def immediateSupertypes(t: Type[T]): Iterable[Type[T]] =
-    supertypes.getOrElse(t, Set.empty)
+    t match {
+      case Type.Top => Iterable.empty
+      case Type.TopValue => Iterable(Type.Top)
+      case Type.TopRef => Iterable(Type.Top)
+      case _ => supertypes.getOrElse(t, Set.empty)
+    }
 
   /**
    * Checks if `lhs` is a subtype of `rhs`.
    */
   def isSubtype(lhs: Type[T], rhs: Type[T]): Boolean = {
-    if (lhs == Type.Bottom) {
+    if (rhs == Type.Top) {
+      true
+    } else if (rhs == Type.TopValue) {
+      lhs match {
+        case Type.Bottom => true
+        case Type.TopValue => true
+        case t: Type.Nominal[T] => valueTypes.contains(t)
+        case _ => false
+      }
+    } else if (rhs == Type.TopRef) {
+      lhs match {
+        case Type.Bottom | Type.BottomRef | Type.TopRef => true
+        case _: Type.Function[T] | _: Type.Tuple[T] => true
+        case Type.Unit => true
+        case t: Type.Nominal[T] => !valueTypes.contains(t)
+        case _ => false
+      }
+    } else if (lhs == Type.Bottom) {
       true
     } else if (lhs == Type.BottomRef) {
       rhs match {
