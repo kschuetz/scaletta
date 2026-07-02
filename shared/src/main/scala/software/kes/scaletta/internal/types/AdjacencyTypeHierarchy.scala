@@ -36,7 +36,15 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     } else if (isSubtype(rhs, lhs)) {
       TypeRelationship.StrictSupertype
     } else {
-      findCommonSupertype(lhs, rhs).fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
+      val common = findCommonSupertype(lhs, rhs)
+      val isC1 = lhs.isInstanceOf[Type.Constructor[_]] || lhs.isInstanceOf[Type.Applied[_]]
+      val isC2 = rhs.isInstanceOf[Type.Constructor[_]] || rhs.isInstanceOf[Type.Applied[_]]
+
+      if (isC1 && isC2) {
+        common.filterNot(_ == Type.Top).fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
+      } else {
+        common.fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
+      }
     }
   }
 
@@ -45,6 +53,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       case Type.Top => Iterable.empty
       case Type.TopValue => Iterable(Type.Top)
       case Type.TopRef => Iterable(Type.Top)
+      case c: Type.Constructor[T] => Iterable(Type.Top)
       case _ => supertypes.getOrElse(t, Set.empty)
     }
 
@@ -65,7 +74,8 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     } else if (rhs == Type.TopRef) {
       lhs match {
         case Type.Bottom | Type.BottomRef | Type.TopRef => true
-        case _: Type.Function[T] | _: Type.Tuple[T] => true
+        case _: Type.Function[T] | _: Type.Tuple[T] | _: Type.Constructor[T] => true
+        case Type.Intersection(types) => types.exists(t => isSubtype(t, rhs))
         case t: Type.Nominal[T] => !valueTypes.contains(t)
         case _ => false
       }
@@ -84,9 +94,9 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case (_, Type.Intersection(types)) =>
           types.forall(t => isSubtype(lhs, t))
         case (Type.Intersection(types), _) =>
-          types.exists(t => isSubtype(t, rhs))
+          types.exists(t => isSubtype(t, rhs)) || bfsSubtypeCheck(lhs, rhs)
         case (_, Type.Union(types)) =>
-          types.exists(t => isSubtype(lhs, t))
+          types.exists(t => isSubtype(lhs, t)) || bfsSubtypeCheck(lhs, rhs)
         case (Type.Function(p1, r1), Type.Function(p2, r2)) =>
           p1.size == p2.size &&
             p1.zip(p2).forall { case (a, b) => isSubtype(b, a) } && // Contravariant
@@ -94,6 +104,8 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case (Type.Tuple(e1), Type.Tuple(e2)) =>
           e1.size == e2.size &&
             e1.zip(e2).forall { case (a, b) => isSubtype(a, b) } // Covariant
+        case (Type.Applied(c1, _), c2: Type.Constructor[T]) =>
+          isSubtype(c1, c2)
         case _ =>
           bfsSubtypeCheck(lhs, rhs)
       }

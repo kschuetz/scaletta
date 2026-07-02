@@ -2,7 +2,8 @@ package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.Type
+import software.kes.scaletta.api.{Type, TypeArgument, TypeParameter}
+import software.kes.scaletta.util.NonEmptyVector
 
 class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
   describe("AdjacencyTypeHierarchy") {
@@ -123,6 +124,40 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
         val f2 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
         hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.Same
+      }
+    }
+
+    describe("Constructor types") {
+      val param = TypeParameter.invariant[TestType]
+      val c1 = Type.constructor(toTestName("C1"), NonEmptyVector(param))
+      val c2 = Type.constructor(toTestName("C2"), NonEmptyVector(param))
+
+      it("should identify identical constructors as Same") {
+        hierarchy.relationshipFor(c1, c1) shouldBe TypeRelationship.Same
+      }
+
+      it("should identify different constructors as Unrelated") {
+        hierarchy.relationshipFor(c1, c2) shouldBe TypeRelationship.Unrelated
+      }
+
+      it("should be a supertype of its applied types") {
+        val applied = Type.applied(c1, TypeArgument(param, toNominal(ParentA)))
+        hierarchy.isSubtype(applied, c1) shouldBe true
+        hierarchy.relationshipFor(applied, c1) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should identify constructor as subtype of Top and TopRef") {
+        hierarchy.isSubtype(c1, Type.Top) shouldBe true
+        hierarchy.isSubtype(c1, Type.TopRef) shouldBe true
+      }
+
+      it("should not be a subtype of TopValue") {
+        hierarchy.isSubtype(c1, Type.TopValue) shouldBe false
+      }
+
+      it("should be a supertype of Bottom and BottomRef") {
+        hierarchy.isSubtype(Type.Bottom, c1) shouldBe true
+        hierarchy.isSubtype(Type.BottomRef, c1) shouldBe true
       }
     }
 
@@ -265,6 +300,10 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
   case object DiamondChild extends TestType
 
   case object Unrelated extends TestType
+
+  case class Other(name: String) extends TestType
+
+  private def toTestName(s: String): TestType = Other(s)
 
   private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
 
