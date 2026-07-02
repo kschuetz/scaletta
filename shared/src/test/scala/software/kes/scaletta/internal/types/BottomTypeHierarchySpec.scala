@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.Type
+import software.kes.scaletta.api.{ProperType, Type}
 
 class BottomTypeHierarchySpec extends AnyFunSpec with Matchers {
   private def bottom: Type[TestType] = Type.bottom[TestType]
@@ -55,8 +55,8 @@ class BottomTypeHierarchySpec extends AnyFunSpec with Matchers {
 
     it("should treat BottomRef as a subtype of non-nominal types") {
       hierarchy.isSubtype(bottomRef, unit) shouldBe true
-      hierarchy.isSubtype(bottomRef, Type.function(toNominal(Root))(toNominal(Root))) shouldBe true
-      hierarchy.isSubtype(bottomRef, Type.tuple(toNominal(Root), toNominal(Root))) shouldBe true
+      hierarchy.isSubtype(bottomRef, Type.function[TestType](toNominal(Root).asInstanceOf[ProperType[TestType]])(toNominal(Root).asInstanceOf[ProperType[TestType]])) shouldBe true
+      hierarchy.isSubtype(bottomRef, Type.tuple[TestType](toNominal(Root).asInstanceOf[ProperType[TestType]], toNominal(Root).asInstanceOf[ProperType[TestType]])) shouldBe true
     }
 
     it("should correctly identify subtypes via isSubtype") {

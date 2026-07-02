@@ -18,14 +18,14 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
 
   def addMethod(methodName: MethodName,
                 parameters: Vector[FormalParameter],
-                returnType: Type[TypeId],
+                returnType: ProperType[TypeId],
                 impl: FunctionImpl): NativeFunctionId = {
     addMultiParamGroupMethod(methodName, ParameterGroup.single(parameters: _*), returnType, impl)
   }
 
   def addMultiParamGroupMethod(methodName: MethodName,
                                paramGroups: Vector[ParameterGroup],
-                               returnType: Type[TypeId],
+                               returnType: ProperType[TypeId],
                                impl: FunctionImpl): NativeFunctionId = {
     val currentSettings = settings
     val receiverParam = methodName.receiverType match {
@@ -62,12 +62,12 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
 
   def overloadRegistryFor(methodName: MethodName): OverloadRegistry = new OverloadRegistry {
     def addOverload(parameters: Vector[FormalParameter],
-                    returnType: Type[TypeId],
+                    returnType: ProperType[TypeId],
                     impl: FunctionImpl): NativeFunctionId =
       addMethod(methodName, parameters, returnType, impl)
 
     def addMultiParamGroupOverload(paramGroups: Vector[ParameterGroup],
-                                   returnType: Type[TypeId],
+                                   returnType: ProperType[TypeId],
                                    impl: FunctionImpl): NativeFunctionId =
       addMultiParamGroupMethod(methodName, paramGroups, returnType, impl)
   }

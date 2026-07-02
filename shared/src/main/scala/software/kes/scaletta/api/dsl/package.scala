@@ -21,7 +21,7 @@ package object dsl {
    * }}}
    */
   implicit class ParameterStringOps(private val name: String) extends AnyVal {
-    def ofType(typ: Type[TypeId]): FormalParameter =
+    def ofType(typ: ProperType[TypeId]): FormalParameter =
       FormalParameter(Name(name), typ, None)
   }
 }

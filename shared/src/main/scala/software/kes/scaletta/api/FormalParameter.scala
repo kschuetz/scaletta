@@ -35,7 +35,7 @@ object FormalParameter {
 }
 
 case class FormalParameter(name: Name,
-                           typ: Type[TypeId],
+                           typ: ProperType[TypeId],
                            default: Option[Any] = None) {
   def withDefault(value: Any): FormalParameter =
     copy(default = Some(value))

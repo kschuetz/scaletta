@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.library.standard
 
-import software.kes.scaletta.api.{Name, Type, TypeId}
+import software.kes.scaletta.api.{Name, ProperType, Type, TypeId}
 
 object StandardTypes {
   object names {
@@ -32,11 +32,11 @@ object StandardTypes {
 }
 
 trait StandardTypes {
-  def AnyRefT: Type[TypeId]
+  def AnyRefT: ProperType[TypeId]
 
-  def AnyT: Type[TypeId]
+  def AnyT: ProperType[TypeId]
 
-  def AnyValT: Type[TypeId]
+  def AnyValT: ProperType[TypeId]
 
   def BooleanT: Type.Nominal[TypeId]
 
@@ -62,9 +62,9 @@ trait StandardTypes {
 
   def NoneT: Type.Applied[TypeId]
 
-  def NothingT: Type[TypeId]
+  def NothingT: ProperType[TypeId]
 
-  def NullT: Type[TypeId]
+  def NullT: ProperType[TypeId]
 
   def OptionT: Type.Constructor[TypeId]
 
@@ -76,7 +76,7 @@ trait StandardTypes {
 
   def StringT: Type.Nominal[TypeId]
 
-  def UnitT: Type[TypeId]
+  def UnitT: ProperType[TypeId]
 
   def VectorT: Type.Constructor[TypeId]
 }

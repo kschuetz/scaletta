@@ -10,32 +10,32 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   import StandardTypes.names
   import software.kes.scaletta.api.Packages
 
-  val AnyT: Type[TypeId] = {
+  val AnyT: ProperType[TypeId] = {
     registry.addAlias(base(names.AnyT), CoreTypes.AnyT)
     CoreTypes.AnyT
   }
 
-  val AnyValT: Type[TypeId] = {
+  val AnyValT: ProperType[TypeId] = {
     registry.addAlias(base(names.AnyValT), CoreTypes.AnyValT)
     CoreTypes.AnyValT
   }
 
-  val AnyRefT: Type[TypeId] = {
+  val AnyRefT: ProperType[TypeId] = {
     registry.addAlias(base(names.AnyRefT), CoreTypes.AnyRefT)
     CoreTypes.AnyRefT
   }
 
-  val NullT: Type[TypeId] = {
+  val NullT: ProperType[TypeId] = {
     registry.addAlias(base(names.NullT), CoreTypes.NullT)
     CoreTypes.NullT
   }
 
-  val NothingT: Type[TypeId] = {
+  val NothingT: ProperType[TypeId] = {
     registry.addAlias(base(names.NothingT), CoreTypes.NothingT)
     CoreTypes.NothingT
   }
 
-  val UnitT: Type[TypeId] = {
+  val UnitT: ProperType[TypeId] = {
     registry.addAlias(base(names.UnitT), CoreTypes.UnitT)
     CoreTypes.UnitT
   }
@@ -95,12 +95,12 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
 
   registry.addRelationship(
-    supertype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)),
-    subtype = TypeApplier.fromNode(SomeT).applyAll(Type.variable(0))
+    supertype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]],
+    subtype = TypeApplier.fromNode(SomeT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]]
   )
   registry.addRelationship(
-    supertype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0)),
-    subtype = TypeApplier.fromNode(ConsT).applyAll(Type.variable(0))
+    supertype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]],
+    subtype = TypeApplier.fromNode(ConsT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]]
   )
 
   private def base(name: Name): QualifiedName.Full =

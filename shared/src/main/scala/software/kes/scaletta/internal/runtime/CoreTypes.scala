@@ -1,11 +1,11 @@
 package software.kes.scaletta.internal.runtime
 
-import software.kes.scaletta.api.{Type, TypeId}
+import software.kes.scaletta.api.{ProperType, Type, TypeId}
 
 object CoreTypes {
-  final val AnyT: Type[TypeId] = Type.Top
-  final val AnyValT: Type[TypeId] = Type.TopValue
-  final val AnyRefT: Type[TypeId] = Type.TopRef
+  final val AnyT: ProperType[TypeId] = Type.top[TypeId]
+  final val AnyValT: ProperType[TypeId] = Type.topValue[TypeId]
+  final val AnyRefT: ProperType[TypeId] = Type.topRef[TypeId]
   final val BooleanT: Type.Nominal[TypeId] = Type.Nominal(TypeId(4))
   final val ByteT: Type.Nominal[TypeId] = Type.Nominal(TypeId(5))
   final val CharT: Type.Nominal[TypeId] = Type.Nominal(TypeId(6))
@@ -16,9 +16,9 @@ object CoreTypes {
   final val ShortT: Type.Nominal[TypeId] = Type.Nominal(TypeId(11))
   final val StringT: Type.Nominal[TypeId] = Type.Nominal(TypeId(12))
 
-  final val UnitT: Type[TypeId] = Type.Unit
-  final val NullT: Type[TypeId] = Type.BottomRef
-  final val NothingT: Type[TypeId] = Type.Bottom
+  final val UnitT: ProperType[TypeId] = Type.unit[TypeId]
+  final val NullT: ProperType[TypeId] = Type.bottomRef[TypeId]
+  final val NothingT: ProperType[TypeId] = Type.bottom[TypeId]
 
   private[scaletta] val Max: Int = StringT.name.value
 }

@@ -109,7 +109,7 @@ class TypeSpec extends AnyFunSpec with Matchers {
         val groundTuple = Type.tuple(typeInt, typeString)
         groundTuple.isGround shouldBe true
 
-        val nonGroundTuple = Type.tuple(typeInt, Type.variable(43))
+        val nonGroundTuple = Type.tuple(typeInt, Type.variable(43).asInstanceOf[ProperType[String]])
         nonGroundTuple.isGround shouldBe false
       }
     }

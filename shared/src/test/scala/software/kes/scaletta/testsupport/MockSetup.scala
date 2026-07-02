@@ -33,17 +33,25 @@ object MockSetup {
     val methodRegistry: MethodRegistry = new MethodRegistry {
       private val settingsStack = SettingsStack.create(MethodRegistry.Settings())
 
-      def addMethod(methodName: MethodName, parameters: Vector[FormalParameter], returnType: Type[TypeId], impl: FunctionImpl): NativeFunctionId =
+      def addMethod(methodName: MethodName,
+                    parameters: Vector[FormalParameter],
+                    returnType: ProperType[TypeId],
+                    impl: FunctionImpl): NativeFunctionId =
         getNextNativeFunctionId()
 
-      def addMultiParamGroupMethod(methodName: MethodName, paramGroups: Vector[ParameterGroup], returnType: Type[TypeId], impl: FunctionImpl): NativeFunctionId =
+      def addMultiParamGroupMethod(methodName: MethodName,
+                                   paramGroups: Vector[ParameterGroup],
+                                   returnType: ProperType[TypeId],
+                                   impl: FunctionImpl): NativeFunctionId =
         getNextNativeFunctionId()
 
       def overloadRegistryFor(methodName: MethodName): OverloadRegistry = new OverloadRegistry {
-        def addOverload(parameters: Vector[FormalParameter], returnType: Type[TypeId], impl: FunctionImpl): NativeFunctionId =
+        def addOverload(parameters: Vector[FormalParameter], returnType: ProperType[TypeId], impl: FunctionImpl): NativeFunctionId =
           getNextNativeFunctionId()
 
-        def addMultiParamGroupOverload(paramGroups: Vector[ParameterGroup], returnType: Type[TypeId], impl: FunctionImpl): NativeFunctionId =
+        def addMultiParamGroupOverload(paramGroups: Vector[ParameterGroup],
+                                       returnType: ProperType[TypeId],
+                                       impl: FunctionImpl): NativeFunctionId =
           getNextNativeFunctionId()
       }
 
@@ -66,7 +74,9 @@ object MockSetup {
       def addRefType(name: QualifiedName.Full): Type.Nominal[TypeId] =
         Type.Nominal(getNextTypeId())
 
-      def addTypeConstructor(name: QualifiedName.Full, first: TypeParameter[TypeId], more: TypeParameter[TypeId]*): Type.Constructor[TypeId] = {
+      def addTypeConstructor(name: QualifiedName.Full,
+                             first: TypeParameter[TypeId],
+                             more: TypeParameter[TypeId]*): Type.Constructor[TypeId] = {
         val params = NonEmptyVector(first, more: _*)
         Type.Constructor(getNextTypeId(), params)
       }

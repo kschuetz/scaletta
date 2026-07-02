@@ -25,14 +25,14 @@ object Type {
                  moreArgs: TypeArgument[T]*): ProperType[T] =
     Applied(constructor, NonEmptyVector(arg1, moreArgs: _*))
 
-  def function[T](parameters: Type[T]*)
-                 (returnType: Type[T]): ProperType[T] =
+  def function[T](parameters: ProperType[T]*)
+                 (returnType: ProperType[T]): ProperType[T] =
     Function(parameters.toVector, returnType)
 
   def intersection[T](t1: ProperType[T], t2: ProperType[T], more: ProperType[T]*): ProperType[T] =
     Intersection(SetTwoPlus(t1, t2, more: _*))
 
-  def tuple[T](t1: Type[T], t2: Type[T], more: Type[T]*): ProperType[T] =
+  def tuple[T](t1: ProperType[T], t2: ProperType[T], more: ProperType[T]*): ProperType[T] =
     Tuple(VectorTwoPlus(t1, t2, more: _*))
 
   def union[T](t1: ProperType[T], t2: ProperType[T], more: ProperType[T]*): ProperType[T] =
@@ -74,7 +74,7 @@ object Type {
     def isGround: Boolean = types.forall(_.isGround)
   }
 
-  case class Function[T](parameters: Vector[Type[T]], result: Type[T]) extends ProperType[T] with ConcreteType[T] {
+  case class Function[T](parameters: Vector[ProperType[T]], result: ProperType[T]) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = parameters.forall(_.isGround) && result.isGround
   }
 
@@ -82,7 +82,7 @@ object Type {
     def isGround: Boolean = true
   }
 
-  case class Tuple[T](elements: VectorTwoPlus[Type[T]]) extends ProperType[T] with ConcreteType[T] {
+  case class Tuple[T](elements: VectorTwoPlus[ProperType[T]]) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = elements.forall(_.isGround)
   }
 
@@ -126,9 +126,9 @@ object Type {
         case i: Intersection[T] @unchecked =>
           Intersection(SetTwoPlus.from(i.types.map(t => go(t).asInstanceOf[ProperType[T]])))
         case Function(params, result) =>
-          Function(params.map(go), go(result))
+          Function(params.map(p => go(p).asInstanceOf[ProperType[T]]), go(result).asInstanceOf[ProperType[T]])
         case Tuple(elements) =>
-          Tuple(VectorTwoPlus.from(elements.map(go)))
+          Tuple(VectorTwoPlus.from(elements.map(e => go(e).asInstanceOf[ProperType[T]])))
         case Unit => Unit
         case Top => Top
         case TopValue => TopValue

@@ -20,12 +20,12 @@ trait MethodRegistry {
    */
   def addMethod(methodName: MethodName,
                 parameters: Vector[FormalParameter],
-                returnType: Type[TypeId],
+                returnType: ProperType[TypeId],
                 impl: FunctionImpl): NativeFunctionId
 
   def addMultiParamGroupMethod(methodName: MethodName,
                                paramGroups: Vector[ParameterGroup],
-                               returnType: Type[TypeId],
+                               returnType: ProperType[TypeId],
                                impl: FunctionImpl): NativeFunctionId
 
   /**
@@ -61,10 +61,10 @@ trait OverloadRegistry {
    * Use [[addMultiParamGroupOverload]] if you need multiple parameter groups.
    */
   def addOverload(parameters: Vector[FormalParameter],
-                  returnType: Type[TypeId],
+                  returnType: ProperType[TypeId],
                   impl: FunctionImpl): NativeFunctionId
 
   def addMultiParamGroupOverload(paramGroups: Vector[ParameterGroup],
-                                 returnType: Type[TypeId],
+                                 returnType: ProperType[TypeId],
                                  impl: FunctionImpl): NativeFunctionId
 }

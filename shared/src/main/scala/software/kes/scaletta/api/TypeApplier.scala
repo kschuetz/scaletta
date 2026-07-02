@@ -34,7 +34,7 @@ final class TypeApplier[T] private(val target: Type[T],
    *
    * Use [[applyArgs]] instead if you want to partially apply arguments.
    */
-  def applyAll(args: Type[T]*): ConcreteType[T] = applyAllFromSeq(args)
+  def applyAll(args: Type[T]*): Type[T] = applyAllFromSeq(args)
 
   /**
    * Constructs a type from the given arguments.
@@ -43,7 +43,7 @@ final class TypeApplier[T] private(val target: Type[T],
    *
    * Use [[applyArgs]] instead if you want to partially apply arguments.
    */
-  def applyAllFromSeq(args: Seq[Type[T]]): ConcreteType[T] =
+  def applyAllFromSeq(args: Seq[Type[T]]): Type[T] =
     applyArgs(args: _*) match {
       case Right(result) => result
       case Left(tc) =>
@@ -56,7 +56,7 @@ final class TypeApplier[T] private(val target: Type[T],
    * If not enough arguments are provided, a new partially applied TypeApplier will be
    * returned in a Left.
    */
-  def applyArgs(args: Type[T]*): Either[TypeApplier[T], ConcreteType[T]] = {
+  def applyArgs(args: Type[T]*): Either[TypeApplier[T], Type[T]] = {
     val argsIter = args.iterator
     val totalParamsCount = applied.length + parameters.length
 
@@ -64,7 +64,7 @@ final class TypeApplier[T] private(val target: Type[T],
     builder ++= applied
 
     @tailrec
-    def go(paramIdx: Int): Either[TypeApplier[T], ConcreteType[T]] = {
+    def go(paramIdx: Int): Either[TypeApplier[T], Type[T]] = {
       if (paramIdx < totalParamsCount) {
         if (argsIter.hasNext) {
           val param = parameters(paramIdx - applied.length)
@@ -79,15 +79,11 @@ final class TypeApplier[T] private(val target: Type[T],
       } else {
         val arguments = builder.result()
         val argValues = arguments.map(_.value)
-        val result = target match {
+        val result: Type[T] = target match {
           case Type.Constructor(_, _) =>
             Type.Applied(target, NonEmptyVector.from(arguments))
           case _ =>
-            target.substitute(argValues) match {
-              case ct: ConcreteType[T @unchecked] => ct
-              case _ =>
-                Type.Applied(target, NonEmptyVector.from(arguments))
-            }
+            target.substitute(argValues)
         }
         Right(result)
       }
