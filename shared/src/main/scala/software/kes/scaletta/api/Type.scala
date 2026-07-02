@@ -8,95 +8,101 @@ sealed trait Type[+T] {
 
 sealed trait ConcreteType[T] extends Type[T]
 
-object Type {
-  def nominal[T](name: T): ConcreteType[T] = Nominal(name)
+/** A type that can have value-level inhabitants. */
+sealed trait ProperType[T] extends ConcreteType[T]
 
-  def constructor[T](name: T, parameters: NonEmptyVector[TypeParameter[T]]): ConcreteType[T] =
+/** A type-level function that requires application to produce a [[ProperType]]. */
+sealed trait TypeConstructor[T] extends ConcreteType[T]
+
+object Type {
+  def nominal[T](name: T): ProperType[T] = Nominal(name)
+
+  def constructor[T](name: T, parameters: NonEmptyVector[TypeParameter[T]]): TypeConstructor[T] =
     Constructor(name, parameters)
 
   def applied[T](constructor: Type[T],
                  arg1: TypeArgument[T],
-                 moreArgs: TypeArgument[T]*): ConcreteType[T] =
+                 moreArgs: TypeArgument[T]*): ProperType[T] =
     Applied(constructor, NonEmptyVector(arg1, moreArgs: _*))
 
   def function[T](parameters: Type[T]*)
-                 (returnType: Type[T]): ConcreteType[T] =
+                 (returnType: Type[T]): ProperType[T] =
     Function(parameters.toVector, returnType)
 
-  def intersection[T](t1: Type[T], t2: Type[T], more: Type[T]*): ConcreteType[T] =
+  def intersection[T](t1: ProperType[T], t2: ProperType[T], more: ProperType[T]*): ProperType[T] =
     Intersection(SetTwoPlus(t1, t2, more: _*))
 
-  def tuple[T](t1: Type[T], t2: Type[T], more: Type[T]*): ConcreteType[T] =
+  def tuple[T](t1: Type[T], t2: Type[T], more: Type[T]*): ProperType[T] =
     Tuple(VectorTwoPlus(t1, t2, more: _*))
 
-  def union[T](t1: Type[T], t2: Type[T], more: Type[T]*): ConcreteType[T] =
+  def union[T](t1: ProperType[T], t2: ProperType[T], more: ProperType[T]*): ProperType[T] =
     Union(SetTwoPlus(t1, t2, more: _*))
 
-  def unit[T]: ConcreteType[T] = Unit.asInstanceOf[ConcreteType[T]]
+  def unit[T]: ProperType[T] = Unit.asInstanceOf[ProperType[T]]
 
-  def top[T]: ConcreteType[T] = Top.asInstanceOf[ConcreteType[T]]
+  def top[T]: ProperType[T] = Top.asInstanceOf[ProperType[T]]
 
-  def topValue[T]: ConcreteType[T] = TopValue.asInstanceOf[ConcreteType[T]]
+  def topValue[T]: ProperType[T] = TopValue.asInstanceOf[ProperType[T]]
 
-  def topRef[T]: ConcreteType[T] = TopRef.asInstanceOf[ConcreteType[T]]
+  def topRef[T]: ProperType[T] = TopRef.asInstanceOf[ProperType[T]]
 
-  def bottom[T]: ConcreteType[T] = Bottom.asInstanceOf[ConcreteType[T]]
+  def bottom[T]: ProperType[T] = Bottom.asInstanceOf[ProperType[T]]
 
-  def bottomRef[T]: ConcreteType[T] = BottomRef.asInstanceOf[ConcreteType[T]]
+  def bottomRef[T]: ProperType[T] = BottomRef.asInstanceOf[ProperType[T]]
 
   def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 
-  case class Nominal[T](name: T) extends ConcreteType[T] {
+  case class Nominal[T](name: T) extends ProperType[T] {
     def isGround: Boolean = true
   }
 
   case class Constructor[T](name: T,
-                            parameters: NonEmptyVector[TypeParameter[T]]) extends ConcreteType[T] {
+                            parameters: NonEmptyVector[TypeParameter[T]]) extends TypeConstructor[T] {
     def isGround: Boolean = true
   }
 
   case class Applied[T](constructor: Type[T],
-                        arguments: NonEmptyVector[TypeArgument[T]]) extends ConcreteType[T] {
+                        arguments: NonEmptyVector[TypeArgument[T]]) extends ProperType[T] {
     def isGround: Boolean = constructor.isGround && arguments.forall(_.value.isGround)
   }
 
-  case class Union[T](types: SetTwoPlus[Type[T]]) extends ConcreteType[T] {
+  case class Union[T](types: SetTwoPlus[ProperType[T]]) extends ProperType[T] {
     def isGround: Boolean = types.forall(_.isGround)
   }
 
-  case class Intersection[T](types: SetTwoPlus[Type[T]]) extends ConcreteType[T] {
+  case class Intersection[T](types: SetTwoPlus[ProperType[T]]) extends ProperType[T] {
     def isGround: Boolean = types.forall(_.isGround)
   }
 
-  case class Function[T](parameters: Vector[Type[T]], result: Type[T]) extends ConcreteType[T] {
+  case class Function[T](parameters: Vector[Type[T]], result: Type[T]) extends ProperType[T] {
     def isGround: Boolean = parameters.forall(_.isGround) && result.isGround
   }
 
-  case object Unit extends ConcreteType[Nothing] {
+  case object Unit extends ProperType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case class Tuple[T](elements: VectorTwoPlus[Type[T]]) extends ConcreteType[T] {
+  case class Tuple[T](elements: VectorTwoPlus[Type[T]]) extends ProperType[T] {
     def isGround: Boolean = elements.forall(_.isGround)
   }
 
-  case object Top extends ConcreteType[Nothing] {
+  case object Top extends ProperType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object TopValue extends ConcreteType[Nothing] {
+  case object TopValue extends ProperType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object TopRef extends ConcreteType[Nothing] {
+  case object TopRef extends ProperType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object BottomRef extends ConcreteType[Nothing] {
+  case object BottomRef extends ProperType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object Bottom extends ConcreteType[Nothing] {
+  case object Bottom extends ProperType[Nothing] {
     def isGround: Boolean = true
   }
 
@@ -115,10 +121,10 @@ object Type {
         case Constructor(name, params) => Constructor(name, params)
         case a: Applied[T] @unchecked =>
           Applied[T](go(a.constructor), a.arguments.map(arg => arg.copy(value = go(arg.value))))
-        case Union(types) =>
-          Union(SetTwoPlus.from(types.map(go)))
-        case Intersection(types) =>
-          Intersection(SetTwoPlus.from(types.map(go)))
+        case u: Union[T] @unchecked =>
+          Union(SetTwoPlus.from(u.types.map(t => go(t).asInstanceOf[ProperType[T]])))
+        case i: Intersection[T] @unchecked =>
+          Intersection(SetTwoPlus.from(i.types.map(t => go(t).asInstanceOf[ProperType[T]])))
         case Function(params, result) =>
           Function(params.map(go), go(result))
         case Tuple(elements) =>

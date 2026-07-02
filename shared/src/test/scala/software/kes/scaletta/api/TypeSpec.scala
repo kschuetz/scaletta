@@ -113,5 +113,51 @@ class TypeSpec extends AnyFunSpec with Matchers {
         nonGroundTuple.isGround shouldBe false
       }
     }
+
+    describe("ProperType and TypeConstructor") {
+      it("should identify Nominal types as ProperType") {
+        typeInt shouldBe a[ProperType[_]]
+      }
+
+      it("should identify Applied types as ProperType") {
+        val params = NonEmptyVector(TypeParameter.invariant[String])
+        val c = Type.constructor("Option", params)
+        val arg = TypeArgument(params.head, typeInt)
+        val t = Type.applied(c, arg)
+        t shouldBe a[ProperType[_]]
+      }
+
+      it("should identify Function types as ProperType") {
+        val t = Type.function(typeInt)(typeString)
+        t shouldBe a[ProperType[_]]
+      }
+
+      it("should identify Union and Intersection types as ProperType") {
+        val u = Type.union(typeInt, typeString)
+        val i = Type.intersection(typeInt, typeString)
+        u shouldBe a[ProperType[_]]
+        i shouldBe a[ProperType[_]]
+      }
+
+      it("should identify Constructor types as TypeConstructor") {
+        val params = NonEmptyVector(TypeParameter.invariant[String])
+        val c = Type.constructor("Option", params)
+        c shouldBe a[TypeConstructor[_]]
+        c should not be a[ProperType[_]]
+      }
+
+      it("should NOT allow TypeConstructor in Union or Intersection") {
+        val params = NonEmptyVector(TypeParameter.invariant[String])
+        val c = Type.constructor("Option", params)
+
+        // The following lines would fail to compile if uncommented:
+        // Type.union(typeInt, c)
+        // Type.intersection(typeInt, c)
+
+        // We can check the type signature of the factory methods
+        "Type.union(typeInt, typeString)" should compile
+        "val params = software.kes.scaletta.util.NonEmptyVector(software.kes.scaletta.api.TypeParameter.invariant[String]); val c = Type.constructor(\"Option\", params); Type.union(Type.nominal(\"Int\"), c)" shouldNot compile
+      }
+    }
   }
 }

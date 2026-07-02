@@ -2,20 +2,20 @@ package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{ConcreteType, Type}
+import software.kes.scaletta.api.{ProperType, Type}
 
 class TopTypeHierarchySpec extends AnyFunSpec with Matchers {
-  private def top: ConcreteType[TestType] = Type.top[TestType]
+  private def top: ProperType[TestType] = Type.top[TestType]
 
-  private def topValue: ConcreteType[TestType] = Type.topValue[TestType]
+  private def topValue: ProperType[TestType] = Type.topValue[TestType]
 
-  private def topRef: ConcreteType[TestType] = Type.topRef[TestType]
+  private def topRef: ProperType[TestType] = Type.topRef[TestType]
 
-  private def bottom: ConcreteType[TestType] = Type.bottom[TestType]
+  private def bottom: ProperType[TestType] = Type.bottom[TestType]
 
-  private def bottomRef: ConcreteType[TestType] = Type.bottomRef[TestType]
+  private def bottomRef: ProperType[TestType] = Type.bottomRef[TestType]
 
-  private def unit: ConcreteType[TestType] = Type.unit[TestType]
+  private def unit: ProperType[TestType] = Type.unit[TestType]
 
   describe("AdjacencyTypeHierarchy with Top types") {
     it("should treat all types as subtypes of Top") {
@@ -81,7 +81,7 @@ class TopTypeHierarchySpec extends AnyFunSpec with Matchers {
 
   case object ValueType extends TestType
 
-  private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
+  private def toNominal(t: TestType): ProperType[TestType] = Type.Nominal(t)
 
   private lazy val hierarchyMap: Map[Type[TestType], Set[Type[TestType]]] = Map(
     toNominal(ParentA) -> Set(toNominal(Root))

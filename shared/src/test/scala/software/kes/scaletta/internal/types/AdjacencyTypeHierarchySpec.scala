@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{Type, TypeArgument, TypeParameter}
+import software.kes.scaletta.api.{ProperType, Type, TypeArgument, TypeParameter}
 import software.kes.scaletta.util.NonEmptyVector
 
 class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
@@ -305,7 +305,7 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
 
   private def toTestName(s: String): TestType = Other(s)
 
-  private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
+  private def toNominal(t: TestType): ProperType[TestType] = Type.Nominal(t)
 
   private lazy val hierarchyMap: Map[Type[TestType], Set[Type[TestType]]] = Map(
     toNominal(DiamondChild) -> Set(toNominal(ChildA1), toNominal(ChildB1)),
