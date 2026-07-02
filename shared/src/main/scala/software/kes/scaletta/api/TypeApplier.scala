@@ -34,7 +34,7 @@ final class TypeApplier[T] private(val target: Type[T],
    *
    * Use [[applyArgs]] instead if you want to partially apply arguments.
    */
-  def applyAll(args: Type[T]*): Type[T] = applyAllFromSeq(args)
+  def applyAll(args: Type[T]*): ProperType[T] = applyAllFromSeq(args)
 
   /**
    * Constructs a type from the given arguments.
@@ -43,9 +43,9 @@ final class TypeApplier[T] private(val target: Type[T],
    *
    * Use [[applyArgs]] instead if you want to partially apply arguments.
    */
-  def applyAllFromSeq(args: Seq[Type[T]]): Type[T] =
+  def applyAllFromSeq(args: Seq[Type[T]]): ProperType[T] =
     applyArgs(args: _*) match {
-      case Right(result) => result
+      case Right(result) => result.asInstanceOf[ProperType[T]]
       case Left(tc) =>
         throw new IllegalArgumentException(s"Not enough arguments to construct type (${tc.arity} more needed)")
     }

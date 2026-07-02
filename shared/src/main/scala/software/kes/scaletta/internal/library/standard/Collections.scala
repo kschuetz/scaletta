@@ -12,8 +12,8 @@ object Collections {
       val registry = setup.methodRegistry
 
       def registerMethods(constructor: Type.Constructor[TypeId], base: IterableBase): Unit = {
-        val typeA: ProperType[TypeId] = Type.variable(0).asInstanceOf[ProperType[TypeId]]
-        val typeB: ProperType[TypeId] = Type.variable(1).asInstanceOf[ProperType[TypeId]]
+        val typeA = Type.variable(0)
+        val typeB = Type.variable(1)
 
         val receiverType = ReceiverType.instance(Type.Nominal(constructor.name))
         val tc = TypeApplier.fromNode(constructor)
@@ -22,7 +22,7 @@ object Collections {
         registry.addMethod(
           MethodName(receiverType, Name("map")),
           Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(typeB))),
-          tc.applyAll(typeB).asInstanceOf[ProperType[TypeId]],
+          tc.applyAll(typeB),
           FunctionImpl.higherOrder(base.mapImpl)
         )
 
@@ -30,7 +30,7 @@ object Collections {
         registry.addMethod(
           MethodName(receiverType, Name("filter")),
           Vector(FormalParameter(Name("p"), Type.function[TypeId](typeA)(st.BooleanT))),
-          tc.applyAll(typeA).asInstanceOf[ProperType[TypeId]],
+          tc.applyAll(typeA),
           FunctionImpl.higherOrder(base.filterImpl)
         )
       }

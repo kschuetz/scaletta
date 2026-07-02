@@ -6,10 +6,10 @@ sealed trait Type[+T] {
   def isGround: Boolean
 }
 
-sealed trait ConcreteType[T] extends Type[T]
+sealed trait ConcreteType[+T] extends Type[T]
 
 /** A type that can have value-level inhabitants. */
-sealed trait ProperType[T] extends Type[T]
+sealed trait ProperType[+T] extends Type[T]
 
 /** A type-level function that requires application to produce a [[ProperType]]. */
 sealed trait TypeConstructor[T] extends ConcreteType[T]
@@ -38,17 +38,17 @@ object Type {
   def union[T](t1: ProperType[T], t2: ProperType[T], more: ProperType[T]*): ProperType[T] =
     Union(SetTwoPlus(t1, t2, more: _*))
 
-  def unit[T]: ProperType[T] = Unit.asInstanceOf[ProperType[T]]
+  def unit[T]: ProperType[T] = Unit
 
-  def top[T]: ProperType[T] = Top.asInstanceOf[ProperType[T]]
+  def top[T]: ProperType[T] = Top
 
-  def topValue[T]: ProperType[T] = TopValue.asInstanceOf[ProperType[T]]
+  def topValue[T]: ProperType[T] = TopValue
 
-  def topRef[T]: ProperType[T] = TopRef.asInstanceOf[ProperType[T]]
+  def topRef[T]: ProperType[T] = TopRef
 
-  def bottom[T]: ProperType[T] = Bottom.asInstanceOf[ProperType[T]]
+  def bottom[T]: ProperType[T] = Bottom
 
-  def bottomRef[T]: ProperType[T] = BottomRef.asInstanceOf[ProperType[T]]
+  def bottomRef[T]: ProperType[T] = BottomRef
 
   def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 
@@ -119,11 +119,11 @@ object Type {
           else v
         case Nominal(name) => Nominal(name)
         case Constructor(name, params) => Constructor(name, params)
-        case a: Applied[T] @unchecked =>
+        case a: Applied[T] =>
           Applied[T](go(a.constructor), a.arguments.map(arg => arg.copy(value = go(arg.value))))
-        case u: Union[T] @unchecked =>
+        case u: Union[T] =>
           Union(SetTwoPlus.from(u.types.map(t => go(t).asInstanceOf[ProperType[T]])))
-        case i: Intersection[T] @unchecked =>
+        case i: Intersection[T] =>
           Intersection(SetTwoPlus.from(i.types.map(t => go(t).asInstanceOf[ProperType[T]])))
         case Function(params, result) =>
           Function(params.map(p => go(p).asInstanceOf[ProperType[T]]), go(result).asInstanceOf[ProperType[T]])

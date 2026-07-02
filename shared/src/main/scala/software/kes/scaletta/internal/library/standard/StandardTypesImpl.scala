@@ -95,12 +95,12 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
 
   registry.addRelationship(
-    supertype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]],
-    subtype = TypeApplier.fromNode(SomeT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]]
+    supertype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)),
+    subtype = TypeApplier.fromNode(SomeT).applyAll(Type.variable(0))
   )
   registry.addRelationship(
-    supertype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]],
-    subtype = TypeApplier.fromNode(ConsT).applyAll(Type.variable(0)).asInstanceOf[ProperType[TypeId]]
+    supertype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0)),
+    subtype = TypeApplier.fromNode(ConsT).applyAll(Type.variable(0))
   )
 
   private def base(name: Name): QualifiedName.Full =

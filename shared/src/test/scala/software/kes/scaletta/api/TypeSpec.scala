@@ -56,30 +56,42 @@ class TypeSpec extends AnyFunSpec with Matchers {
     describe("intersection") {
       it("should create an Intersection type") {
         val t = Type.intersection(typeInt, typeString)
-        t shouldBe a[Type.Intersection[_]]
-        t.asInstanceOf[Type.Intersection[String]].types should contain allOf(typeInt, typeString)
+        t match {
+          case i: Type.Intersection[_] =>
+            i.types should contain allOf(typeInt, typeString)
+          case _ => fail("Expected an Intersection type")
+        }
         t.isGround shouldBe true
       }
 
       it("should handle more than two types") {
         val t = Type.intersection(typeInt, typeString, typeBoolean)
-        t shouldBe a[Type.Intersection[_]]
-        t.asInstanceOf[Type.Intersection[String]].types should contain allOf(typeInt, typeString, typeBoolean)
+        t match {
+          case i: Type.Intersection[_] =>
+            i.types should contain allOf(typeInt, typeString, typeBoolean)
+          case _ => fail("Expected an Intersection type")
+        }
       }
     }
 
     describe("union") {
       it("should create a Union type") {
         val t = Type.union(typeInt, typeString)
-        t shouldBe a[Type.Union[_]]
-        t.asInstanceOf[Type.Union[String]].types should contain allOf(typeInt, typeString)
+        t match {
+          case u: Type.Union[_] =>
+            u.types should contain allOf(typeInt, typeString)
+          case _ => fail("Expected a Union type")
+        }
         t.isGround shouldBe true
       }
 
       it("should handle more than two types") {
         val t = Type.union(typeInt, typeString, typeBoolean)
-        t shouldBe a[Type.Union[_]]
-        t.asInstanceOf[Type.Union[String]].types should contain allOf(typeInt, typeString, typeBoolean)
+        t match {
+          case u: Type.Union[_] =>
+            u.types should contain allOf(typeInt, typeString, typeBoolean)
+          case _ => fail("Expected a Union type")
+        }
       }
     }
 
@@ -94,22 +106,28 @@ class TypeSpec extends AnyFunSpec with Matchers {
     describe("tuple") {
       it("should create a Tuple type") {
         val t = Type.tuple(typeInt, typeString)
-        t shouldBe a[Type.Tuple[_]]
-        t.asInstanceOf[Type.Tuple[String]].elements.toVector shouldBe Vector(typeInt, typeString)
+        t match {
+          case tu: Type.Tuple[_] =>
+            tu.elements.toVector shouldBe Vector(typeInt, typeString)
+          case _ => fail("Expected a Tuple type")
+        }
         t.isGround shouldBe true
       }
 
       it("should handle more than two elements") {
         val t = Type.tuple(typeInt, typeString, typeBoolean)
-        t shouldBe a[Type.Tuple[_]]
-        t.asInstanceOf[Type.Tuple[String]].elements.toVector shouldBe Vector(typeInt, typeString, typeBoolean)
+        t match {
+          case tu: Type.Tuple[_] =>
+            tu.elements.toVector shouldBe Vector(typeInt, typeString, typeBoolean)
+          case _ => fail("Expected a Tuple type")
+        }
       }
 
       it("should be ground only if all elements are ground") {
         val groundTuple = Type.tuple(typeInt, typeString)
         groundTuple.isGround shouldBe true
 
-        val nonGroundTuple = Type.tuple(typeInt, Type.variable(43).asInstanceOf[ProperType[String]])
+        val nonGroundTuple = Type.tuple(typeInt, Type.variable(43))
         nonGroundTuple.isGround shouldBe false
       }
     }

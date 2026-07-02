@@ -55,8 +55,8 @@ class BottomTypeHierarchySpec extends AnyFunSpec with Matchers {
 
     it("should treat BottomRef as a subtype of non-nominal types") {
       hierarchy.isSubtype(bottomRef, unit) shouldBe true
-      hierarchy.isSubtype(bottomRef, Type.function[TestType](toNominal(Root).asInstanceOf[ProperType[TestType]])(toNominal(Root).asInstanceOf[ProperType[TestType]])) shouldBe true
-      hierarchy.isSubtype(bottomRef, Type.tuple[TestType](toNominal(Root).asInstanceOf[ProperType[TestType]], toNominal(Root).asInstanceOf[ProperType[TestType]])) shouldBe true
+      hierarchy.isSubtype(bottomRef, Type.function[TestType](toNominal(Root))(toNominal(Root))) shouldBe true
+      hierarchy.isSubtype(bottomRef, Type.tuple[TestType](toNominal(Root), toNominal(Root))) shouldBe true
     }
 
     it("should correctly identify subtypes via isSubtype") {
@@ -80,7 +80,7 @@ class BottomTypeHierarchySpec extends AnyFunSpec with Matchers {
 
   case object Unrelated extends TestType
 
-  private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
+  private def toNominal(t: TestType): ProperType[TestType] = Type.Nominal(t)
 
   private lazy val hierarchyMap: Map[Type[TestType], Set[Type[TestType]]] = Map(
     toNominal(ChildA1) -> Set(toNominal(ParentA)),
