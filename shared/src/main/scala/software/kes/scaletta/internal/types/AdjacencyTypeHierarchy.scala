@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.types
 
-import software.kes.scaletta.api.Type
+import software.kes.scaletta.api.{Type, Variance}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
@@ -41,7 +41,11 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       val isC2 = rhs.isInstanceOf[Type.Constructor[_]] || rhs.isInstanceOf[Type.Applied[_]]
 
       if (isC1 && isC2) {
-        common.filterNot(_ == Type.Top).fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
+        val filtered = common.filterNot {
+          case Type.Top | _: Type.Constructor[_] => true
+          case _ => false
+        }
+        filtered.fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
       } else {
         common.fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
       }
@@ -53,7 +57,14 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       case Type.Top => Iterable.empty
       case Type.TopValue => Iterable(Type.Top)
       case Type.TopRef => Iterable(Type.Top)
-      case c: Type.Constructor[T] => Iterable(Type.Top)
+      case _: Type.Constructor[T] => Iterable(Type.Top)
+      case a: Type.Applied[T] =>
+        val constructorSupertypes = supertypes.getOrElse(a.constructor, Set.empty)
+        val fromApplied = constructorSupertypes.collect {
+          case c: Type.Constructor[T] => Type.Applied(c, a.arguments)
+          case other => other.substitute(a.arguments.map(_.value))
+        }
+        fromApplied ++ Iterable(a.constructor) ++ supertypes.getOrElse(a, Set.empty)
       case _ => supertypes.getOrElse(t, Set.empty)
     }
 
@@ -105,6 +116,21 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case (Type.Tuple(e1), Type.Tuple(e2)) =>
           e1.size == e2.size &&
             e1.zip(e2).forall { case (a, b) => isSubtype(a, b) } // Covariant
+        case (a1: Type.Applied[T] @unchecked, a2: Type.Applied[T] @unchecked) =>
+          if (a1.constructor == a2.constructor && a1.arguments.size == a2.arguments.size) {
+            a1.arguments.toVector.zip(a2.arguments.toVector).forall {
+              case (arg1, arg2) =>
+                arg2.parameter.variance match {
+                  case Variance.Invariant => arg1.value == arg2.value
+                  case Variance.Covariant => isSubtype(arg1.value, arg2.value)
+                  case Variance.Contravariant => isSubtype(arg2.value, arg1.value)
+                }
+            }
+          } else {
+            bfsSubtypeCheck(a1, a2)
+          }
+        case (a1: Type.Applied[T] @unchecked, a2: Type[T]) if !a2.isInstanceOf[Type.Applied[_]] =>
+          bfsSubtypeCheck(a1, a2)
         case (a: Type.Applied[T] @unchecked, c2: Type.Constructor[T] @unchecked) =>
           isSubtype(a.constructor, c2)
         case _ =>

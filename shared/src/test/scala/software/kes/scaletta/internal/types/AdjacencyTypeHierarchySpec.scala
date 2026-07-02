@@ -161,6 +161,85 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Applied types") {
+      val invariantParam = TypeParameter.invariant[TestType]
+      val covariantParam = TypeParameter.covariant[TestType]
+      val contravariantParam = TypeParameter.contravariant[TestType]
+
+      val boxC = Type.constructor(toTestName("Box"), NonEmptyVector(invariantParam))
+      val listC = Type.constructor(toTestName("List"), NonEmptyVector(covariantParam))
+      val writerC = Type.constructor(toTestName("Writer"), NonEmptyVector(contravariantParam))
+
+      it("should identify identical applied types as Same") {
+        val listInt = Type.applied(listC, TypeArgument(covariantParam, toNominal(ChildA1)))
+        hierarchy.relationshipFor(listInt, listInt) shouldBe TypeRelationship.Same
+      }
+
+      it("should respect covariance") {
+        val listChild = Type.applied(listC, TypeArgument(covariantParam, toNominal(ChildA1)))
+        val listParent = Type.applied(listC, TypeArgument(covariantParam, toNominal(ParentA)))
+        hierarchy.isSubtype(listChild, listParent) shouldBe true
+        hierarchy.isSubtype(listParent, listChild) shouldBe false
+        hierarchy.relationshipFor(listChild, listParent) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should respect contravariance") {
+        val writerChild = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ChildA1)))
+        val writerParent = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ParentA)))
+        hierarchy.isSubtype(writerParent, writerChild) shouldBe true
+        hierarchy.isSubtype(writerChild, writerParent) shouldBe false
+        hierarchy.relationshipFor(writerParent, writerChild) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should respect invariance") {
+        val boxChild = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ChildA1)))
+        val boxParent = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ParentA)))
+        hierarchy.isSubtype(boxChild, boxParent) shouldBe false
+        hierarchy.isSubtype(boxParent, boxChild) shouldBe false
+        hierarchy.relationshipFor(boxChild, boxParent) shouldBe TypeRelationship.Unrelated
+      }
+
+      it("should be a subtype of its constructor") {
+        val applied = Type.applied(listC, TypeArgument(covariantParam, toNominal(ParentA)))
+        hierarchy.isSubtype(applied, listC) shouldBe true
+        hierarchy.relationshipFor(applied, listC) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should handle mixed variance and multiple parameters") {
+        val invParam = TypeParameter.invariant[TestType]
+        val coParam = TypeParameter.covariant[TestType]
+        val mapC = Type.constructor(toTestName("Map"), NonEmptyVector[TypeParameter[TestType]](invParam, coParam))
+
+        val map1 = Type.applied(mapC, TypeArgument(invParam, toNominal(Root)), TypeArgument(coParam, toNominal(ChildA1)))
+        val map2 = Type.applied(mapC, TypeArgument(invParam, toNominal(Root)), TypeArgument(coParam, toNominal(ParentA)))
+
+        hierarchy.isSubtype(map1, map2) shouldBe true
+
+        val map3 = Type.applied(mapC, TypeArgument(invParam, toNominal(ParentA)), TypeArgument(coParam, toNominal(ParentA)))
+        // map2 and map3 are unrelated because keys are invariant and Root != ParentA
+        hierarchy.isSubtype(map2, map3) shouldBe false
+        hierarchy.isSubtype(map3, map2) shouldBe false
+      }
+
+      it("should climb the hierarchy via the constructor") {
+        // Define a hierarchy of constructors
+        // Suppose List[T] <: Collection[T]
+        val collectionC = Type.constructor(toTestName("Collection"), NonEmptyVector(covariantParam))
+        val listCWithParent = Type.constructor(toTestName("List"), NonEmptyVector(covariantParam))
+
+        val hierarchyWithConstructors = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(listCWithParent -> Set(collectionC)),
+          Set.empty
+        )
+
+        val listInt = Type.applied(listCWithParent, TypeArgument(covariantParam, toNominal(ChildA1)))
+        val collectionInt = Type.applied(collectionC, TypeArgument(covariantParam, toNominal(ChildA1)))
+
+        hierarchyWithConstructors.isSubtype(listInt, collectionC) shouldBe true
+        hierarchyWithConstructors.isSubtype(listInt, collectionInt) shouldBe true
+      }
+    }
+
     describe("Union types") {
       it("should identify a union as Same as itself") {
         val u = Type.union(toNominal(ParentA), toNominal(ParentB))
