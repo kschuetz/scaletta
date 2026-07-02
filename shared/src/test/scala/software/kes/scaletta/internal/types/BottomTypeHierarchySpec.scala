@@ -2,14 +2,14 @@ package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{ConcreteType, Type}
+import software.kes.scaletta.api.Type
 
 class BottomTypeHierarchySpec extends AnyFunSpec with Matchers {
-  private def bottom: ConcreteType[TestType] = Type.bottom[TestType]
+  private def bottom: Type[TestType] = Type.bottom[TestType]
 
-  private def bottomRef: ConcreteType[TestType] = Type.bottomRef[TestType]
+  private def bottomRef: Type[TestType] = Type.bottomRef[TestType]
 
-  private def unit: ConcreteType[TestType] = Type.unit[TestType]
+  private def unit: Type[TestType] = Type.unit[TestType]
 
   describe("AdjacencyTypeHierarchy with Bottom types") {
     it("should treat Bottom as a subtype of any nominal type") {

@@ -9,7 +9,7 @@ sealed trait Type[+T] {
 sealed trait ConcreteType[T] extends Type[T]
 
 /** A type that can have value-level inhabitants. */
-sealed trait ProperType[T] extends ConcreteType[T]
+sealed trait ProperType[T] extends Type[T]
 
 /** A type-level function that requires application to produce a [[ProperType]]. */
 sealed trait TypeConstructor[T] extends ConcreteType[T]
@@ -52,7 +52,7 @@ object Type {
 
   def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 
-  case class Nominal[T](name: T) extends ProperType[T] {
+  case class Nominal[T](name: T) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = true
   }
 
@@ -62,52 +62,52 @@ object Type {
   }
 
   case class Applied[T](constructor: Type[T],
-                        arguments: NonEmptyVector[TypeArgument[T]]) extends ProperType[T] {
+                        arguments: NonEmptyVector[TypeArgument[T]]) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = constructor.isGround && arguments.forall(_.value.isGround)
   }
 
-  case class Union[T](types: SetTwoPlus[ProperType[T]]) extends ProperType[T] {
+  case class Union[T](types: SetTwoPlus[ProperType[T]]) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = types.forall(_.isGround)
   }
 
-  case class Intersection[T](types: SetTwoPlus[ProperType[T]]) extends ProperType[T] {
+  case class Intersection[T](types: SetTwoPlus[ProperType[T]]) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = types.forall(_.isGround)
   }
 
-  case class Function[T](parameters: Vector[Type[T]], result: Type[T]) extends ProperType[T] {
+  case class Function[T](parameters: Vector[Type[T]], result: Type[T]) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = parameters.forall(_.isGround) && result.isGround
   }
 
-  case object Unit extends ProperType[Nothing] {
+  case object Unit extends ProperType[Nothing] with ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case class Tuple[T](elements: VectorTwoPlus[Type[T]]) extends ProperType[T] {
+  case class Tuple[T](elements: VectorTwoPlus[Type[T]]) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = elements.forall(_.isGround)
   }
 
-  case object Top extends ProperType[Nothing] {
+  case object Top extends ProperType[Nothing] with ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object TopValue extends ProperType[Nothing] {
+  case object TopValue extends ProperType[Nothing] with ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object TopRef extends ProperType[Nothing] {
+  case object TopRef extends ProperType[Nothing] with ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object BottomRef extends ProperType[Nothing] {
+  case object BottomRef extends ProperType[Nothing] with ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 
-  case object Bottom extends ProperType[Nothing] {
+  case object Bottom extends ProperType[Nothing] with ConcreteType[Nothing] {
     def isGround: Boolean = true
   }
 
   case class Variable(scopeIndex: Int,
-                      paramIndex: Int) extends Type[Nothing] {
+                      paramIndex: Int) extends ProperType[Nothing] {
     def isGround: Boolean = false
   }
 
