@@ -979,6 +979,104 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("cycle safety") {
+      it("should terminate subtype checks for a two-node cycle") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(
+            toNominal(CycleA) -> Set(toNominal(CycleB)),
+            toNominal(CycleB) -> Set(toNominal(CycleA))
+          ),
+          Set.empty
+        )
+
+        h.isSubtype(toNominal(CycleA), toNominal(CycleB)) shouldBe true
+        h.isSubtype(toNominal(CycleB), toNominal(CycleA)) shouldBe true
+        h.isSubtype(toNominal(CycleA), toNominal(CycleUnrelated)) shouldBe false
+        h.isSubtype(toNominal(CycleUnrelated), toNominal(CycleA)) shouldBe false
+      }
+
+      it("should terminate relationship checks for a two-node cycle") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(
+            toNominal(CycleA) -> Set(toNominal(CycleB)),
+            toNominal(CycleB) -> Set(toNominal(CycleA))
+          ),
+          Set.empty
+        )
+
+        h.relationshipFor(toNominal(CycleA), toNominal(CycleB)) shouldBe TypeRelationship.Same
+        h.relationshipFor(toNominal(CycleB), toNominal(CycleA)) shouldBe TypeRelationship.Same
+      }
+
+      it("should terminate for a self-cycle") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(
+            toNominal(CycleA) -> Set(toNominal(CycleA))
+          ),
+          Set.empty
+        )
+
+        h.isSubtype(toNominal(CycleA), toNominal(CycleA)) shouldBe true
+        h.relationshipFor(toNominal(CycleA), toNominal(CycleA)) shouldBe TypeRelationship.Same
+        h.isSubtype(toNominal(CycleA), toNominal(CycleUnrelated)) shouldBe false
+      }
+
+      it("should terminate for a longer cycle") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(
+            toNominal(CycleA) -> Set(toNominal(CycleB)),
+            toNominal(CycleB) -> Set(toNominal(CycleC)),
+            toNominal(CycleC) -> Set(toNominal(CycleA))
+          ),
+          Set.empty
+        )
+
+        h.isSubtype(toNominal(CycleA), toNominal(CycleC)) shouldBe true
+        h.isSubtype(toNominal(CycleC), toNominal(CycleB)) shouldBe true
+        h.isSubtype(toNominal(CycleB), toNominal(CycleUnrelated)) shouldBe false
+      }
+
+      it("should still find supertypes reachable through a cycle") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(
+            toNominal(CycleA) -> Set(toNominal(CycleB)),
+            toNominal(CycleB) -> Set(toNominal(CycleA), toNominal(Root))
+          ),
+          Set.empty
+        )
+
+        h.isSubtype(toNominal(CycleA), toNominal(Root)) shouldBe true
+        h.isSubtype(toNominal(CycleB), toNominal(Root)) shouldBe true
+        h.relationshipFor(toNominal(CycleA), toNominal(Root)) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should terminate common-supertype lookup when one side is cyclic") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(
+            toNominal(CycleA) -> Set(toNominal(CycleB)),
+            toNominal(CycleB) -> Set(toNominal(CycleA))
+          ),
+          Set.empty
+        )
+
+        h.relationshipFor(toNominal(CycleA), toNominal(CycleUnrelated)) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.Top)
+      }
+
+      it("should return only direct supertypes for cyclic nodes") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(
+            toNominal(CycleA) -> Set(toNominal(CycleB)),
+            toNominal(CycleB) -> Set(toNominal(CycleA), toNominal(Root))
+          ),
+          Set.empty
+        )
+
+        h.immediateSupertypes(toNominal(CycleA)) should contain theSameElementsAs Set(toNominal(CycleB))
+        h.immediateSupertypes(toNominal(CycleB)) should contain theSameElementsAs Set(toNominal(CycleA), toNominal(Root))
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
@@ -1099,6 +1197,14 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
   case object MultiParent1 extends TestType
 
   case object MultiParent2 extends TestType
+
+  case object CycleA extends TestType
+
+  case object CycleB extends TestType
+
+  case object CycleC extends TestType
+
+  case object CycleUnrelated extends TestType
 
   case class Other(name: String) extends TestType
 
