@@ -367,6 +367,159 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("constructor inheritance with applied-type variance") {
+      it("should preserve exact argument for invariant parameters") {
+        val param = TypeParameter.invariant[TestType]
+        val boxC = Type.constructor(toTestName("InvariantBox"), NonEmptyVector(param))
+        val containerC = Type.constructor(toTestName("InvariantContainer"), NonEmptyVector(param))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxC -> Set(containerC)),
+          Set.empty
+        )
+
+        val boxChild = Type.applied(boxC, TypeArgument(param, toNominal(ChildA1)))
+        val containerChild = Type.applied(containerC, TypeArgument(param, toNominal(ChildA1)))
+        val containerParent = Type.applied(containerC, TypeArgument(param, toNominal(ParentA)))
+
+        h.immediateSupertypes(boxChild) should contain(containerChild)
+        h.isSubtype(boxChild, containerChild) shouldBe true
+        h.relationshipFor(boxChild, containerChild) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(boxChild, containerParent) shouldBe false
+        h.relationshipFor(boxChild, containerParent) shouldBe TypeRelationship.HaveCommonSupertype(containerC)
+      }
+
+      it("should respect reversed ordering for contravariant parameters") {
+        val param = TypeParameter.contravariant[TestType]
+        val writerC = Type.constructor(toTestName("Writer"), NonEmptyVector(param))
+        val sinkC = Type.constructor(toTestName("Sink"), NonEmptyVector(param))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (writerC -> Set(sinkC)),
+          Set.empty
+        )
+
+        val writerParent = Type.applied(writerC, TypeArgument(param, toNominal(ParentA)))
+        val writerChild = Type.applied(writerC, TypeArgument(param, toNominal(ChildA1)))
+
+        val sinkParent = Type.applied(sinkC, TypeArgument(param, toNominal(ParentA)))
+        val sinkChild = Type.applied(sinkC, TypeArgument(param, toNominal(ChildA1)))
+
+        h.immediateSupertypes(writerParent) should contain(sinkParent)
+        h.isSubtype(writerParent, sinkParent) shouldBe true
+        h.relationshipFor(writerParent, sinkParent) shouldBe TypeRelationship.StrictSubtype
+
+        // Because Sink is contravariant:
+        h.isSubtype(sinkParent, sinkChild) shouldBe true
+        h.isSubtype(sinkChild, sinkParent) shouldBe false
+
+        // Through constructor inheritance:
+        h.isSubtype(writerParent, sinkChild) shouldBe true
+        h.isSubtype(writerChild, sinkParent) shouldBe false
+      }
+
+      it("should handle mixed invariant and covariant parameters") {
+        val keyParam = TypeParameter.invariant[TestType]
+        val valueParam = TypeParameter.covariant[TestType]
+
+        val mapC = Type.constructor(
+          toTestName("SpecialMap"),
+          NonEmptyVector[TypeParameter[TestType]](keyParam, valueParam)
+        )
+
+        val mapLikeC = Type.constructor(
+          toTestName("MapLike"),
+          NonEmptyVector[TypeParameter[TestType]](keyParam, valueParam)
+        )
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (mapC -> Set(mapLikeC)),
+          Set.empty
+        )
+
+        val map1 = Type.applied(
+          mapC,
+          TypeArgument(keyParam, toNominal(Root)),
+          TypeArgument(valueParam, toNominal(ChildA1))
+        )
+
+        val mapLikeSameKeyParentValue = Type.applied(
+          mapLikeC,
+          TypeArgument(keyParam, toNominal(Root)),
+          TypeArgument(valueParam, toNominal(ParentA))
+        )
+
+        val mapLikeDifferentKey = Type.applied(
+          mapLikeC,
+          TypeArgument(keyParam, toNominal(ParentA)),
+          TypeArgument(valueParam, toNominal(ParentA))
+        )
+
+        val mapLike1 = Type.applied(
+          mapLikeC,
+          TypeArgument(keyParam, toNominal(Root)),
+          TypeArgument(valueParam, toNominal(ChildA1))
+        )
+
+        h.immediateSupertypes(map1) should contain(mapLike1)
+        h.isSubtype(map1, mapLikeSameKeyParentValue) shouldBe true
+        h.relationshipFor(map1, mapLikeSameKeyParentValue) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(map1, mapLikeDifferentKey) shouldBe false
+      }
+
+      it("should handle mixed contravariant and covariant parameters") {
+        val inParam = TypeParameter.contravariant[TestType]
+        val outParam = TypeParameter.covariant[TestType]
+
+        val channelC = Type.constructor(
+          toTestName("SpecialChannel"),
+          NonEmptyVector[TypeParameter[TestType]](inParam, outParam)
+        )
+
+        val channelLikeC = Type.constructor(
+          toTestName("ChannelLike"),
+          NonEmptyVector[TypeParameter[TestType]](inParam, outParam)
+        )
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (channelC -> Set(channelLikeC)),
+          Set.empty
+        )
+
+        val channel = Type.applied(
+          channelC,
+          TypeArgument(inParam, toNominal(ParentA)),
+          TypeArgument(outParam, toNominal(ChildB1))
+        )
+
+        val channelLikeAccepted = Type.applied(
+          channelLikeC,
+          TypeArgument(inParam, toNominal(ChildA1)),
+          TypeArgument(outParam, toNominal(ParentB))
+        )
+
+        val channelLikeRejectedInput = Type.applied(
+          channelLikeC,
+          TypeArgument(inParam, toNominal(Root)),
+          TypeArgument(outParam, toNominal(ParentB))
+        )
+
+        val channelLikeExact = Type.applied(
+          channelLikeC,
+          TypeArgument(inParam, toNominal(ParentA)),
+          TypeArgument(outParam, toNominal(ChildB1))
+        )
+
+        h.immediateSupertypes(channel) should contain(channelLikeExact)
+        h.isSubtype(channel, channelLikeAccepted) shouldBe true
+        h.relationshipFor(channel, channelLikeAccepted) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(channel, channelLikeRejectedInput) shouldBe false
+      }
+    }
+
     describe("Union types") {
       it("should identify a union as Same as itself") {
         val u = Type.union(toNominal(ParentA), toNominal(ParentB))
