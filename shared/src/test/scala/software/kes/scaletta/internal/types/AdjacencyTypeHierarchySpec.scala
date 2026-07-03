@@ -920,6 +920,80 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Union and intersection across value and reference branches") {
+      val valueA = toNominal(ValueA)
+      val valueB = toNominal(ValueB)
+      val refA = toNominal(RefA)
+      val refB = toNominal(RefB)
+
+      val h = AdjacencyTypeHierarchy.fromMap[TestType](
+        Map(
+          valueB -> Set(valueA),
+          refB -> Set(refA)
+        ),
+        Set(valueA, valueB)
+      )
+
+      it("should identify union of value and reference types as meeting at Top") {
+        val union = Type.union(valueA, refA)
+        h.isSubtype(valueA, union) shouldBe true
+        h.isSubtype(refA, union) shouldBe true
+
+        h.isSubtype(union, Type.Top) shouldBe true
+        h.isSubtype(union, Type.TopValue) shouldBe false
+        h.isSubtype(union, Type.TopRef) shouldBe false
+
+        h.relationshipFor(valueA, refA) shouldBe TypeRelationship.HaveCommonSupertype(Type.Top)
+      }
+
+      it("should identify union of branch tops as a strict subtype of Top (not simplified)") {
+        val union = Type.union(Type.TopValue, Type.TopRef)
+        h.isSubtype(union, Type.Top) shouldBe true
+        h.isSubtype(Type.Top, union) shouldBe false
+        h.relationshipFor(union, Type.Top) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should simplify union with BottomRef and a reference type") {
+        val union = Type.union(Type.BottomRef, refA)
+        h.isSubtype(union, refA) shouldBe true
+        h.isSubtype(refA, union) shouldBe true
+        h.relationshipFor(union, refA) shouldBe TypeRelationship.Same
+      }
+
+      it("should handle union with BottomRef and a value type") {
+        val union = Type.union(Type.BottomRef, valueA)
+        h.isSubtype(valueA, union) shouldBe true
+        h.isSubtype(Type.BottomRef, union) shouldBe true
+
+        h.isSubtype(union, Type.Top) shouldBe true
+        h.isSubtype(union, Type.TopValue) shouldBe false
+        h.isSubtype(union, Type.TopRef) shouldBe false
+
+        h.relationshipFor(union, valueA) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should represent intersection of value and reference types structurally (not simplified to Bottom)") {
+        val intersection = Type.intersection(valueA, refA)
+        h.isSubtype(intersection, valueA) shouldBe true
+        h.isSubtype(intersection, refA) shouldBe true
+
+        h.isSubtype(intersection, Type.Top) shouldBe true
+        h.isSubtype(intersection, Type.TopValue) shouldBe true
+        h.isSubtype(intersection, Type.TopRef) shouldBe true
+
+        h.relationshipFor(intersection, Type.Bottom) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should represent intersection of TopValue and TopRef structurally") {
+        val intersection = Type.intersection(Type.TopValue, Type.TopRef)
+        h.isSubtype(intersection, Type.TopValue) shouldBe true
+        h.isSubtype(intersection, Type.TopRef) shouldBe true
+        h.isSubtype(intersection, Type.Top) shouldBe true
+
+        h.relationshipFor(intersection, Type.Bottom) shouldBe TypeRelationship.StrictSupertype
+      }
+    }
+
     describe("multiple minimal common supertypes") {
       val multiMap: Map[Type[TestType], Set[Type[TestType]]] = Map(
         toNominal(MultiA) -> Set(toNominal(MultiParent1), toNominal(MultiParent2)),

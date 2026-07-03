@@ -95,6 +95,8 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case Type.TopValue => true
         case Type.Unit => true
         case t: Type.Nominal[T] => valueTypes.contains(t)
+        case u: Type.Union[T] => u.types.forall(t => isSubtype(t, rhs))
+        case i: Type.Intersection[T] => i.types.exists(t => isSubtype(t, rhs))
         case _ => false
       }
     } else if (rhs == Type.TopRef) {
