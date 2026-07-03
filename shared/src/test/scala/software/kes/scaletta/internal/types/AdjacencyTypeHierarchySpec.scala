@@ -1477,6 +1477,65 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         relTops shouldBe a[TypeRelationship.HaveCommonSupertype[_]]
         relTops.commonSupertype shouldBe Some(Type.Top)
       }
+
+      it("should report correct relationship between value nominal and TopValue") {
+        val valueA = toNominal(ValueA)
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map.empty,
+          Set(valueA)
+        )
+        h.relationshipFor(valueA, Type.TopValue) shouldBe TypeRelationship.StrictSubtype
+        h.relationshipFor(Type.TopValue, valueA) shouldBe TypeRelationship.StrictSupertype
+
+        h.isSubtype(valueA, Type.TopValue) shouldBe true
+        h.isSubtype(Type.TopValue, valueA) shouldBe false
+      }
+
+      it("should preserve value-branch membership for value subtype chains") {
+        val valueA = toNominal(ValueA)
+        val valueB = toNominal(ValueB)
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(valueB -> Set(valueA)),
+          Set(valueA, valueB)
+        )
+        h.relationshipFor(valueB, valueA) shouldBe TypeRelationship.StrictSubtype
+        h.relationshipFor(valueA, valueB) shouldBe TypeRelationship.StrictSupertype
+
+        h.relationshipFor(valueB, Type.TopValue) shouldBe TypeRelationship.StrictSubtype
+        h.relationshipFor(Type.TopValue, valueB) shouldBe TypeRelationship.StrictSupertype
+
+        h.isSubtype(valueB, Type.TopValue) shouldBe true
+        h.isSubtype(valueB, Type.Top) shouldBe true
+        h.isSubtype(valueB, Type.TopRef) shouldBe false
+      }
+
+      it("should report Top as common supertype for value nominal and reference nominal") {
+        val valueA = toNominal(ValueA)
+        val refA = toNominal(RefA)
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map.empty,
+          Set(valueA)
+        )
+        h.relationshipFor(valueA, refA) shouldBe TypeRelationship.HaveCommonSupertype(Type.Top)
+        h.relationshipFor(refA, valueA) shouldBe TypeRelationship.HaveCommonSupertype(Type.Top)
+
+        h.isSubtype(valueA, Type.TopValue) shouldBe true
+        h.isSubtype(refA, Type.TopRef) shouldBe true
+        h.isSubtype(valueA, Type.TopRef) shouldBe false
+        h.isSubtype(refA, Type.TopValue) shouldBe false
+      }
+
+      it("should report Top as common supertype for value subtype and reference nominal") {
+        val valueA = toNominal(ValueA)
+        val valueB = toNominal(ValueB)
+        val refA = toNominal(RefA)
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(valueB -> Set(valueA)),
+          Set(valueA, valueB)
+        )
+        h.relationshipFor(valueB, refA) shouldBe TypeRelationship.HaveCommonSupertype(Type.Top)
+        h.relationshipFor(refA, valueB) shouldBe TypeRelationship.HaveCommonSupertype(Type.Top)
+      }
     }
 
     describe("explicit value/reference crossing relationships") {
