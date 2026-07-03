@@ -1032,6 +1032,159 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Structural LUB for invariant applied types with shared parent constructors") {
+      val invariantParam = TypeParameter.invariant[TestType]
+
+      val collectionC = Type.constructor(
+        toTestName("InvariantCollection"),
+        NonEmptyVector(invariantParam)
+      )
+
+      val listC = Type.constructor(
+        toTestName("InvariantList"),
+        NonEmptyVector(invariantParam)
+      )
+
+      val vectorC = Type.constructor(
+        toTestName("InvariantVector"),
+        NonEmptyVector(invariantParam)
+      )
+
+      val h = AdjacencyTypeHierarchy.fromMap[TestType](
+        hierarchyMap ++ Map(
+          listC -> Set(collectionC),
+          vectorC -> Set(collectionC)
+        ),
+        Set.empty
+      )
+
+      it("should produce applied shared parent as LUB when invariant arguments are identical") {
+        val listChild = Type.applied(
+          listC,
+          TypeArgument(invariantParam, toNominal(ChildA1))
+        )
+
+        val vectorChild = Type.applied(
+          vectorC,
+          TypeArgument(invariantParam, toNominal(ChildA1))
+        )
+
+        val expected = Type.applied(
+          collectionC,
+          TypeArgument(invariantParam, toNominal(ChildA1))
+        )
+
+        h.isSubtype(listChild, expected) shouldBe true
+        h.isSubtype(vectorChild, expected) shouldBe true
+
+        h.relationshipFor(listChild, vectorChild) shouldBe
+          TypeRelationship.HaveCommonSupertype(expected)
+
+        h.relationshipFor(vectorChild, listChild) shouldBe
+          TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should not widen to parent-applied type when invariant arguments are ordered but unequal") {
+        val listChild = Type.applied(
+          listC,
+          TypeArgument(invariantParam, toNominal(ChildA1))
+        )
+
+        val vectorParent = Type.applied(
+          vectorC,
+          TypeArgument(invariantParam, toNominal(ParentA))
+        )
+
+        val collectionChild = Type.applied(
+          collectionC,
+          TypeArgument(invariantParam, toNominal(ChildA1))
+        )
+
+        val collectionParent = Type.applied(
+          collectionC,
+          TypeArgument(invariantParam, toNominal(ParentA))
+        )
+
+        h.isSubtype(listChild, collectionChild) shouldBe true
+        h.isSubtype(vectorParent, collectionParent) shouldBe true
+
+        h.isSubtype(listChild, collectionParent) shouldBe false
+        h.isSubtype(vectorParent, collectionChild) shouldBe false
+
+        h.relationshipFor(listChild, vectorParent) shouldBe
+          TypeRelationship.HaveCommonSupertype(collectionC)
+
+        h.relationshipFor(vectorParent, listChild) shouldBe
+          TypeRelationship.HaveCommonSupertype(collectionC)
+      }
+
+      it("should fall back to shared parent constructor for unrelated invariant arguments") {
+        val listParentA = Type.applied(
+          listC,
+          TypeArgument(invariantParam, toNominal(ParentA))
+        )
+
+        val vectorParentB = Type.applied(
+          vectorC,
+          TypeArgument(invariantParam, toNominal(ParentB))
+        )
+
+        val collectionParentA = Type.applied(
+          collectionC,
+          TypeArgument(invariantParam, toNominal(ParentA))
+        )
+
+        val collectionParentB = Type.applied(
+          collectionC,
+          TypeArgument(invariantParam, toNominal(ParentB))
+        )
+
+        h.isSubtype(listParentA, collectionParentB) shouldBe false
+        h.isSubtype(vectorParentB, collectionParentA) shouldBe false
+
+        h.relationshipFor(listParentA, vectorParentB) shouldBe
+          TypeRelationship.HaveCommonSupertype(collectionC)
+
+        h.relationshipFor(vectorParentB, listParentA) shouldBe
+          TypeRelationship.HaveCommonSupertype(collectionC)
+      }
+
+      it("should contrast correctly with covariant shared parent behavior") {
+        val covariantParam = TypeParameter.covariant[TestType]
+
+        val covCollectionC = Type.constructor(
+          toTestName("CovariantCollection"),
+          NonEmptyVector(covariantParam)
+        )
+
+        val covListC = Type.constructor(
+          toTestName("CovariantList"),
+          NonEmptyVector(covariantParam)
+        )
+
+        val covVectorC = Type.constructor(
+          toTestName("CovariantVector"),
+          NonEmptyVector(covariantParam)
+        )
+
+        val hCov = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap ++ Map(
+            covListC -> Set(covCollectionC),
+            covVectorC -> Set(covCollectionC)
+          ),
+          Set.empty
+        )
+
+        val listChild = Type.applied(covListC, TypeArgument(covariantParam, toNominal(ChildA1)))
+        val vectorParent = Type.applied(covVectorC, TypeArgument(covariantParam, toNominal(ParentA)))
+
+        // LUB(List[ChildA1], Vector[ParentA]) -> Collection[LUB(ChildA1, ParentA)] -> Collection[ParentA]
+        val expected = Type.applied(covCollectionC, TypeArgument(covariantParam, toNominal(ParentA)))
+
+        hCov.relationshipFor(listChild, vectorParent) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+    }
+
     describe("empty hierarchy") {
       val h = AdjacencyTypeHierarchy.empty[TestType]
 
