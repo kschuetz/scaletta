@@ -367,6 +367,207 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("applied type substitution with distinct constructor parameters") {
+      it("should substitute single-parameter constructor inheritance with different parameter instances") {
+        val childParam = TypeParameter.covariant[TestType]
+        val parentParam = TypeParameter.covariant[TestType]
+
+        val childBoxC = Type.constructor(toTestName("ChildBox"), NonEmptyVector(childParam))
+        val parentBoxC = Type.constructor(toTestName("ParentBox"), NonEmptyVector(parentParam))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (
+            childBoxC -> Set(
+              Type.applied(parentBoxC, TypeArgument(parentParam, Type.variable(0)))
+            )
+            ),
+          Set.empty
+        )
+
+        val childBoxChild = Type.applied(
+          childBoxC,
+          TypeArgument(childParam, toNominal(ChildA1))
+        )
+
+        val parentBoxChild = Type.applied(
+          parentBoxC,
+          TypeArgument(parentParam, toNominal(ChildA1))
+        )
+
+        val parentBoxParent = Type.applied(
+          parentBoxC,
+          TypeArgument(parentParam, toNominal(ParentA))
+        )
+
+        h.immediateSupertypes(childBoxChild) should contain(parentBoxChild)
+
+        h.isSubtype(childBoxChild, parentBoxChild) shouldBe true
+        h.relationshipFor(childBoxChild, parentBoxChild) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(childBoxChild, parentBoxParent) shouldBe true
+      }
+
+      it("should handle invariant parent parameter with different parameter instances") {
+        val childParam = TypeParameter.covariant[TestType]
+        val parentParam = TypeParameter.invariant[TestType]
+
+        val childBoxC = Type.constructor(toTestName("ChildInvariantBox"), NonEmptyVector(childParam))
+        val parentBoxC = Type.constructor(toTestName("ParentInvariantBox"), NonEmptyVector(parentParam))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (
+            childBoxC -> Set(
+              Type.applied(parentBoxC, TypeArgument(parentParam, Type.variable(0)))
+            )
+            ),
+          Set.empty
+        )
+
+        val childBoxChild = Type.applied(
+          childBoxC,
+          TypeArgument(childParam, toNominal(ChildA1))
+        )
+
+        val parentBoxChild = Type.applied(
+          parentBoxC,
+          TypeArgument(parentParam, toNominal(ChildA1))
+        )
+
+        val parentBoxParent = Type.applied(
+          parentBoxC,
+          TypeArgument(parentParam, toNominal(ParentA))
+        )
+
+        h.immediateSupertypes(childBoxChild) should contain(parentBoxChild)
+
+        h.isSubtype(childBoxChild, parentBoxChild) shouldBe true
+        h.relationshipFor(childBoxChild, parentBoxChild) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(childBoxChild, parentBoxParent) shouldBe false
+      }
+
+      it("should substitute multi-parameter constructor inheritance with distinct parameter instances") {
+        val childParamA = TypeParameter.covariant[TestType]
+        val childParamB = TypeParameter.covariant[TestType]
+        val parentParamA = TypeParameter.covariant[TestType]
+        val parentParamB = TypeParameter.covariant[TestType]
+
+        val childPairC = Type.constructor(
+          toTestName("ChildPair"),
+          NonEmptyVector[TypeParameter[TestType]](childParamA, childParamB)
+        )
+
+        val parentPairC = Type.constructor(
+          toTestName("ParentPair"),
+          NonEmptyVector[TypeParameter[TestType]](parentParamA, parentParamB)
+        )
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (
+            childPairC -> Set(
+              Type.applied(
+                parentPairC,
+                TypeArgument(parentParamA, Type.variable(0)),
+                TypeArgument(parentParamB, Type.variable(1))
+              )
+            )
+            ),
+          Set.empty
+        )
+
+        val childPair = Type.applied(
+          childPairC,
+          TypeArgument(childParamA, toNominal(ChildA1)),
+          TypeArgument(childParamB, toNominal(ChildB1))
+        )
+
+        val parentPair = Type.applied(
+          parentPairC,
+          TypeArgument(parentParamA, toNominal(ChildA1)),
+          TypeArgument(parentParamB, toNominal(ChildB1))
+        )
+
+        val parentPairWidened = Type.applied(
+          parentPairC,
+          TypeArgument(parentParamA, toNominal(ParentA)),
+          TypeArgument(parentParamB, toNominal(ParentB))
+        )
+
+        val parentPairSwapped = Type.applied(
+          parentPairC,
+          TypeArgument(parentParamA, toNominal(ChildB1)),
+          TypeArgument(parentParamB, toNominal(ChildA1))
+        )
+
+        h.immediateSupertypes(childPair) should contain(parentPair)
+
+        h.isSubtype(childPair, parentPair) shouldBe true
+        h.isSubtype(childPair, parentPairWidened) shouldBe true
+        h.isSubtype(childPair, parentPairSwapped) shouldBe false
+      }
+
+      it("should handle mixed variance parent constructor with distinct parameter instances") {
+        val childInParam = TypeParameter.covariant[TestType]
+        val childOutParam = TypeParameter.covariant[TestType]
+
+        val parentInParam = TypeParameter.contravariant[TestType]
+        val parentOutParam = TypeParameter.covariant[TestType]
+
+        val childChannelC = Type.constructor(
+          toTestName("ChildChannel"),
+          NonEmptyVector[TypeParameter[TestType]](childInParam, childOutParam)
+        )
+
+        val parentChannelC = Type.constructor(
+          toTestName("ParentChannel"),
+          NonEmptyVector[TypeParameter[TestType]](parentInParam, parentOutParam)
+        )
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (
+            childChannelC -> Set(
+              Type.applied(
+                parentChannelC,
+                TypeArgument(parentInParam, Type.variable(0)),
+                TypeArgument(parentOutParam, Type.variable(1))
+              )
+            )
+            ),
+          Set.empty
+        )
+
+        val childChannel = Type.applied(
+          childChannelC,
+          TypeArgument(childInParam, toNominal(ParentA)),
+          TypeArgument(childOutParam, toNominal(ChildB1))
+        )
+
+        val parentChannelExact = Type.applied(
+          parentChannelC,
+          TypeArgument(parentInParam, toNominal(ParentA)),
+          TypeArgument(parentOutParam, toNominal(ChildB1))
+        )
+
+        val parentChannelAccepted = Type.applied(
+          parentChannelC,
+          TypeArgument(parentInParam, toNominal(ChildA1)),
+          TypeArgument(parentOutParam, toNominal(ParentB))
+        )
+
+        val parentChannelRejectedInput = Type.applied(
+          parentChannelC,
+          TypeArgument(parentInParam, toNominal(Root)),
+          TypeArgument(parentOutParam, toNominal(ParentB))
+        )
+
+        h.immediateSupertypes(childChannel) should contain(parentChannelExact)
+
+        h.isSubtype(childChannel, parentChannelExact) shouldBe true
+        h.isSubtype(childChannel, parentChannelAccepted) shouldBe true
+        h.isSubtype(childChannel, parentChannelRejectedInput) shouldBe false
+      }
+    }
+
     describe("constructor inheritance with applied-type variance") {
       it("should preserve exact argument for invariant parameters") {
         val param = TypeParameter.invariant[TestType]
