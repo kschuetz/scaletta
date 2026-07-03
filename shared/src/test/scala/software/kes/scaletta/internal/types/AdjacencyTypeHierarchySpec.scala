@@ -243,6 +243,77 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("applied type supertype substitution") {
+      val paramA = TypeParameter.covariant[TestType]
+      val paramB = TypeParameter.covariant[TestType]
+      val boxC = Type.constructor(toTestName("Box"), NonEmptyVector(paramA))
+      val iterableC = Type.constructor(toTestName("Iterable"), NonEmptyVector(paramA))
+      val containerC = Type.constructor(toTestName("Container"), NonEmptyVector(paramA))
+
+      val boxChild = Type.applied(boxC, TypeArgument(paramA, toNominal(ChildA1)))
+      val iterableChild = Type.applied(iterableC, TypeArgument(paramA, toNominal(ChildA1)))
+      val iterableParent = Type.applied(iterableC, TypeArgument(paramA, toNominal(ParentA)))
+
+      it("should substitute a single applied argument into constructor supertype expressions") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxC -> Set(Type.applied(iterableC, TypeArgument(paramA, Type.variable(0))))),
+          Set.empty
+        )
+
+        h.immediateSupertypes(boxChild) should contain(iterableChild)
+        h.isSubtype(boxChild, iterableChild) shouldBe true
+        h.isSubtype(boxChild, iterableParent) shouldBe true
+      }
+
+      it("should preserve substituted argument identity in immediate supertypes") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxC -> Set(Type.applied(iterableC, TypeArgument(paramA, Type.variable(0))))),
+          Set.empty
+        )
+
+        val result = h.immediateSupertypes(boxChild).toSet
+        result should contain(iterableChild)
+        // Verify it didn't just return a raw constructor or something else
+        result.collect { case a: Type.Applied[TestType] if a.constructor == iterableC => a }.head shouldBe iterableChild
+      }
+
+      it("should substitute multiple applied arguments in the correct order") {
+        val pairBoxC = Type.constructor(toTestName("PairBox"), NonEmptyVector(paramA, paramB))
+        val pairLikeC = Type.constructor(toTestName("PairLike"), NonEmptyVector(paramA, paramB))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (pairBoxC -> Set(Type.applied(pairLikeC, TypeArgument(paramA, Type.variable(0)), TypeArgument(paramB, Type.variable(1))))),
+          Set.empty
+        )
+
+        val pb = Type.applied(pairBoxC, TypeArgument(paramA, toNominal(ParentA)), TypeArgument(paramB, toNominal(ChildB1)))
+        val plCorrect = Type.applied(pairLikeC, TypeArgument(paramA, toNominal(ParentA)), TypeArgument(paramB, toNominal(ChildB1)))
+        val plSwapped = Type.applied(pairLikeC, TypeArgument(paramA, toNominal(ChildB1)), TypeArgument(paramB, toNominal(ParentA)))
+
+        h.immediateSupertypes(pb) should contain(plCorrect)
+        h.immediateSupertypes(pb) should not contain plSwapped
+        h.isSubtype(pb, plCorrect) shouldBe true
+        h.isSubtype(pb, plSwapped) shouldBe false
+      }
+
+      it("should substitute into nested supertype expressions") {
+        val wrapperC = Type.constructor(toTestName("Wrapper"), NonEmptyVector(paramA))
+        // Wrapper[T] <: Container[Iterable[T]]
+        val nestedSuper = Type.applied(containerC, TypeArgument(paramA, Type.applied(iterableC, TypeArgument(paramA, Type.variable(0)))))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (wrapperC -> Set(nestedSuper)),
+          Set.empty
+        )
+
+        val wrapperChild = Type.applied(wrapperC, TypeArgument(paramA, toNominal(ChildA1)))
+        val expectedSuper = Type.applied(containerC, TypeArgument(paramA, Type.applied(iterableC, TypeArgument(paramA, toNominal(ChildA1)))))
+
+        h.immediateSupertypes(wrapperChild) should contain(expectedSuper)
+        h.isSubtype(wrapperChild, expectedSuper) shouldBe true
+      }
+    }
+
     describe("Union types") {
       it("should identify a union as Same as itself") {
         val u = Type.union(toNominal(ParentA), toNominal(ParentB))
