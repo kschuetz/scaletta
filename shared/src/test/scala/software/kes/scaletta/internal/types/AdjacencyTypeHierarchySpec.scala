@@ -1170,6 +1170,60 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Function and tuple LUB arity mismatch") {
+      it("should use TopRef as the common supertype for functions with different arity") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        val f2 = Type.Function(Vector(toNominal(ParentA), toNominal(ParentA)), toNominal(Root))
+
+        hierarchy.isSubtype(f1, f2) shouldBe false
+        hierarchy.isSubtype(f2, f1) shouldBe false
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+        hierarchy.relationshipFor(f2, f1) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+      }
+
+      it("should use TopRef as the common supertype for zero- and one-parameter functions") {
+        val f0 = Type.Function(Vector.empty, toNominal(Root))
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+
+        hierarchy.relationshipFor(f0, f1) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+        hierarchy.relationshipFor(f1, f0) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+      }
+
+      it("should use TopRef as the common supertype for tuples with different arity") {
+        val t2 = Type.tuple(toNominal(ParentA), toNominal(ParentB))
+        val t3 = Type.tuple(toNominal(ParentA), toNominal(ParentB), toNominal(Root))
+
+        hierarchy.isSubtype(t2, t3) shouldBe false
+        hierarchy.isSubtype(t3, t2) shouldBe false
+        hierarchy.relationshipFor(t2, t3) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+        hierarchy.relationshipFor(t3, t2) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+      }
+
+      it("should use TopRef as the common supertype across function and tuple types") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        val t2 = Type.tuple(toNominal(ParentA), toNominal(Root))
+
+        hierarchy.relationshipFor(f1, t2) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+        hierarchy.relationshipFor(t2, f1) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+      }
+
+      it("should compute structural LUB for functions with same arity (contrast)") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ParentA)), toNominal(ParentB))
+        val expected = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should compute structural LUB for tuples with same arity (contrast)") {
+        val t1 = Type.tuple(toNominal(ChildA1), toNominal(ParentB))
+        val t2 = Type.tuple(toNominal(ParentA), toNominal(ChildB1))
+        val expected = Type.tuple(toNominal(ParentA), toNominal(ParentB))
+
+        hierarchy.relationshipFor(t1, t2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
