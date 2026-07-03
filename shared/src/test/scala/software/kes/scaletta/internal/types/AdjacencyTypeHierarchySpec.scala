@@ -1224,6 +1224,97 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("top and bottom lattice") {
+      it("should treat Top as the universal supertype") {
+        hierarchy.isSubtype(Type.Top, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.TopRef, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.TopValue, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.BottomRef, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.Unit, Type.Top) shouldBe true
+        hierarchy.isSubtype(toNominal(ParentA), Type.Top) shouldBe true
+      }
+
+      it("should treat Bottom as the universal subtype") {
+        hierarchy.isSubtype(Type.Bottom, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, Type.TopRef) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, Type.TopValue) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, Type.Bottom) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, Type.BottomRef) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, Type.Unit) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, toNominal(ParentA)) shouldBe true
+      }
+
+      it("should keep TopRef and TopValue as separate branches under Top") {
+        hierarchy.isSubtype(Type.TopRef, Type.TopValue) shouldBe false
+        hierarchy.isSubtype(Type.TopValue, Type.TopRef) shouldBe false
+        hierarchy.relationshipFor(Type.TopRef, Type.TopValue) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.Top)
+      }
+
+      it("should treat BottomRef as reference-only bottom") {
+        hierarchy.isSubtype(Type.BottomRef, Type.TopRef) shouldBe true
+        hierarchy.isSubtype(Type.BottomRef, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.BottomRef, Type.TopValue) shouldBe false
+        hierarchy.isSubtype(Type.BottomRef, Type.Bottom) shouldBe false
+        hierarchy.isSubtype(Type.BottomRef, toNominal(ParentA)) shouldBe true
+
+        val valueA = toNominal(ValueA)
+        val localHierarchy = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map.empty,
+          Set(valueA)
+        )
+        localHierarchy.isSubtype(Type.BottomRef, valueA) shouldBe false
+      }
+
+      it("should treat Unit as a value type") {
+        hierarchy.isSubtype(Type.Unit, Type.TopValue) shouldBe true
+        hierarchy.isSubtype(Type.Unit, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.Unit, Type.TopRef) shouldBe false
+
+        hierarchy.relationshipFor(Type.Unit, Type.TopValue) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(Type.Unit, Type.TopRef) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.Top)
+      }
+
+      it("should report expected relationships for top and bottom pairs") {
+        hierarchy.relationshipFor(Type.Bottom, Type.Top) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(Type.Top, Type.Bottom) shouldBe TypeRelationship.StrictSupertype
+
+        hierarchy.relationshipFor(Type.BottomRef, Type.TopRef) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(Type.TopRef, Type.BottomRef) shouldBe TypeRelationship.StrictSupertype
+
+        hierarchy.relationshipFor(Type.TopRef, Type.Top) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(Type.TopValue, Type.Top) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should return expected immediate supertypes for built-in top types") {
+        hierarchy.immediateSupertypes(Type.Top) shouldBe empty
+        hierarchy.immediateSupertypes(Type.TopRef) should contain theSameElementsAs Set(Type.Top)
+        hierarchy.immediateSupertypes(Type.TopValue) should contain theSameElementsAs Set(Type.Top)
+      }
+
+      it("should verify subtyping matrix for built-in types") {
+        val cases = Seq(
+          (Type.Bottom, Type.Top, true),
+          (Type.Bottom, Type.TopRef, true),
+          (Type.Bottom, Type.TopValue, true),
+          (Type.BottomRef, Type.TopRef, true),
+          (Type.BottomRef, Type.TopValue, false),
+          (Type.TopRef, Type.TopValue, false),
+          (Type.TopValue, Type.TopRef, false),
+          (Type.Unit, Type.TopValue, true),
+          (Type.Unit, Type.TopRef, false)
+        )
+
+        cases.foreach { case (lhs, rhs, expected) =>
+          withClue(s"$lhs <: $rhs") {
+            hierarchy.isSubtype(lhs, rhs) shouldBe expected
+          }
+        }
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
