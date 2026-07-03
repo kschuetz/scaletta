@@ -920,6 +920,65 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("multiple minimal common supertypes") {
+      val multiMap: Map[Type[TestType], Set[Type[TestType]]] = Map(
+        toNominal(MultiA) -> Set(toNominal(MultiParent1), toNominal(MultiParent2)),
+        toNominal(MultiB) -> Set(toNominal(MultiParent1), toNominal(MultiParent2)),
+        toNominal(MultiParent1) -> Set(toNominal(Root)),
+        toNominal(MultiParent2) -> Set(toNominal(Root))
+      )
+
+      val h = AdjacencyTypeHierarchy.fromMap[TestType](
+        multiMap,
+        Set.empty
+      )
+
+      val expected = Type.intersection(
+        toNominal(MultiParent1),
+        toNominal(MultiParent2)
+      )
+
+      it("should represent multiple incomparable minimal common supertypes as an intersection") {
+        h.relationshipFor(toNominal(MultiA), toNominal(MultiB)) shouldBe
+          TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should not collapse multiple minimal common supertypes to a less specific root") {
+        h.isSubtype(expected, toNominal(Root)) shouldBe true
+        h.isSubtype(toNominal(Root), expected) shouldBe false
+
+        h.isSubtype(toNominal(MultiA), expected) shouldBe true
+        h.isSubtype(toNominal(MultiB), expected) shouldBe true
+      }
+
+      it("should keep shared parents incomparable in the test fixture") {
+        h.isSubtype(toNominal(MultiParent1), toNominal(MultiParent2)) shouldBe false
+        h.isSubtype(toNominal(MultiParent2), toNominal(MultiParent1)) shouldBe false
+      }
+
+      it("should compute the same common supertype regardless of argument order") {
+        h.relationshipFor(toNominal(MultiB), toNominal(MultiA)) shouldBe
+          TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should collapse to one common supertype when one candidate is more specific") {
+        val collapsedMap: Map[Type[TestType], Set[Type[TestType]]] = Map(
+          toNominal(MultiA) -> Set(toNominal(MultiParent1), toNominal(MultiParent2)),
+          toNominal(MultiB) -> Set(toNominal(MultiParent1), toNominal(MultiParent2)),
+          toNominal(MultiParent1) -> Set(toNominal(MultiParent2)),
+          toNominal(MultiParent2) -> Set(toNominal(Root))
+        )
+
+        val hCollapsed = AdjacencyTypeHierarchy.fromMap[TestType](
+          collapsedMap,
+          Set.empty
+        )
+
+        hCollapsed.relationshipFor(toNominal(MultiA), toNominal(MultiB)) shouldBe
+          TypeRelationship.HaveCommonSupertype(toNominal(MultiParent1))
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
@@ -1032,6 +1091,14 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
   case object RefB extends TestType
 
   case object Unrelated extends TestType
+
+  case object MultiA extends TestType
+
+  case object MultiB extends TestType
+
+  case object MultiParent1 extends TestType
+
+  case object MultiParent2 extends TestType
 
   case class Other(name: String) extends TestType
 
