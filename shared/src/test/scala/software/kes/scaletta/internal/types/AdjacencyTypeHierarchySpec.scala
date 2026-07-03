@@ -831,6 +831,95 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Union and intersection simplification") {
+      it("should simplify unions with redundant subtype members") {
+        val union = Type.union(toNominal(ChildA1), toNominal(ParentA))
+
+        hierarchy.isSubtype(union, toNominal(ParentA)) shouldBe true
+        hierarchy.isSubtype(toNominal(ParentA), union) shouldBe true
+        hierarchy.relationshipFor(union, toNominal(ParentA)) shouldBe TypeRelationship.Same
+      }
+
+      it("should flatten nested unions") {
+        val nested = Type.union(
+          Type.union(toNominal(ChildA1), toNominal(ParentB)),
+          toNominal(ParentA)
+        )
+
+        val expected = Type.union(toNominal(ParentA), toNominal(ParentB))
+
+        hierarchy.isSubtype(nested, expected) shouldBe true
+        hierarchy.isSubtype(expected, nested) shouldBe true
+        hierarchy.relationshipFor(nested, expected) shouldBe TypeRelationship.Same
+      }
+
+      it("should ignore Bottom in unions") {
+        val union = Type.union(Type.Bottom, toNominal(ParentA))
+
+        hierarchy.isSubtype(union, toNominal(ParentA)) shouldBe true
+        hierarchy.isSubtype(toNominal(ParentA), union) shouldBe true
+        hierarchy.relationshipFor(union, toNominal(ParentA)) shouldBe TypeRelationship.Same
+      }
+
+      it("should simplify unions containing Top to Top") {
+        val union = Type.union(Type.Top, toNominal(ParentA))
+
+        hierarchy.isSubtype(union, Type.Top) shouldBe true
+        hierarchy.isSubtype(Type.Top, union) shouldBe true
+        hierarchy.relationshipFor(union, Type.Top) shouldBe TypeRelationship.Same
+      }
+
+      it("should simplify intersections with redundant supertype members") {
+        val intersection = Type.intersection(toNominal(ChildA1), toNominal(ParentA))
+
+        hierarchy.isSubtype(intersection, toNominal(ChildA1)) shouldBe true
+        hierarchy.isSubtype(toNominal(ChildA1), intersection) shouldBe true
+        hierarchy.relationshipFor(intersection, toNominal(ChildA1)) shouldBe TypeRelationship.Same
+      }
+
+      it("should flatten nested intersections") {
+        val nested = Type.intersection(
+          Type.intersection(toNominal(ParentA), toNominal(ParentB)),
+          toNominal(Root)
+        )
+
+        val expected = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+
+        hierarchy.isSubtype(nested, expected) shouldBe true
+        hierarchy.isSubtype(expected, nested) shouldBe true
+        hierarchy.relationshipFor(nested, expected) shouldBe TypeRelationship.Same
+      }
+
+      it("should ignore Top in intersections") {
+        val intersection = Type.intersection(Type.Top, toNominal(ParentA))
+
+        hierarchy.isSubtype(intersection, toNominal(ParentA)) shouldBe true
+        hierarchy.isSubtype(toNominal(ParentA), intersection) shouldBe true
+        hierarchy.relationshipFor(intersection, toNominal(ParentA)) shouldBe TypeRelationship.Same
+      }
+
+      it("should simplify intersections containing Bottom to Bottom") {
+        val intersection = Type.intersection(Type.Bottom, toNominal(ParentA))
+
+        hierarchy.isSubtype(intersection, Type.Bottom) shouldBe true
+        hierarchy.isSubtype(Type.Bottom, intersection) shouldBe true
+        hierarchy.relationshipFor(intersection, Type.Bottom) shouldBe TypeRelationship.Same
+      }
+
+      it("should simplify redundant LUB results for unions") {
+        val union = Type.union(toNominal(ChildA1), toNominal(ParentB))
+
+        hierarchy.relationshipFor(union, toNominal(ParentA)) shouldBe
+          TypeRelationship.HaveCommonSupertype(toNominal(Root))
+      }
+
+      it("should simplify redundant LUB results involving intersections") {
+        val intersection = Type.intersection(toNominal(ChildA1), toNominal(ParentA))
+
+        hierarchy.relationshipFor(intersection, toNominal(ChildA1)) shouldBe TypeRelationship.Same
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)

@@ -32,13 +32,19 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
   def relationshipFor(lhs: Type[T], rhs: Type[T]): TypeRelationship[T] = {
     if (lhs == rhs) {
       TypeRelationship.Same
-    } else if (isSubtype(lhs, rhs)) {
-      TypeRelationship.StrictSubtype
-    } else if (isSubtype(rhs, lhs)) {
-      TypeRelationship.StrictSupertype
     } else {
-      val lub = leastUpperBound(lhs, rhs)
-      TypeRelationship.HaveCommonSupertype(lub)
+      val lSubR = isSubtype(lhs, rhs)
+      val rSubL = isSubtype(rhs, lhs)
+      if (lSubR && rSubL) {
+        TypeRelationship.Same
+      } else if (lSubR) {
+        TypeRelationship.StrictSubtype
+      } else if (rSubL) {
+        TypeRelationship.StrictSupertype
+      } else {
+        val lub = leastUpperBound(lhs, rhs)
+        TypeRelationship.HaveCommonSupertype(lub)
+      }
     }
   }
 
