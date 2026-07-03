@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{ProperType, Type, TypeArgument, TypeParameter}
+import software.kes.scaletta.api.{Type, TypeArgument, TypeParameter}
 import software.kes.scaletta.util.NonEmptyVector
 
 class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
@@ -460,6 +460,94 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         h.relationshipFor(listParentA, vectorParentB) shouldBe TypeRelationship.HaveCommonSupertype(expected)
       }
     }
+
+    describe("Value and reference lattice") {
+      val valueA = toNominal(ValueA)
+      val valueB = toNominal(ValueB)
+      val refA = toNominal(RefA)
+      val refB = toNominal(RefB)
+
+      val valueHierarchy = AdjacencyTypeHierarchy.fromMap[TestType](
+        Map(
+          valueB -> Set(valueA),
+          refB -> Set(refA)
+        ),
+        Set(valueA, valueB)
+      )
+
+      it("should treat nominal value types correctly") {
+        valueHierarchy.isSubtype(valueA, Type.TopValue) shouldBe true
+        valueHierarchy.isSubtype(valueA, Type.Top) shouldBe true
+        valueHierarchy.isSubtype(valueA, Type.TopRef) shouldBe false
+      }
+
+      it("should treat nominal reference types correctly") {
+        valueHierarchy.isSubtype(refA, Type.TopRef) shouldBe true
+        valueHierarchy.isSubtype(refA, Type.Top) shouldBe true
+        valueHierarchy.isSubtype(refA, Type.TopValue) shouldBe false
+      }
+
+      it("should treat Bottom as the universal bottom type") {
+        valueHierarchy.isSubtype(Type.Bottom, valueA) shouldBe true
+        valueHierarchy.isSubtype(Type.Bottom, refA) shouldBe true
+        valueHierarchy.isSubtype(Type.Bottom, Type.TopValue) shouldBe true
+        valueHierarchy.isSubtype(Type.Bottom, Type.TopRef) shouldBe true
+        valueHierarchy.isSubtype(Type.Bottom, Type.Top) shouldBe true
+      }
+
+      it("should treat BottomRef as only bottom for the reference side") {
+        valueHierarchy.isSubtype(Type.BottomRef, refA) shouldBe true
+        valueHierarchy.isSubtype(Type.BottomRef, Type.TopRef) shouldBe true
+        valueHierarchy.isSubtype(Type.BottomRef, Type.Top) shouldBe true
+        valueHierarchy.isSubtype(Type.BottomRef, valueA) shouldBe false
+        valueHierarchy.isSubtype(Type.BottomRef, Type.TopValue) shouldBe false
+        valueHierarchy.isSubtype(Type.BottomRef, Type.Bottom) shouldBe false
+      }
+
+      it("should treat Unit as a value type") {
+        valueHierarchy.isSubtype(Type.Unit, Type.TopValue) shouldBe true
+        valueHierarchy.isSubtype(Type.Unit, Type.Top) shouldBe true
+        valueHierarchy.isSubtype(Type.Unit, Type.TopRef) shouldBe false
+      }
+
+      it("should verify branch tops relationships") {
+        valueHierarchy.isSubtype(Type.TopValue, Type.Top) shouldBe true
+        valueHierarchy.isSubtype(Type.TopRef, Type.Top) shouldBe true
+        valueHierarchy.isSubtype(Type.TopValue, Type.TopRef) shouldBe false
+        valueHierarchy.isSubtype(Type.TopRef, Type.TopValue) shouldBe false
+      }
+
+      it("should return correct immediateSupertypes for value and reference types") {
+        // valueA has no explicit mapping, so it should extend TopValue
+        valueHierarchy.immediateSupertypes(valueA) should contain theSameElementsAs Set(Type.TopValue)
+        // refA has no explicit mapping, so it should extend TopRef
+        valueHierarchy.immediateSupertypes(refA) should contain theSameElementsAs Set(Type.TopRef)
+        // valueB extends valueA
+        valueHierarchy.immediateSupertypes(valueB) should contain theSameElementsAs Set(valueA)
+        // refB extends refA
+        valueHierarchy.immediateSupertypes(refB) should contain theSameElementsAs Set(refA)
+
+        valueHierarchy.immediateSupertypes(Type.TopValue) should contain theSameElementsAs Set(Type.Top)
+        valueHierarchy.immediateSupertypes(Type.TopRef) should contain theSameElementsAs Set(Type.Top)
+      }
+
+      it("should report correct relationships via relationshipFor") {
+        valueHierarchy.relationshipFor(valueA, Type.TopValue) shouldBe TypeRelationship.StrictSubtype
+        valueHierarchy.relationshipFor(refA, Type.TopRef) shouldBe TypeRelationship.StrictSubtype
+        valueHierarchy.relationshipFor(Type.TopValue, Type.Top) shouldBe TypeRelationship.StrictSubtype
+        valueHierarchy.relationshipFor(Type.TopRef, Type.Top) shouldBe TypeRelationship.StrictSubtype
+
+        // Relationship between value and reference type
+        val relValRef = valueHierarchy.relationshipFor(valueA, refA)
+        relValRef shouldBe a[TypeRelationship.HaveCommonSupertype[_]]
+        relValRef.commonSupertype shouldBe Some(Type.Top)
+
+        // Relationship between branch tops
+        val relTops = valueHierarchy.relationshipFor(Type.TopValue, Type.TopRef)
+        relTops shouldBe a[TypeRelationship.HaveCommonSupertype[_]]
+        relTops.commonSupertype shouldBe Some(Type.Top)
+      }
+    }
   }
 
   sealed trait TestType
@@ -476,13 +564,21 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
 
   case object DiamondChild extends TestType
 
+  case object ValueA extends TestType
+
+  case object ValueB extends TestType
+
+  case object RefA extends TestType
+
+  case object RefB extends TestType
+
   case object Unrelated extends TestType
 
   case class Other(name: String) extends TestType
 
   private def toTestName(s: String): TestType = Other(s)
 
-  private def toNominal(t: TestType): ProperType[TestType] = Type.Nominal(t)
+  private def toNominal(t: TestType): Type.Nominal[TestType] = Type.Nominal(t)
 
   private lazy val hierarchyMap: Map[Type[TestType], Set[Type[TestType]]] = Map(
     toNominal(DiamondChild) -> Set(toNominal(ChildA1), toNominal(ChildB1)),
