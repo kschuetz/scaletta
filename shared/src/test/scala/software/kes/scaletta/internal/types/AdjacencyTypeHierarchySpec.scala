@@ -1077,6 +1077,99 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("direct applied-type supertypes") {
+      val param = TypeParameter.invariant[TestType]
+      val boxC = Type.constructor(toTestName("Box"), NonEmptyVector(param))
+      val boxChild = Type.applied(boxC, TypeArgument(param, toNominal(ChildA1)))
+      val specialParent = toNominal(Other("SpecialParent"))
+
+      it("should include direct applied-type supertypes in immediateSupertypes") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(specialParent)),
+          Set.empty
+        )
+
+        h.immediateSupertypes(boxChild) should contain theSameElementsAs Set(
+          boxC,
+          Type.TopRef,
+          specialParent
+        )
+      }
+
+      it("should use direct applied-type supertypes for subtype checks") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(specialParent)),
+          Set.empty
+        )
+
+        h.isSubtype(boxChild, specialParent) shouldBe true
+
+        val boxParent = Type.applied(boxC, TypeArgument(param, toNominal(ParentA)))
+        h.isSubtype(boxParent, specialParent) shouldBe false
+      }
+
+      it("should report strict relationships for direct applied-type supertypes") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(specialParent)),
+          Set.empty
+        )
+
+        h.relationshipFor(boxChild, specialParent) shouldBe TypeRelationship.StrictSubtype
+        h.relationshipFor(specialParent, boxChild) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should compose direct applied-type supertypes transitively") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap ++ Map(
+            boxChild -> Set(specialParent),
+            specialParent -> Set(toNominal(Root))
+          ),
+          Set.empty
+        )
+
+        h.isSubtype(boxChild, toNominal(Root)) shouldBe true
+        h.relationshipFor(boxChild, toNominal(Root)) shouldBe TypeRelationship.StrictSubtype
+      }
+
+      it("should combine direct applied-type and constructor-level supertypes") {
+        val paramCov = TypeParameter.covariant[TestType]
+        val boxC2 = Type.constructor(toTestName("Box"), NonEmptyVector(paramCov))
+        val containerC = Type.constructor(toTestName("Container"), NonEmptyVector(paramCov))
+
+        val boxChild2 = Type.applied(boxC2, TypeArgument(paramCov, toNominal(ChildA1)))
+        val containerChild2 = Type.applied(containerC, TypeArgument(paramCov, toNominal(ChildA1)))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap ++ Map(
+            boxC2 -> Set(containerC),
+            boxChild2 -> Set(specialParent)
+          ),
+          Set.empty
+        )
+
+        h.immediateSupertypes(boxChild2) should contain theSameElementsAs Set(
+          containerChild2,
+          boxC2,
+          Type.TopRef,
+          specialParent
+        )
+
+        h.isSubtype(boxChild2, containerChild2) shouldBe true
+        h.isSubtype(boxChild2, specialParent) shouldBe true
+      }
+
+      it("should apply direct mappings only to the exact applied type") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(specialParent)),
+          Set.empty
+        )
+
+        val boxParent = Type.applied(boxC, TypeArgument(param, toNominal(ParentA)))
+        h.isSubtype(boxParent, specialParent) shouldBe false
+        h.relationshipFor(boxParent, specialParent) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
