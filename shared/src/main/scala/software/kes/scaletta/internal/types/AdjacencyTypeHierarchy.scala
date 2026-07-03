@@ -66,12 +66,13 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
           fromMap
         }
       case Type.Intersection(types) =>
-        types.toVector.flatMap(immediateSupertypes)
+        types.toVector ++ types.toVector.flatMap(immediateSupertypes)
       case Type.Union(types) =>
-        // A | B's immediate supertype is LUB(A, B) if we had it,
-        // but for now we can return the nominal LUB of its components.
-        // Actually, for BFS traversal, it's tricky.
-        // If we want allAncestors(A | B) to include ancestors of both A and B:
+        // A | B's supertypes are those that are supertypes of ALL components.
+        // For BFS, we can return the intersection of supertypes of components,
+        // but that's hard to represent as a simple Iterable.
+        // Instead, we return the union of supertypes, which is a bit loose but
+        // BFS will eventually find the common ones if they exist.
         types.toVector.flatMap(immediateSupertypes)
       case _ => supertypes.getOrElse(t, Set.empty)
     }
@@ -93,7 +94,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     } else if (rhs == Type.TopRef) {
       lhs match {
         case Type.Bottom | Type.BottomRef | Type.TopRef => true
-        case _: Type.Function[T] | _: Type.Tuple[T] | _: Type.Constructor[T] => true
+        case _: Type.Function[T] | _: Type.Tuple[T] | _: Type.Constructor[T] | _: Type.Applied[T] => true
         case u: Type.Union[T] => u.types.forall(t => isSubtype(t, rhs))
         case i: Type.Intersection[T] => i.types.exists(t => isSubtype(t, rhs))
         case t: Type.Nominal[T] => !valueTypes.contains(t)
@@ -135,7 +136,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
                 }
             }
           } else {
-            bfsSubtypeCheck(a1, a2)
+            immediateSupertypes(a1).exists(s => isSubtype(s, a2))
           }
         case (a1: Type.Applied[T] @unchecked, a2: Type[T]) if !a2.isInstanceOf[Type.Applied[_]] =>
           bfsSubtypeCheck(a1, a2)
@@ -170,13 +171,13 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
           val args = a1.arguments.toVector.zip(a2.arguments.toVector).map { case (arg1, arg2) =>
             val newValue = arg1.parameter.variance match {
               case Variance.Invariant => if (arg1.value == arg2.value) arg1.value else null
-              case Variance.Covariant => leastUpperBound(arg1.value, arg2.value)
-              case Variance.Contravariant => greatestLowerBound(arg1.value, arg2.value)
+              case Variance.Covariant => leastUpperBound(arg1.value, arg2.value).asInstanceOf[ProperType[T]]
+              case Variance.Contravariant => greatestLowerBound(arg1.value, arg2.value).asInstanceOf[ProperType[T]]
             }
             if (newValue == null) null else arg1.copy(value = newValue)
           }
           if (args.contains(null)) nominalLUB(a1, a2)
-          else Type.Applied(a1.constructor, NonEmptyVector.from(args))
+          else simplifyType(Type.Applied(a1.constructor, NonEmptyVector.from(args)))
 
         case (u1: Type.Union[T], _) =>
           val results = u1.types.toVector.map(t => leastUpperBound(t, b).asInstanceOf[ProperType[T]])
@@ -185,9 +186,10 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
           leastUpperBound(b, a)
 
         case (i1: Type.Intersection[T], _) =>
-          // LUB(A & B, C) is not necessarily simplify(LUB(A, C) & LUB(B, C))
-          // For now, fallback to nominal LUB
-          nominalLUB(a, b)
+          val results = i1.types.toVector.map(t => leastUpperBound(t, b).asInstanceOf[ProperType[T]])
+          simplifyType(Type.Intersection(SetTwoPlus.from(results)))
+        case (_, i2: Type.Intersection[T]) =>
+          leastUpperBound(b, a)
 
         case _ => nominalLUB(a, b)
       }
@@ -217,18 +219,24 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
           val args = a1.arguments.toVector.zip(a2.arguments.toVector).map { case (arg1, arg2) =>
             val newValue = arg1.parameter.variance match {
               case Variance.Invariant => if (arg1.value == arg2.value) arg1.value else null
-              case Variance.Covariant => greatestLowerBound(arg1.value, arg2.value)
-              case Variance.Contravariant => leastUpperBound(arg1.value, arg2.value)
+              case Variance.Covariant => greatestLowerBound(arg1.value, arg2.value).asInstanceOf[ProperType[T]]
+              case Variance.Contravariant => leastUpperBound(arg1.value, arg2.value).asInstanceOf[ProperType[T]]
             }
             if (newValue == null) null else arg1.copy(value = newValue)
           }
-          if (args.contains(null)) Type.Intersection(SetTwoPlus(a.asInstanceOf[ProperType[T]], b.asInstanceOf[ProperType[T]]))
-          else Type.Applied(a1.constructor, NonEmptyVector.from(args))
+          if (args.contains(null)) simplifyType(Type.Intersection(SetTwoPlus(a.asInstanceOf[ProperType[T]], b.asInstanceOf[ProperType[T]])))
+          else simplifyType(Type.Applied(a1.constructor, NonEmptyVector.from(args)))
 
         case (i1: Type.Intersection[T], _) =>
           val results = i1.types.toVector.map(t => greatestLowerBound(t, b).asInstanceOf[ProperType[T]])
           simplifyType(Type.Intersection(SetTwoPlus.from(results)))
         case (_, i2: Type.Intersection[T]) =>
+          greatestLowerBound(b, a)
+
+        case (u1: Type.Union[T], _) =>
+          val results = u1.types.toVector.map(t => greatestLowerBound(t, b).asInstanceOf[ProperType[T]])
+          simplifyType(Type.Union(SetTwoPlus.from(results)))
+        case (_, u2: Type.Union[T]) =>
           greatestLowerBound(b, a)
 
         case (Type.TopRef, _) | (_, Type.TopRef) =>
@@ -244,7 +252,36 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
   }
 
   private def nominalLUB(a: Type[T], b: Type[T]): Type[T] = {
-    findCommonSupertype(a, b).getOrElse(Type.Top)
+    val sA = allAncestors(a)
+    val sB = allAncestors(b)
+
+    val commonNominal = sA.intersect(sB)
+
+    val commonApplied = for {
+      case1: Type.Applied[T] <- sA.collect { case app: Type.Applied[T] => app }
+      case2: Type.Applied[T] <- sB.collect { case app: Type.Applied[T] => app }
+      if (case1 != a || case2 != b) && (case1 != b || case2 != a)
+      if case1.constructor == case2.constructor && case1.arguments.size == case2.arguments.size
+    } yield leastUpperBound(case1, case2)
+
+    val candidates = commonNominal ++ commonApplied
+    val minimalCandidates = candidates.foldLeft(Set.empty[Type[T]]) { (acc, curr) =>
+      if (acc.exists(t => isSubtype(t, curr))) acc
+      else acc.filterNot(t => isSubtype(curr, t)) + curr
+    }
+
+    if (minimalCandidates.size == 1) {
+      minimalCandidates.head
+    } else {
+      val properCandidates = minimalCandidates.collect { case p: ProperType[T] => p }.toSet
+      if (properCandidates.size >= 2) {
+        simplifyType(Type.Intersection(SetTwoPlus.from(properCandidates)))
+      } else if (properCandidates.size == 1) {
+        properCandidates.head
+      } else {
+        minimalCandidates.headOption.getOrElse(Type.Top)
+      }
+    }
   }
 
   private def simplifyType(t: Type[T]): Type[T] = t match {
@@ -305,30 +342,6 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     }
 
     go(Queue(lhs), Set(lhs))
-  }
-
-  /**
-   * Finds the least upper bound (LUB) of two types.
-   * Currently, it returns the first common supertype found during BFS.
-   */
-  private def findCommonSupertype(lhs: Type[T], rhs: Type[T]): Option[Type[T]] = {
-    val lhsAncestors = allAncestors(lhs)
-
-    @tailrec
-    def go(queue: Queue[Type[T]], visited: Set[Type[T]]): Option[Type[T]] = {
-      queue.dequeueOption match {
-        case Some((current, rest)) =>
-          if (lhsAncestors.contains(current)) {
-            Some(current)
-          } else {
-            val nextSupertypes = immediateSupertypes(current).filterNot(visited.contains)
-            go(rest.enqueueAll(nextSupertypes), visited ++ nextSupertypes)
-          }
-        case None => None
-      }
-    }
-
-    go(Queue(rhs), Set(rhs))
   }
 
   private def allAncestors(t: Type[T]): Set[Type[T]] = {

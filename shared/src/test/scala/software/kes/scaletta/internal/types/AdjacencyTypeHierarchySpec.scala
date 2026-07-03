@@ -228,7 +228,7 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         val listCWithParent = Type.constructor(toTestName("List"), NonEmptyVector(covariantParam))
 
         val hierarchyWithConstructors = AdjacencyTypeHierarchy.fromMap[TestType](
-          Map(listCWithParent -> Set(collectionC)),
+          hierarchyMap + (listCWithParent -> Set(collectionC)),
           Set.empty
         )
 
@@ -237,6 +237,9 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
 
         hierarchyWithConstructors.isSubtype(listInt, collectionC) shouldBe true
         hierarchyWithConstructors.isSubtype(listInt, collectionInt) shouldBe true
+
+        val collectionParent = Type.applied(collectionC, TypeArgument(covariantParam, toNominal(ParentA)))
+        hierarchyWithConstructors.isSubtype(listInt, collectionParent) shouldBe true
       }
     }
 
@@ -302,6 +305,26 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         val i = Type.intersection(u, toNominal(Unrelated))
         hierarchy.isSubtype(i, u) shouldBe true
         hierarchy.isSubtype(i, toNominal(Unrelated)) shouldBe true
+      }
+
+      it("should find A as LUB of (A & B) and (A & C)") {
+        val A = toNominal(ParentA)
+        val B = toNominal(ParentB)
+        val C = toNominal(Unrelated)
+        val iAB = Type.intersection(A, B)
+        val iAC = Type.intersection(A, C)
+
+        val rel = hierarchy.relationshipFor(iAB, iAC)
+        rel shouldBe a[TypeRelationship.HaveCommonSupertype[_]]
+        rel.commonSupertype shouldBe Some(A)
+      }
+
+      it("should find A as LUB of (A & B) and A") {
+        val A = toNominal(ParentA)
+        val B = toNominal(ParentB)
+        val iAB = Type.intersection(A, B)
+
+        hierarchy.relationshipFor(iAB, A) shouldBe TypeRelationship.StrictSubtype
       }
     }
 
@@ -392,6 +415,49 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         // LUB(List[ParentA], List[ParentB]) = List[Root]
         val expected = Type.applied(listC, TypeArgument(covariantParam, toNominal(Root)))
         hierarchy.relationshipFor(listParentA, listParentB) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should compute LUB for applied types with different constructors but common parent") {
+        val covariantParam = TypeParameter.covariant[TestType]
+        val collectionC = Type.constructor(toTestName("Collection"), NonEmptyVector(covariantParam))
+        val listC = Type.constructor(toTestName("List"), NonEmptyVector(covariantParam))
+        val vectorC = Type.constructor(toTestName("Vector"), NonEmptyVector(covariantParam))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap ++ Map(
+            listC -> Set(collectionC),
+            vectorC -> Set(collectionC)
+          ),
+          Set.empty
+        )
+
+        val listChild = Type.applied(listC, TypeArgument(covariantParam, toNominal(ChildA1)))
+        val vectorChild = Type.applied(vectorC, TypeArgument(covariantParam, toNominal(ChildA1)))
+
+        val expected = Type.applied(collectionC, TypeArgument(covariantParam, toNominal(ChildA1)))
+        h.relationshipFor(listChild, vectorChild) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should compute LUB for applied types with different constructors and different arguments (covariant)") {
+        val covariantParam = TypeParameter.covariant[TestType]
+        val collectionC = Type.constructor(toTestName("Collection"), NonEmptyVector(covariantParam))
+        val listC = Type.constructor(toTestName("List"), NonEmptyVector(covariantParam))
+        val vectorC = Type.constructor(toTestName("Vector"), NonEmptyVector(covariantParam))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap ++ Map(
+            listC -> Set(collectionC),
+            vectorC -> Set(collectionC)
+          ),
+          Set.empty
+        )
+
+        val listParentA = Type.applied(listC, TypeArgument(covariantParam, toNominal(ParentA)))
+        val vectorParentB = Type.applied(vectorC, TypeArgument(covariantParam, toNominal(ParentB)))
+
+        // LUB(List[ParentA], Vector[ParentB]) -> Collection[LUB(ParentA, ParentB)] -> Collection[Root]
+        val expected = Type.applied(collectionC, TypeArgument(covariantParam, toNominal(Root)))
+        h.relationshipFor(listParentA, vectorParentB) shouldBe TypeRelationship.HaveCommonSupertype(expected)
       }
     }
   }
