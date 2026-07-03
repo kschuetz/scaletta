@@ -518,6 +518,102 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("immediateSupertypes for non-nominal types") {
+      it("should return correct supertypes for top types") {
+        hierarchy.immediateSupertypes(Type.Top) shouldBe empty
+        hierarchy.immediateSupertypes(Type.TopValue) should contain theSameElementsAs Set(Type.Top)
+        hierarchy.immediateSupertypes(Type.TopRef) should contain theSameElementsAs Set(Type.Top)
+      }
+
+      it("should return TopRef for constructors") {
+        val param = TypeParameter.invariant[TestType]
+        val constructor = Type.constructor(toTestName("Box"), NonEmptyVector(param))
+
+        hierarchy.immediateSupertypes(constructor) should contain theSameElementsAs Set(Type.TopRef)
+      }
+
+      it("should return TopRef for function types") {
+        val f = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+
+        hierarchy.immediateSupertypes(f) should contain theSameElementsAs Set(Type.TopRef)
+      }
+
+      it("should return TopRef for tuple types") {
+        val tuple = Type.tuple(toNominal(ParentA), toNominal(ParentB))
+
+        hierarchy.immediateSupertypes(tuple) should contain theSameElementsAs Set(Type.TopRef)
+      }
+
+      it("should return constructor and TopRef for applied types without constructor supertypes") {
+        val param = TypeParameter.covariant[TestType]
+        val listC = Type.constructor(toTestName("List"), NonEmptyVector(param))
+        val listA = Type.applied(listC, TypeArgument(param, toNominal(ParentA)))
+
+        hierarchy.immediateSupertypes(listA) should contain theSameElementsAs Set(
+          listC,
+          Type.TopRef
+        )
+      }
+
+      it("should lift constructor supertypes for applied types") {
+        val param = TypeParameter.covariant[TestType]
+        val collectionC = Type.constructor(toTestName("Collection"), NonEmptyVector(param))
+        val listC = Type.constructor(toTestName("List"), NonEmptyVector(param))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (listC -> Set(collectionC)),
+          Set.empty
+        )
+
+        val listA = Type.applied(listC, TypeArgument(param, toNominal(ParentA)))
+        val collectionA = Type.applied(collectionC, TypeArgument(param, toNominal(ParentA)))
+
+        h.immediateSupertypes(listA) should contain theSameElementsAs Set(
+          collectionA,
+          listC,
+          Type.TopRef
+        )
+      }
+
+      it("should include direct applied-type supertypes") {
+        val param = TypeParameter.invariant[TestType]
+        val boxC = Type.constructor(toTestName("Box"), NonEmptyVector(param))
+        val boxA = Type.applied(boxC, TypeArgument(param, toNominal(ParentA)))
+        val specialParent = toNominal(Other("SpecialParent"))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxA -> Set(specialParent)),
+          Set.empty
+        )
+
+        h.immediateSupertypes(boxA) should contain theSameElementsAs Set(
+          boxC,
+          Type.TopRef,
+          specialParent
+        )
+      }
+
+      it("should derive union supertypes from component supertypes") {
+        val union = Type.union(toNominal(ChildA1), toNominal(ChildB1))
+
+        hierarchy.immediateSupertypes(union) should contain theSameElementsAs Set(
+          toNominal(ParentA),
+          toNominal(ParentB)
+        )
+      }
+
+      it("should include components and component supertypes for intersections") {
+        val intersection = Type.intersection(toNominal(ChildA1), toNominal(ChildB1))
+
+        hierarchy.immediateSupertypes(intersection) should contain theSameElementsAs Set(
+          toNominal(ChildA1),
+          toNominal(ChildB1),
+          toNominal(ParentA),
+          toNominal(ParentB)
+        )
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
