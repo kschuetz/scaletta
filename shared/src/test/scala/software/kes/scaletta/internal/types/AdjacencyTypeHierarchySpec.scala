@@ -32,9 +32,9 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       hierarchy.relationshipFor(toNominal(ChildA1), toNominal(ChildB1)) shouldBe TypeRelationship.HaveCommonSupertype(toNominal(Root))
     }
 
-    it("should return Unrelated for unrelated types") {
-      hierarchy.relationshipFor(toNominal(Root), toNominal(Unrelated)) shouldBe TypeRelationship.Unrelated
-      hierarchy.relationshipFor(toNominal(ChildA1), toNominal(Unrelated)) shouldBe TypeRelationship.Unrelated
+    it("should return HaveCommonSupertype(TopRef) for unrelated reference types") {
+      hierarchy.relationshipFor(toNominal(Root), toNominal(Unrelated)) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
+      hierarchy.relationshipFor(toNominal(ChildA1), toNominal(Unrelated)) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
     }
 
     it("should correctly identify subtypes via isSubtype") {
@@ -49,7 +49,7 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       it("should return correct immediate supertypes") {
         hierarchy.immediateSupertypes(toNominal(DiamondChild)) should contain theSameElementsAs Set(toNominal(ChildA1), toNominal(ChildB1))
         hierarchy.immediateSupertypes(toNominal(ChildA1)) should contain theSameElementsAs Set(toNominal(ParentA))
-        hierarchy.immediateSupertypes(toNominal(Root)) shouldBe empty
+        hierarchy.immediateSupertypes(toNominal(Root)) should contain theSameElementsAs Set(Type.TopRef)
       }
     }
 
@@ -136,8 +136,8 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         hierarchy.relationshipFor(c1, c1) shouldBe TypeRelationship.Same
       }
 
-      it("should identify different constructors as Unrelated") {
-        hierarchy.relationshipFor(c1, c2) shouldBe TypeRelationship.Unrelated
+      it("should identify different constructors as having TopRef as common supertype") {
+        hierarchy.relationshipFor(c1, c2) shouldBe TypeRelationship.HaveCommonSupertype(Type.TopRef)
       }
 
       it("should be a supertype of its applied types") {
@@ -196,7 +196,7 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         val boxParent = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ParentA)))
         hierarchy.isSubtype(boxChild, boxParent) shouldBe false
         hierarchy.isSubtype(boxParent, boxChild) shouldBe false
-        hierarchy.relationshipFor(boxChild, boxParent) shouldBe TypeRelationship.Unrelated
+        hierarchy.relationshipFor(boxChild, boxParent) shouldBe TypeRelationship.HaveCommonSupertype(boxC)
       }
 
       it("should be a subtype of its constructor") {
@@ -356,10 +356,42 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         val t1 = Type.tuple(toNominal(ChildA1), toNominal(ParentB))
         val t2 = Type.tuple(toNominal(ParentA), toNominal(ChildB1))
         // LUB of (ChildA1, ParentB) and (ParentA, ChildB1) is (ParentA, ParentB)
-        // Note: findCommonSupertype currently returns the first ancestor found in BFS,
-        // which might be TopRef if complex structural LUB is not yet implemented.
-        hierarchy.isSubtype(t1, Type.TopRef) shouldBe true
-        hierarchy.isSubtype(t2, Type.TopRef) shouldBe true
+        val expected = Type.tuple(toNominal(ParentA), toNominal(ParentB))
+        hierarchy.relationshipFor(t1, t2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+    }
+
+    describe("Structural LUB") {
+      it("should compute structural LUB for functions") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ParentA)), toNominal(ParentB))
+        // LUB((ParentA) => ChildA1, (ParentA) => ParentB) = (ParentA) => Root
+        val expected = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should compute structural LUB for functions with contravariance") {
+        val f1 = Type.Function(Vector(toNominal(ChildA1)), toNominal(Root))
+        val f2 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        // LUB((ChildA1) => Root, (ParentA) => Root) = (ChildA1) => Root
+        // Because (ParentA) => Root is a subtype of (ChildA1) => Root
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should compute structural LUB for applied types (covariant)") {
+        val covariantParam = TypeParameter.covariant[TestType]
+        val listC = Type.constructor(toTestName("List"), NonEmptyVector(covariantParam))
+        val listChild = Type.applied(listC, TypeArgument(covariantParam, toNominal(ChildA1)))
+        val listParentA = Type.applied(listC, TypeArgument(covariantParam, toNominal(ParentA)))
+        val listParentB = Type.applied(listC, TypeArgument(covariantParam, toNominal(ParentB)))
+
+        // LUB(List[ChildA1], List[ParentA]) = List[ParentA]
+        hierarchy.relationshipFor(listChild, listParentA) shouldBe TypeRelationship.StrictSubtype
+
+        // LUB(List[ParentA], List[ParentB]) = List[Root]
+        val expected = Type.applied(listC, TypeArgument(covariantParam, toNominal(Root)))
+        hierarchy.relationshipFor(listParentA, listParentB) shouldBe TypeRelationship.HaveCommonSupertype(expected)
       }
     }
   }

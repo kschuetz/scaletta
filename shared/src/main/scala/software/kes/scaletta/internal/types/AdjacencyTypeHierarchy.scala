@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.types
 
-import software.kes.scaletta.api.{Type, Variance}
+import software.kes.scaletta.api.{ProperType, Type, Variance}
+import software.kes.scaletta.util.{NonEmptyVector, SetTwoPlus, VectorTwoPlus}
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Queue
@@ -36,19 +37,8 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     } else if (isSubtype(rhs, lhs)) {
       TypeRelationship.StrictSupertype
     } else {
-      val common = findCommonSupertype(lhs, rhs)
-      val isC1 = lhs.isInstanceOf[Type.Constructor[_]] || lhs.isInstanceOf[Type.Applied[_]]
-      val isC2 = rhs.isInstanceOf[Type.Constructor[_]] || rhs.isInstanceOf[Type.Applied[_]]
-
-      if (isC1 && isC2) {
-        val filtered = common.filterNot {
-          case Type.Top | _: Type.Constructor[_] => true
-          case _ => false
-        }
-        filtered.fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
-      } else {
-        common.fold[TypeRelationship[T]](TypeRelationship.Unrelated)(TypeRelationship.HaveCommonSupertype(_))
-      }
+      val lub = leastUpperBound(lhs, rhs)
+      TypeRelationship.HaveCommonSupertype(lub)
     }
   }
 
@@ -57,14 +47,32 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       case Type.Top => Iterable.empty
       case Type.TopValue => Iterable(Type.Top)
       case Type.TopRef => Iterable(Type.Top)
-      case _: Type.Constructor[T] => Iterable(Type.Top)
+      case _: Type.Constructor[T] => Iterable(Type.TopRef)
       case a: Type.Applied[T] =>
         val constructorSupertypes = supertypes.getOrElse(a.constructor, Set.empty)
         val fromApplied = constructorSupertypes.collect {
           case c: Type.Constructor[T] => Type.Applied(c, a.arguments)
           case other => other.substitute(a.arguments.map(_.value))
         }
-        fromApplied ++ Iterable(a.constructor) ++ supertypes.getOrElse(a, Set.empty)
+        fromApplied ++ Iterable(a.constructor, Type.TopRef) ++ supertypes.getOrElse(a, Set.empty)
+      case _: Type.Function[T] => Iterable(Type.TopRef)
+      case _: Type.Tuple[T] => Iterable(Type.TopRef)
+      case n: Type.Nominal[T] =>
+        val fromMap = supertypes.getOrElse(n, Set.empty)
+        if (fromMap.isEmpty) {
+          if (valueTypes.contains(n)) Iterable(Type.TopValue)
+          else Iterable(Type.TopRef)
+        } else {
+          fromMap
+        }
+      case Type.Intersection(types) =>
+        types.toVector.flatMap(immediateSupertypes)
+      case Type.Union(types) =>
+        // A | B's immediate supertype is LUB(A, B) if we had it,
+        // but for now we can return the nominal LUB of its components.
+        // Actually, for BFS traversal, it's tricky.
+        // If we want allAncestors(A | B) to include ancestors of both A and B:
+        types.toVector.flatMap(immediateSupertypes)
       case _ => supertypes.getOrElse(t, Set.empty)
     }
 
@@ -136,6 +144,148 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case _ =>
           bfsSubtypeCheck(lhs, rhs)
       }
+    }
+  }
+
+  private def leastUpperBound(a: Type[T], b: Type[T]): Type[T] = {
+    if (a == b) a
+    else if (isSubtype(a, b)) b
+    else if (isSubtype(b, a)) a
+    else {
+      (a, b) match {
+        case (Type.Top, _) | (_, Type.Top) => Type.Top
+        case (Type.Bottom, other) => other
+        case (other, Type.Bottom) => other
+
+        case (f1: Type.Function[T], f2: Type.Function[T]) if f1.parameters.size == f2.parameters.size =>
+          val p = f1.parameters.zip(f2.parameters).map { case (p1, p2) => greatestLowerBound(p1, p2).asInstanceOf[ProperType[T]] }
+          val r = leastUpperBound(f1.result, f2.result).asInstanceOf[ProperType[T]]
+          Type.Function(p, r)
+
+        case (t1: Type.Tuple[T], t2: Type.Tuple[T]) if t1.elements.size == t2.elements.size =>
+          val e = t1.elements.toVector.zip(t2.elements.toVector).map { case (e1, e2) => leastUpperBound(e1, e2).asInstanceOf[ProperType[T]] }
+          Type.Tuple(VectorTwoPlus.from(e))
+
+        case (a1: Type.Applied[T], a2: Type.Applied[T]) if a1.constructor == a2.constructor && a1.arguments.size == a2.arguments.size =>
+          val args = a1.arguments.toVector.zip(a2.arguments.toVector).map { case (arg1, arg2) =>
+            val newValue = arg1.parameter.variance match {
+              case Variance.Invariant => if (arg1.value == arg2.value) arg1.value else null
+              case Variance.Covariant => leastUpperBound(arg1.value, arg2.value)
+              case Variance.Contravariant => greatestLowerBound(arg1.value, arg2.value)
+            }
+            if (newValue == null) null else arg1.copy(value = newValue)
+          }
+          if (args.contains(null)) nominalLUB(a1, a2)
+          else Type.Applied(a1.constructor, NonEmptyVector.from(args))
+
+        case (u1: Type.Union[T], _) =>
+          val results = u1.types.toVector.map(t => leastUpperBound(t, b).asInstanceOf[ProperType[T]])
+          simplifyType(Type.Union(SetTwoPlus.from(results)))
+        case (_, u2: Type.Union[T]) =>
+          leastUpperBound(b, a)
+
+        case (i1: Type.Intersection[T], _) =>
+          // LUB(A & B, C) is not necessarily simplify(LUB(A, C) & LUB(B, C))
+          // For now, fallback to nominal LUB
+          nominalLUB(a, b)
+
+        case _ => nominalLUB(a, b)
+      }
+    }
+  }
+
+  private def greatestLowerBound(a: Type[T], b: Type[T]): Type[T] = {
+    if (a == b) a
+    else if (isSubtype(a, b)) a
+    else if (isSubtype(b, a)) b
+    else {
+      (a, b) match {
+        case (Type.Bottom, _) | (_, Type.Bottom) => Type.Bottom
+        case (Type.Top, other) => other
+        case (other, Type.Top) => other
+
+        case (f1: Type.Function[T], f2: Type.Function[T]) if f1.parameters.size == f2.parameters.size =>
+          val p = f1.parameters.zip(f2.parameters).map { case (p1, p2) => leastUpperBound(p1, p2).asInstanceOf[ProperType[T]] }
+          val r = greatestLowerBound(f1.result, f2.result).asInstanceOf[ProperType[T]]
+          Type.Function(p, r)
+
+        case (t1: Type.Tuple[T], t2: Type.Tuple[T]) if t1.elements.size == t2.elements.size =>
+          val e = t1.elements.toVector.zip(t2.elements.toVector).map { case (e1, e2) => greatestLowerBound(e1, e2).asInstanceOf[ProperType[T]] }
+          Type.Tuple(VectorTwoPlus.from(e))
+
+        case (a1: Type.Applied[T], a2: Type.Applied[T]) if a1.constructor == a2.constructor && a1.arguments.size == a2.arguments.size =>
+          val args = a1.arguments.toVector.zip(a2.arguments.toVector).map { case (arg1, arg2) =>
+            val newValue = arg1.parameter.variance match {
+              case Variance.Invariant => if (arg1.value == arg2.value) arg1.value else null
+              case Variance.Covariant => greatestLowerBound(arg1.value, arg2.value)
+              case Variance.Contravariant => leastUpperBound(arg1.value, arg2.value)
+            }
+            if (newValue == null) null else arg1.copy(value = newValue)
+          }
+          if (args.contains(null)) Type.Intersection(SetTwoPlus(a.asInstanceOf[ProperType[T]], b.asInstanceOf[ProperType[T]]))
+          else Type.Applied(a1.constructor, NonEmptyVector.from(args))
+
+        case (i1: Type.Intersection[T], _) =>
+          val results = i1.types.toVector.map(t => greatestLowerBound(t, b).asInstanceOf[ProperType[T]])
+          simplifyType(Type.Intersection(SetTwoPlus.from(results)))
+        case (_, i2: Type.Intersection[T]) =>
+          greatestLowerBound(b, a)
+
+        case (Type.TopRef, _) | (_, Type.TopRef) =>
+          if (isSubtype(a, Type.TopRef) && isSubtype(b, Type.TopRef)) Type.intersection(a.asInstanceOf[ProperType[T]], b.asInstanceOf[ProperType[T]])
+          else Type.Bottom
+        case (Type.TopValue, _) | (_, Type.TopValue) =>
+          if (isSubtype(a, Type.TopValue) && isSubtype(b, Type.TopValue)) Type.intersection(a.asInstanceOf[ProperType[T]], b.asInstanceOf[ProperType[T]])
+          else Type.Bottom
+
+        case _ => Type.intersection(a.asInstanceOf[ProperType[T]], b.asInstanceOf[ProperType[T]])
+      }
+    }
+  }
+
+  private def nominalLUB(a: Type[T], b: Type[T]): Type[T] = {
+    findCommonSupertype(a, b).getOrElse(Type.Top)
+  }
+
+  private def simplifyType(t: Type[T]): Type[T] = t match {
+    case u: Type.Union[T] =>
+      val flattened = flattenUnion(u.types.toSet)
+      if (flattened.contains(Type.Top)) Type.Top
+      else {
+        val simplified = flattened.foldLeft(Set.empty[ProperType[T]]) { (acc, curr) =>
+          if (acc.exists(t => isSubtype(curr, t))) acc
+          else acc.filterNot(t => isSubtype(t, curr)) + curr
+        }
+        if (simplified.size == 1) simplified.head
+        else Type.Union(SetTwoPlus.from(simplified))
+      }
+    case i: Type.Intersection[T] =>
+      val flattened = flattenIntersection(i.types.toSet)
+      if (flattened.contains(Type.Bottom)) Type.Bottom
+      else {
+        val simplified = flattened.foldLeft(Set.empty[ProperType[T]]) { (acc, curr) =>
+          if (acc.exists(t => isSubtype(t, curr))) acc
+          else acc.filterNot(t => isSubtype(curr, t)) + curr
+        }
+        if (simplified.size == 1) simplified.head
+        else Type.Intersection(SetTwoPlus.from(simplified))
+      }
+    case _ => t
+  }
+
+  private def flattenUnion(types: Set[ProperType[T]]): Set[ProperType[T]] = {
+    types.flatMap {
+      case u: Type.Union[T] => flattenUnion(u.types.toSet)
+      case Type.Bottom => Set.empty[ProperType[T]]
+      case other => Set(other)
+    }
+  }
+
+  private def flattenIntersection(types: Set[ProperType[T]]): Set[ProperType[T]] = {
+    types.flatMap {
+      case i: Type.Intersection[T] => flattenIntersection(i.types.toSet)
+      case Type.Top => Set.empty[ProperType[T]]
+      case other => Set(other)
     }
   }
 
