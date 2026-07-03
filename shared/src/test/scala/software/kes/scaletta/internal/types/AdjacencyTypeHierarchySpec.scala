@@ -1402,6 +1402,80 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         relTops.commonSupertype shouldBe Some(Type.Top)
       }
     }
+
+    describe("explicit value/reference crossing relationships") {
+      val valueA = toNominal(ValueA)
+      val refA = toNominal(RefA)
+      val refB = toNominal(RefB)
+
+      it("should honor explicit edges from value nominal to reference nominal") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(valueA -> Set(refA)),
+          Set(valueA)
+        )
+
+        h.immediateSupertypes(valueA) should contain theSameElementsAs Set(refA)
+
+        h.isSubtype(valueA, refA) shouldBe true
+        h.relationshipFor(valueA, refA) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(valueA, Type.TopValue) shouldBe true
+        h.isSubtype(valueA, Type.TopRef) shouldBe false
+        h.isSubtype(valueA, Type.Top) shouldBe true
+      }
+
+      it("should honor explicit edges from reference nominal to value nominal") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(refA -> Set(valueA)),
+          Set(valueA)
+        )
+
+        h.immediateSupertypes(refA) should contain theSameElementsAs Set(valueA)
+
+        h.isSubtype(refA, valueA) shouldBe true
+        h.relationshipFor(refA, valueA) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(refA, Type.TopRef) shouldBe true
+        h.isSubtype(refA, Type.TopValue) shouldBe false
+        h.isSubtype(refA, Type.Top) shouldBe true
+      }
+
+      it("should not allow value nominal to become a subtype of TopRef via explicit edge") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(valueA -> Set(Type.TopRef)),
+          Set(valueA)
+        )
+
+        h.immediateSupertypes(valueA) should contain theSameElementsAs Set(Type.TopRef)
+
+        h.isSubtype(valueA, Type.TopValue) shouldBe true
+        h.isSubtype(valueA, Type.TopRef) shouldBe false
+        h.isSubtype(valueA, Type.Top) shouldBe true
+      }
+
+      it("should not allow reference nominal to become a subtype of TopValue via explicit edge") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map(refA -> Set(Type.TopValue)),
+          Set.empty
+        )
+
+        h.immediateSupertypes(refA) should contain theSameElementsAs Set(Type.TopValue)
+
+        h.isSubtype(refA, Type.TopRef) shouldBe true
+        h.isSubtype(refA, Type.TopValue) shouldBe false
+        h.isSubtype(refA, Type.Top) shouldBe true
+      }
+
+      it("should report HaveCommonSupertype(Top) for unrelated crossed types") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map.empty,
+          Set(valueA)
+        )
+        val relValRef = h.relationshipFor(valueA, refB)
+        relValRef shouldBe a[TypeRelationship.HaveCommonSupertype[_]]
+        relValRef.commonSupertype shouldBe Some(Type.Top)
+      }
+    }
   }
 
   sealed trait TestType
