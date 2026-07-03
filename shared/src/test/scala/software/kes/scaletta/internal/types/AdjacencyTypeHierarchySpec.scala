@@ -461,6 +461,63 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("empty hierarchy") {
+      val h = AdjacencyTypeHierarchy.empty[TestType]
+
+      it("should not define nominal inheritance relationships") {
+        h.isSubtype(toNominal(ParentA), toNominal(Root)) shouldBe false
+        h.isSubtype(toNominal(Root), toNominal(ParentA)) shouldBe false
+        h.isSubtype(toNominal(ParentA), toNominal(Unrelated)) shouldBe false
+      }
+
+      it("should treat nominal types as reference types by default") {
+        h.isSubtype(toNominal(ParentA), Type.TopRef) shouldBe true
+        h.isSubtype(toNominal(ParentA), Type.Top) shouldBe true
+        h.isSubtype(toNominal(ParentA), Type.TopValue) shouldBe false
+
+        h.isSubtype(toNominal(Unrelated), Type.TopRef) shouldBe true
+        h.isSubtype(toNominal(Unrelated), Type.TopValue) shouldBe false
+      }
+
+      it("should report TopRef as the common supertype for unrelated nominal types") {
+        h.relationshipFor(toNominal(ParentA), toNominal(Unrelated)) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.TopRef)
+      }
+
+      it("should preserve Same relationships") {
+        h.relationshipFor(toNominal(ParentA), toNominal(ParentA)) shouldBe TypeRelationship.Same
+      }
+
+      it("should treat structural reference-like types as subtypes of TopRef") {
+        val f = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        h.isSubtype(f, Type.TopRef) shouldBe true
+        h.isSubtype(f, Type.Top) shouldBe true
+        h.isSubtype(f, Type.TopValue) shouldBe false
+
+        val tuple = Type.tuple(toNominal(ParentA), toNominal(Root))
+        h.isSubtype(tuple, Type.TopRef) shouldBe true
+        h.isSubtype(tuple, Type.Top) shouldBe true
+        h.isSubtype(tuple, Type.TopValue) shouldBe false
+
+        val param = TypeParameter.invariant[TestType]
+        val c = Type.constructor(toTestName("C"), NonEmptyVector(param))
+        h.isSubtype(c, Type.TopRef) shouldBe true
+
+        val applied = Type.applied(c, TypeArgument(param, toNominal(ParentA)))
+        h.isSubtype(applied, Type.TopRef) shouldBe true
+      }
+
+      it("should return default immediate supertypes") {
+        h.immediateSupertypes(toNominal(ParentA)) should contain theSameElementsAs Set(Type.TopRef)
+        h.immediateSupertypes(Type.TopRef) should contain theSameElementsAs Set(Type.Top)
+        h.immediateSupertypes(Type.TopValue) should contain theSameElementsAs Set(Type.Top)
+        h.immediateSupertypes(Type.Top) shouldBe empty
+
+        val f = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        h.immediateSupertypes(f) should contain theSameElementsAs Set(Type.TopRef)
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
