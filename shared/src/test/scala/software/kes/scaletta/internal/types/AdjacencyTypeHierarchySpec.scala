@@ -1558,6 +1558,121 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         hCollapsed.relationshipFor(toNominal(MultiA), toNominal(MultiB)) shouldBe
           TypeRelationship.HaveCommonSupertype(toNominal(MultiParent1))
       }
+
+      describe("for applied types") {
+        val param = TypeParameter.covariant[TestType]
+
+        val aC = Type.constructor(toTestName("AppliedMultiA"), NonEmptyVector(param))
+        val bC = Type.constructor(toTestName("AppliedMultiB"), NonEmptyVector(param))
+        val p1C = Type.constructor(toTestName("AppliedMultiParent1"), NonEmptyVector(param))
+        val p2C = Type.constructor(toTestName("AppliedMultiParent2"), NonEmptyVector(param))
+
+        val baseHierarchyMap: Map[Type[TestType], Set[Type[TestType]]] = hierarchyMap ++ Map(
+          (aC: Type[TestType]) -> Set[Type[TestType]](p1C, p2C),
+          (bC: Type[TestType]) -> Set[Type[TestType]](p1C, p2C)
+        )
+
+        it("should represent multiple applied minimal common supertypes as an intersection") {
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            baseHierarchyMap,
+            Set.empty
+          )
+
+          val aChild = Type.applied(aC, TypeArgument(param, toNominal(ChildA1)))
+          val bChild = Type.applied(bC, TypeArgument(param, toNominal(ChildA1)))
+
+          val p1Child = Type.applied(p1C, TypeArgument(param, toNominal(ChildA1)))
+          val p2Child = Type.applied(p2C, TypeArgument(param, toNominal(ChildA1)))
+
+          val expected = Type.intersection(p1Child, p2Child)
+
+          h.relationshipFor(aChild, bChild) shouldBe
+            TypeRelationship.HaveCommonSupertype(expected)
+
+          h.relationshipFor(bChild, aChild) shouldBe
+            TypeRelationship.HaveCommonSupertype(expected)
+
+          h.isSubtype(aChild, expected) shouldBe true
+          h.isSubtype(bChild, expected) shouldBe true
+
+          h.isSubtype(p1Child, p2Child) shouldBe false
+          h.isSubtype(p2Child, p1Child) shouldBe false
+        }
+
+        it("should compute parent intersections with widened arguments for different covariant applied arguments") {
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            baseHierarchyMap,
+            Set.empty
+          )
+
+          val aChild = Type.applied(aC, TypeArgument(param, toNominal(ChildA1)))
+          val bParent = Type.applied(bC, TypeArgument(param, toNominal(ParentA)))
+
+          val p1Parent = Type.applied(p1C, TypeArgument(param, toNominal(ParentA)))
+          val p2Parent = Type.applied(p2C, TypeArgument(param, toNominal(ParentA)))
+
+          val expected = Type.intersection(p1Parent, p2Parent)
+
+          h.relationshipFor(aChild, bParent) shouldBe
+            TypeRelationship.HaveCommonSupertype(expected)
+
+          h.relationshipFor(bParent, aChild) shouldBe
+            TypeRelationship.HaveCommonSupertype(expected)
+
+          h.isSubtype(aChild, p1Parent) shouldBe true
+          h.isSubtype(aChild, p2Parent) shouldBe true
+          h.isSubtype(bParent, p1Parent) shouldBe true
+          h.isSubtype(bParent, p2Parent) shouldBe true
+        }
+
+        it("should not collapse applied minimal common supertypes to a less specific root constructor") {
+          val rootParam = TypeParameter.covariant[TestType]
+          val rootC = Type.constructor(toTestName("AppliedMultiRoot"), NonEmptyVector(rootParam))
+
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            baseHierarchyMap ++ Map[Type[TestType], Set[Type[TestType]]](
+              p1C -> Set[Type[TestType]](rootC),
+              p2C -> Set[Type[TestType]](rootC)
+            ),
+            Set.empty
+          )
+
+          val aChild = Type.applied(aC, TypeArgument(param, toNominal(ChildA1)))
+          val bChild = Type.applied(bC, TypeArgument(param, toNominal(ChildA1)))
+
+          val p1Child = Type.applied(p1C, TypeArgument(param, toNominal(ChildA1)))
+          val p2Child = Type.applied(p2C, TypeArgument(param, toNominal(ChildA1)))
+
+          val expected = Type.intersection(p1Child, p2Child)
+
+          h.relationshipFor(aChild, bChild) shouldBe
+            TypeRelationship.HaveCommonSupertype(expected)
+
+          val rootChild = Type.applied(rootC, TypeArgument(rootParam, toNominal(ChildA1)))
+
+          h.isSubtype(expected, rootChild) shouldBe true
+          h.isSubtype(rootChild, expected) shouldBe false
+        }
+
+        it("should collapse applied common supertypes when one parent constructor is more specific") {
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            baseHierarchyMap ++ Map[Type[TestType], Set[Type[TestType]]](
+              p1C -> Set[Type[TestType]](p2C)
+            ),
+            Set.empty
+          )
+
+          val aChild = Type.applied(aC, TypeArgument(param, toNominal(ChildA1)))
+          val bChild = Type.applied(bC, TypeArgument(param, toNominal(ChildA1)))
+
+          val expected = Type.applied(p1C, TypeArgument(param, toNominal(ChildA1)))
+
+          h.relationshipFor(aChild, bChild) shouldBe
+            TypeRelationship.HaveCommonSupertype(expected)
+
+          h.isSubtype(expected, Type.applied(p2C, TypeArgument(param, toNominal(ChildA1)))) shouldBe true
+        }
+      }
     }
 
     describe("cycle safety") {
