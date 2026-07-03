@@ -1315,6 +1315,82 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("relationshipFor with bottom types") {
+      it("should report StrictSubtype/StrictSupertype for Bottom vs nominal reference type") {
+        hierarchy.relationshipFor(Type.Bottom, toNominal(ParentA)) shouldBe
+          TypeRelationship.StrictSubtype
+
+        hierarchy.relationshipFor(toNominal(ParentA), Type.Bottom) shouldBe
+          TypeRelationship.StrictSupertype
+
+        hierarchy.isSubtype(Type.Bottom, toNominal(ParentA)) shouldBe true
+        hierarchy.isSubtype(toNominal(ParentA), Type.Bottom) shouldBe false
+      }
+
+      it("should report StrictSubtype/StrictSupertype for Bottom vs nominal value type") {
+        val valueA = toNominal(ValueA)
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map.empty,
+          Set(valueA)
+        )
+
+        h.relationshipFor(Type.Bottom, valueA) shouldBe
+          TypeRelationship.StrictSubtype
+
+        h.relationshipFor(valueA, Type.Bottom) shouldBe
+          TypeRelationship.StrictSupertype
+
+        h.isSubtype(Type.Bottom, valueA) shouldBe true
+        h.isSubtype(valueA, Type.Bottom) shouldBe false
+      }
+
+      it("should report StrictSubtype/StrictSupertype for BottomRef vs nominal reference type") {
+        hierarchy.relationshipFor(Type.BottomRef, toNominal(ParentA)) shouldBe
+          TypeRelationship.StrictSubtype
+
+        hierarchy.relationshipFor(toNominal(ParentA), Type.BottomRef) shouldBe
+          TypeRelationship.StrictSupertype
+
+        hierarchy.isSubtype(Type.BottomRef, toNominal(ParentA)) shouldBe true
+        hierarchy.isSubtype(toNominal(ParentA), Type.BottomRef) shouldBe false
+      }
+
+      it("should report HaveCommonSupertype(Top) for BottomRef vs nominal value type") {
+        val valueA = toNominal(ValueA)
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          Map.empty,
+          Set(valueA)
+        )
+
+        h.isSubtype(Type.BottomRef, valueA) shouldBe false
+        h.isSubtype(valueA, Type.BottomRef) shouldBe false
+
+        h.relationshipFor(Type.BottomRef, valueA) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.Top)
+
+        h.relationshipFor(valueA, Type.BottomRef) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.Top)
+      }
+
+      it("should report StrictSubtype/StrictSupertype for BottomRef vs structural reference-like types") {
+        val f = Type.Function(Vector(toNominal(Root)), toNominal(Root))
+
+        hierarchy.relationshipFor(Type.BottomRef, f) shouldBe
+          TypeRelationship.StrictSubtype
+
+        hierarchy.relationshipFor(f, Type.BottomRef) shouldBe
+          TypeRelationship.StrictSupertype
+
+        val tuple = Type.tuple(toNominal(ParentA), toNominal(Root))
+
+        hierarchy.relationshipFor(Type.BottomRef, tuple) shouldBe
+          TypeRelationship.StrictSubtype
+
+        hierarchy.relationshipFor(tuple, Type.BottomRef) shouldBe
+          TypeRelationship.StrictSupertype
+      }
+    }
+
     describe("Value and reference lattice") {
       val valueA = toNominal(ValueA)
       val valueB = toNominal(ValueB)
