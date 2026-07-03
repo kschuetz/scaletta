@@ -532,6 +532,99 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Structural LUB for contravariant and invariant applied types") {
+      val invariantParam = TypeParameter.invariant[TestType]
+      val covariantParam = TypeParameter.covariant[TestType]
+      val contravariantParam = TypeParameter.contravariant[TestType]
+
+      val boxC = Type.constructor(toTestName("Box"), NonEmptyVector(invariantParam))
+      val writerC = Type.constructor(toTestName("Writer"), NonEmptyVector(contravariantParam))
+
+      it("should report strict subtyping for contravariant applied types when arguments are ordered") {
+        val writerChild = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ChildA1)))
+        val writerParent = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ParentA)))
+
+        // Writer[ParentA] <: Writer[ChildA1]
+        hierarchy.isSubtype(writerParent, writerChild) shouldBe true
+        hierarchy.isSubtype(writerChild, writerParent) shouldBe false
+        hierarchy.relationshipFor(writerParent, writerChild) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(writerChild, writerParent) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should compute contravariant applied LUB using argument GLB") {
+        val writerParentA = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ParentA)))
+        val writerParentB = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ParentB)))
+
+        // LUB(Writer[ParentA], Writer[ParentB]) = Writer[ParentA & ParentB]
+        val expectedArg = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        val expected = Type.applied(writerC, TypeArgument(contravariantParam, expectedArg))
+
+        hierarchy.relationshipFor(writerParentA, writerParentB) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should simplify contravariant applied relationships when one argument is already narrower") {
+        val writerChild = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ChildA1)))
+        val writerParent = Type.applied(writerC, TypeArgument(contravariantParam, toNominal(ParentA)))
+
+        hierarchy.relationshipFor(writerParent, writerChild) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(writerChild, writerParent) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should report Same for invariant applied types with identical arguments") {
+        val boxA1 = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ParentA)))
+        val boxA2 = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ParentA)))
+
+        hierarchy.relationshipFor(boxA1, boxA2) shouldBe TypeRelationship.Same
+        hierarchy.isSubtype(boxA1, boxA2) shouldBe true
+      }
+
+      it("should fall back to the constructor for invariant applied types with ordered but unequal arguments") {
+        val boxChild = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ChildA1)))
+        val boxParent = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ParentA)))
+
+        hierarchy.isSubtype(boxChild, boxParent) shouldBe false
+        hierarchy.isSubtype(boxParent, boxChild) shouldBe false
+        hierarchy.relationshipFor(boxChild, boxParent) shouldBe TypeRelationship.HaveCommonSupertype(boxC)
+      }
+
+      it("should fall back to the constructor for invariant applied types with unrelated arguments") {
+        val boxParentA = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ParentA)))
+        val boxParentB = Type.applied(boxC, TypeArgument(invariantParam, toNominal(ParentB)))
+
+        hierarchy.isSubtype(boxParentA, boxParentB) shouldBe false
+        hierarchy.isSubtype(boxParentB, boxParentA) shouldBe false
+        hierarchy.relationshipFor(boxParentA, boxParentB) shouldBe TypeRelationship.HaveCommonSupertype(boxC)
+      }
+
+      it("should compute mixed-variance applied LUB") {
+        val inParam = TypeParameter.contravariant[TestType]
+        val outParam = TypeParameter.covariant[TestType]
+        val channelC = Type.constructor(toTestName("Channel"), NonEmptyVector(inParam, outParam))
+
+        val channel1 = Type.applied(
+          channelC,
+          TypeArgument(inParam, toNominal(ParentA)),
+          TypeArgument(outParam, toNominal(ChildA1))
+        )
+        val channel2 = Type.applied(
+          channelC,
+          TypeArgument(inParam, toNominal(ParentB)),
+          TypeArgument(outParam, toNominal(ChildB1))
+        )
+
+        // LUB(Channel[ParentA, ChildA1], Channel[ParentB, ChildB1]) = Channel[ParentA & ParentB, Root]
+        val expectedIn = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        val expectedOut = toNominal(Root)
+        val expected = Type.applied(
+          channelC,
+          TypeArgument(inParam, expectedIn),
+          TypeArgument(outParam, expectedOut)
+        )
+
+        hierarchy.relationshipFor(channel1, channel2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+    }
+
     describe("empty hierarchy") {
       val h = AdjacencyTypeHierarchy.empty[TestType]
 
