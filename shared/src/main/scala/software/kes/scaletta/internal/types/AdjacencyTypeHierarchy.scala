@@ -277,7 +277,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       if case1.constructor == case2.constructor && case1.arguments.size == case2.arguments.size
     } yield leastUpperBound(case1, case2)
 
-    val candidates = commonNominal ++ commonApplied
+    val candidates = (commonNominal ++ commonApplied).filter(t => isSubtype(a, t) && isSubtype(b, t))
     val minimalCandidates = candidates.foldLeft(Set.empty[Type[T]]) { (acc, curr) =>
       if (acc.exists(t => isSubtype(t, curr))) acc
       else acc.filterNot(t => isSubtype(curr, t)) + curr

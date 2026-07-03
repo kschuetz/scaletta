@@ -2012,6 +2012,120 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("direct applied-type supertypes across value and reference branches") {
+      val param = TypeParameter.covariant[TestType]
+      val boxC = Type.constructor(toTestName("ValueBranchBox"), NonEmptyVector(param))
+
+      val boxChild = Type.applied(
+        boxC,
+        TypeArgument(param, toNominal(ChildA1))
+      )
+
+      val boxParent = Type.applied(
+        boxC,
+        TypeArgument(param, toNominal(ParentA))
+      )
+
+      val valueA = toNominal(ValueA)
+      val valueB = toNominal(ValueB)
+
+      it("should honor direct applied-type mappings to nominal value types") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(valueA)),
+          Set(valueA)
+        )
+
+        h.immediateSupertypes(boxChild) should contain(valueA)
+        h.immediateSupertypes(boxChild) should contain theSameElementsAs Set(
+          boxC,
+          Type.TopRef,
+          valueA
+        )
+
+        h.isSubtype(boxChild, valueA) shouldBe true
+        h.relationshipFor(boxChild, valueA) shouldBe TypeRelationship.StrictSubtype
+        h.relationshipFor(valueA, boxChild) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should not treat applied types as TopValue even with direct value supertypes") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(valueA)),
+          Set(valueA)
+        )
+
+        h.isSubtype(boxChild, Type.TopRef) shouldBe true
+        h.isSubtype(boxChild, Type.Top) shouldBe true
+        h.isSubtype(boxChild, Type.TopValue) shouldBe false
+      }
+
+      it("should expose direct TopValue mappings in immediateSupertypes without changing applied branch membership") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(Type.TopValue)),
+          Set.empty
+        )
+
+        h.immediateSupertypes(boxChild) should contain(Type.TopValue)
+
+        h.isSubtype(boxChild, Type.TopRef) shouldBe true
+        h.isSubtype(boxChild, Type.Top) shouldBe true
+        h.isSubtype(boxChild, Type.TopValue) shouldBe false
+
+        h.relationshipFor(boxChild, Type.TopValue) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.Top)
+      }
+
+      it("should apply direct value-type mappings only to the exact applied type") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(valueA)),
+          Set(valueA)
+        )
+
+        h.isSubtype(boxParent, valueA) shouldBe false
+
+        h.relationshipFor(boxParent, valueA) shouldBe
+          TypeRelationship.HaveCommonSupertype(Type.Top)
+
+        h.immediateSupertypes(boxParent) should not contain valueA
+      }
+
+      it("should honor direct applied-type mappings to reference and value supertypes together") {
+        val refA = toNominal(RefA)
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (boxChild -> Set(valueA, refA)),
+          Set(valueA)
+        )
+
+        h.immediateSupertypes(boxChild) should contain allOf(valueA, refA)
+
+        h.isSubtype(boxChild, valueA) shouldBe true
+        h.isSubtype(boxChild, refA) shouldBe true
+
+        h.isSubtype(boxChild, Type.TopRef) shouldBe true
+        h.isSubtype(boxChild, Type.TopValue) shouldBe false
+        h.isSubtype(boxChild, Type.Top) shouldBe true
+      }
+
+      it("should follow direct applied-type mappings through a value subtype chain") {
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap ++ Map(
+            boxChild -> Set(valueB),
+            valueB -> Set(valueA)
+          ),
+          Set(valueA, valueB)
+        )
+
+        h.isSubtype(boxChild, valueB) shouldBe true
+        h.isSubtype(boxChild, valueA) shouldBe true
+
+        h.relationshipFor(boxChild, valueA) shouldBe TypeRelationship.StrictSubtype
+
+        h.isSubtype(boxChild, Type.TopValue) shouldBe false
+        h.isSubtype(boxChild, Type.TopRef) shouldBe true
+        h.isSubtype(boxChild, Type.Top) shouldBe true
+      }
+    }
+
     describe("Function and tuple LUB arity mismatch") {
       it("should use TopRef as the common supertype for functions with different arity") {
         val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
