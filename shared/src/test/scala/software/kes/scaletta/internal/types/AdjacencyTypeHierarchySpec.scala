@@ -127,6 +127,59 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("Structural GLB through function LUB") {
+      it("should use an intersection as the parameter GLB for unrelated parameter types") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+        val f2 = Type.Function(Vector(toNominal(ParentB)), toNominal(Root))
+
+        val expectedParam = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        val expected = Type.Function(Vector(expectedParam), toNominal(Root))
+
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should simplify parameter GLB when one parameter is narrower") {
+        val fChildParam = Type.Function(Vector(toNominal(ChildA1)), toNominal(Root))
+        val fParentParam = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+
+        hierarchy.relationshipFor(fParentParam, fChildParam) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(fChildParam, fParentParam) shouldBe TypeRelationship.StrictSupertype
+      }
+
+      it("should combine parameter GLB and result LUB") {
+        val f1 = Type.Function(Vector(toNominal(ParentA)), toNominal(ChildA1))
+        val f2 = Type.Function(Vector(toNominal(ParentB)), toNominal(ChildB1))
+
+        val expectedParam = Type.intersection(toNominal(ParentA), toNominal(ParentB))
+        val expected = Type.Function(Vector(expectedParam), toNominal(Root))
+
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should compute parameter GLB independently for multiple parameters") {
+        val f1 = Type.Function(Vector(toNominal(ParentA), toNominal(ParentB)), toNominal(Root))
+        val f2 = Type.Function(Vector(toNominal(ParentB), toNominal(ParentA)), toNominal(Root))
+
+        val expected = Type.Function(
+          Vector(
+            Type.intersection(toNominal(ParentA), toNominal(ParentB)),
+            Type.intersection(toNominal(ParentB), toNominal(ParentA))
+          ),
+          toNominal(Root)
+        )
+
+        hierarchy.relationshipFor(f1, f2) shouldBe TypeRelationship.HaveCommonSupertype(expected)
+      }
+
+      it("should simplify parameter GLB involving TopRef") {
+        val fTopRef = Type.Function(Vector(Type.TopRef), toNominal(Root))
+        val fParent = Type.Function(Vector(toNominal(ParentA)), toNominal(Root))
+
+        hierarchy.relationshipFor(fTopRef, fParent) shouldBe TypeRelationship.StrictSubtype
+        hierarchy.relationshipFor(fParent, fTopRef) shouldBe TypeRelationship.StrictSupertype
+      }
+    }
+
     describe("Constructor types") {
       val param = TypeParameter.invariant[TestType]
       val c1 = Type.constructor(toTestName("C1"), NonEmptyVector(param))
