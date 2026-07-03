@@ -53,7 +53,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       case Type.Top => Iterable.empty
       case Type.TopValue => Iterable(Type.Top)
       case Type.TopRef => Iterable(Type.Top)
-      case _: Type.Constructor[T] => Iterable(Type.TopRef)
+      case c: Type.Constructor[T] => supertypes.getOrElse(c, Set.empty) ++ Iterable(Type.TopRef)
       case a: Type.Applied[T] =>
         val constructorSupertypes = supertypes.getOrElse(a.constructor, Set.empty)
         val fromApplied = constructorSupertypes.collect {
@@ -126,13 +126,23 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
           i.types.exists(t => isSubtype(t, rhs)) || bfsSubtypeCheck(lhs, rhs)
         case (_, u: Type.Union[T]) =>
           u.types.exists(t => isSubtype(lhs, t)) || bfsSubtypeCheck(lhs, rhs)
+        case _ =>
+          isSubtypeStructural(lhs, rhs) || bfsSubtypeCheck(lhs, rhs)
+      }
+    }
+  }
+
+  private def isSubtypeStructural(lhs: Type[T], rhs: Type[T]): Boolean = {
+    if (lhs == rhs) true
+    else {
+      (lhs, rhs) match {
         case (Type.Function(p1, r1), Type.Function(p2, r2)) =>
           p1.size == p2.size &&
-            p1.zip(p2).forall { case (a, b) => isSubtype(b, a) } && // Contravariant
-            isSubtype(r1, r2) // Covariant
+            p1.zip(p2).forall { case (a, b) => isSubtype(b, a) } &&
+            isSubtype(r1, r2)
         case (Type.Tuple(e1), Type.Tuple(e2)) =>
           e1.size == e2.size &&
-            e1.zip(e2).forall { case (a, b) => isSubtype(a, b) } // Covariant
+            e1.zip(e2).forall { case (a, b) => isSubtype(a, b) }
         case (a1: Type.Applied[T] @unchecked, a2: Type.Applied[T] @unchecked) =>
           if (a1.constructor == a2.constructor && a1.arguments.size == a2.arguments.size) {
             a1.arguments.toVector.zip(a2.arguments.toVector).forall {
@@ -143,15 +153,10 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
                   case Variance.Contravariant => isSubtype(arg2.value, arg1.value)
                 }
             }
-          } else {
-            immediateSupertypes(a1).exists(s => isSubtype(s, a2))
-          }
-        case (a1: Type.Applied[T] @unchecked, a2: Type[T]) if !a2.isInstanceOf[Type.Applied[_]] =>
-          bfsSubtypeCheck(a1, a2)
+          } else false
         case (a: Type.Applied[T] @unchecked, c2: Type.Constructor[T] @unchecked) =>
           isSubtype(a.constructor, c2)
-        case _ =>
-          bfsSubtypeCheck(lhs, rhs)
+        case _ => false
       }
     }
   }
@@ -339,7 +344,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     def go(queue: Queue[Type[T]], visited: Set[Type[T]]): Boolean = {
       queue.dequeueOption match {
         case Some((current, rest)) =>
-          if (current == rhs) {
+          if (isSubtypeStructural(current, rhs)) {
             true
           } else {
             val nextSupertypes = immediateSupertypes(current).filterNot(visited.contains)

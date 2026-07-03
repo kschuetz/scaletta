@@ -1771,6 +1771,152 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         h.immediateSupertypes(toNominal(CycleA)) should contain theSameElementsAs Set(toNominal(CycleB))
         h.immediateSupertypes(toNominal(CycleB)) should contain theSameElementsAs Set(toNominal(CycleA), toNominal(Root))
       }
+
+      describe("for constructors and applied types") {
+        it("should terminate for a two-node constructor cycle") {
+          val param = TypeParameter.covariant[TestType]
+          val aC = Type.constructor(toTestName("CycleConstructorA"), NonEmptyVector(param))
+          val bC = Type.constructor(toTestName("CycleConstructorB"), NonEmptyVector(param))
+
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            Map(
+              aC -> Set(bC),
+              bC -> Set(aC)
+            ),
+            Set.empty
+          )
+
+          h.isSubtype(aC, bC) shouldBe true
+          h.isSubtype(bC, aC) shouldBe true
+          h.relationshipFor(aC, bC) shouldBe TypeRelationship.Same
+          h.relationshipFor(bC, aC) shouldBe TypeRelationship.Same
+
+          h.isSubtype(aC, toNominal(CycleUnrelated)) shouldBe false
+
+          h.immediateSupertypes(aC) should contain theSameElementsAs Set(bC, Type.TopRef)
+        }
+
+        it("should terminate for applied types through a cyclic constructor hierarchy") {
+          val param = TypeParameter.covariant[TestType]
+          val aC = Type.constructor(toTestName("AppliedCycleA"), NonEmptyVector(param))
+          val bC = Type.constructor(toTestName("AppliedCycleB"), NonEmptyVector(param))
+
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            hierarchyMap ++ Map(
+              aC -> Set(bC),
+              bC -> Set(aC)
+            ),
+            Set.empty
+          )
+
+          val aChild = Type.applied(aC, TypeArgument(param, toNominal(ChildA1)))
+          val bChild = Type.applied(bC, TypeArgument(param, toNominal(ChildA1)))
+          val bParent = Type.applied(bC, TypeArgument(param, toNominal(ParentA)))
+
+          h.isSubtype(aChild, bChild) shouldBe true
+          h.isSubtype(bChild, aChild) shouldBe true
+          h.relationshipFor(aChild, bChild) shouldBe TypeRelationship.Same
+
+          h.isSubtype(aChild, bParent) shouldBe true
+
+          val unrelatedC = Type.constructor(toTestName("UnrelatedConstructor"), NonEmptyVector(param))
+          val unrelatedApplied = Type.applied(unrelatedC, TypeArgument(param, toNominal(ChildA1)))
+
+          h.isSubtype(aChild, unrelatedApplied) shouldBe false
+        }
+
+        it("should find reachable root constructor through applied constructor cycle") {
+          val param = TypeParameter.covariant[TestType]
+          val aC = Type.constructor(toTestName("AppliedCycleWithRootA"), NonEmptyVector(param))
+          val bC = Type.constructor(toTestName("AppliedCycleWithRootB"), NonEmptyVector(param))
+          val rootC = Type.constructor(toTestName("AppliedCycleRoot"), NonEmptyVector(param))
+
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            hierarchyMap ++ Map(
+              aC -> Set(bC),
+              bC -> Set(aC, rootC)
+            ),
+            Set.empty
+          )
+
+          val aChild = Type.applied(aC, TypeArgument(param, toNominal(ChildA1)))
+          val rootChild = Type.applied(rootC, TypeArgument(param, toNominal(ChildA1)))
+          val rootParent = Type.applied(rootC, TypeArgument(param, toNominal(ParentA)))
+
+          h.isSubtype(aChild, rootChild) shouldBe true
+          h.isSubtype(aChild, rootParent) shouldBe true
+
+          h.relationshipFor(aChild, rootChild) shouldBe TypeRelationship.StrictSubtype
+        }
+
+        it("should terminate for a two-node direct applied-type cycle") {
+          val param = TypeParameter.covariant[TestType]
+          val boxC = Type.constructor(toTestName("DirectAppliedCycleBox"), NonEmptyVector(param))
+
+          val boxChild = Type.applied(boxC, TypeArgument(param, toNominal(ChildA1)))
+          val boxParent = Type.applied(boxC, TypeArgument(param, toNominal(ParentA)))
+
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            Map(
+              boxChild -> Set(boxParent),
+              boxParent -> Set(boxChild)
+            ),
+            Set.empty
+          )
+
+          h.isSubtype(boxChild, boxParent) shouldBe true
+          h.isSubtype(boxParent, boxChild) shouldBe true
+          h.relationshipFor(boxChild, boxParent) shouldBe TypeRelationship.Same
+
+          h.isSubtype(boxChild, toNominal(CycleUnrelated)) shouldBe false
+
+          h.immediateSupertypes(boxChild) should contain(boxParent)
+          h.immediateSupertypes(boxParent) should contain(boxChild)
+        }
+
+        it("should find reachable nominal supertype through direct applied-type cycle") {
+          val param = TypeParameter.covariant[TestType]
+          val boxC = Type.constructor(toTestName("DirectAppliedCycleBox"), NonEmptyVector(param))
+
+          val boxChild = Type.applied(boxC, TypeArgument(param, toNominal(ChildA1)))
+          val boxParent = Type.applied(boxC, TypeArgument(param, toNominal(ParentA)))
+
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            hierarchyMap ++ Map(
+              boxChild -> Set(boxParent),
+              boxParent -> Set(boxChild, toNominal(Root))
+            ),
+            Set.empty
+          )
+
+          h.isSubtype(boxChild, toNominal(Root)) shouldBe true
+          h.isSubtype(boxParent, toNominal(Root)) shouldBe true
+
+          h.relationshipFor(boxChild, toNominal(Root)) shouldBe TypeRelationship.StrictSubtype
+        }
+
+        it("should terminate relationshipFor with common-supertype lookup for applied cycle") {
+          val param = TypeParameter.covariant[TestType]
+          val boxC = Type.constructor(toTestName("DirectAppliedCycleBox"), NonEmptyVector(param))
+
+          val boxChild = Type.applied(boxC, TypeArgument(param, toNominal(ChildA1)))
+          val boxParent = Type.applied(boxC, TypeArgument(param, toNominal(ParentA)))
+
+          val h = AdjacencyTypeHierarchy.fromMap[TestType](
+            Map(
+              boxChild -> Set(boxParent),
+              boxParent -> Set(boxChild)
+            ),
+            Set.empty
+          )
+
+          val unrelatedC = Type.constructor(toTestName("DirectAppliedCycleUnrelated"), NonEmptyVector(param))
+          val unrelated = Type.applied(unrelatedC, TypeArgument(param, toNominal(ChildA1)))
+
+          val rel = h.relationshipFor(boxChild, unrelated)
+          rel shouldBe a[TypeRelationship.HaveCommonSupertype[_]]
+        }
+      }
     }
 
     describe("direct applied-type supertypes") {
