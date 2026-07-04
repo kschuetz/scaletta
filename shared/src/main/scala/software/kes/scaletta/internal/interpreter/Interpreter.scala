@@ -375,6 +375,25 @@ final class Interpreter private(private val program: Program,
         val typeTag = (rawOpcode >> 16) & 0xFF
         operandStack.convert(typeTag.toByte)
 
+      case Opcodes.StringConcat =>
+        val numArgs = rawOpcode & 0xFFFFFF
+        val result = if (numArgs > 0) {
+          val items = new Array[Any](numArgs)
+          var i = numArgs - 1
+          while (i >= 0) {
+            items(i) = operandStack.pop()
+            i -= 1
+          }
+          val sb = new StringBuilder(numArgs * 16)
+          var j = 0
+          while (j < numArgs) {
+            sb.append(items(j))
+            j += 1
+          }
+          sb.result()
+        } else ""
+        operandStack.pushObject(result)
+
       case _ =>
         throw new RuntimeException(s"Unknown opcode: $opcode")
     }

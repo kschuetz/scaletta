@@ -25,4 +25,5 @@ object Opcodes {
   final val LogicalOr = 21
   final val Box = 22
   final val Convert = 23
+  final val StringConcat = 24
 }

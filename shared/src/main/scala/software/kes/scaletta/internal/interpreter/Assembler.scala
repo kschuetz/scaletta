@@ -235,6 +235,13 @@ final class Assembler(private val writer: OpcodeWriter,
   def convert(typ: BasicType): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Convert, typ, 0))
 
+  /**
+   * Pops `numArgs` values from the operand stack, converts them to strings, concatenates these
+   * into a single string, and pushes the result onto the operand stack.
+   */
+  def stringConcat(numArgs: Int): Unit =
+    writer.writeAndAdvance(makeOpcode24(Opcodes.StringConcat, numArgs))
+
   def emitReturn(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Return, 0, 0))
 
