@@ -6,7 +6,7 @@ import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
-import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarAddress, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 import scala.collection.immutable.ArraySeq

@@ -173,7 +173,7 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
                              (f: Environment => Unit): Unit = {
     val userFunctionBuilder = UserFunctionBuilder.create(signature)
     val constantPoolBuilder = ConstantPoolBuilder.create()
-    val assembler = new Assembler(userFunctionBuilder, constantPoolBuilder)
+    val assembler = new Assembler(0, userFunctionBuilder, constantPoolBuilder)
     val environment = Environment(assembler, userFunctionBuilder, constantPoolBuilder)
     f(environment)
   }

@@ -21,7 +21,7 @@ final class ProgramBuilder private(private val constantPoolBuilder: ConstantPool
   /**
    * Returns an Assembler for the main function.
    */
-  def mainAssembler(): Assembler = new Assembler(mainFunctionBuilder, constantPoolBuilder)
+  def mainAssembler(): Assembler = new Assembler(0, mainFunctionBuilder, constantPoolBuilder)
 
   /**
    * Adds a new function to the program and returns an Assembler for it.
@@ -32,7 +32,7 @@ final class ProgramBuilder private(private val constantPoolBuilder: ConstantPool
   def addFunction(signature: UserFunctionSignature): Assembler = {
     val builder = UserFunctionBuilder.create(signature)
     additionalFunctions += builder
-    new Assembler(builder, constantPoolBuilder)
+    new Assembler(additionalFunctions.length, builder, constantPoolBuilder)
   }
 
   /**

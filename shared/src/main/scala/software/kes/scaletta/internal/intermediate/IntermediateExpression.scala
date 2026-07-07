@@ -28,7 +28,9 @@ object IntermediateExpression {
 
   case class StringConcat(segments: Vector[IntermediateExpression]) extends IntermediateExpression
 
-  sealed trait Value extends IntermediateExpression
+  sealed trait Value extends IntermediateExpression {
+    def asAny: Any
+  }
 
   object Value {
     def apply(value: Any): Value = value match {
@@ -75,20 +77,34 @@ object IntermediateExpression {
         case other => ObjectValue(other)
       }
 
-    case class IntValue(value: Int) extends Value
+    case class IntValue(value: Int) extends Value {
+      def asAny: Any = value
+    }
 
-    case class LongValue(value: Long) extends Value
+    case class LongValue(value: Long) extends Value {
+      def asAny: Any = value
+    }
 
-    case class FloatValue(value: Float) extends Value
+    case class FloatValue(value: Float) extends Value {
+      def asAny: Any = value
+    }
 
-    case class DoubleValue(value: Double) extends Value
+    case class DoubleValue(value: Double) extends Value {
+      def asAny: Any = value
+    }
 
-    case class ShortValue(value: Short) extends Value
+    case class ShortValue(value: Short) extends Value {
+      def asAny: Any = value
+    }
 
-    case class ByteValue(value: Byte) extends Value
+    case class ByteValue(value: Byte) extends Value {
+      def asAny: Any = value
+    }
 
     sealed trait BooleanValue extends Value {
       def value: Boolean
+
+      def asAny: Any = value
     }
 
     case object True extends BooleanValue {
@@ -99,10 +115,14 @@ object IntermediateExpression {
       def value: Boolean = false
     }
 
-    case class CharValue(value: Char) extends Value
+    case class CharValue(value: Char) extends Value {
+      def asAny: Any = value
+    }
 
     sealed trait AnyRefValue extends Value {
       def value: AnyRef
+
+      def asAny: Any = value
     }
 
     case object Null extends AnyRefValue {

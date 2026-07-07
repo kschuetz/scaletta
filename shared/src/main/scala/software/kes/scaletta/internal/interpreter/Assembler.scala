@@ -17,7 +17,8 @@ object Assembler {
 
 }
 
-final class Assembler(private val writer: OpcodeWriter,
+final class Assembler(val index: Int,
+                      private val writer: OpcodeWriter,
                       private val interner: ConstantInterner) {
 
   def nop(): Unit =
