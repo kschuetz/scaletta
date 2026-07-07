@@ -16,7 +16,7 @@ object IntermediateExpression {
                          thenBranch: IntermediateExpression,
                          elseBranch: IntermediateExpression) extends IntermediateExpression
 
-  case class WithBindings(bindings: Vector[IntermediateExpression],
+  case class WithBindings(bindings: Vector[Binding],
                           body: IntermediateExpression) extends IntermediateExpression
 
   case class Reference(scope: Int,
