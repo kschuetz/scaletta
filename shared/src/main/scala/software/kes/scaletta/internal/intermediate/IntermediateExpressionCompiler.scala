@@ -17,23 +17,6 @@ object IntermediateExpressionCompiler {
     programBuilder.build()
   }
 
-  private sealed trait BindingInfo
-
-  private object BindingInfo {
-    final case class Val(absoluteIndex: Int) extends BindingInfo
-
-    final case class LazyVal(absoluteIndex: Int, functionIndex: Int) extends BindingInfo
-
-    final case class Def(functionIndex: Int) extends BindingInfo
-  }
-
-  private final case class CompileEnv(layers: List[Vector[BindingInfo]],
-                                      nextVarIndex: Int) {
-    def resolve(scope: Int, slot: Int): BindingInfo = layers(scope)(slot)
-
-    def pushLayer(layer: Vector[BindingInfo], newVarCount: Int): CompileEnv =
-      copy(layers = layer :: layers, nextVarIndex = nextVarIndex + newVarCount)
-  }
 
   private final class Emitter(programBuilder: ProgramBuilder) {
     private val workQueue = mutable.Queue[(IntermediateExpression, UserFunctionSignature, CompileEnv, Assembler)]()
@@ -70,9 +53,9 @@ object IntermediateExpressionCompiler {
             case BindingInfo.Val(absoluteIndex) =>
               val typ = signature.varSpace.basicTypeOf(absoluteIndex)
               pushFromVar(assembler, typ, absoluteIndex)
-            case BindingInfo.LazyVal(absoluteIndex, functionIndex) =>
+            case BindingInfo.LazyVal(absoluteIndex, functionIndex, _) =>
               assembler.lazyEval(absoluteIndex, functionIndex)
-            case BindingInfo.Def(_) =>
+            case BindingInfo.Def(_, _) =>
               throw new RuntimeException("Cannot reference a local function as a value")
           }
 
@@ -83,7 +66,7 @@ object IntermediateExpressionCompiler {
         case IntermediateExpression.LocalCall(scope, slot, arguments) =>
           arguments.foreach(arg => emit(arg, env, signature, assembler))
           env.resolve(scope, slot) match {
-            case BindingInfo.Def(functionIndex) =>
+            case BindingInfo.Def(functionIndex, _) =>
               assembler.callLocal(functionIndex)
             case BindingInfo.Val(_) =>
               throw new RuntimeException("Cannot call a value as a function")
@@ -142,13 +125,13 @@ object IntermediateExpressionCompiler {
                 )
                 val added = programBuilder.addFunction(evalSignature)
 
-                currentLayer = currentLayer :+ BindingInfo.LazyVal(absoluteIndex, added.index)
+                currentLayer = currentLayer :+ BindingInfo.LazyVal(absoluteIndex, added.index, underlyingType)
                 discoveredInBlock += ((value, evalSignature, added))
                 newVarCountInBlock += 1
 
               case Binding.Def(fSignature, fBody) =>
                 val added = programBuilder.addFunction(fSignature)
-                currentLayer = currentLayer :+ BindingInfo.Def(added.index)
+                currentLayer = currentLayer :+ BindingInfo.Def(added.index, fSignature.returnType)
                 discoveredInBlock += ((fBody, fSignature, added))
             }
           }
