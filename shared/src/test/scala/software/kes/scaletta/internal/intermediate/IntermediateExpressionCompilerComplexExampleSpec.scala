@@ -186,4 +186,48 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     // a = 11, b = 22
     result.intValue() shouldBe 22
   }
+
+  test("discount eligibility logic with AND and OR") {
+    val signature = UserFunctionSignature(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+        CoreTypes.BooleanT, // isVip
+        CoreTypes.DoubleT, // totalSpent
+        CoreTypes.BooleanT // hasCoupon
+      ))),
+      BasicTypes.Boolean,
+      3
+    )
+
+    // (isVip || totalSpent > 101.0) && hasCoupon
+    val body = And(
+      Or(
+        Reference(0, 0),
+        NativeCall(stdLib.comparison.double.gt.double, Vector(Reference(0, 1), double(101.0)))
+      ),
+      Reference(0, 2)
+    )
+
+    val program = compiler.compile(signature, body)
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val testCases = Seq(
+      // (isVip, totalSpent, hasCoupon) -> expected
+      (true, 50.0, true) -> true, // (true || false) && true = true
+      (true, 150.0, true) -> true, // (true || true) && true = true
+      (false, 150.0, true) -> true, // (false || true) && true = true
+      (false, 50.0, true) -> false, // (false || false) && true = false
+      (true, 150.0, false) -> false, // (true || true) && false = false
+      (false, 150.0, false) -> false, // (false || true) && false = false
+      (false, 50.0, false) -> false // (false || false) && false = false
+    )
+
+    testCases.foreach { case ((isVip, totalSpent, hasCoupon), expected) =>
+      val result = interpreter.run(emptyContextReader, vs => {
+        vs.unsafeWriteBoolean(0, isVip)
+        vs.unsafeWriteDouble(1, totalSpent)
+        vs.unsafeWriteBoolean(2, hasCoupon)
+      })
+      result.booleanValue() shouldBe expected
+    }
+  }
 }
