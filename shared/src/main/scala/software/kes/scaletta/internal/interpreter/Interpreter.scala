@@ -351,10 +351,9 @@ final class Interpreter private(private val program: Program,
           var nextFuncIdx = callStack.pop()
 
           if (nextFuncIdx == -1) {
-            val result = operandStack.pop()
+            operandStack.swap()
             val cell = operandStack.pop().asInstanceOf[LazyCell]
-            cell.updateValue(result)
-            operandStack.push(result)
+            cell.update(operandStack)
 
             nextIP = callStack.pop()
             nextFuncIdx = callStack.pop()

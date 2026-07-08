@@ -323,6 +323,36 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     floats.pop()
   }
 
+  def unsafeReadControl(position: Int): Byte =
+    control.unsafeRead(position)
+
+  def unsafeReadObject(position: Int): AnyRef =
+    objects.unsafeRead(position)
+
+  def unsafeReadBoolean(position: Int): Boolean =
+    booleans.unsafeRead(position)
+
+  def unsafeReadInt(position: Int): Int =
+    ints.unsafeRead(position)
+
+  def unsafeReadLong(position: Int): Long =
+    longs.unsafeRead(position)
+
+  def unsafeReadShort(position: Int): Short =
+    shorts.unsafeRead(position)
+
+  def unsafeReadByte(position: Int): Byte =
+    bytes.unsafeRead(position)
+
+  def unsafeReadChar(position: Int): Char =
+    chars.unsafeRead(position)
+
+  def unsafeReadDouble(position: Int): Double =
+    doubles.unsafeRead(position)
+
+  def unsafeReadFloat(position: Int): Float =
+    floats.unsafeRead(position)
+
   def clear(): Unit = {
     objects.clear()
     booleans.clear()
