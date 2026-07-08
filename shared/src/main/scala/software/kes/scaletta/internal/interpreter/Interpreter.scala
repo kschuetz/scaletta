@@ -347,8 +347,21 @@ final class Interpreter private(private val program: Program,
           done = true
         } else {
           val prevFunction = currentFunction
-          instructionPointer = callStack.pop()
-          userFunctionIndex = callStack.pop()
+          var nextIP = callStack.pop()
+          var nextFuncIdx = callStack.pop()
+
+          if (nextFuncIdx == -1) {
+            val result = operandStack.pop()
+            val cell = operandStack.pop().asInstanceOf[LazyCell]
+            cell.updateValue(result)
+            operandStack.push(result)
+
+            nextIP = callStack.pop()
+            nextFuncIdx = callStack.pop()
+          }
+
+          instructionPointer = nextIP
+          userFunctionIndex = nextFuncIdx
           currentFunction = program.functions(userFunctionIndex)
           variableStack.contractFrame(prevFunction.frameSignature)
           varSpace.setSignature(currentFunction.varSpaceSignature)
@@ -396,17 +409,34 @@ final class Interpreter private(private val program: Program,
 
       case Opcodes.LazyInit =>
         val typ = (rawOpcode >> 16) & 0xFF
-        instructionPointer += 1
         val varIndex = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
         val cell = LazyCell.create(typ.toByte)
         varSpace.unsafeWriteObject(varIndex, cell)
 
       case Opcodes.LazyEval =>
-        instructionPointer += 1
         val varIndex = currentFunction.fetch(instructionPointer)
         instructionPointer += 1
-        val userFunctionIndex = currentFunction.fetch(instructionPointer)
-        throw new UnsupportedOperationException("TODO")
+        val evalFunctionIndex = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+
+        val cell = varSpace.unsafeReadObject(varIndex).asInstanceOf[LazyCell]
+        if (cell.evaluated) {
+          cell.pushValue(operandStack)
+        } else {
+          callStack.push(userFunctionIndex)
+          callStack.push(instructionPointer)
+          callStack.push(-1)
+          callStack.push(0)
+
+          operandStack.pushObject(cell)
+
+          userFunctionIndex = evalFunctionIndex
+          instructionPointer = 0
+          currentFunction = program.functions(userFunctionIndex)
+          variableStack.expandFrame(currentFunction.frameSignature)
+          varSpace.setSignature(currentFunction.varSpaceSignature)
+        }
 
       case _ =>
         throw new RuntimeException(s"Unknown opcode: $opcode")
