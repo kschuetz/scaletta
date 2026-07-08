@@ -22,6 +22,8 @@ object IntermediateExpressionCompiler {
   private object BindingInfo {
     final case class Val(absoluteIndex: Int) extends BindingInfo
 
+    final case class LazyVal(absoluteIndex: Int, functionIndex: Int) extends BindingInfo
+
     final case class Def(functionIndex: Int) extends BindingInfo
   }
 
@@ -68,6 +70,8 @@ object IntermediateExpressionCompiler {
             case BindingInfo.Val(absoluteIndex) =>
               val typ = signature.varSpace.basicTypeOf(absoluteIndex)
               pushFromVar(assembler, typ, absoluteIndex)
+            case BindingInfo.LazyVal(absoluteIndex, functionIndex) =>
+              assembler.lazyEval(absoluteIndex, functionIndex)
             case BindingInfo.Def(_) =>
               throw new RuntimeException("Cannot reference a local function as a value")
           }
@@ -127,13 +131,19 @@ object IntermediateExpressionCompiler {
                 currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
                 newVarCountInBlock += 1
 
-              case Binding.LazyVal(value) =>
-                // Eager for now
+              case Binding.LazyVal(value, underlyingType) =>
                 val absoluteIndex = env.nextVarIndex + newVarCountInBlock
-                emit(value, envForBinding, signature, assembler)
-                val typ = signature.varSpace.basicTypeOf(absoluteIndex)
-                popIntoVar(assembler, typ, absoluteIndex)
-                currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
+                assembler.lazyInit(underlyingType, absoluteIndex)
+
+                val evalSignature = UserFunctionSignature(
+                  signature.varSpace.pushFrame(software.kes.scaletta.internal.runtime.FrameSignature.empty),
+                  underlyingType,
+                  0
+                )
+                val added = programBuilder.addFunction(evalSignature)
+
+                currentLayer = currentLayer :+ BindingInfo.LazyVal(absoluteIndex, added.index)
+                discoveredInBlock += ((value, evalSignature, added))
                 newVarCountInBlock += 1
 
               case Binding.Def(fSignature, fBody) =>

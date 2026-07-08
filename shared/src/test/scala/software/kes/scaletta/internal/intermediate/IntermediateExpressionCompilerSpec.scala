@@ -145,5 +145,79 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).value[String]() shouldBe "Hello, World!"
     }
+
+    it("should handle LazyVal") {
+      val expr = WithBindings(
+        Vector(Binding.LazyVal(int(41), BasicTypes.Int)),
+        NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), int(1)))
+      )
+      // Slot for LazyVal must be ObjectT
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
+      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      interpreter.run(emptyContextReader).intValue() shouldBe 42
+    }
+
+    it("should handle LazyVal and evaluate it only once") {
+      var callCount = 0
+      var incrementId: software.kes.scaletta.api.NativeFunctionId = software.kes.scaletta.api.NativeFunctionId(-1)
+
+      val module = software.kes.scaletta.api.ScalettaModule { setup =>
+        incrementId = setup.methodRegistry.addMethod(
+          software.kes.scaletta.api.MethodName(software.kes.scaletta.api.ReceiverType.Static(software.kes.scaletta.api.PackagePath.root), software.kes.scaletta.api.Name("increment")),
+          Vector.empty,
+          CoreTypes.IntT,
+          software.kes.scaletta.api.FunctionImpl.intResult { _ =>
+            callCount += 1
+            callCount
+          }
+        )
+      }
+      val customScaletta = Scaletta.create(Scaletta.addModule(module)).asInstanceOf[ScalettaFacade]
+      val customNativeFunctions = customScaletta.universe.methodUniverse.dispatchTable
+
+      val expr = WithBindings(
+        Vector(Binding.LazyVal(NativeCall(incrementId, Vector.empty), BasicTypes.Int)),
+        NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), Reference(0, 0)))
+      )
+
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
+      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, customNativeFunctions)
+
+      // (callCount=1) + (cached callCount=1) = 2
+      interpreter.run(emptyContextReader).intValue() shouldBe 2
+      callCount shouldBe 1
+    }
+
+    it("should handle LazyVal referencing outer variables") {
+      val expr = WithBindings(
+        Vector(Binding.Val(int(10))),
+        WithBindings(
+          Vector(Binding.LazyVal(NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(2, 0), int(31))), BasicTypes.Int)),
+          Reference(0, 0)
+        )
+      )
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.AnyRefT)))
+      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 41
+    }
+
+    it("should detect circular dependencies in LazyVal") {
+      val expr = WithBindings(
+        Vector(Binding.LazyVal(Reference(1, 0), BasicTypes.Int)),
+        Reference(0, 0)
+      )
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
+      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      val exception = the[RuntimeException] thrownBy {
+        interpreter.run(emptyContextReader)
+      }
+      exception.getMessage should include("Circular dependency")
+    }
   }
 }
