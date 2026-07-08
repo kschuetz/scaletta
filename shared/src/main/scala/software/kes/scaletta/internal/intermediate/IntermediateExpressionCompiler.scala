@@ -1,12 +1,13 @@
 package software.kes.scaletta.internal.intermediate
 
 import software.kes.scaletta.common.BasicType
+import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.interpreter.{Assembler, Program, ProgramBuilder}
 import software.kes.scaletta.internal.runtime.UserFunctionSignature
 
 import scala.collection.mutable
 
-object IntermediateExpressionCompiler {
+final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTable) {
 
   def compile(mainSignature: UserFunctionSignature,
               expression: IntermediateExpression): Program = {
@@ -16,7 +17,6 @@ object IntermediateExpressionCompiler {
     emitter.emitDiscoveredFunctions()
     programBuilder.build()
   }
-
 
   private final class Emitter(programBuilder: ProgramBuilder) {
     private val workQueue = mutable.Queue[(IntermediateExpression, UserFunctionSignature, CompileEnv, Assembler)]()

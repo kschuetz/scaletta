@@ -14,6 +14,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
+  private val compiler = scaletta.universe.compiler
 
   import IntermediateExpression.Value._
   import IntermediateExpression._
@@ -21,14 +22,14 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
   describe("IntermediateExpressionCompiler") {
     it("should compile literals") {
       val expr = int(41)
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
     it("should compile native calls") {
       val expr = NativeCall(stdLib.arithmetic.int.add.int, Vector(int(10), int(31)))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
@@ -37,7 +38,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val frame = FrameSignature.fromSeq(Seq(CoreTypes.IntT))
       val signature = VarSpaceSignature.of(frame)
       val expr = Reference(0, 0) // scope 0, slot 0 (param)
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 1), expr)
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 1), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
 
       val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 43))
@@ -51,7 +52,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       )
       // Main signature must have space for the local variable
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT)))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
@@ -67,7 +68,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       )
       // Space for 2 ints (x and y)
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT)))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
@@ -94,7 +95,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
         LocalCall(0, 0, Vector(int(5)))
       )
 
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 120
     }
@@ -114,7 +115,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val customNativeFunctions = customScaletta.universe.methodUniverse.dispatchTable
 
       val expr = And(boolean(false), NativeCall(failingNative, Vector.empty))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Boolean, 0), expr)
+      val program = customScaletta.universe.compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Boolean, 0), expr)
       val interpreter = Interpreter.create(program, customNativeFunctions)
       interpreter.run(emptyContextReader).booleanValue() shouldBe false
     }
@@ -134,14 +135,14 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val customNativeFunctions = customScaletta.universe.methodUniverse.dispatchTable
 
       val expr = Or(boolean(true), NativeCall(failingNative, Vector.empty))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Boolean, 0), expr)
+      val program = customScaletta.universe.compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Boolean, 0), expr)
       val interpreter = Interpreter.create(program, customNativeFunctions)
       interpreter.run(emptyContextReader).booleanValue() shouldBe true
     }
 
     it("should handle StringConcat") {
       val expr = StringConcat(Vector(string("Hello, "), string("World!")))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).value[String]() shouldBe "Hello, World!"
     }
@@ -153,7 +154,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       )
       // Slot for LazyVal must be ObjectT
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
 
       interpreter.run(emptyContextReader).intValue() shouldBe 42
@@ -183,7 +184,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       )
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val program = customScaletta.universe.compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, customNativeFunctions)
 
       // (callCount=1) + (cached callCount=1) = 2
@@ -200,7 +201,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
         )
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.AnyRefT)))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
@@ -211,7 +212,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
         Reference(0, 0)
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
-      val program = IntermediateExpressionCompiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
 
       val exception = the[RuntimeException] thrownBy {

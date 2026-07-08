@@ -2,6 +2,7 @@ package software.kes.scaletta.internal
 
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins.{MethodResolver, MethodUniverse, NativeFunctionDefinition, ResolutionError}
+import software.kes.scaletta.internal.intermediate.IntermediateExpressionCompiler
 import software.kes.scaletta.internal.symbols.SignatureQuery
 import software.kes.scaletta.internal.types.TypeUniverse
 
@@ -13,6 +14,9 @@ object Universe {
 
 final class Universe private(val typeUniverse: TypeUniverse,
                              val methodUniverse: MethodUniverse) extends MethodResolver {
+
+  lazy val compiler: IntermediateExpressionCompiler =
+    new IntermediateExpressionCompiler(methodUniverse.dispatchTable)
 
   def getMethodCandidates(typ: Type[TypeId],
                           name: Name,
