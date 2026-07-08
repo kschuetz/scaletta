@@ -26,4 +26,6 @@ object Opcodes {
   final val Box = 22
   final val Convert = 23
   final val StringConcat = 24
+  final val LazyInit = 25
+  final val LazyEval = 26
 }

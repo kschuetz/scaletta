@@ -258,6 +258,30 @@ final class Assembler(val index: Int,
   def tailCallLocal(userFunctionIndex: Int): Unit =
     writer.writeAndAdvance(makeOpcode24(Opcodes.TailCallLocal, userFunctionIndex))
 
+  /**
+   * Creates a lazy cell of the given type and stores it at the given variable index.
+   * (varIndex must point to an object variable)
+   */
+  def lazyInit(typ: BasicType,
+               varIndex: Int): Unit = {
+    writer.writeAndAdvance(makeOpcode(Opcodes.LazyInit, typ, 0))
+    writer.writeAndAdvance(varIndex)
+  }
+
+  /**
+   * Attempts to evaluate the lazy cell at the given variable index.
+   * If already evaluated, pushes its result onto the stack.
+   * If not evaluated, calls the user function at the given index,
+   * and when returned, stores the result in the lazy cell.
+   * In either case, the result will be at the top of the stack.
+   */
+  def lazyEval(varIndex: Int,
+               userFunctionIndex: Int): Unit = {
+    writer.writeAndAdvance(makeOpcode(Opcodes.LazyEval, 0, 0))
+    writer.writeAndAdvance(varIndex)
+    writer.writeAndAdvance(userFunctionIndex)
+  }
+
   def label(): Assembler.Label = new LabelImpl()
 
   /**

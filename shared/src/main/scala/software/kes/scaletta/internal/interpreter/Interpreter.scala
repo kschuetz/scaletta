@@ -394,6 +394,20 @@ final class Interpreter private(private val program: Program,
         } else ""
         operandStack.pushObject(result)
 
+      case Opcodes.LazyInit =>
+        val typ = (rawOpcode >> 16) & 0xFF
+        instructionPointer += 1
+        val varIndex = currentFunction.fetch(instructionPointer)
+        val cell = LazyCell.create(typ.toByte)
+        varSpace.unsafeWriteObject(varIndex, cell)
+
+      case Opcodes.LazyEval =>
+        instructionPointer += 1
+        val varIndex = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        val userFunctionIndex = currentFunction.fetch(instructionPointer)
+        throw new UnsupportedOperationException("TODO")
+
       case _ =>
         throw new RuntimeException(s"Unknown opcode: $opcode")
     }
