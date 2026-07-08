@@ -73,4 +73,117 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
       result.intValue() shouldBe expected
     }
   }
+
+  test("price calculation with lazy tax and discount") {
+    val signature = UserFunctionSignature(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+        CoreTypes.DoubleT, // basePrice
+        CoreTypes.IntT, // countryCode
+        CoreTypes.IntT, // customerStatus
+        CoreTypes.AnyRefT, // taxRate (lazy)
+        CoreTypes.AnyRefT // discount (lazy)
+      ))),
+      BasicTypes.Double,
+      3
+    )
+
+    // lazy val taxRate = if (countryCode == 1) 0.05 else 0.10
+    // countryCode is param 1. In LazyVal RHS, params are at scope 2.
+    val taxRateExpr = Conditional(
+      NativeCall(stdLib.equality.int.eq.int, Vector(Reference(2, 1), int(1))),
+      double(0.05),
+      double(0.10)
+    )
+
+    // lazy val discount = if (customerStatus == 1) 10.0 else 0.0
+    // customerStatus is param 2. taxRate is at scope 1, slot 0.
+    val discountExpr = Conditional(
+      NativeCall(stdLib.equality.int.eq.int, Vector(Reference(2, 2), int(1))),
+      double(10.0),
+      double(0.0)
+    )
+
+    // body
+    // basePrice is param 0.
+    // taxRate is local 0 (Reference(0, 0))
+    // discount is local 1 (Reference(0, 1))
+    val body = WithBindings(
+      Vector(
+        Binding.LazyVal(taxRateExpr),
+        Binding.LazyVal(discountExpr)
+      ),
+      Conditional(
+        NativeCall(stdLib.comparison.double.gt.double, Vector(Reference(1, 0), double(100.0))),
+        NativeCall(stdLib.arithmetic.double.multiply.double, Vector(
+          NativeCall(stdLib.arithmetic.double.subtract.double, Vector(Reference(1, 0), Reference(0, 1))),
+          NativeCall(stdLib.arithmetic.double.add.double, Vector(double(1.0), Reference(0, 0)))
+        )),
+        NativeCall(stdLib.arithmetic.double.multiply.double, Vector(
+          Reference(1, 0),
+          NativeCall(stdLib.arithmetic.double.add.double, Vector(double(1.0), Reference(0, 0)))
+        ))
+      )
+    )
+
+    val program = compiler.compile(signature, body)
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    // Test case 1: basePrice = 50.0, countryCode = 1, customerStatus = 1
+    // taxRate = 0.05
+    // basePrice <= 100.0
+    // result = 50.0 * (1.0 + 0.05) = 52.5
+    val testCase1 = interpreter.run(emptyContextReader, vs => {
+      vs.unsafeWriteDouble(0, 50.0)
+      vs.unsafeWriteInt(1, 1)
+      vs.unsafeWriteInt(2, 1)
+    })
+    testCase1.doubleValue() shouldBe (52.5 +- 0.001)
+
+    // Test case 2: basePrice = 150.0, countryCode = 2, customerStatus = 1
+    // taxRate = 0.10
+    // discount = 10.0
+    // basePrice > 100.0
+    // result = (150.0 - 10.0) * (1.0 + 0.10) = 140.0 * 1.1 = 154.0
+    val testCase2 = interpreter.run(emptyContextReader, vs => {
+      vs.unsafeWriteDouble(0, 150.0)
+      vs.unsafeWriteInt(1, 2)
+      vs.unsafeWriteInt(2, 1)
+    })
+    testCase2.doubleValue() shouldBe (154.0 +- 0.001)
+  }
+
+  test("lazy val depending on another lazy val") {
+    val signature = UserFunctionSignature(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+        CoreTypes.IntT, // input
+        CoreTypes.AnyRefT, // a
+        CoreTypes.AnyRefT // b
+      ))),
+      BasicTypes.Int,
+      1
+    )
+
+    // lazy val a = input + 1
+    // input is at scope 2, slot 0
+    val aExpr = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(2, 0), int(1)))
+
+    // lazy val b = a * 2
+    // a is at scope 1, slot 0
+    val bExpr = NativeCall(stdLib.arithmetic.int.multiply.int, Vector(Reference(1, 0), int(2)))
+
+    val body = WithBindings(
+      Vector(
+        Binding.LazyVal(aExpr),
+        Binding.LazyVal(bExpr)
+      ),
+      Reference(0, 1) // return b
+    )
+
+    val program = compiler.compile(signature, body)
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 10))
+    // a = 11, b = 22
+    result.intValue() shouldBe 22
+  }
 }
