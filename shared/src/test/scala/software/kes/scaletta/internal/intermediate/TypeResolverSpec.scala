@@ -91,5 +91,22 @@ class TypeResolverSpec extends AnyFunSpec with Matchers {
       val expr = IntermediateExpression.StringConcat(Vector(IntermediateExpression.Value.string("a"), IntermediateExpression.Value.int(1)))
       TypeResolver.resolveType(expr, emptyEnv, emptySignature, nativeTable) shouldBe BasicTypes.Object
     }
+
+    it("should resolve WithBindings with LazyVal") {
+      val expr = IntermediateExpression.WithBindings(
+        Vector(
+          Binding.LazyVal(IntermediateExpression.Value.int(41))
+        ),
+        IntermediateExpression.Reference(0, 0)
+      )
+
+      val signature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.of(CoreTypes.IntT)),
+        BasicTypes.Object,
+        0
+      )
+
+      TypeResolver.resolveType(expr, emptyEnv, signature, nativeTable) shouldBe BasicTypes.Int
+    }
   }
 }

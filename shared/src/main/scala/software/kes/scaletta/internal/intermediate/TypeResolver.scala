@@ -4,10 +4,7 @@ import software.kes.scaletta.common.{BasicType, BasicTypes}
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.runtime.UserFunctionSignature
 
-import scala.annotation.tailrec
-
 object TypeResolver {
-  @tailrec
   def resolveType(expression: IntermediateExpression,
                   env: CompileEnv,
                   signature: UserFunctionSignature,
@@ -68,8 +65,13 @@ object TypeResolver {
             val absoluteIndex = env.nextVarIndex + newVarCountInBlock
             currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
             newVarCountInBlock += 1
-          case Binding.LazyVal(_, underlyingType) =>
+          case Binding.LazyVal(value) =>
             val absoluteIndex = env.nextVarIndex + newVarCountInBlock
+            val placeholder = BindingInfo.LazyVal(absoluteIndex, -1, BasicTypes.Object)
+            val envForRhs = env.pushLayer(currentLayer :+ placeholder, newVarCountInBlock + 1)
+              .pushLayer(Vector.empty, 0)
+            val underlyingType = resolveType(value, envForRhs, signature, nativeTable)
+
             currentLayer = currentLayer :+ BindingInfo.LazyVal(absoluteIndex, -1, underlyingType)
             newVarCountInBlock += 1
           case Binding.Def(fSignature, _) =>

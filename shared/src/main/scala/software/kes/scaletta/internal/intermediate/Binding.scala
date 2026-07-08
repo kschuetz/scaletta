@@ -7,8 +7,7 @@ sealed trait Binding
 object Binding {
   case class Val(value: IntermediateExpression) extends Binding
 
-  case class LazyVal(value: IntermediateExpression,
-                     underlyingType: software.kes.scaletta.common.BasicType) extends Binding
+  case class LazyVal(value: IntermediateExpression) extends Binding
 
   case class Def(signature: UserFunctionSignature,
                  body: IntermediateExpression) extends Binding

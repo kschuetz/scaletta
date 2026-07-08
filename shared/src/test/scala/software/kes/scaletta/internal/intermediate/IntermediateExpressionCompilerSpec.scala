@@ -149,7 +149,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
 
     it("should handle LazyVal") {
       val expr = WithBindings(
-        Vector(Binding.LazyVal(int(41), BasicTypes.Int)),
+        Vector(Binding.LazyVal(int(41))),
         NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), int(1)))
       )
       // Slot for LazyVal must be ObjectT
@@ -179,7 +179,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val customNativeFunctions = customScaletta.universe.methodUniverse.dispatchTable
 
       val expr = WithBindings(
-        Vector(Binding.LazyVal(NativeCall(incrementId, Vector.empty), BasicTypes.Int)),
+        Vector(Binding.LazyVal(NativeCall(incrementId, Vector.empty))),
         NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), Reference(0, 0)))
       )
 
@@ -196,7 +196,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val expr = WithBindings(
         Vector(Binding.Val(int(10))),
         WithBindings(
-          Vector(Binding.LazyVal(NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(2, 0), int(31))), BasicTypes.Int)),
+          Vector(Binding.LazyVal(NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(2, 0), int(31))))),
           Reference(0, 0)
         )
       )
@@ -208,7 +208,7 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
 
     it("should detect circular dependencies in LazyVal") {
       val expr = WithBindings(
-        Vector(Binding.LazyVal(Reference(1, 0), BasicTypes.Int)),
+        Vector(Binding.LazyVal(Reference(1, 0))),
         Reference(0, 0)
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))

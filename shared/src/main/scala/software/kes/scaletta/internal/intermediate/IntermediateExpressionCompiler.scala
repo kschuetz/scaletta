@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.intermediate
 
-import software.kes.scaletta.common.BasicType
+import software.kes.scaletta.common.{BasicType, BasicTypes}
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.interpreter.{Assembler, Program, ProgramBuilder}
 import software.kes.scaletta.internal.runtime.UserFunctionSignature
@@ -114,8 +114,14 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
                 currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
                 newVarCountInBlock += 1
 
-              case Binding.LazyVal(value, underlyingType) =>
+              case Binding.LazyVal(value) =>
                 val absoluteIndex = env.nextVarIndex + newVarCountInBlock
+
+                val placeholder = BindingInfo.LazyVal(absoluteIndex, -1, BasicTypes.Object)
+                val envForRhs = env.pushLayer(currentLayer :+ placeholder, newVarCountInBlock + 1)
+                  .pushLayer(Vector.empty, 0)
+                val underlyingType = TypeResolver.resolveType(value, envForRhs, signature, nativeFunctionTable)
+
                 assembler.lazyInit(underlyingType, absoluteIndex)
 
                 val evalSignature = UserFunctionSignature(
@@ -182,5 +188,3 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
   }
 
 }
-
-
