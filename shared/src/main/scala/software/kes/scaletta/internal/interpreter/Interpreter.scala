@@ -422,7 +422,10 @@ final class Interpreter private(private val program: Program,
         val cell = varSpace.unsafeReadObject(varIndex).asInstanceOf[LazyCell]
         if (cell.evaluated) {
           cell.pushValue(operandStack)
+        } else if (cell.evaluating) {
+          throw new RuntimeException("Circular dependency detected during lazy evaluation")
         } else {
+          cell.markEvaluating()
           callStack.push(userFunctionIndex)
           callStack.push(instructionPointer)
           callStack.push(-1)

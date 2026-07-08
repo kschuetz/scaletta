@@ -128,5 +128,39 @@ class LazyEvalSpec extends AnyFunSpec with Matchers {
 
       result.intValue() shouldBe 42
     }
+
+    it("should detect circular dependencies") {
+      val mainFrame = FrameSignature.of(CoreTypes.AnyRefT)
+      val mainSignature = VarSpaceSignature.of(mainFrame)
+      val builder = ProgramBuilder.create(UserFunctionSignature(mainSignature, BasicTypes.Int, 0))
+
+      val xIdx = 0
+
+      val main = builder.mainAssembler()
+      main.lazyInit(BasicTypes.Int, xIdx)
+
+      // return x
+      main.lazyEval(xIdx, 1)
+      main.emitReturn()
+
+      // evalX needs to see main's frame to access xIdx
+      val evalXFrame = FrameSignature.empty
+      val evalXSignature = mainSignature.pushFrame(evalXFrame)
+
+      val evalX = builder.addFunction(UserFunctionSignature(evalXSignature, BasicTypes.Int, 0))
+      // eval x = x + 1 (circular!)
+      evalX.lazyEval(xIdx, 1) // calling itself
+      evalX.pushImmediateInt(1)
+      evalX.callNative(stdLib.arithmetic.int.add.int)
+      evalX.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, nativeFunctions)
+
+      val exception = intercept[RuntimeException] {
+        interpreter.run(emptyContextReader)
+      }
+      exception.getMessage should include("Circular dependency detected")
+    }
   }
 }
