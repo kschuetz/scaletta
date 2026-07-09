@@ -63,7 +63,10 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val nativeFunction = nativeFunctionTable.get(target)
           arguments.zipWithIndex.foreach { case (arg, index) =>
             emit(arg, env, signature, assembler)
-            assembler.convert(nativeFunction.params.basicTypeOf(index))
+            val targetType = nativeFunction.params.basicTypeOf(index)
+            if (TypeResolver.resolveType(arg, env, signature, nativeFunctionTable) != targetType) {
+              assembler.convert(targetType)
+            }
           }
           assembler.callNative(target)
 
@@ -103,7 +106,9 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
 
         case IntermediateExpression.Convert(value, targetType) =>
           emit(value, env, signature, assembler)
-          assembler.convert(targetType)
+          if (TypeResolver.resolveType(value, env, signature, nativeFunctionTable) != targetType) {
+            assembler.convert(targetType)
+          }
 
         case IntermediateExpression.WithBindings(bindings, body) =>
           var currentLayer = Vector.empty[BindingInfo]
