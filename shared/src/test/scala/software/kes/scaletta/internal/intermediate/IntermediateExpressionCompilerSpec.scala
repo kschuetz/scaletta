@@ -147,6 +147,18 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       interpreter.run(emptyContextReader).value[String]() shouldBe "Hello, World!"
     }
 
+    it("should handle Convert") {
+      val expr = Convert(int(41), BasicTypes.Long)
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Long, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).longValue() shouldBe 41L
+
+      val expr2 = Convert(long(43L), BasicTypes.Int)
+      val program2 = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr2)
+      val interpreter2 = Interpreter.create(program2, nativeFunctions)
+      interpreter2.run(emptyContextReader).intValue() shouldBe 43
+    }
+
     it("should handle LazyVal") {
       val expr = WithBindings(
         Vector(Binding.LazyVal(int(41))),

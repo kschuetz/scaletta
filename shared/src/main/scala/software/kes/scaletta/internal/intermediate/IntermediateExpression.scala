@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.intermediate
 
 import software.kes.scaletta.api.NativeFunctionId
+import software.kes.scaletta.common.BasicType
 
 sealed trait IntermediateExpression
 
@@ -27,6 +28,9 @@ object IntermediateExpression {
   case class Or(lhs: IntermediateExpression, rhs: IntermediateExpression) extends IntermediateExpression
 
   case class StringConcat(segments: Vector[IntermediateExpression]) extends IntermediateExpression
+
+  case class Convert(value: IntermediateExpression,
+                     targetType: BasicType) extends IntermediateExpression
 
   sealed trait Value extends IntermediateExpression {
     def asAny: Any

@@ -101,6 +101,10 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           segments.foreach(seg => emit(seg, env, signature, assembler))
           assembler.stringConcat(segments.length)
 
+        case IntermediateExpression.Convert(value, targetType) =>
+          emit(value, env, signature, assembler)
+          assembler.convert(targetType)
+
         case IntermediateExpression.WithBindings(bindings, body) =>
           var currentLayer = Vector.empty[BindingInfo]
           var newVarCountInBlock = 0

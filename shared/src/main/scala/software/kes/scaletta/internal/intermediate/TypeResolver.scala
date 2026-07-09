@@ -57,6 +57,9 @@ object TypeResolver {
       case IntermediateExpression.StringConcat(_) =>
         BasicTypes.Object
 
+      case IntermediateExpression.Convert(_, targetType) =>
+        targetType
+
       case IntermediateExpression.WithBindings(bindings, body) =>
         var currentLayer = Vector.empty[BindingInfo]
         var newVarCountInBlock = 0
