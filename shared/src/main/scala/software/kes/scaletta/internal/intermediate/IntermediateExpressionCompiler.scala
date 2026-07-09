@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.intermediate
 
 import software.kes.scaletta.common.{BasicType, BasicTypes}
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
+import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value
 import software.kes.scaletta.internal.interpreter.{Assembler, Program, ProgramBuilder}
 import software.kes.scaletta.internal.runtime.UserFunctionSignature
 
@@ -46,7 +47,17 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
                      assembler: Assembler): Unit = {
       expression match {
         case v: IntermediateExpression.Value =>
-          assembler.pushImmediate(v.asAny)
+          v match {
+            case Value.IntValue(value) => assembler.pushImmediateInt(value)
+            case Value.LongValue(value) => assembler.pushImmediateLong(value)
+            case Value.FloatValue(value) => assembler.pushImmediateFloat(value)
+            case Value.DoubleValue(value) => assembler.pushImmediateDouble(value)
+            case Value.ShortValue(value) => assembler.pushImmediateShort(value)
+            case Value.ByteValue(value) => assembler.pushImmediateByte(value)
+            case value: Value.BooleanValue => assembler.pushImmediateBoolean(value.value)
+            case Value.CharValue(value) => assembler.pushImmediateChar(value)
+            case value: Value.AnyRefValue => assembler.pushImmediateObject(value.value)
+          }
 
         case IntermediateExpression.Reference(scope, slot) =>
           env.resolve(scope, slot) match {
