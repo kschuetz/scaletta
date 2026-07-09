@@ -75,7 +75,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
   }
 
   // TODO: fix for Scala.js
-  ignore("price calculation with lazy tax and discount") {
+  test("price calculation with lazy tax and discount") {
     val signature = UserFunctionSignature(
       VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
         CoreTypes.DoubleT, // basePrice
@@ -189,7 +189,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
   }
 
   // TODO: fix for Scala.js
-  ignore("discount eligibility logic with AND and OR") {
+  test("discount eligibility logic with AND and OR") {
     val signature = UserFunctionSignature(
       VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
         CoreTypes.BooleanT, // isVip

@@ -60,7 +60,11 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           }
 
         case IntermediateExpression.NativeCall(target, arguments) =>
-          arguments.foreach(arg => emit(arg, env, signature, assembler))
+          val nativeFunction = nativeFunctionTable.get(target)
+          arguments.zipWithIndex.foreach { case (arg, index) =>
+            emit(arg, env, signature, assembler)
+            assembler.convert(nativeFunction.params.basicTypeOf(index))
+          }
           assembler.callNative(target)
 
         case IntermediateExpression.LocalCall(scope, slot, arguments) =>
