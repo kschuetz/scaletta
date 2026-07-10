@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.builtins
 
 import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryParameter}
-import software.kes.scaletta.internal.types.TypeUniverse
+import software.kes.scaletta.internal.types.{TypeConversion, TypeConversionGraph, TypeUniverse}
 
 case class OverloadTable(variations: List[NativeFunctionDefinition]) {
   def findCandidates(typeUniverse: TypeUniverse,
@@ -23,7 +23,29 @@ case class OverloadTable(variations: List[NativeFunctionDefinition]) {
   def resolveBestMatch(typeUniverse: TypeUniverse,
                        query: SignatureQuery): Either[ResolutionError, NativeFunctionDefinition] = {
     val candidates = findCandidates(typeUniverse, query)
-    OverloadTable.resolveBestMatch(typeUniverse, candidates)
+    if (candidates.nonEmpty) {
+      OverloadTable.resolveBestMatch(typeUniverse, candidates)
+    } else {
+      val conversionCandidates = findCandidatesWithConversions(typeUniverse, query)
+      OverloadTable.resolveBestMatch(typeUniverse, conversionCandidates)
+    }
+  }
+
+  def findCandidatesWithConversions(typeUniverse: TypeUniverse,
+                                    query: SignatureQuery): List[NativeFunctionDefinition] = {
+    variations.filter { variation =>
+      variation.paramGroups.size == query.groups.size &&
+        variation.paramGroups.zip(query.groups).forall { case (formalGroup, queryGroup) =>
+          formalGroup.params.size == queryGroup.parameters.size &&
+            formalGroup.params.zip(queryGroup.parameters).forall {
+              case (formalParam, SignatureQueryParameter.OfType(queryType)) =>
+                typeUniverse.hierarchy.isSubtype(queryType, formalParam.typ) ||
+                  TypeConversionGraph.conversionRelation(queryType, formalParam.typ) != TypeConversion.None
+              case (_, SignatureQueryParameter.Unknown) =>
+                true
+            }
+        }
+    }
   }
 }
 
