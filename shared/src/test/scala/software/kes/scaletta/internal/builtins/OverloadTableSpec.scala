@@ -133,6 +133,27 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
       val query = SignatureQuery.of(intT)
       tableWithBoth.resolveBestMatch(universe, query) shouldBe Right(fn2)
     }
+
+    it("should prefer a widening match with lower cost") {
+      import software.kes.scaletta.internal.runtime.CoreTypes
+      val fnLong = NativeFunctionDefinition(
+        paramGroups = ParameterGroup.single(FormalParameter(Name("a"), CoreTypes.LongT)),
+        returnType = CoreTypes.StringT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(53)
+      )
+      val fnDouble = NativeFunctionDefinition(
+        paramGroups = ParameterGroup.single(FormalParameter(Name("a"), CoreTypes.DoubleT)),
+        returnType = CoreTypes.StringT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(59)
+      )
+      // Int -> Long cost 1
+      // Int -> Double cost 3
+      val table = OverloadTable(List(fnLong, fnDouble))
+      val query = SignatureQuery.of(CoreTypes.IntT)
+      table.resolveBestMatch(universe, query) shouldBe Right(fnLong)
+    }
   }
 
   object Fixtures {

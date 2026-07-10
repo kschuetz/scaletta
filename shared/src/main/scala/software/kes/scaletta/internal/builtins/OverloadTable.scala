@@ -27,7 +27,13 @@ case class OverloadTable(variations: List[NativeFunctionDefinition]) {
       OverloadTable.resolveBestMatch(typeUniverse, candidates)
     } else {
       val conversionCandidates = findCandidatesWithConversions(typeUniverse, query)
-      OverloadTable.resolveBestMatch(typeUniverse, conversionCandidates)
+      if (conversionCandidates.isEmpty) Left(ResolutionError.NotFound)
+      else {
+        val withCosts = conversionCandidates.map(c => (c, calculateTotalCost(typeUniverse, query, c)))
+        val minCost = withCosts.map(_._2).min
+        val bestByCost = withCosts.filter(_._2 == minCost).map(_._1)
+        OverloadTable.resolveBestMatch(typeUniverse, bestByCost)
+      }
     }
   }
 
@@ -45,6 +51,21 @@ case class OverloadTable(variations: List[NativeFunctionDefinition]) {
                 true
             }
         }
+    }
+  }
+
+  private def calculateTotalCost(typeUniverse: TypeUniverse,
+                                 query: SignatureQuery,
+                                 variation: NativeFunctionDefinition): Int = {
+    variation.paramGroups.zip(query.groups).foldLeft(0) { case (acc, (formalGroup, queryGroup)) =>
+      acc + formalGroup.params.zip(queryGroup.parameters).foldLeft(0) {
+        case (acc2, (formalParam, SignatureQueryParameter.OfType(queryType))) =>
+          val cost = if (typeUniverse.hierarchy.isSubtype(queryType, formalParam.typ)) 0
+          else TypeConversionGraph.conversionRelation(queryType, formalParam.typ).cost
+          acc2 + cost
+        case (acc2, (_, SignatureQueryParameter.Unknown)) =>
+          acc2
+      }
     }
   }
 }
