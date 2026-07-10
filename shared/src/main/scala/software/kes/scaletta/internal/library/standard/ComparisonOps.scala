@@ -158,7 +158,7 @@ object ComparisonOps {
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(byteDouble))
       overloads.addOverload(rhsFloat, BooleanT, booleanResult(byteFloat))
 
-      overloads = registry.overloadRegistryFor(MethodName(ByteT, name))
+      overloads = registry.overloadRegistryFor(MethodName(CharT, name))
       overloads.addOverload(rhsInt, BooleanT, booleanResult(charInt))
       overloads.addOverload(rhsLong, BooleanT, booleanResult(charLong))
       overloads.addOverload(rhsShort, BooleanT, booleanResult(charShort))
