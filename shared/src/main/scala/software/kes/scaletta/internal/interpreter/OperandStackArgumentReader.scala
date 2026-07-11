@@ -6,8 +6,11 @@ import software.kes.scaletta.internal.runtime.ParamsSignature
 
 import scala.collection.immutable.ArraySeq
 
-private class OperandStackArgumentReader(stack: OperandStack,
-                                         signature: ParamsSignature) extends ArgumentReader {
+/**
+ * Mutable. The same instance will be reused for every native call.
+ */
+private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
+                                                      var signature: ParamsSignature) extends ArgumentReader {
   def argCount: Int = signature.paramCount
 
   def read(index: Int): Any =

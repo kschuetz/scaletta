@@ -1,12 +1,10 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.api.{ArgumentReader, EvalResult, FunctionImpl, RuntimeContextReader}
+import software.kes.scaletta.api.{EvalResult, FunctionImpl, RuntimeContextReader}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.runtime.ParamsSignature
 import software.kes.scaletta.util.stack.IntStack
-
-import scala.collection.immutable.ArraySeq
 
 object Interpreter {
   def create(program: Program,
@@ -32,7 +30,7 @@ final class Interpreter private(private val program: Program,
   private var evalResultContainer: EvalResultContainer = _
   private var currentFunction: UserFunction = _
   private var done: Boolean = true
-  private val argumentReader = new InterpreterArgumentReader(operandStack, ParamsSignature.empty)
+  private val argumentReader = new OperandStackArgumentReader(operandStack, ParamsSignature.empty)
 
   /**
    * Initializes the interpreter and runs the program to completion.
@@ -234,7 +232,7 @@ final class Interpreter private(private val program: Program,
       case Opcodes.CallNative =>
         val nativeId = rawOpcode & 0xFFFFFF
         val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
-        argumentReader.params = nativeFunction.params
+        argumentReader.signature = nativeFunction.params
         nativeFunction.impl match {
           case FunctionImpl.ObjectResult(body) =>
             val result = body(argumentReader)
@@ -511,83 +509,3 @@ final class Interpreter private(private val program: Program,
     varSpace.readAll()
 }
 
-/**
- * Mutable. The same instance will be reused for every native call.
- */
-private[interpreter] final class InterpreterArgumentReader(operandStack: OperandStack,
-                                                           var params: ParamsSignature) extends ArgumentReader {
-  def argCount: Int = params.paramCount
-
-  def read(index: Int): Any = {
-    val basicType = params.basicTypeOf(index)
-    val stackOffset = params.stackOffsetOf(index)
-    basicType match {
-      case BasicTypes.Boolean => unsafeReadBoolean(stackOffset)
-      case BasicTypes.Int => unsafeReadInt(stackOffset)
-      case BasicTypes.Long => unsafeReadLong(stackOffset)
-      case BasicTypes.Short => unsafeReadShort(stackOffset)
-      case BasicTypes.Byte => unsafeReadByte(stackOffset)
-      case BasicTypes.Char => unsafeReadChar(stackOffset)
-      case BasicTypes.Double => unsafeReadDouble(stackOffset)
-      case BasicTypes.Float => unsafeReadFloat(stackOffset)
-      case _ => unsafeReadObject(stackOffset)
-    }
-  }
-
-  def toVector: Vector[Any] =
-    (0 until argCount).map(read).toVector
-
-  def toArray: Array[Any] =
-    (0 until argCount).map(read).toArray
-
-  def unsafeReadBoolean(index: Int): Boolean =
-    operandStack.booleans.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadByte(index: Int): Byte =
-    operandStack.bytes.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadChar(index: Int): Char =
-    operandStack.chars.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadDouble(index: Int): Double =
-    operandStack.doubles.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadFloat(index: Int): Float =
-    operandStack.floats.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadInt(index: Int): Int =
-    operandStack.ints.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadLong(index: Int): Long =
-    operandStack.longs.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadShort(index: Int): Short =
-    operandStack.shorts.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadObject(index: Int): AnyRef =
-    operandStack.objects.unsafeRead(params.stackOffsetOf(index))
-
-  def unsafeReadBooleanArray(index: Int): ArraySeq[Boolean] =
-    read(index).asInstanceOf[ArraySeq[Boolean]]
-
-  def unsafeReadByteArray(index: Int): ArraySeq[Byte] =
-    read(index).asInstanceOf[ArraySeq[Byte]]
-
-  def unsafeReadCharArray(index: Int): ArraySeq[Char] =
-    read(index).asInstanceOf[ArraySeq[Char]]
-
-  def unsafeReadDoubleArray(index: Int): ArraySeq[Double] =
-    read(index).asInstanceOf[ArraySeq[Double]]
-
-  def unsafeReadFloatArray(index: Int): ArraySeq[Float] =
-    read(index).asInstanceOf[ArraySeq[Float]]
-
-  def unsafeReadIntArray(index: Int): ArraySeq[Int] =
-    read(index).asInstanceOf[ArraySeq[Int]]
-
-  def unsafeReadLongArray(index: Int): ArraySeq[Long] =
-    read(index).asInstanceOf[ArraySeq[Long]]
-
-  def unsafeReadShortArray(index: Int): ArraySeq[Short] =
-    read(index).asInstanceOf[ArraySeq[Short]]
-}
