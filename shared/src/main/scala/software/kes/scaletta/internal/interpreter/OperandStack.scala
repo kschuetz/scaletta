@@ -3,6 +3,7 @@ package software.kes.scaletta.internal.interpreter
 import software.kes.scaletta.api.ArgumentReader
 import software.kes.scaletta.common.{BasicType, BasicTypes}
 import software.kes.scaletta.internal.runtime.ParamsSignature
+import software.kes.scaletta.util.conversions.ObjectToPrimitive
 import software.kes.scaletta.util.stack._
 
 object OperandStack {
@@ -540,60 +541,14 @@ final class OperandStack(private[interpreter] val control: ByteStack,
         case _ => pushObject(Float.box(floats.pop()))
       }
       case _ => toType match {
-        case BasicTypes.Boolean =>
-          pushBoolean(objects.pop() match {
-            case value: java.lang.Boolean => value.booleanValue()
-            case _ => false
-          })
-        case BasicTypes.Int =>
-          pushInt(objects.pop() match {
-            case number: java.lang.Number => number.intValue()
-            case char: java.lang.Character => char.charValue()
-            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
-            case _ => 0
-          })
-        case BasicTypes.Long =>
-          pushLong(objects.pop() match {
-            case number: java.lang.Number => number.longValue()
-            case char: java.lang.Character => char.charValue()
-            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
-            case _ => 0
-          })
-        case BasicTypes.Short =>
-          pushShort(objects.pop() match {
-            case number: java.lang.Number => number.shortValue()
-            case char: java.lang.Character => char.charValue().toShort
-            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
-            case _ => 0
-          })
-        case BasicTypes.Byte =>
-          pushByte(objects.pop() match {
-            case number: java.lang.Number => number.byteValue()
-            case char: java.lang.Character => char.charValue().toByte
-            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
-            case _ => 0
-          })
-        case BasicTypes.Char =>
-          pushChar(objects.pop() match {
-            case number: java.lang.Number => number.intValue().toChar
-            case char: java.lang.Character => char.charValue()
-            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
-            case _ => 0
-          })
-        case BasicTypes.Double =>
-          pushDouble(objects.pop() match {
-            case number: java.lang.Number => number.doubleValue()
-            case char: java.lang.Character => char.charValue()
-            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
-            case _ => 0
-          })
-        case BasicTypes.Float =>
-          pushFloat(objects.pop() match {
-            case number: java.lang.Number => number.floatValue()
-            case char: java.lang.Character => char.charValue()
-            case boolean: java.lang.Boolean => if (boolean.booleanValue()) 1 else 0
-            case _ => 0
-          })
+        case BasicTypes.Boolean => pushBoolean(ObjectToPrimitive.objectToBoolean(objects.pop()))
+        case BasicTypes.Int => pushInt(ObjectToPrimitive.objectToInt(objects.pop()))
+        case BasicTypes.Long => pushLong(ObjectToPrimitive.objectToLong(objects.pop()))
+        case BasicTypes.Short => pushShort(ObjectToPrimitive.objectToShort(objects.pop()))
+        case BasicTypes.Byte => pushByte(ObjectToPrimitive.objectToByte(objects.pop()))
+        case BasicTypes.Char => pushChar(ObjectToPrimitive.objectToChar(objects.pop()))
+        case BasicTypes.Double => pushDouble(ObjectToPrimitive.objectToDouble(objects.pop()))
+        case BasicTypes.Float => pushFloat(ObjectToPrimitive.objectToFloat(objects.pop()))
         case _ => control.push(BasicTypes.Object)
       }
     }
