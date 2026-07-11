@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal
 
 import software.kes.scaletta.api._
-import software.kes.scaletta.internal.builtins.{MethodResolver, MethodUniverse, NativeFunctionDefinition, ResolutionError}
+import software.kes.scaletta.internal.builtins._
 import software.kes.scaletta.internal.intermediate.IntermediateExpressionCompiler
 import software.kes.scaletta.internal.symbols.SignatureQuery
 import software.kes.scaletta.internal.types.TypeUniverse
@@ -21,17 +21,12 @@ final class Universe private(val typeUniverse: TypeUniverse,
   def getMethodCandidates(typ: Type[TypeId],
                           name: Name,
                           signatureQuery: SignatureQuery): List[NativeFunctionDefinition] = {
-    methodUniverse.symbolTable.getMethod(typ, name) match {
-      case Some(overloads) =>
-        val updatedQuery = signatureQuery.groups match {
-          case groups if groups.isEmpty => SignatureQuery.of(typ)
-          case groups =>
-            val firstGroup = groups(0)
-            val updatedFirstGroup = SignatureQuery.Group(typ +: firstGroup.parameters)
-            SignatureQuery.ofGroups(updatedFirstGroup +: groups.tail: _*)
-        }
-        overloads.findCandidates(typeUniverse, updatedQuery)
-      case None => List.empty[NativeFunctionDefinition]
+    val overloads = getAllMethodOverloads(typ, name)
+    if (overloads.isEmpty) {
+      List.empty[NativeFunctionDefinition]
+    } else {
+      val updatedQuery = updateQueryWithReceiver(typ, signatureQuery)
+      OverloadTable(overloads).findCandidates(typeUniverse, updatedQuery)
     }
   }
 
@@ -54,17 +49,12 @@ final class Universe private(val typeUniverse: TypeUniverse,
   def resolveBestMethod(typ: Type[TypeId],
                         name: Name,
                         signatureQuery: SignatureQuery): Either[ResolutionError, NativeFunctionDefinition] = {
-    methodUniverse.symbolTable.getMethod(typ, name) match {
-      case Some(overloads) =>
-        val updatedQuery = signatureQuery.groups match {
-          case groups if groups.isEmpty => SignatureQuery.of(typ)
-          case groups =>
-            val firstGroup = groups(0)
-            val updatedFirstGroup = SignatureQuery.Group(typ +: firstGroup.parameters)
-            SignatureQuery.ofGroups(updatedFirstGroup +: groups.tail: _*)
-        }
-        overloads.resolveBestMatch(typeUniverse, updatedQuery)
-      case None => Left(ResolutionError.NotFound)
+    val overloads = getAllMethodOverloads(typ, name)
+    if (overloads.isEmpty) {
+      Left(ResolutionError.NotFound)
+    } else {
+      val updatedQuery = updateQueryWithReceiver(typ, signatureQuery)
+      OverloadTable(overloads).resolveBestMatch(typeUniverse, updatedQuery)
     }
   }
 
@@ -84,6 +74,25 @@ final class Universe private(val typeUniverse: TypeUniverse,
     methodUniverse.symbolTable.getStaticFunction(name) match {
       case Some(overloads) => overloads.resolveBestMatch(typeUniverse, signatureQuery)
       case None => Left(ResolutionError.NotFound)
+    }
+  }
+
+  private def getAllMethodOverloads(typ: Type[TypeId], name: Name): List[NativeFunctionDefinition] = {
+    typeUniverse.hierarchy.allAncestors(typ).toList.flatMap { ancestor =>
+      methodUniverse.symbolTable.getMethod(ancestor, name) match {
+        case Some(overloads) => overloads.variations
+        case None => Nil
+      }
+    }
+  }
+
+  private def updateQueryWithReceiver(typ: Type[TypeId], signatureQuery: SignatureQuery): SignatureQuery = {
+    signatureQuery.groups match {
+      case groups if groups.isEmpty => SignatureQuery.of(typ)
+      case groups =>
+        val firstGroup = groups(0)
+        val updatedFirstGroup = SignatureQuery.Group(typ +: firstGroup.parameters)
+        SignatureQuery.ofGroups(updatedFirstGroup +: groups.tail: _*)
     }
   }
 }

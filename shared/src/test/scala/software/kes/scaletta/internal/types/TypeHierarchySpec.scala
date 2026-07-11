@@ -4,6 +4,9 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Type
 
+import scala.annotation.tailrec
+import scala.collection.immutable.Queue
+
 class TypeHierarchySpec extends AnyFunSpec with Matchers {
 
   // A simple, localized type system for testing
@@ -109,6 +112,20 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
           }
         case _ => Nil
       }
+
+    def allAncestors(t: Type[TestType]): Set[Type[TestType]] = {
+      @tailrec
+      def go(queue: Queue[Type[TestType]], visited: Set[Type[TestType]], acc: Set[Type[TestType]]): Set[Type[TestType]] = {
+        queue.dequeueOption match {
+          case Some((current, rest)) =>
+            val nextSupertypes = immediateSupertypes(current).filterNot(visited.contains)
+            go(rest.enqueueAll(nextSupertypes), visited ++ nextSupertypes, acc + current)
+          case None => acc
+        }
+      }
+
+      go(Queue(t), Set(t), Set.empty)
+    }
   }
 
   private def toNominal(t: TestType): Type[TestType] = Type.Nominal(t)
@@ -167,6 +184,27 @@ class TypeHierarchySpec extends AnyFunSpec with Matchers {
 
       it("should return both ChildA1 and ChildB1 for DiamondChild") {
         testHierarchy.immediateSupertypes(toNominal(DiamondChild)) should contain theSameElementsAs List(toNominal(ChildA1), toNominal(ChildB1))
+      }
+    }
+
+    describe("allAncestors") {
+      it("should return all ancestors for DiamondChild") {
+        testHierarchy.allAncestors(toNominal(DiamondChild)) should contain theSameElementsAs Set(
+          toNominal(DiamondChild),
+          toNominal(ChildA1),
+          toNominal(ChildB1),
+          toNominal(ParentA),
+          toNominal(ParentB),
+          toNominal(Root)
+        )
+      }
+
+      it("should return itself for Root") {
+        testHierarchy.allAncestors(toNominal(Root)) shouldBe Set(toNominal(Root))
+      }
+
+      it("should return itself for Unrelated") {
+        testHierarchy.allAncestors(toNominal(Unrelated)) shouldBe Set(toNominal(Unrelated))
       }
     }
   }

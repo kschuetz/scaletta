@@ -357,7 +357,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     go(Queue(lhs), Set(lhs))
   }
 
-  private def allAncestors(t: Type[T]): Set[Type[T]] = {
+  def allAncestors(t: Type[T]): Set[Type[T]] = {
     @tailrec
     def go(queue: Queue[Type[T]], visited: Set[Type[T]], acc: Set[Type[T]]): Set[Type[T]] = {
       queue.dequeueOption match {
