@@ -35,28 +35,28 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
       reader.argCount shouldBe 8
 
       reader.read(0) shouldBe true
-      reader.unsafeReadBoolean(0) shouldBe true
+      reader.readBoolean(0) shouldBe true
 
       reader.read(1) shouldBe 43.toByte
-      reader.unsafeReadByte(1) shouldBe 43.toByte
+      reader.readByte(1) shouldBe 43.toByte
 
       reader.read(2) shouldBe 'Z'
-      reader.unsafeReadChar(2) shouldBe 'Z'
+      reader.readChar(2) shouldBe 'Z'
 
       reader.read(3) shouldBe 41.toShort
-      reader.unsafeReadShort(3) shouldBe 41.toShort
+      reader.readShort(3) shouldBe 41.toShort
 
       reader.read(4) shouldBe 43
-      reader.unsafeReadInt(4) shouldBe 43
+      reader.readInt(4) shouldBe 43
 
       reader.read(5) shouldBe 41L
-      reader.unsafeReadLong(5) shouldBe 41L
+      reader.readLong(5) shouldBe 41L
 
       reader.read(6) shouldBe 43.5f
-      reader.unsafeReadFloat(6) shouldBe 43.5f
+      reader.readFloat(6) shouldBe 43.5f
 
       reader.read(7) shouldBe 41.5
-      reader.unsafeReadDouble(7) shouldBe 41.5
+      reader.readDouble(7) shouldBe 41.5
     }
 
     it("should read object types correctly") {
@@ -71,10 +71,10 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
       val reader = stack.argumentReader(signature)
 
       reader.read(0) shouldBe s
-      reader.unsafeReadObject(0) shouldBe s
+      reader.readObject(0) shouldBe s
 
       reader.read(1) shouldBe o
-      reader.unsafeReadObject(1) shouldBe o
+      reader.readObject(1) shouldBe o
     }
 
     it("should read primitive arrays correctly") {
@@ -133,10 +133,10 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
 
       val reader = stack.argumentReader(signature)
 
-      reader.unsafeReadInt(0) shouldBe 41
-      reader.unsafeReadObject(1) shouldBe "hello"
-      reader.unsafeReadDouble(2) shouldBe 43.5
-      reader.unsafeReadBoolean(3) shouldBe true
+      reader.readInt(0) shouldBe 41
+      reader.readObject(1) shouldBe "hello"
+      reader.readDouble(2) shouldBe 43.5
+      reader.readBoolean(3) shouldBe true
     }
 
     it("should export to collections correctly") {
@@ -169,12 +169,12 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
 
       val reader = stack.argumentReader(signature)
 
-      reader.unsafeReadInt(0) shouldBe 1
-      reader.unsafeReadInt(1) shouldBe 2
-      reader.unsafeReadInt(2) shouldBe 3
+      reader.readInt(0) shouldBe 1
+      reader.readInt(1) shouldBe 2
+      reader.readInt(2) shouldBe 3
     }
 
-    describe("readAsX") {
+    describe("readX") {
       it("should read Boolean as Boolean") {
         val stack = OperandStack.create()
         val signature = ParamsSignature.of(CoreTypes.BooleanT)

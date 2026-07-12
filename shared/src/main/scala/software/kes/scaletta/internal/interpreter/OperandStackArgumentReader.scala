@@ -160,33 +160,6 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
     }
   }
 
-  def unsafeReadBoolean(index: Int): Boolean =
-    stack.booleans.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadByte(index: Int): Byte =
-    stack.bytes.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadChar(index: Int): Char =
-    stack.chars.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadDouble(index: Int): Double =
-    stack.doubles.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadFloat(index: Int): Float =
-    stack.floats.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadInt(index: Int): Int =
-    stack.ints.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadLong(index: Int): Long =
-    stack.longs.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadShort(index: Int): Short =
-    stack.shorts.unsafeRead(signature.stackOffsetOf(index))
-
-  def unsafeReadObject(index: Int): AnyRef =
-    stack.objects.unsafeRead(signature.stackOffsetOf(index))
-
   def unsafeReadBooleanArray(index: Int): ArraySeq[Boolean] =
     unsafeReadObject(index).asInstanceOf[ArraySeq[Boolean]]
 
@@ -210,6 +183,33 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
 
   def unsafeReadShortArray(index: Int): ArraySeq[Short] =
     unsafeReadObject(index).asInstanceOf[ArraySeq[Short]]
+
+  private def unsafeReadBoolean(index: Int): Boolean =
+    stack.booleans.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadByte(index: Int): Byte =
+    stack.bytes.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadChar(index: Int): Char =
+    stack.chars.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadDouble(index: Int): Double =
+    stack.doubles.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadFloat(index: Int): Float =
+    stack.floats.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadInt(index: Int): Int =
+    stack.ints.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadLong(index: Int): Long =
+    stack.longs.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadShort(index: Int): Short =
+    stack.shorts.unsafeRead(signature.stackOffsetOf(index))
+
+  private def unsafeReadObject(index: Int): AnyRef =
+    stack.objects.unsafeRead(signature.stackOffsetOf(index))
 
   private def readAndConvertToBoolean(index: Int, incomingType: Byte): Boolean =
     incomingType match {
