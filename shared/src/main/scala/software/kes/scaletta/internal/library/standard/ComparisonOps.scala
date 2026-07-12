@@ -33,8 +33,6 @@ object ComparisonOps {
 
     def byteShort(args: ArgumentReader): Boolean
 
-    def charByte(args: ArgumentReader): Boolean
-
     def charChar(args: ArgumentReader): Boolean
 
     def charDouble(args: ArgumentReader): Boolean
@@ -45,39 +43,13 @@ object ComparisonOps {
 
     def charLong(args: ArgumentReader): Boolean
 
-    def charShort(args: ArgumentReader): Boolean
-
-    def doubleByte(args: ArgumentReader): Boolean
-
-    def doubleChar(args: ArgumentReader): Boolean
-
     def doubleDouble(args: ArgumentReader): Boolean
-
-    def doubleFloat(args: ArgumentReader): Boolean
-
-    def doubleInt(args: ArgumentReader): Boolean
-
-    def doubleLong(args: ArgumentReader): Boolean
-
-    def doubleShort(args: ArgumentReader): Boolean
-
-    def floatByte(args: ArgumentReader): Boolean
-
-    def floatChar(args: ArgumentReader): Boolean
 
     def floatDouble(args: ArgumentReader): Boolean
 
     def floatFloat(args: ArgumentReader): Boolean
 
-    def floatInt(args: ArgumentReader): Boolean
-
     def floatLong(args: ArgumentReader): Boolean
-
-    def floatShort(args: ArgumentReader): Boolean
-
-    def intByte(args: ArgumentReader): Boolean
-
-    def intChar(args: ArgumentReader): Boolean
 
     def intDouble(args: ArgumentReader): Boolean
 
@@ -87,23 +59,11 @@ object ComparisonOps {
 
     def intLong(args: ArgumentReader): Boolean
 
-    def intShort(args: ArgumentReader): Boolean
-
-    def longByte(args: ArgumentReader): Boolean
-
-    def longChar(args: ArgumentReader): Boolean
-
     def longDouble(args: ArgumentReader): Boolean
 
     def longFloat(args: ArgumentReader): Boolean
 
-    def longInt(args: ArgumentReader): Boolean
-
     def longLong(args: ArgumentReader): Boolean
-
-    def longShort(args: ArgumentReader): Boolean
-
-    def shortByte(args: ArgumentReader): Boolean
 
     def shortChar(args: ArgumentReader): Boolean
 
@@ -125,18 +85,11 @@ object ComparisonOps {
       var overloads = registry.overloadRegistryFor(MethodName(IntT, name))
       overloads.addOverload(rhsInt, BooleanT, booleanResult(intInt))
       overloads.addOverload(rhsLong, BooleanT, booleanResult(intLong))
-      overloads.addOverload(rhsShort, BooleanT, booleanResult(intShort))
-      overloads.addOverload(rhsByte, BooleanT, booleanResult(intByte))
-      overloads.addOverload(rhsChar, BooleanT, booleanResult(intChar))
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(intDouble))
       overloads.addOverload(rhsFloat, BooleanT, booleanResult(intFloat))
 
       overloads = registry.overloadRegistryFor(MethodName(LongT, name))
-      overloads.addOverload(rhsInt, BooleanT, booleanResult(longInt))
       overloads.addOverload(rhsLong, BooleanT, booleanResult(longLong))
-      overloads.addOverload(rhsShort, BooleanT, booleanResult(longShort))
-      overloads.addOverload(rhsByte, BooleanT, booleanResult(longByte))
-      overloads.addOverload(rhsChar, BooleanT, booleanResult(longChar))
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(longDouble))
       overloads.addOverload(rhsFloat, BooleanT, booleanResult(longFloat))
 
@@ -144,7 +97,6 @@ object ComparisonOps {
       overloads.addOverload(rhsInt, BooleanT, booleanResult(shortInt))
       overloads.addOverload(rhsLong, BooleanT, booleanResult(shortLong))
       overloads.addOverload(rhsShort, BooleanT, booleanResult(shortShort))
-      overloads.addOverload(rhsByte, BooleanT, booleanResult(shortByte))
       overloads.addOverload(rhsChar, BooleanT, booleanResult(shortChar))
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(shortDouble))
       overloads.addOverload(rhsFloat, BooleanT, booleanResult(shortFloat))
@@ -161,27 +113,15 @@ object ComparisonOps {
       overloads = registry.overloadRegistryFor(MethodName(CharT, name))
       overloads.addOverload(rhsInt, BooleanT, booleanResult(charInt))
       overloads.addOverload(rhsLong, BooleanT, booleanResult(charLong))
-      overloads.addOverload(rhsShort, BooleanT, booleanResult(charShort))
-      overloads.addOverload(rhsByte, BooleanT, booleanResult(charByte))
       overloads.addOverload(rhsChar, BooleanT, booleanResult(charChar))
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(charDouble))
       overloads.addOverload(rhsFloat, BooleanT, booleanResult(charFloat))
 
       overloads = registry.overloadRegistryFor(MethodName(DoubleT, name))
-      overloads.addOverload(rhsInt, BooleanT, booleanResult(doubleInt))
-      overloads.addOverload(rhsLong, BooleanT, booleanResult(doubleLong))
-      overloads.addOverload(rhsShort, BooleanT, booleanResult(doubleShort))
-      overloads.addOverload(rhsByte, BooleanT, booleanResult(doubleByte))
-      overloads.addOverload(rhsChar, BooleanT, booleanResult(doubleChar))
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(doubleDouble))
-      overloads.addOverload(rhsFloat, BooleanT, booleanResult(doubleFloat))
 
       overloads = registry.overloadRegistryFor(MethodName(FloatT, name))
-      overloads.addOverload(rhsInt, BooleanT, booleanResult(floatInt))
       overloads.addOverload(rhsLong, BooleanT, booleanResult(floatLong))
-      overloads.addOverload(rhsShort, BooleanT, booleanResult(floatShort))
-      overloads.addOverload(rhsByte, BooleanT, booleanResult(floatByte))
-      overloads.addOverload(rhsChar, BooleanT, booleanResult(floatChar))
       overloads.addOverload(rhsDouble, BooleanT, booleanResult(floatDouble))
       overloads.addOverload(rhsFloat, BooleanT, booleanResult(floatFloat))
 
@@ -210,8 +150,6 @@ object ComparisonOps {
 
     def byteShort(args: ArgumentReader): Boolean = args.readByte(0) < args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.readChar(0) < args.readByte(1)
-
     def charChar(args: ArgumentReader): Boolean = args.readChar(0) < args.readChar(1)
 
     def charDouble(args: ArgumentReader): Boolean = args.readChar(0) < args.readDouble(1)
@@ -222,39 +160,13 @@ object ComparisonOps {
 
     def charLong(args: ArgumentReader): Boolean = args.readChar(0) < args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.readChar(0) < args.readShort(1)
-
-    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) < args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) < args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) < args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) < args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) < args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) < args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) < args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) < args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) < args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) < args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) < args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) < args.readInt(1)
-
     def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) < args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) < args.readShort(1)
-
-    def intByte(args: ArgumentReader): Boolean = args.readInt(0) < args.readByte(1)
-
-    def intChar(args: ArgumentReader): Boolean = args.readInt(0) < args.readChar(1)
 
     def intDouble(args: ArgumentReader): Boolean = args.readInt(0) < args.readDouble(1)
 
@@ -264,23 +176,11 @@ object ComparisonOps {
 
     def intLong(args: ArgumentReader): Boolean = args.readInt(0) < args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.readInt(0) < args.readShort(1)
-
-    def longByte(args: ArgumentReader): Boolean = args.readLong(0) < args.readByte(1)
-
-    def longChar(args: ArgumentReader): Boolean = args.readLong(0) < args.readChar(1)
-
     def longDouble(args: ArgumentReader): Boolean = args.readLong(0) < args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Boolean = args.readLong(0) < args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.readLong(0) < args.readInt(1)
-
     def longLong(args: ArgumentReader): Boolean = args.readLong(0) < args.readLong(1)
-
-    def longShort(args: ArgumentReader): Boolean = args.readLong(0) < args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) < args.readByte(1)
 
     def shortChar(args: ArgumentReader): Boolean = args.readShort(0) < args.readChar(1)
 
@@ -316,8 +216,6 @@ object ComparisonOps {
 
     def byteShort(args: ArgumentReader): Boolean = args.readByte(0) > args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.readChar(0) > args.readByte(1)
-
     def charChar(args: ArgumentReader): Boolean = args.readChar(0) > args.readChar(1)
 
     def charDouble(args: ArgumentReader): Boolean = args.readChar(0) > args.readDouble(1)
@@ -328,39 +226,13 @@ object ComparisonOps {
 
     def charLong(args: ArgumentReader): Boolean = args.readChar(0) > args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.readChar(0) > args.readShort(1)
-
-    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) > args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) > args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) > args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) > args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) > args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) > args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) > args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) > args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) > args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) > args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) > args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) > args.readInt(1)
-
     def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) > args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) > args.readShort(1)
-
-    def intByte(args: ArgumentReader): Boolean = args.readInt(0) > args.readByte(1)
-
-    def intChar(args: ArgumentReader): Boolean = args.readInt(0) > args.readChar(1)
 
     def intDouble(args: ArgumentReader): Boolean = args.readInt(0) > args.readDouble(1)
 
@@ -370,23 +242,11 @@ object ComparisonOps {
 
     def intLong(args: ArgumentReader): Boolean = args.readInt(0) > args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.readInt(0) > args.readShort(1)
-
-    def longByte(args: ArgumentReader): Boolean = args.readLong(0) > args.readByte(1)
-
-    def longChar(args: ArgumentReader): Boolean = args.readLong(0) > args.readChar(1)
-
     def longDouble(args: ArgumentReader): Boolean = args.readLong(0) > args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Boolean = args.readLong(0) > args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.readLong(0) > args.readInt(1)
-
     def longLong(args: ArgumentReader): Boolean = args.readLong(0) > args.readLong(1)
-
-    def longShort(args: ArgumentReader): Boolean = args.readLong(0) > args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) > args.readByte(1)
 
     def shortChar(args: ArgumentReader): Boolean = args.readShort(0) > args.readChar(1)
 
@@ -422,8 +282,6 @@ object ComparisonOps {
 
     def byteShort(args: ArgumentReader): Boolean = args.readByte(0) <= args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.readChar(0) <= args.readByte(1)
-
     def charChar(args: ArgumentReader): Boolean = args.readChar(0) <= args.readChar(1)
 
     def charDouble(args: ArgumentReader): Boolean = args.readChar(0) <= args.readDouble(1)
@@ -434,39 +292,13 @@ object ComparisonOps {
 
     def charLong(args: ArgumentReader): Boolean = args.readChar(0) <= args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.readChar(0) <= args.readShort(1)
-
-    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readInt(1)
-
     def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readShort(1)
-
-    def intByte(args: ArgumentReader): Boolean = args.readInt(0) <= args.readByte(1)
-
-    def intChar(args: ArgumentReader): Boolean = args.readInt(0) <= args.readChar(1)
 
     def intDouble(args: ArgumentReader): Boolean = args.readInt(0) <= args.readDouble(1)
 
@@ -476,23 +308,11 @@ object ComparisonOps {
 
     def intLong(args: ArgumentReader): Boolean = args.readInt(0) <= args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.readInt(0) <= args.readShort(1)
-
-    def longByte(args: ArgumentReader): Boolean = args.readLong(0) <= args.readByte(1)
-
-    def longChar(args: ArgumentReader): Boolean = args.readLong(0) <= args.readChar(1)
-
     def longDouble(args: ArgumentReader): Boolean = args.readLong(0) <= args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Boolean = args.readLong(0) <= args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.readLong(0) <= args.readInt(1)
-
     def longLong(args: ArgumentReader): Boolean = args.readLong(0) <= args.readLong(1)
-
-    def longShort(args: ArgumentReader): Boolean = args.readLong(0) <= args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) <= args.readByte(1)
 
     def shortChar(args: ArgumentReader): Boolean = args.readShort(0) <= args.readChar(1)
 
@@ -528,8 +348,6 @@ object ComparisonOps {
 
     def byteShort(args: ArgumentReader): Boolean = args.readByte(0) >= args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.readChar(0) >= args.readByte(1)
-
     def charChar(args: ArgumentReader): Boolean = args.readChar(0) >= args.readChar(1)
 
     def charDouble(args: ArgumentReader): Boolean = args.readChar(0) >= args.readDouble(1)
@@ -540,39 +358,13 @@ object ComparisonOps {
 
     def charLong(args: ArgumentReader): Boolean = args.readChar(0) >= args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.readChar(0) >= args.readShort(1)
-
-    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readInt(1)
-
     def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readShort(1)
-
-    def intByte(args: ArgumentReader): Boolean = args.readInt(0) >= args.readByte(1)
-
-    def intChar(args: ArgumentReader): Boolean = args.readInt(0) >= args.readChar(1)
 
     def intDouble(args: ArgumentReader): Boolean = args.readInt(0) >= args.readDouble(1)
 
@@ -582,23 +374,11 @@ object ComparisonOps {
 
     def intLong(args: ArgumentReader): Boolean = args.readInt(0) >= args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.readInt(0) >= args.readShort(1)
-
-    def longByte(args: ArgumentReader): Boolean = args.readLong(0) >= args.readByte(1)
-
-    def longChar(args: ArgumentReader): Boolean = args.readLong(0) >= args.readChar(1)
-
     def longDouble(args: ArgumentReader): Boolean = args.readLong(0) >= args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Boolean = args.readLong(0) >= args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.readLong(0) >= args.readInt(1)
-
     def longLong(args: ArgumentReader): Boolean = args.readLong(0) >= args.readLong(1)
-
-    def longShort(args: ArgumentReader): Boolean = args.readLong(0) >= args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) >= args.readByte(1)
 
     def shortChar(args: ArgumentReader): Boolean = args.readShort(0) >= args.readChar(1)
 
