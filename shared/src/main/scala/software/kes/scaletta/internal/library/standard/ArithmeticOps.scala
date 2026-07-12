@@ -34,8 +34,6 @@ object ArithmeticOps {
 
     def byteShort(args: ArgumentReader): Int
 
-    def charByte(args: ArgumentReader): Int
-
     def charChar(args: ArgumentReader): Int
 
     def charDouble(args: ArgumentReader): Double
@@ -48,37 +46,11 @@ object ArithmeticOps {
 
     def charShort(args: ArgumentReader): Int
 
-    def doubleByte(args: ArgumentReader): Double
-
-    def doubleChar(args: ArgumentReader): Double
-
     def doubleDouble(args: ArgumentReader): Double
-
-    def doubleFloat(args: ArgumentReader): Double
-
-    def doubleInt(args: ArgumentReader): Double
-
-    def doubleLong(args: ArgumentReader): Double
-
-    def doubleShort(args: ArgumentReader): Double
-
-    def floatByte(args: ArgumentReader): Float
-
-    def floatChar(args: ArgumentReader): Float
 
     def floatDouble(args: ArgumentReader): Double
 
     def floatFloat(args: ArgumentReader): Float
-
-    def floatInt(args: ArgumentReader): Float
-
-    def floatLong(args: ArgumentReader): Float
-
-    def floatShort(args: ArgumentReader): Float
-
-    def intByte(args: ArgumentReader): Int
-
-    def intChar(args: ArgumentReader): Int
 
     def intDouble(args: ArgumentReader): Double
 
@@ -88,23 +60,11 @@ object ArithmeticOps {
 
     def intLong(args: ArgumentReader): Long
 
-    def intShort(args: ArgumentReader): Int
-
-    def longByte(args: ArgumentReader): Long
-
-    def longChar(args: ArgumentReader): Long
-
     def longDouble(args: ArgumentReader): Double
 
     def longFloat(args: ArgumentReader): Float
 
-    def longInt(args: ArgumentReader): Long
-
     def longLong(args: ArgumentReader): Long
-
-    def longShort(args: ArgumentReader): Long
-
-    def shortByte(args: ArgumentReader): Int
 
     def shortChar(args: ArgumentReader): Int
 
@@ -122,18 +82,11 @@ object ArithmeticOps {
       var overloads = registry.overloadRegistryFor(MethodName(IntT, name))
       overloads.addOverload(rhsInt, IntT, intResult(intInt))
       overloads.addOverload(rhsLong, LongT, longResult(intLong))
-      overloads.addOverload(rhsShort, IntT, intResult(intShort))
-      overloads.addOverload(rhsByte, IntT, intResult(intByte))
-      overloads.addOverload(rhsChar, IntT, intResult(intChar))
       overloads.addOverload(rhsDouble, DoubleT, doubleResult(intDouble))
       overloads.addOverload(rhsFloat, FloatT, floatResult(intFloat))
 
       overloads = registry.overloadRegistryFor(MethodName(LongT, name))
-      overloads.addOverload(rhsInt, LongT, longResult(longInt))
       overloads.addOverload(rhsLong, LongT, longResult(longLong))
-      overloads.addOverload(rhsShort, LongT, longResult(longShort))
-      overloads.addOverload(rhsByte, LongT, longResult(longByte))
-      overloads.addOverload(rhsChar, LongT, longResult(longChar))
       overloads.addOverload(rhsDouble, DoubleT, doubleResult(longDouble))
       overloads.addOverload(rhsFloat, FloatT, floatResult(longFloat))
 
@@ -141,7 +94,6 @@ object ArithmeticOps {
       overloads.addOverload(rhsInt, IntT, longResult(shortInt))
       overloads.addOverload(rhsLong, LongT, longResult(shortLong))
       overloads.addOverload(rhsShort, IntT, intResult(shortShort))
-      overloads.addOverload(rhsByte, IntT, intResult(shortByte))
       overloads.addOverload(rhsChar, IntT, intResult(shortChar))
       overloads.addOverload(rhsDouble, DoubleT, doubleResult(shortDouble))
       overloads.addOverload(rhsFloat, FloatT, floatResult(shortFloat))
@@ -159,26 +111,14 @@ object ArithmeticOps {
       overloads.addOverload(rhsInt, IntT, intResult(charInt))
       overloads.addOverload(rhsLong, LongT, longResult(charLong))
       overloads.addOverload(rhsShort, IntT, intResult(charShort))
-      overloads.addOverload(rhsByte, IntT, intResult(charByte))
       overloads.addOverload(rhsChar, IntT, intResult(charChar))
       overloads.addOverload(rhsDouble, DoubleT, doubleResult(charDouble))
       overloads.addOverload(rhsFloat, FloatT, floatResult(charFloat))
 
       overloads = registry.overloadRegistryFor(MethodName(DoubleT, name))
-      overloads.addOverload(rhsInt, DoubleT, doubleResult(doubleInt))
-      overloads.addOverload(rhsLong, DoubleT, doubleResult(doubleLong))
-      overloads.addOverload(rhsShort, DoubleT, doubleResult(doubleShort))
-      overloads.addOverload(rhsByte, DoubleT, doubleResult(doubleByte))
-      overloads.addOverload(rhsChar, DoubleT, doubleResult(doubleChar))
       overloads.addOverload(rhsDouble, DoubleT, doubleResult(doubleDouble))
-      overloads.addOverload(rhsFloat, DoubleT, doubleResult(doubleFloat))
 
       overloads = registry.overloadRegistryFor(MethodName(FloatT, name))
-      overloads.addOverload(rhsInt, FloatT, floatResult(floatInt))
-      overloads.addOverload(rhsLong, FloatT, floatResult(floatLong))
-      overloads.addOverload(rhsShort, FloatT, floatResult(floatShort))
-      overloads.addOverload(rhsByte, FloatT, floatResult(floatByte))
-      overloads.addOverload(rhsChar, FloatT, floatResult(floatChar))
       overloads.addOverload(rhsDouble, DoubleT, doubleResult(floatDouble))
       overloads.addOverload(rhsFloat, FloatT, floatResult(floatFloat))
     }
@@ -201,8 +141,6 @@ object ArithmeticOps {
 
     def byteShort(args: ArgumentReader): Int = args.readByte(0) + args.readShort(1)
 
-    def charByte(args: ArgumentReader): Int = args.readChar(0) + args.readByte(1)
-
     def charChar(args: ArgumentReader): Int = args.readChar(0) + args.readChar(1)
 
     def charDouble(args: ArgumentReader): Double = args.readChar(0) + args.readDouble(1)
@@ -215,37 +153,11 @@ object ArithmeticOps {
 
     def charShort(args: ArgumentReader): Int = args.readChar(0) + args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Double = args.readDouble(0) + args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Double = args.readDouble(0) + args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Double = args.readDouble(0) + args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Double = args.readDouble(0) + args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Double = args.readDouble(0) + args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Double = args.readDouble(0) + args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Double = args.readDouble(0) + args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Float = args.readFloat(0) + args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Float = args.readFloat(0) + args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Double = args.readFloat(0) + args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Float = args.readFloat(0) + args.readFloat(1)
-
-    def floatInt(args: ArgumentReader): Float = args.readFloat(0) + args.readInt(1)
-
-    def floatLong(args: ArgumentReader): Float = args.readFloat(0) + args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Float = args.readFloat(0) + args.readShort(1)
-
-    def intByte(args: ArgumentReader): Int = args.readInt(0) + args.readByte(1)
-
-    def intChar(args: ArgumentReader): Int = args.readInt(0) + args.readChar(1)
 
     def intDouble(args: ArgumentReader): Double = args.readInt(0) + args.readDouble(1)
 
@@ -255,23 +167,11 @@ object ArithmeticOps {
 
     def intLong(args: ArgumentReader): Long = args.readInt(0) + args.readLong(1)
 
-    def intShort(args: ArgumentReader): Int = args.readInt(0) + args.readShort(1)
-
-    def longByte(args: ArgumentReader): Long = args.readLong(0) + args.readByte(1)
-
-    def longChar(args: ArgumentReader): Long = args.readLong(0) + args.readChar(1)
-
     def longDouble(args: ArgumentReader): Double = args.readLong(0) + args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Float = args.readLong(0) + args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Long = args.readLong(0) + args.readInt(1)
-
     def longLong(args: ArgumentReader): Long = args.readLong(0) + args.readLong(1)
-
-    def longShort(args: ArgumentReader): Long = args.readLong(0) + args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Int = args.readShort(0) + args.readByte(1)
 
     def shortChar(args: ArgumentReader): Int = args.readShort(0) + args.readChar(1)
 
@@ -303,8 +203,6 @@ object ArithmeticOps {
 
     def byteShort(args: ArgumentReader): Int = args.readByte(0) - args.readShort(1)
 
-    def charByte(args: ArgumentReader): Int = args.readChar(0) - args.readByte(1)
-
     def charChar(args: ArgumentReader): Int = args.readChar(0) - args.readChar(1)
 
     def charDouble(args: ArgumentReader): Double = args.readChar(0) - args.readDouble(1)
@@ -317,37 +215,11 @@ object ArithmeticOps {
 
     def charShort(args: ArgumentReader): Int = args.readChar(0) - args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Double = args.readDouble(0) - args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Double = args.readDouble(0) - args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Double = args.readDouble(0) - args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Double = args.readDouble(0) - args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Double = args.readDouble(0) - args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Double = args.readDouble(0) - args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Double = args.readDouble(0) - args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Float = args.readFloat(0) - args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Float = args.readFloat(0) - args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Double = args.readFloat(0) - args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Float = args.readFloat(0) - args.readFloat(1)
-
-    def floatInt(args: ArgumentReader): Float = args.readFloat(0) - args.readInt(1)
-
-    def floatLong(args: ArgumentReader): Float = args.readFloat(0) - args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Float = args.readFloat(0) - args.readShort(1)
-
-    def intByte(args: ArgumentReader): Int = args.readInt(0) - args.readByte(1)
-
-    def intChar(args: ArgumentReader): Int = args.readInt(0) - args.readChar(1)
 
     def intDouble(args: ArgumentReader): Double = args.readInt(0) - args.readDouble(1)
 
@@ -357,23 +229,11 @@ object ArithmeticOps {
 
     def intLong(args: ArgumentReader): Long = args.readInt(0) - args.readLong(1)
 
-    def intShort(args: ArgumentReader): Int = args.readInt(0) - args.readShort(1)
-
-    def longByte(args: ArgumentReader): Long = args.readLong(0) - args.readByte(1)
-
-    def longChar(args: ArgumentReader): Long = args.readLong(0) - args.readChar(1)
-
     def longDouble(args: ArgumentReader): Double = args.readLong(0) - args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Float = args.readLong(0) - args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Long = args.readLong(0) - args.readInt(1)
-
     def longLong(args: ArgumentReader): Long = args.readLong(0) - args.readLong(1)
-
-    def longShort(args: ArgumentReader): Long = args.readLong(0) - args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Int = args.readShort(0) - args.readByte(1)
 
     def shortChar(args: ArgumentReader): Int = args.readShort(0) - args.readChar(1)
 
@@ -405,8 +265,6 @@ object ArithmeticOps {
 
     def byteShort(args: ArgumentReader): Int = args.readByte(0) * args.readShort(1)
 
-    def charByte(args: ArgumentReader): Int = args.readChar(0) * args.readByte(1)
-
     def charChar(args: ArgumentReader): Int = args.readChar(0) * args.readChar(1)
 
     def charDouble(args: ArgumentReader): Double = args.readChar(0) * args.readDouble(1)
@@ -419,37 +277,11 @@ object ArithmeticOps {
 
     def charShort(args: ArgumentReader): Int = args.readChar(0) * args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Double = args.readDouble(0) * args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Double = args.readDouble(0) * args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Double = args.readDouble(0) * args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Double = args.readDouble(0) * args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Double = args.readDouble(0) * args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Double = args.readDouble(0) * args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Double = args.readDouble(0) * args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Float = args.readFloat(0) * args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Float = args.readFloat(0) * args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Double = args.readFloat(0) * args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Float = args.readFloat(0) * args.readFloat(1)
-
-    def floatInt(args: ArgumentReader): Float = args.readFloat(0) * args.readInt(1)
-
-    def floatLong(args: ArgumentReader): Float = args.readFloat(0) * args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Float = args.readFloat(0) * args.readShort(1)
-
-    def intByte(args: ArgumentReader): Int = args.readInt(0) * args.readByte(1)
-
-    def intChar(args: ArgumentReader): Int = args.readInt(0) * args.readChar(1)
 
     def intDouble(args: ArgumentReader): Double = args.readInt(0) * args.readDouble(1)
 
@@ -459,23 +291,11 @@ object ArithmeticOps {
 
     def intLong(args: ArgumentReader): Long = args.readInt(0) * args.readLong(1)
 
-    def intShort(args: ArgumentReader): Int = args.readInt(0) * args.readShort(1)
-
-    def longByte(args: ArgumentReader): Long = args.readLong(0) * args.readByte(1)
-
-    def longChar(args: ArgumentReader): Long = args.readLong(0) * args.readChar(1)
-
     def longDouble(args: ArgumentReader): Double = args.readLong(0) * args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Float = args.readLong(0) * args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Long = args.readLong(0) * args.readInt(1)
-
     def longLong(args: ArgumentReader): Long = args.readLong(0) * args.readLong(1)
-
-    def longShort(args: ArgumentReader): Long = args.readLong(0) * args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Int = args.readShort(0) * args.readByte(1)
 
     def shortChar(args: ArgumentReader): Int = args.readShort(0) * args.readChar(1)
 
@@ -507,8 +327,6 @@ object ArithmeticOps {
 
     def byteShort(args: ArgumentReader): Int = args.readByte(0) / args.readShort(1)
 
-    def charByte(args: ArgumentReader): Int = args.readChar(0) / args.readByte(1)
-
     def charChar(args: ArgumentReader): Int = args.readChar(0) / args.readChar(1)
 
     def charDouble(args: ArgumentReader): Double = args.readChar(0) / args.readDouble(1)
@@ -521,37 +339,11 @@ object ArithmeticOps {
 
     def charShort(args: ArgumentReader): Int = args.readChar(0) / args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Double = args.readDouble(0) / args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Double = args.readDouble(0) / args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Double = args.readDouble(0) / args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Double = args.readDouble(0) / args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Double = args.readDouble(0) / args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Double = args.readDouble(0) / args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Double = args.readDouble(0) / args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Float = args.readFloat(0) / args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Float = args.readFloat(0) / args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Double = args.readFloat(0) / args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Float = args.readFloat(0) / args.readFloat(1)
-
-    def floatInt(args: ArgumentReader): Float = args.readFloat(0) / args.readInt(1)
-
-    def floatLong(args: ArgumentReader): Float = args.readFloat(0) / args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Float = args.readFloat(0) / args.readShort(1)
-
-    def intByte(args: ArgumentReader): Int = args.readInt(0) / args.readByte(1)
-
-    def intChar(args: ArgumentReader): Int = args.readInt(0) / args.readChar(1)
 
     def intDouble(args: ArgumentReader): Double = args.readInt(0) / args.readDouble(1)
 
@@ -561,23 +353,11 @@ object ArithmeticOps {
 
     def intLong(args: ArgumentReader): Long = args.readInt(0) / args.readLong(1)
 
-    def intShort(args: ArgumentReader): Int = args.readInt(0) / args.readShort(1)
-
-    def longByte(args: ArgumentReader): Long = args.readLong(0) / args.readByte(1)
-
-    def longChar(args: ArgumentReader): Long = args.readLong(0) / args.readChar(1)
-
     def longDouble(args: ArgumentReader): Double = args.readLong(0) / args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Float = args.readLong(0) / args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Long = args.readLong(0) / args.readInt(1)
-
     def longLong(args: ArgumentReader): Long = args.readLong(0) / args.readLong(1)
-
-    def longShort(args: ArgumentReader): Long = args.readLong(0) / args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Int = args.readShort(0) / args.readByte(1)
 
     def shortChar(args: ArgumentReader): Int = args.readShort(0) / args.readChar(1)
 
@@ -609,8 +389,6 @@ object ArithmeticOps {
 
     def byteShort(args: ArgumentReader): Int = args.readByte(0) % args.readShort(1)
 
-    def charByte(args: ArgumentReader): Int = args.readChar(0) % args.readByte(1)
-
     def charChar(args: ArgumentReader): Int = args.readChar(0) % args.readChar(1)
 
     def charDouble(args: ArgumentReader): Double = args.readChar(0) % args.readDouble(1)
@@ -623,37 +401,11 @@ object ArithmeticOps {
 
     def charShort(args: ArgumentReader): Int = args.readChar(0) % args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Double = args.readDouble(0) % args.readByte(1)
-
-    def doubleChar(args: ArgumentReader): Double = args.readDouble(0) % args.readChar(1)
-
     def doubleDouble(args: ArgumentReader): Double = args.readDouble(0) % args.readDouble(1)
-
-    def doubleFloat(args: ArgumentReader): Double = args.readDouble(0) % args.readFloat(1)
-
-    def doubleInt(args: ArgumentReader): Double = args.readDouble(0) % args.readInt(1)
-
-    def doubleLong(args: ArgumentReader): Double = args.readDouble(0) % args.readLong(1)
-
-    def doubleShort(args: ArgumentReader): Double = args.readDouble(0) % args.readShort(1)
-
-    def floatByte(args: ArgumentReader): Float = args.readFloat(0) % args.readByte(1)
-
-    def floatChar(args: ArgumentReader): Float = args.readFloat(0) % args.readChar(1)
 
     def floatDouble(args: ArgumentReader): Double = args.readFloat(0) % args.readDouble(1)
 
     def floatFloat(args: ArgumentReader): Float = args.readFloat(0) % args.readFloat(1)
-
-    def floatInt(args: ArgumentReader): Float = args.readFloat(0) % args.readInt(1)
-
-    def floatLong(args: ArgumentReader): Float = args.readFloat(0) % args.readLong(1)
-
-    def floatShort(args: ArgumentReader): Float = args.readFloat(0) % args.readShort(1)
-
-    def intByte(args: ArgumentReader): Int = args.readInt(0) % args.readByte(1)
-
-    def intChar(args: ArgumentReader): Int = args.readInt(0) % args.readChar(1)
 
     def intDouble(args: ArgumentReader): Double = args.readInt(0) % args.readDouble(1)
 
@@ -663,23 +415,11 @@ object ArithmeticOps {
 
     def intLong(args: ArgumentReader): Long = args.readInt(0) % args.readLong(1)
 
-    def intShort(args: ArgumentReader): Int = args.readInt(0) % args.readShort(1)
-
-    def longByte(args: ArgumentReader): Long = args.readLong(0) % args.readByte(1)
-
-    def longChar(args: ArgumentReader): Long = args.readLong(0) % args.readChar(1)
-
     def longDouble(args: ArgumentReader): Double = args.readLong(0) % args.readDouble(1)
 
     def longFloat(args: ArgumentReader): Float = args.readLong(0) % args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Long = args.readLong(0) % args.readInt(1)
-
     def longLong(args: ArgumentReader): Long = args.readLong(0) % args.readLong(1)
-
-    def longShort(args: ArgumentReader): Long = args.readLong(0) % args.readShort(1)
-
-    def shortByte(args: ArgumentReader): Int = args.readShort(0) % args.readByte(1)
 
     def shortChar(args: ArgumentReader): Int = args.readShort(0) % args.readChar(1)
 
