@@ -42,57 +42,48 @@ trait ArgumentReader {
 
   /**
    * Reads the argument at index and converts it to a Boolean.
-   * Safer than [[unsafeReadBoolean]] but slower.
    */
-  def readAsBoolean(index: Int): Boolean
+  def readBoolean(index: Int): Boolean
 
   /**
    * Reads the argument at index and converts it to an Int.
-   * Safer than [[unsafeReadInt]] but slower.
    */
-  def readAsInt(index: Int): Int
+  def readInt(index: Int): Int
 
   /**
    * Reads the argument at index and converts it to a Long.
-   * Safer than [[unsafeReadLong]] but slower.
    */
-  def readAsLong(index: Int): Long
+  def readLong(index: Int): Long
 
   /**
    * Reads the argument at index and converts it to a Short.
-   * Safer than [[unsafeReadShort]] but slower.
    */
-  def readAsShort(index: Int): Short
+  def readShort(index: Int): Short
 
   /**
    * Reads the argument at index and converts it to a Byte.
-   * Safer than [[unsafeReadByte]] but slower.
    */
-  def readAsByte(index: Int): Byte
+  def readByte(index: Int): Byte
 
   /**
    * Reads the argument at index and converts it to a Char.
-   * Safer than [[unsafeReadChar]] but slower.
    */
-  def readAsChar(index: Int): Char
+  def readChar(index: Int): Char
 
   /**
    * Reads the argument at index and converts it to a Double.
-   * Safer than [[unsafeReadDouble]] but slower.
    */
-  def readAsDouble(index: Int): Double
+  def readDouble(index: Int): Double
 
   /**
    * Reads the argument at index and converts it to a Float.
-   * Safer than [[unsafeReadFloat]] but slower.
    */
-  def readAsFloat(index: Int): Float
+  def readFloat(index: Int): Float
 
   /**
    * Reads the argument at index and converts it to an object.
-   * Safer than [[unsafeReadObject]] but slower.
    */
-  def readAsObject(index: Int): AnyRef
+  def readObject(index: Int): AnyRef
 
   /**
    * Read the argument at index as an unboxed Boolean.

@@ -180,7 +180,7 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         val signature = ParamsSignature.of(CoreTypes.BooleanT)
         stack.pushBoolean(true)
         val reader = stack.argumentReader(signature)
-        reader.readAsBoolean(0) shouldBe true
+        reader.readBoolean(0) shouldBe true
       }
 
       it("should read Int as Boolean (non-zero is true)") {
@@ -189,8 +189,8 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         stack.pushInt(41)
         stack.pushInt(0)
         val reader = stack.argumentReader(signature)
-        reader.readAsBoolean(0) shouldBe true
-        reader.readAsBoolean(1) shouldBe false
+        reader.readBoolean(0) shouldBe true
+        reader.readBoolean(1) shouldBe false
       }
 
       it("should read Int as Int") {
@@ -198,7 +198,7 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         val signature = ParamsSignature.of(CoreTypes.IntT)
         stack.pushInt(41)
         val reader = stack.argumentReader(signature)
-        reader.readAsInt(0) shouldBe 41
+        reader.readInt(0) shouldBe 41
       }
 
       it("should read Short as Int") {
@@ -206,7 +206,7 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         val signature = ParamsSignature.of(CoreTypes.ShortT)
         stack.pushShort(41.toShort)
         val reader = stack.argumentReader(signature)
-        reader.readAsInt(0) shouldBe 41
+        reader.readInt(0) shouldBe 41
       }
 
       it("should read Boolean as Int (true -> 1, false -> 0)") {
@@ -215,8 +215,8 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         stack.pushBoolean(true)
         stack.pushBoolean(false)
         val reader = stack.argumentReader(signature)
-        reader.readAsInt(0) shouldBe 1
-        reader.readAsInt(1) shouldBe 0
+        reader.readInt(0) shouldBe 1
+        reader.readInt(1) shouldBe 0
       }
 
       it("should read Object as Int via best-effort") {
@@ -225,7 +225,7 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         stack.pushObject("41")
         val reader = stack.argumentReader(signature)
         // "41" is not a Number or Boolean, so it should be 0 according to ObjectToPrimitive
-        reader.readAsInt(0) shouldBe 0
+        reader.readInt(0) shouldBe 0
       }
 
       it("should read boxed Integer as Int") {
@@ -233,7 +233,7 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         val signature = ParamsSignature.of(CoreTypes.AnyRefT)
         stack.pushObject(java.lang.Integer.valueOf(43))
         val reader = stack.argumentReader(signature)
-        reader.readAsInt(0) shouldBe 43
+        reader.readInt(0) shouldBe 43
       }
 
       it("should read Int as boxed Integer via readAsObject") {
@@ -241,7 +241,7 @@ class OperandStackArgumentReaderSpec extends AnyFunSpec with Matchers {
         val signature = ParamsSignature.of(CoreTypes.IntT)
         stack.pushInt(41)
         val reader = stack.argumentReader(signature)
-        val result = reader.readAsObject(0)
+        val result = reader.readObject(0)
         result shouldBe java.lang.Integer.valueOf(41)
         result.isInstanceOf[AnyRef] shouldBe true
       }

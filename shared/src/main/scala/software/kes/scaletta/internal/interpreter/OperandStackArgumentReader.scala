@@ -47,7 +47,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to a Boolean.
    * Safer than [[unsafeReadBoolean]] but slower.
    */
-  def readAsBoolean(index: Int): Boolean = {
+  def readBoolean(index: Int): Boolean = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Boolean) {
       unsafeReadBoolean(index)
@@ -60,7 +60,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to an Int.
    * Safer than [[unsafeReadInt]] but slower.
    */
-  def readAsInt(index: Int): Int = {
+  def readInt(index: Int): Int = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Int) {
       unsafeReadInt(index)
@@ -73,7 +73,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to a Long.
    * Safer than [[unsafeReadLong]] but slower.
    */
-  def readAsLong(index: Int): Long = {
+  def readLong(index: Int): Long = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Long) {
       unsafeReadLong(index)
@@ -86,7 +86,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to a Short.
    * Safer than [[unsafeReadShort]] but slower.
    */
-  def readAsShort(index: Int): Short = {
+  def readShort(index: Int): Short = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Short) {
       unsafeReadShort(index)
@@ -99,7 +99,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to a Byte.
    * Safer than [[unsafeReadByte]] but slower.
    */
-  def readAsByte(index: Int): Byte = {
+  def readByte(index: Int): Byte = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Byte) {
       unsafeReadByte(index)
@@ -112,7 +112,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to a Char.
    * Safer than [[unsafeReadChar]] but slower.
    */
-  def readAsChar(index: Int): Char = {
+  def readChar(index: Int): Char = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Char) {
       unsafeReadChar(index)
@@ -125,7 +125,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to a Double.
    * Safer than [[unsafeReadDouble]] but slower.
    */
-  def readAsDouble(index: Int): Double = {
+  def readDouble(index: Int): Double = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Double) {
       unsafeReadDouble(index)
@@ -138,7 +138,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to a Float.
    * Safer than [[unsafeReadFloat]] but slower.
    */
-  def readAsFloat(index: Int): Float = {
+  def readFloat(index: Int): Float = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Float) {
       unsafeReadFloat(index)
@@ -151,7 +151,7 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
    * Reads the argument at index and converts it to an object.
    * Safer than [[unsafeReadObject]] but slower.
    */
-  def readAsObject(index: Int): AnyRef = {
+  def readObject(index: Int): AnyRef = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Object) {
       unsafeReadObject(index)
