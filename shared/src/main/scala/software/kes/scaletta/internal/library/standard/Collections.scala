@@ -53,7 +53,7 @@ object Collections {
     protected def makeResult(builder: Builder): C
 
     def filterImpl(argumentReader: ArgumentReader): NativeStep = {
-      val input = argumentReader.unsafeReadObject(0).asInstanceOf[C]
+      val input = argumentReader.readObject(0).asInstanceOf[C]
       if (input.isEmpty) NativeStep.done(makeEmpty())
       else {
         val fn = argumentReader.unsafeReadFunction(1)
@@ -78,7 +78,7 @@ object Collections {
     }
 
     def mapImpl(argumentReader: ArgumentReader): NativeStep = {
-      val input = argumentReader.unsafeReadObject(0).asInstanceOf[C]
+      val input = argumentReader.readObject(0).asInstanceOf[C]
       if (input.isEmpty) NativeStep.done(makeEmpty())
       else {
         val fn = argumentReader.unsafeReadFunction(1)
