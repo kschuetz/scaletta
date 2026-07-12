@@ -48,8 +48,7 @@ class InterpreterNodeTraversalExampleSpec extends AnyFunSuite with Matchers {
   private lazy val getNextId = nodeLib.nextId
   private lazy val getValueId = nodeLib.valueId
 
-  // TODO: fix
-  ignore("host-object linked list traversal") {
+  test("host-object linked list traversal") {
     // Var 0: current node (Object), Var 1: sum (Int)
     val frame = FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT, CoreTypes.IntT))
     val signature = VarSpaceSignature.of(frame)

@@ -90,6 +90,44 @@ final class TypeNameIndex private(symbolIndex: SymbolIndex[Type[TypeId]],
   }
 
   /**
+   * Registers a core type with a pre-assigned TypeId.
+   *
+   * @param name   The fully qualified name for the core type.
+   * @param target The type structure (must be Nominal or Constructor to update allNames).
+   * @return An updated TypeNameIndex.
+   */
+  def registerCore(name: QualifiedName.Full, target: Type[TypeId]): TypeNameIndex = {
+    symbolIndex.get(name) match {
+      case Some(existing) if existing == target => this
+      case Some(_) => throw new IllegalStateException(s"Name $name is already registered with a different definition")
+      case None =>
+        val idOpt = target match {
+          case Type.Nominal(id) => Some(id.value)
+          case Type.Constructor(id, _) => Some(id.value)
+          case _ => None
+        }
+
+        idOpt match {
+          case Some(id) =>
+            val newAllNames =
+              if (id < allNames.size) {
+                if (allNames(id) != null && allNames(id) != name) {
+                  throw new IllegalStateException(s"TypeId $id is already assigned to ${allNames(id)}")
+                }
+                allNames.updated(id, name)
+              } else {
+                val padding = Vector.fill(id - allNames.size)(null: QualifiedName.Full)
+                allNames ++ padding :+ name
+              }
+            val newNextId = math.max(nextId, id + 1)
+            new TypeNameIndex(symbolIndex.add(name, target), newAllNames, newNextId)
+          case None =>
+            addAlias(name, target)
+        }
+    }
+  }
+
+  /**
    * Adds a nominal type name only if it doesn't already exist in the index.
    *
    * @param name The fully qualified type name to add.

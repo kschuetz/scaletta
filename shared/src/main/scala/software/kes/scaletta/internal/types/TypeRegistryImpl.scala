@@ -43,14 +43,14 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
 
   def registerCoreValueType(name: QualifiedName.Full,
                             typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
-    nameIndex = nameIndex.addAlias(name, typ)
+    nameIndex = nameIndex.registerCore(name, typ)
     valueTypes += typ
     typ
   }
 
   def registerCoreRefType(name: QualifiedName.Full,
                           typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
-    nameIndex = nameIndex.addAlias(name, typ)
+    nameIndex = nameIndex.registerCore(name, typ)
     typ
   }
 
