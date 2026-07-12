@@ -196,425 +196,425 @@ object ComparisonOps {
   object lt extends ComparisonOp {
     val name: Name = Name("<")
 
-    def byteByte(args: ArgumentReader): Boolean = args.unsafeReadByte(0) < args.unsafeReadByte(1)
+    def byteByte(args: ArgumentReader): Boolean = args.readByte(0) < args.readByte(1)
 
-    def byteChar(args: ArgumentReader): Boolean = args.unsafeReadByte(0) < args.unsafeReadChar(1)
+    def byteChar(args: ArgumentReader): Boolean = args.readByte(0) < args.readChar(1)
 
-    def byteDouble(args: ArgumentReader): Boolean = args.unsafeReadByte(0) < args.unsafeReadDouble(1)
+    def byteDouble(args: ArgumentReader): Boolean = args.readByte(0) < args.readDouble(1)
 
-    def byteFloat(args: ArgumentReader): Boolean = args.unsafeReadByte(0) < args.unsafeReadFloat(1)
+    def byteFloat(args: ArgumentReader): Boolean = args.readByte(0) < args.readFloat(1)
 
-    def byteInt(args: ArgumentReader): Boolean = args.unsafeReadByte(0) < args.unsafeReadInt(1)
+    def byteInt(args: ArgumentReader): Boolean = args.readByte(0) < args.readInt(1)
 
-    def byteLong(args: ArgumentReader): Boolean = args.unsafeReadByte(0) < args.unsafeReadLong(1)
+    def byteLong(args: ArgumentReader): Boolean = args.readByte(0) < args.readLong(1)
 
-    def byteShort(args: ArgumentReader): Boolean = args.unsafeReadByte(0) < args.unsafeReadShort(1)
+    def byteShort(args: ArgumentReader): Boolean = args.readByte(0) < args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.unsafeReadChar(0) < args.unsafeReadByte(1)
+    def charByte(args: ArgumentReader): Boolean = args.readChar(0) < args.readByte(1)
 
-    def charChar(args: ArgumentReader): Boolean = args.unsafeReadChar(0) < args.unsafeReadChar(1)
+    def charChar(args: ArgumentReader): Boolean = args.readChar(0) < args.readChar(1)
 
-    def charDouble(args: ArgumentReader): Boolean = args.unsafeReadChar(0) < args.unsafeReadDouble(1)
+    def charDouble(args: ArgumentReader): Boolean = args.readChar(0) < args.readDouble(1)
 
-    def charFloat(args: ArgumentReader): Boolean = args.unsafeReadChar(0) < args.unsafeReadFloat(1)
+    def charFloat(args: ArgumentReader): Boolean = args.readChar(0) < args.readFloat(1)
 
-    def charInt(args: ArgumentReader): Boolean = args.unsafeReadChar(0) < args.unsafeReadInt(1)
+    def charInt(args: ArgumentReader): Boolean = args.readChar(0) < args.readInt(1)
 
-    def charLong(args: ArgumentReader): Boolean = args.unsafeReadChar(0) < args.unsafeReadLong(1)
+    def charLong(args: ArgumentReader): Boolean = args.readChar(0) < args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.unsafeReadChar(0) < args.unsafeReadShort(1)
+    def charShort(args: ArgumentReader): Boolean = args.readChar(0) < args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) < args.unsafeReadByte(1)
+    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) < args.readByte(1)
 
-    def doubleChar(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) < args.unsafeReadChar(1)
+    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) < args.readChar(1)
 
-    def doubleDouble(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) < args.unsafeReadDouble(1)
+    def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) < args.readDouble(1)
 
-    def doubleFloat(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) < args.unsafeReadFloat(1)
+    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) < args.readFloat(1)
 
-    def doubleInt(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) < args.unsafeReadInt(1)
+    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) < args.readInt(1)
 
-    def doubleLong(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) < args.unsafeReadLong(1)
+    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) < args.readLong(1)
 
-    def doubleShort(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) < args.unsafeReadShort(1)
+    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) < args.readShort(1)
 
-    def floatByte(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) < args.unsafeReadByte(1)
+    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) < args.readByte(1)
 
-    def floatChar(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) < args.unsafeReadChar(1)
+    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) < args.readChar(1)
 
-    def floatDouble(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) < args.unsafeReadDouble(1)
+    def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) < args.readDouble(1)
 
-    def floatFloat(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) < args.unsafeReadFloat(1)
+    def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) < args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) < args.unsafeReadInt(1)
+    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) < args.readInt(1)
 
-    def floatLong(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) < args.unsafeReadLong(1)
+    def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) < args.readLong(1)
 
-    def floatShort(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) < args.unsafeReadShort(1)
+    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) < args.readShort(1)
 
-    def intByte(args: ArgumentReader): Boolean = args.unsafeReadInt(0) < args.unsafeReadByte(1)
+    def intByte(args: ArgumentReader): Boolean = args.readInt(0) < args.readByte(1)
 
-    def intChar(args: ArgumentReader): Boolean = args.unsafeReadInt(0) < args.unsafeReadChar(1)
+    def intChar(args: ArgumentReader): Boolean = args.readInt(0) < args.readChar(1)
 
-    def intDouble(args: ArgumentReader): Boolean = args.unsafeReadInt(0) < args.unsafeReadDouble(1)
+    def intDouble(args: ArgumentReader): Boolean = args.readInt(0) < args.readDouble(1)
 
-    def intFloat(args: ArgumentReader): Boolean = args.unsafeReadInt(0) < args.unsafeReadFloat(1)
+    def intFloat(args: ArgumentReader): Boolean = args.readInt(0) < args.readFloat(1)
 
-    def intInt(args: ArgumentReader): Boolean = args.unsafeReadInt(0) < args.unsafeReadInt(1)
+    def intInt(args: ArgumentReader): Boolean = args.readInt(0) < args.readInt(1)
 
-    def intLong(args: ArgumentReader): Boolean = args.unsafeReadInt(0) < args.unsafeReadLong(1)
+    def intLong(args: ArgumentReader): Boolean = args.readInt(0) < args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.unsafeReadInt(0) < args.unsafeReadShort(1)
+    def intShort(args: ArgumentReader): Boolean = args.readInt(0) < args.readShort(1)
 
-    def longByte(args: ArgumentReader): Boolean = args.unsafeReadLong(0) < args.unsafeReadByte(1)
+    def longByte(args: ArgumentReader): Boolean = args.readLong(0) < args.readByte(1)
 
-    def longChar(args: ArgumentReader): Boolean = args.unsafeReadLong(0) < args.unsafeReadChar(1)
+    def longChar(args: ArgumentReader): Boolean = args.readLong(0) < args.readChar(1)
 
-    def longDouble(args: ArgumentReader): Boolean = args.unsafeReadLong(0) < args.unsafeReadDouble(1)
+    def longDouble(args: ArgumentReader): Boolean = args.readLong(0) < args.readDouble(1)
 
-    def longFloat(args: ArgumentReader): Boolean = args.unsafeReadLong(0) < args.unsafeReadFloat(1)
+    def longFloat(args: ArgumentReader): Boolean = args.readLong(0) < args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.unsafeReadLong(0) < args.unsafeReadInt(1)
+    def longInt(args: ArgumentReader): Boolean = args.readLong(0) < args.readInt(1)
 
-    def longLong(args: ArgumentReader): Boolean = args.unsafeReadLong(0) < args.unsafeReadLong(1)
+    def longLong(args: ArgumentReader): Boolean = args.readLong(0) < args.readLong(1)
 
-    def longShort(args: ArgumentReader): Boolean = args.unsafeReadLong(0) < args.unsafeReadShort(1)
+    def longShort(args: ArgumentReader): Boolean = args.readLong(0) < args.readShort(1)
 
-    def shortByte(args: ArgumentReader): Boolean = args.unsafeReadShort(0) < args.unsafeReadByte(1)
+    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) < args.readByte(1)
 
-    def shortChar(args: ArgumentReader): Boolean = args.unsafeReadShort(0) < args.unsafeReadChar(1)
+    def shortChar(args: ArgumentReader): Boolean = args.readShort(0) < args.readChar(1)
 
-    def shortDouble(args: ArgumentReader): Boolean = args.unsafeReadShort(0) < args.unsafeReadDouble(1)
+    def shortDouble(args: ArgumentReader): Boolean = args.readShort(0) < args.readDouble(1)
 
-    def shortFloat(args: ArgumentReader): Boolean = args.unsafeReadShort(0) < args.unsafeReadFloat(1)
+    def shortFloat(args: ArgumentReader): Boolean = args.readShort(0) < args.readFloat(1)
 
-    def shortInt(args: ArgumentReader): Boolean = args.unsafeReadShort(0) < args.unsafeReadInt(1)
+    def shortInt(args: ArgumentReader): Boolean = args.readShort(0) < args.readInt(1)
 
-    def shortLong(args: ArgumentReader): Boolean = args.unsafeReadShort(0) < args.unsafeReadLong(1)
+    def shortLong(args: ArgumentReader): Boolean = args.readShort(0) < args.readLong(1)
 
-    def shortShort(args: ArgumentReader): Boolean = args.unsafeReadShort(0) < args.unsafeReadShort(1)
+    def shortShort(args: ArgumentReader): Boolean = args.readShort(0) < args.readShort(1)
 
-    def booleanBoolean(args: ArgumentReader): Boolean = args.unsafeReadBoolean(0) < args.unsafeReadBoolean(1)
+    def booleanBoolean(args: ArgumentReader): Boolean = args.readBoolean(0) < args.readBoolean(1)
 
-    def stringString(args: ArgumentReader): Boolean = args.unsafeReadObject(0).asInstanceOf[String] < args.unsafeReadObject(1).asInstanceOf[String]
+    def stringString(args: ArgumentReader): Boolean = args.readObject(0).asInstanceOf[String] < args.readObject(1).asInstanceOf[String]
   }
 
   object gt extends ComparisonOp {
     val name: Name = Name(">")
 
-    def byteByte(args: ArgumentReader): Boolean = args.unsafeReadByte(0) > args.unsafeReadByte(1)
+    def byteByte(args: ArgumentReader): Boolean = args.readByte(0) > args.readByte(1)
 
-    def byteChar(args: ArgumentReader): Boolean = args.unsafeReadByte(0) > args.unsafeReadChar(1)
+    def byteChar(args: ArgumentReader): Boolean = args.readByte(0) > args.readChar(1)
 
-    def byteDouble(args: ArgumentReader): Boolean = args.unsafeReadByte(0) > args.unsafeReadDouble(1)
+    def byteDouble(args: ArgumentReader): Boolean = args.readByte(0) > args.readDouble(1)
 
-    def byteFloat(args: ArgumentReader): Boolean = args.unsafeReadByte(0) > args.unsafeReadFloat(1)
+    def byteFloat(args: ArgumentReader): Boolean = args.readByte(0) > args.readFloat(1)
 
-    def byteInt(args: ArgumentReader): Boolean = args.unsafeReadByte(0) > args.unsafeReadInt(1)
+    def byteInt(args: ArgumentReader): Boolean = args.readByte(0) > args.readInt(1)
 
-    def byteLong(args: ArgumentReader): Boolean = args.unsafeReadByte(0) > args.unsafeReadLong(1)
+    def byteLong(args: ArgumentReader): Boolean = args.readByte(0) > args.readLong(1)
 
-    def byteShort(args: ArgumentReader): Boolean = args.unsafeReadByte(0) > args.unsafeReadShort(1)
+    def byteShort(args: ArgumentReader): Boolean = args.readByte(0) > args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.unsafeReadChar(0) > args.unsafeReadByte(1)
+    def charByte(args: ArgumentReader): Boolean = args.readChar(0) > args.readByte(1)
 
-    def charChar(args: ArgumentReader): Boolean = args.unsafeReadChar(0) > args.unsafeReadChar(1)
+    def charChar(args: ArgumentReader): Boolean = args.readChar(0) > args.readChar(1)
 
-    def charDouble(args: ArgumentReader): Boolean = args.unsafeReadChar(0) > args.unsafeReadDouble(1)
+    def charDouble(args: ArgumentReader): Boolean = args.readChar(0) > args.readDouble(1)
 
-    def charFloat(args: ArgumentReader): Boolean = args.unsafeReadChar(0) > args.unsafeReadFloat(1)
+    def charFloat(args: ArgumentReader): Boolean = args.readChar(0) > args.readFloat(1)
 
-    def charInt(args: ArgumentReader): Boolean = args.unsafeReadChar(0) > args.unsafeReadInt(1)
+    def charInt(args: ArgumentReader): Boolean = args.readChar(0) > args.readInt(1)
 
-    def charLong(args: ArgumentReader): Boolean = args.unsafeReadChar(0) > args.unsafeReadLong(1)
+    def charLong(args: ArgumentReader): Boolean = args.readChar(0) > args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.unsafeReadChar(0) > args.unsafeReadShort(1)
+    def charShort(args: ArgumentReader): Boolean = args.readChar(0) > args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) > args.unsafeReadByte(1)
+    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) > args.readByte(1)
 
-    def doubleChar(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) > args.unsafeReadChar(1)
+    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) > args.readChar(1)
 
-    def doubleDouble(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) > args.unsafeReadDouble(1)
+    def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) > args.readDouble(1)
 
-    def doubleFloat(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) > args.unsafeReadFloat(1)
+    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) > args.readFloat(1)
 
-    def doubleInt(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) > args.unsafeReadInt(1)
+    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) > args.readInt(1)
 
-    def doubleLong(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) > args.unsafeReadLong(1)
+    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) > args.readLong(1)
 
-    def doubleShort(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) > args.unsafeReadShort(1)
+    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) > args.readShort(1)
 
-    def floatByte(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) > args.unsafeReadByte(1)
+    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) > args.readByte(1)
 
-    def floatChar(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) > args.unsafeReadChar(1)
+    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) > args.readChar(1)
 
-    def floatDouble(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) > args.unsafeReadDouble(1)
+    def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) > args.readDouble(1)
 
-    def floatFloat(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) > args.unsafeReadFloat(1)
+    def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) > args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) > args.unsafeReadInt(1)
+    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) > args.readInt(1)
 
-    def floatLong(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) > args.unsafeReadLong(1)
+    def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) > args.readLong(1)
 
-    def floatShort(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) > args.unsafeReadShort(1)
+    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) > args.readShort(1)
 
-    def intByte(args: ArgumentReader): Boolean = args.unsafeReadInt(0) > args.unsafeReadByte(1)
+    def intByte(args: ArgumentReader): Boolean = args.readInt(0) > args.readByte(1)
 
-    def intChar(args: ArgumentReader): Boolean = args.unsafeReadInt(0) > args.unsafeReadChar(1)
+    def intChar(args: ArgumentReader): Boolean = args.readInt(0) > args.readChar(1)
 
-    def intDouble(args: ArgumentReader): Boolean = args.unsafeReadInt(0) > args.unsafeReadDouble(1)
+    def intDouble(args: ArgumentReader): Boolean = args.readInt(0) > args.readDouble(1)
 
-    def intFloat(args: ArgumentReader): Boolean = args.unsafeReadInt(0) > args.unsafeReadFloat(1)
+    def intFloat(args: ArgumentReader): Boolean = args.readInt(0) > args.readFloat(1)
 
-    def intInt(args: ArgumentReader): Boolean = args.unsafeReadInt(0) > args.unsafeReadInt(1)
+    def intInt(args: ArgumentReader): Boolean = args.readInt(0) > args.readInt(1)
 
-    def intLong(args: ArgumentReader): Boolean = args.unsafeReadInt(0) > args.unsafeReadLong(1)
+    def intLong(args: ArgumentReader): Boolean = args.readInt(0) > args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.unsafeReadInt(0) > args.unsafeReadShort(1)
+    def intShort(args: ArgumentReader): Boolean = args.readInt(0) > args.readShort(1)
 
-    def longByte(args: ArgumentReader): Boolean = args.unsafeReadLong(0) > args.unsafeReadByte(1)
+    def longByte(args: ArgumentReader): Boolean = args.readLong(0) > args.readByte(1)
 
-    def longChar(args: ArgumentReader): Boolean = args.unsafeReadLong(0) > args.unsafeReadChar(1)
+    def longChar(args: ArgumentReader): Boolean = args.readLong(0) > args.readChar(1)
 
-    def longDouble(args: ArgumentReader): Boolean = args.unsafeReadLong(0) > args.unsafeReadDouble(1)
+    def longDouble(args: ArgumentReader): Boolean = args.readLong(0) > args.readDouble(1)
 
-    def longFloat(args: ArgumentReader): Boolean = args.unsafeReadLong(0) > args.unsafeReadFloat(1)
+    def longFloat(args: ArgumentReader): Boolean = args.readLong(0) > args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.unsafeReadLong(0) > args.unsafeReadInt(1)
+    def longInt(args: ArgumentReader): Boolean = args.readLong(0) > args.readInt(1)
 
-    def longLong(args: ArgumentReader): Boolean = args.unsafeReadLong(0) > args.unsafeReadLong(1)
+    def longLong(args: ArgumentReader): Boolean = args.readLong(0) > args.readLong(1)
 
-    def longShort(args: ArgumentReader): Boolean = args.unsafeReadLong(0) > args.unsafeReadShort(1)
+    def longShort(args: ArgumentReader): Boolean = args.readLong(0) > args.readShort(1)
 
-    def shortByte(args: ArgumentReader): Boolean = args.unsafeReadShort(0) > args.unsafeReadByte(1)
+    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) > args.readByte(1)
 
-    def shortChar(args: ArgumentReader): Boolean = args.unsafeReadShort(0) > args.unsafeReadChar(1)
+    def shortChar(args: ArgumentReader): Boolean = args.readShort(0) > args.readChar(1)
 
-    def shortDouble(args: ArgumentReader): Boolean = args.unsafeReadShort(0) > args.unsafeReadDouble(1)
+    def shortDouble(args: ArgumentReader): Boolean = args.readShort(0) > args.readDouble(1)
 
-    def shortFloat(args: ArgumentReader): Boolean = args.unsafeReadShort(0) > args.unsafeReadFloat(1)
+    def shortFloat(args: ArgumentReader): Boolean = args.readShort(0) > args.readFloat(1)
 
-    def shortInt(args: ArgumentReader): Boolean = args.unsafeReadShort(0) > args.unsafeReadInt(1)
+    def shortInt(args: ArgumentReader): Boolean = args.readShort(0) > args.readInt(1)
 
-    def shortLong(args: ArgumentReader): Boolean = args.unsafeReadShort(0) > args.unsafeReadLong(1)
+    def shortLong(args: ArgumentReader): Boolean = args.readShort(0) > args.readLong(1)
 
-    def shortShort(args: ArgumentReader): Boolean = args.unsafeReadShort(0) > args.unsafeReadShort(1)
+    def shortShort(args: ArgumentReader): Boolean = args.readShort(0) > args.readShort(1)
 
-    def booleanBoolean(args: ArgumentReader): Boolean = args.unsafeReadBoolean(0) > args.unsafeReadBoolean(1)
+    def booleanBoolean(args: ArgumentReader): Boolean = args.readBoolean(0) > args.readBoolean(1)
 
-    def stringString(args: ArgumentReader): Boolean = args.unsafeReadObject(0).asInstanceOf[String] > args.unsafeReadObject(1).asInstanceOf[String]
+    def stringString(args: ArgumentReader): Boolean = args.readObject(0).asInstanceOf[String] > args.readObject(1).asInstanceOf[String]
   }
 
   object le extends ComparisonOp {
     val name: Name = Name("<=")
 
-    def byteByte(args: ArgumentReader): Boolean = args.unsafeReadByte(0) <= args.unsafeReadByte(1)
+    def byteByte(args: ArgumentReader): Boolean = args.readByte(0) <= args.readByte(1)
 
-    def byteChar(args: ArgumentReader): Boolean = args.unsafeReadByte(0) <= args.unsafeReadChar(1)
+    def byteChar(args: ArgumentReader): Boolean = args.readByte(0) <= args.readChar(1)
 
-    def byteDouble(args: ArgumentReader): Boolean = args.unsafeReadByte(0) <= args.unsafeReadDouble(1)
+    def byteDouble(args: ArgumentReader): Boolean = args.readByte(0) <= args.readDouble(1)
 
-    def byteFloat(args: ArgumentReader): Boolean = args.unsafeReadByte(0) <= args.unsafeReadFloat(1)
+    def byteFloat(args: ArgumentReader): Boolean = args.readByte(0) <= args.readFloat(1)
 
-    def byteInt(args: ArgumentReader): Boolean = args.unsafeReadByte(0) <= args.unsafeReadInt(1)
+    def byteInt(args: ArgumentReader): Boolean = args.readByte(0) <= args.readInt(1)
 
-    def byteLong(args: ArgumentReader): Boolean = args.unsafeReadByte(0) <= args.unsafeReadLong(1)
+    def byteLong(args: ArgumentReader): Boolean = args.readByte(0) <= args.readLong(1)
 
-    def byteShort(args: ArgumentReader): Boolean = args.unsafeReadByte(0) <= args.unsafeReadShort(1)
+    def byteShort(args: ArgumentReader): Boolean = args.readByte(0) <= args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.unsafeReadChar(0) <= args.unsafeReadByte(1)
+    def charByte(args: ArgumentReader): Boolean = args.readChar(0) <= args.readByte(1)
 
-    def charChar(args: ArgumentReader): Boolean = args.unsafeReadChar(0) <= args.unsafeReadChar(1)
+    def charChar(args: ArgumentReader): Boolean = args.readChar(0) <= args.readChar(1)
 
-    def charDouble(args: ArgumentReader): Boolean = args.unsafeReadChar(0) <= args.unsafeReadDouble(1)
+    def charDouble(args: ArgumentReader): Boolean = args.readChar(0) <= args.readDouble(1)
 
-    def charFloat(args: ArgumentReader): Boolean = args.unsafeReadChar(0) <= args.unsafeReadFloat(1)
+    def charFloat(args: ArgumentReader): Boolean = args.readChar(0) <= args.readFloat(1)
 
-    def charInt(args: ArgumentReader): Boolean = args.unsafeReadChar(0) <= args.unsafeReadInt(1)
+    def charInt(args: ArgumentReader): Boolean = args.readChar(0) <= args.readInt(1)
 
-    def charLong(args: ArgumentReader): Boolean = args.unsafeReadChar(0) <= args.unsafeReadLong(1)
+    def charLong(args: ArgumentReader): Boolean = args.readChar(0) <= args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.unsafeReadChar(0) <= args.unsafeReadShort(1)
+    def charShort(args: ArgumentReader): Boolean = args.readChar(0) <= args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) <= args.unsafeReadByte(1)
+    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readByte(1)
 
-    def doubleChar(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) <= args.unsafeReadChar(1)
+    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readChar(1)
 
-    def doubleDouble(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) <= args.unsafeReadDouble(1)
+    def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readDouble(1)
 
-    def doubleFloat(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) <= args.unsafeReadFloat(1)
+    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readFloat(1)
 
-    def doubleInt(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) <= args.unsafeReadInt(1)
+    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readInt(1)
 
-    def doubleLong(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) <= args.unsafeReadLong(1)
+    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readLong(1)
 
-    def doubleShort(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) <= args.unsafeReadShort(1)
+    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) <= args.readShort(1)
 
-    def floatByte(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) <= args.unsafeReadByte(1)
+    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readByte(1)
 
-    def floatChar(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) <= args.unsafeReadChar(1)
+    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readChar(1)
 
-    def floatDouble(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) <= args.unsafeReadDouble(1)
+    def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readDouble(1)
 
-    def floatFloat(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) <= args.unsafeReadFloat(1)
+    def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) <= args.unsafeReadInt(1)
+    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readInt(1)
 
-    def floatLong(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) <= args.unsafeReadLong(1)
+    def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readLong(1)
 
-    def floatShort(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) <= args.unsafeReadShort(1)
+    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) <= args.readShort(1)
 
-    def intByte(args: ArgumentReader): Boolean = args.unsafeReadInt(0) <= args.unsafeReadByte(1)
+    def intByte(args: ArgumentReader): Boolean = args.readInt(0) <= args.readByte(1)
 
-    def intChar(args: ArgumentReader): Boolean = args.unsafeReadInt(0) <= args.unsafeReadChar(1)
+    def intChar(args: ArgumentReader): Boolean = args.readInt(0) <= args.readChar(1)
 
-    def intDouble(args: ArgumentReader): Boolean = args.unsafeReadInt(0) <= args.unsafeReadDouble(1)
+    def intDouble(args: ArgumentReader): Boolean = args.readInt(0) <= args.readDouble(1)
 
-    def intFloat(args: ArgumentReader): Boolean = args.unsafeReadInt(0) <= args.unsafeReadFloat(1)
+    def intFloat(args: ArgumentReader): Boolean = args.readInt(0) <= args.readFloat(1)
 
-    def intInt(args: ArgumentReader): Boolean = args.unsafeReadInt(0) <= args.unsafeReadInt(1)
+    def intInt(args: ArgumentReader): Boolean = args.readInt(0) <= args.readInt(1)
 
-    def intLong(args: ArgumentReader): Boolean = args.unsafeReadInt(0) <= args.unsafeReadLong(1)
+    def intLong(args: ArgumentReader): Boolean = args.readInt(0) <= args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.unsafeReadInt(0) <= args.unsafeReadShort(1)
+    def intShort(args: ArgumentReader): Boolean = args.readInt(0) <= args.readShort(1)
 
-    def longByte(args: ArgumentReader): Boolean = args.unsafeReadLong(0) <= args.unsafeReadByte(1)
+    def longByte(args: ArgumentReader): Boolean = args.readLong(0) <= args.readByte(1)
 
-    def longChar(args: ArgumentReader): Boolean = args.unsafeReadLong(0) <= args.unsafeReadChar(1)
+    def longChar(args: ArgumentReader): Boolean = args.readLong(0) <= args.readChar(1)
 
-    def longDouble(args: ArgumentReader): Boolean = args.unsafeReadLong(0) <= args.unsafeReadDouble(1)
+    def longDouble(args: ArgumentReader): Boolean = args.readLong(0) <= args.readDouble(1)
 
-    def longFloat(args: ArgumentReader): Boolean = args.unsafeReadLong(0) <= args.unsafeReadFloat(1)
+    def longFloat(args: ArgumentReader): Boolean = args.readLong(0) <= args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.unsafeReadLong(0) <= args.unsafeReadInt(1)
+    def longInt(args: ArgumentReader): Boolean = args.readLong(0) <= args.readInt(1)
 
-    def longLong(args: ArgumentReader): Boolean = args.unsafeReadLong(0) <= args.unsafeReadLong(1)
+    def longLong(args: ArgumentReader): Boolean = args.readLong(0) <= args.readLong(1)
 
-    def longShort(args: ArgumentReader): Boolean = args.unsafeReadLong(0) <= args.unsafeReadShort(1)
+    def longShort(args: ArgumentReader): Boolean = args.readLong(0) <= args.readShort(1)
 
-    def shortByte(args: ArgumentReader): Boolean = args.unsafeReadShort(0) <= args.unsafeReadByte(1)
+    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) <= args.readByte(1)
 
-    def shortChar(args: ArgumentReader): Boolean = args.unsafeReadShort(0) <= args.unsafeReadChar(1)
+    def shortChar(args: ArgumentReader): Boolean = args.readShort(0) <= args.readChar(1)
 
-    def shortDouble(args: ArgumentReader): Boolean = args.unsafeReadShort(0) <= args.unsafeReadDouble(1)
+    def shortDouble(args: ArgumentReader): Boolean = args.readShort(0) <= args.readDouble(1)
 
-    def shortFloat(args: ArgumentReader): Boolean = args.unsafeReadShort(0) <= args.unsafeReadFloat(1)
+    def shortFloat(args: ArgumentReader): Boolean = args.readShort(0) <= args.readFloat(1)
 
-    def shortInt(args: ArgumentReader): Boolean = args.unsafeReadShort(0) <= args.unsafeReadInt(1)
+    def shortInt(args: ArgumentReader): Boolean = args.readShort(0) <= args.readInt(1)
 
-    def shortLong(args: ArgumentReader): Boolean = args.unsafeReadShort(0) <= args.unsafeReadLong(1)
+    def shortLong(args: ArgumentReader): Boolean = args.readShort(0) <= args.readLong(1)
 
-    def shortShort(args: ArgumentReader): Boolean = args.unsafeReadShort(0) <= args.unsafeReadShort(1)
+    def shortShort(args: ArgumentReader): Boolean = args.readShort(0) <= args.readShort(1)
 
-    def booleanBoolean(args: ArgumentReader): Boolean = args.unsafeReadBoolean(0) <= args.unsafeReadBoolean(1)
+    def booleanBoolean(args: ArgumentReader): Boolean = args.readBoolean(0) <= args.readBoolean(1)
 
-    def stringString(args: ArgumentReader): Boolean = args.unsafeReadObject(0).asInstanceOf[String] <= args.unsafeReadObject(1).asInstanceOf[String]
+    def stringString(args: ArgumentReader): Boolean = args.readObject(0).asInstanceOf[String] <= args.readObject(1).asInstanceOf[String]
   }
 
   object ge extends ComparisonOp {
     val name: Name = Name(">=")
 
-    def byteByte(args: ArgumentReader): Boolean = args.unsafeReadByte(0) >= args.unsafeReadByte(1)
+    def byteByte(args: ArgumentReader): Boolean = args.readByte(0) >= args.readByte(1)
 
-    def byteChar(args: ArgumentReader): Boolean = args.unsafeReadByte(0) >= args.unsafeReadChar(1)
+    def byteChar(args: ArgumentReader): Boolean = args.readByte(0) >= args.readChar(1)
 
-    def byteDouble(args: ArgumentReader): Boolean = args.unsafeReadByte(0) >= args.unsafeReadDouble(1)
+    def byteDouble(args: ArgumentReader): Boolean = args.readByte(0) >= args.readDouble(1)
 
-    def byteFloat(args: ArgumentReader): Boolean = args.unsafeReadByte(0) >= args.unsafeReadFloat(1)
+    def byteFloat(args: ArgumentReader): Boolean = args.readByte(0) >= args.readFloat(1)
 
-    def byteInt(args: ArgumentReader): Boolean = args.unsafeReadByte(0) >= args.unsafeReadInt(1)
+    def byteInt(args: ArgumentReader): Boolean = args.readByte(0) >= args.readInt(1)
 
-    def byteLong(args: ArgumentReader): Boolean = args.unsafeReadByte(0) >= args.unsafeReadLong(1)
+    def byteLong(args: ArgumentReader): Boolean = args.readByte(0) >= args.readLong(1)
 
-    def byteShort(args: ArgumentReader): Boolean = args.unsafeReadByte(0) >= args.unsafeReadShort(1)
+    def byteShort(args: ArgumentReader): Boolean = args.readByte(0) >= args.readShort(1)
 
-    def charByte(args: ArgumentReader): Boolean = args.unsafeReadChar(0) >= args.unsafeReadByte(1)
+    def charByte(args: ArgumentReader): Boolean = args.readChar(0) >= args.readByte(1)
 
-    def charChar(args: ArgumentReader): Boolean = args.unsafeReadChar(0) >= args.unsafeReadChar(1)
+    def charChar(args: ArgumentReader): Boolean = args.readChar(0) >= args.readChar(1)
 
-    def charDouble(args: ArgumentReader): Boolean = args.unsafeReadChar(0) >= args.unsafeReadDouble(1)
+    def charDouble(args: ArgumentReader): Boolean = args.readChar(0) >= args.readDouble(1)
 
-    def charFloat(args: ArgumentReader): Boolean = args.unsafeReadChar(0) >= args.unsafeReadFloat(1)
+    def charFloat(args: ArgumentReader): Boolean = args.readChar(0) >= args.readFloat(1)
 
-    def charInt(args: ArgumentReader): Boolean = args.unsafeReadChar(0) >= args.unsafeReadInt(1)
+    def charInt(args: ArgumentReader): Boolean = args.readChar(0) >= args.readInt(1)
 
-    def charLong(args: ArgumentReader): Boolean = args.unsafeReadChar(0) >= args.unsafeReadLong(1)
+    def charLong(args: ArgumentReader): Boolean = args.readChar(0) >= args.readLong(1)
 
-    def charShort(args: ArgumentReader): Boolean = args.unsafeReadChar(0) >= args.unsafeReadShort(1)
+    def charShort(args: ArgumentReader): Boolean = args.readChar(0) >= args.readShort(1)
 
-    def doubleByte(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) >= args.unsafeReadByte(1)
+    def doubleByte(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readByte(1)
 
-    def doubleChar(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) >= args.unsafeReadChar(1)
+    def doubleChar(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readChar(1)
 
-    def doubleDouble(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) >= args.unsafeReadDouble(1)
+    def doubleDouble(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readDouble(1)
 
-    def doubleFloat(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) >= args.unsafeReadFloat(1)
+    def doubleFloat(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readFloat(1)
 
-    def doubleInt(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) >= args.unsafeReadInt(1)
+    def doubleInt(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readInt(1)
 
-    def doubleLong(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) >= args.unsafeReadLong(1)
+    def doubleLong(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readLong(1)
 
-    def doubleShort(args: ArgumentReader): Boolean = args.unsafeReadDouble(0) >= args.unsafeReadShort(1)
+    def doubleShort(args: ArgumentReader): Boolean = args.readDouble(0) >= args.readShort(1)
 
-    def floatByte(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) >= args.unsafeReadByte(1)
+    def floatByte(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readByte(1)
 
-    def floatChar(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) >= args.unsafeReadChar(1)
+    def floatChar(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readChar(1)
 
-    def floatDouble(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) >= args.unsafeReadDouble(1)
+    def floatDouble(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readDouble(1)
 
-    def floatFloat(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) >= args.unsafeReadFloat(1)
+    def floatFloat(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readFloat(1)
 
-    def floatInt(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) >= args.unsafeReadInt(1)
+    def floatInt(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readInt(1)
 
-    def floatLong(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) >= args.unsafeReadLong(1)
+    def floatLong(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readLong(1)
 
-    def floatShort(args: ArgumentReader): Boolean = args.unsafeReadFloat(0) >= args.unsafeReadShort(1)
+    def floatShort(args: ArgumentReader): Boolean = args.readFloat(0) >= args.readShort(1)
 
-    def intByte(args: ArgumentReader): Boolean = args.unsafeReadInt(0) >= args.unsafeReadByte(1)
+    def intByte(args: ArgumentReader): Boolean = args.readInt(0) >= args.readByte(1)
 
-    def intChar(args: ArgumentReader): Boolean = args.unsafeReadInt(0) >= args.unsafeReadChar(1)
+    def intChar(args: ArgumentReader): Boolean = args.readInt(0) >= args.readChar(1)
 
-    def intDouble(args: ArgumentReader): Boolean = args.unsafeReadInt(0) >= args.unsafeReadDouble(1)
+    def intDouble(args: ArgumentReader): Boolean = args.readInt(0) >= args.readDouble(1)
 
-    def intFloat(args: ArgumentReader): Boolean = args.unsafeReadInt(0) >= args.unsafeReadFloat(1)
+    def intFloat(args: ArgumentReader): Boolean = args.readInt(0) >= args.readFloat(1)
 
-    def intInt(args: ArgumentReader): Boolean = args.unsafeReadInt(0) >= args.unsafeReadInt(1)
+    def intInt(args: ArgumentReader): Boolean = args.readInt(0) >= args.readInt(1)
 
-    def intLong(args: ArgumentReader): Boolean = args.unsafeReadInt(0) >= args.unsafeReadLong(1)
+    def intLong(args: ArgumentReader): Boolean = args.readInt(0) >= args.readLong(1)
 
-    def intShort(args: ArgumentReader): Boolean = args.unsafeReadInt(0) >= args.unsafeReadShort(1)
+    def intShort(args: ArgumentReader): Boolean = args.readInt(0) >= args.readShort(1)
 
-    def longByte(args: ArgumentReader): Boolean = args.unsafeReadLong(0) >= args.unsafeReadByte(1)
+    def longByte(args: ArgumentReader): Boolean = args.readLong(0) >= args.readByte(1)
 
-    def longChar(args: ArgumentReader): Boolean = args.unsafeReadLong(0) >= args.unsafeReadChar(1)
+    def longChar(args: ArgumentReader): Boolean = args.readLong(0) >= args.readChar(1)
 
-    def longDouble(args: ArgumentReader): Boolean = args.unsafeReadLong(0) >= args.unsafeReadDouble(1)
+    def longDouble(args: ArgumentReader): Boolean = args.readLong(0) >= args.readDouble(1)
 
-    def longFloat(args: ArgumentReader): Boolean = args.unsafeReadLong(0) >= args.unsafeReadFloat(1)
+    def longFloat(args: ArgumentReader): Boolean = args.readLong(0) >= args.readFloat(1)
 
-    def longInt(args: ArgumentReader): Boolean = args.unsafeReadLong(0) >= args.unsafeReadInt(1)
+    def longInt(args: ArgumentReader): Boolean = args.readLong(0) >= args.readInt(1)
 
-    def longLong(args: ArgumentReader): Boolean = args.unsafeReadLong(0) >= args.unsafeReadLong(1)
+    def longLong(args: ArgumentReader): Boolean = args.readLong(0) >= args.readLong(1)
 
-    def longShort(args: ArgumentReader): Boolean = args.unsafeReadLong(0) >= args.unsafeReadShort(1)
+    def longShort(args: ArgumentReader): Boolean = args.readLong(0) >= args.readShort(1)
 
-    def shortByte(args: ArgumentReader): Boolean = args.unsafeReadShort(0) >= args.unsafeReadByte(1)
+    def shortByte(args: ArgumentReader): Boolean = args.readShort(0) >= args.readByte(1)
 
-    def shortChar(args: ArgumentReader): Boolean = args.unsafeReadShort(0) >= args.unsafeReadChar(1)
+    def shortChar(args: ArgumentReader): Boolean = args.readShort(0) >= args.readChar(1)
 
-    def shortDouble(args: ArgumentReader): Boolean = args.unsafeReadShort(0) >= args.unsafeReadDouble(1)
+    def shortDouble(args: ArgumentReader): Boolean = args.readShort(0) >= args.readDouble(1)
 
-    def shortFloat(args: ArgumentReader): Boolean = args.unsafeReadShort(0) >= args.unsafeReadFloat(1)
+    def shortFloat(args: ArgumentReader): Boolean = args.readShort(0) >= args.readFloat(1)
 
-    def shortInt(args: ArgumentReader): Boolean = args.unsafeReadShort(0) >= args.unsafeReadInt(1)
+    def shortInt(args: ArgumentReader): Boolean = args.readShort(0) >= args.readInt(1)
 
-    def shortLong(args: ArgumentReader): Boolean = args.unsafeReadShort(0) >= args.unsafeReadLong(1)
+    def shortLong(args: ArgumentReader): Boolean = args.readShort(0) >= args.readLong(1)
 
-    def shortShort(args: ArgumentReader): Boolean = args.unsafeReadShort(0) >= args.unsafeReadShort(1)
+    def shortShort(args: ArgumentReader): Boolean = args.readShort(0) >= args.readShort(1)
 
-    def booleanBoolean(args: ArgumentReader): Boolean = args.unsafeReadBoolean(0) >= args.unsafeReadBoolean(1)
+    def booleanBoolean(args: ArgumentReader): Boolean = args.readBoolean(0) >= args.readBoolean(1)
 
-    def stringString(args: ArgumentReader): Boolean = args.unsafeReadObject(0).asInstanceOf[String] >= args.unsafeReadObject(1).asInstanceOf[String]
+    def stringString(args: ArgumentReader): Boolean = args.readObject(0).asInstanceOf[String] >= args.readObject(1).asInstanceOf[String]
   }
 
   private val rhsName = Name("x")
