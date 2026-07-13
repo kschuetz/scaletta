@@ -13,8 +13,9 @@ object Interpreter {
     val operandStack = OperandStack.create()
     val variableStack = VariableStack.create()
     val varSpace = VarSpaceFromVariableStack.create(variableStack, program.mainFunction.varSpaceSignature)
+    val pool = new CapturedFramePool(maxRetained = 64)
     new Interpreter(program, functionTable, callStack, operandStack, variableStack,
-      varSpace, 0, 0)
+      varSpace, 0, 0, pool)
   }
 }
 
@@ -25,7 +26,8 @@ final class Interpreter private(private val program: Program,
                                 private val variableStack: VariableStack,
                                 private val varSpace: VarSpaceFromVariableStack,
                                 private var userFunctionIndex: Int,
-                                private var instructionPointer: Int) {
+                                private var instructionPointer: Int,
+                                private val capturedFramePool: CapturedFramePool) {
   private var runtimeContexts: RuntimeContextReader = _
   private var evalResultContainer: EvalResultContainer = _
   private var currentFunction: UserFunction = _
@@ -38,9 +40,13 @@ final class Interpreter private(private val program: Program,
   def run(runtimeContexts: RuntimeContextReader,
           initializer: Initializer = Initializer.none,
           initialUserFunctionIndex: Int = 0): EvalResult = {
-    initialize(runtimeContexts, initializer, initialUserFunctionIndex)
-    runUntilDone()
-    getResult
+    try {
+      initialize(runtimeContexts, initializer, initialUserFunctionIndex)
+      runUntilDone()
+      getResult
+    } finally {
+      capturedFramePool.endRun()
+    }
   }
 
   /**
@@ -51,6 +57,7 @@ final class Interpreter private(private val program: Program,
   def initialize(runtimeContexts: RuntimeContextReader,
                  initializer: Initializer = Initializer.none,
                  initialUserFunctionIndex: Int = 0): Unit = {
+    capturedFramePool.endRun()
     val targetFunction = program.functions(initialUserFunctionIndex)
     this.evalResultContainer = EvalResultContainer.create(targetFunction.returnType)
     this.runtimeContexts = runtimeContexts
@@ -343,6 +350,7 @@ final class Interpreter private(private val program: Program,
         if (callStack.isEmpty) {
           evalResultContainer.loadFromOperandStack(operandStack)
           done = true
+          capturedFramePool.endRun()
         } else {
           val prevFunction = currentFunction
           var nextIP = callStack.pop()
