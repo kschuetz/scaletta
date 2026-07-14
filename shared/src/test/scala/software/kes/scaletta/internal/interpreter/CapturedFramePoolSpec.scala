@@ -109,6 +109,7 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
       val target = new CapturedFrame(capSig)
 
       val plan = new CapturePlan(
+        signature = capSig,
         sourceIndices = Array(0, 1),
         targetEncoded = Array(
           VarAddress.encode(BasicTypes.Int, 0),

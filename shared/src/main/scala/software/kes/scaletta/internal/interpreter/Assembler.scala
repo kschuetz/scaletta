@@ -258,6 +258,17 @@ final class Assembler(val index: Int,
   def tailCallLocal(userFunctionIndex: Int): Unit =
     writer.writeAndAdvance(makeOpcode24(Opcodes.TailCallLocal, userFunctionIndex))
 
+  def makeClosure(userFunctionIndex: Int, capturePlan: CapturePlan): Unit = {
+    writer.writeAndAdvance(makeOpcode24(Opcodes.MakeClosure, userFunctionIndex))
+    writer.writeAndAdvance(interner.internObject(capturePlan))
+  }
+
+  def callClosure(): Unit =
+    writer.writeAndAdvance(makeOpcode24(Opcodes.CallClosure, 0))
+
+  def tailCallClosure(): Unit =
+    writer.writeAndAdvance(makeOpcode24(Opcodes.TailCallClosure, 0))
+
   /**
    * Creates a lazy cell of the given type and stores it at the given variable index.
    * (varIndex must point to an object variable)

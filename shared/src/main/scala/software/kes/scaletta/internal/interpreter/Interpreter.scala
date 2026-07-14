@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.interpreter
 import software.kes.scaletta.api.{EvalResult, FunctionImpl, RuntimeContextReader}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
-import software.kes.scaletta.internal.runtime.ParamsSignature
+import software.kes.scaletta.internal.runtime.{ParamsSignature, VarAddress, VarSpaceSignature}
 import software.kes.scaletta.util.stack.IntStack
 
 object Interpreter {
@@ -446,6 +446,42 @@ final class Interpreter private(private val program: Program,
           varSpace.setSignature(currentFunction.varSpaceSignature)
         }
 
+      case Opcodes.MakeClosure =>
+        val functionIndex = rawOpcode & 0xFFFFFF
+        val capturePlanIndex = currentFunction.fetch(instructionPointer)
+        instructionPointer += 1
+        val capturePlan = program.constantPool.getObject(capturePlanIndex).asInstanceOf[CapturePlan]
+        val capturedFrame = capturedFramePool.acquire(capturePlan.signature)
+        capturePlan.capture(varSpace, capturedFrame)
+        operandStack.pushObject(new RuntimeClosure(functionIndex, capturedFrame))
+
+      case Opcodes.CallClosure =>
+        val closure = operandStack.unsafePopObject().asInstanceOf[RuntimeClosure]
+        callStack.push(userFunctionIndex)
+        callStack.push(instructionPointer)
+        userFunctionIndex = closure.functionIndex
+        instructionPointer = 0
+        currentFunction = program.functions(userFunctionIndex)
+        variableStack.expandFrame(currentFunction.frameSignature)
+        varSpace.setSignature(currentFunction.varSpaceSignature)
+        transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
+        transferCaptures(closure.capturedFrame, currentFunction.varSpaceSignature, currentFunction.parameterCount)
+
+      case Opcodes.TailCallClosure =>
+        val closure = operandStack.unsafePopObject().asInstanceOf[RuntimeClosure]
+        instructionPointer = 0
+
+        if (closure.functionIndex != userFunctionIndex) {
+          val prevFunction = currentFunction
+          userFunctionIndex = closure.functionIndex
+          currentFunction = program.functions(userFunctionIndex)
+          variableStack.contractFrame(prevFunction.frameSignature)
+          variableStack.expandFrame(currentFunction.frameSignature)
+          varSpace.setSignature(currentFunction.varSpaceSignature)
+        }
+        transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
+        transferCaptures(closure.capturedFrame, currentFunction.varSpaceSignature, currentFunction.parameterCount)
+
       case _ =>
         throw new RuntimeException(s"Unknown opcode: $opcode")
     }
@@ -473,6 +509,95 @@ final class Interpreter private(private val program: Program,
       val typeTag = frameSignature.basicTypeOf(i)
       popIntoVar(typeTag, i)
       i -= 1
+    }
+  }
+
+  private def transferCaptures(capturedFrame: CapturedFrame,
+                               varSpaceSignature: VarSpaceSignature,
+                               parameterCount: Int): Unit = {
+    val paramCounts = new Array[Int](BasicTypes.MaxValue + 1)
+    java.util.Arrays.fill(paramCounts, 0)
+    var i = 0
+    while (i < parameterCount) {
+      val encoded = varSpaceSignature.slot(i)
+      val typeTag = VarAddress.decodeBasicType(encoded)
+      paramCounts(typeTag) += 1
+      i += 1
+    }
+
+    val sig = capturedFrame.signature
+
+    if (sig.objectCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Object)
+      while (c < sig.objectCount) {
+        variableStack.objects.unsafeWrite(base + c, capturedFrame.objects(c))
+        c += 1
+      }
+    }
+    if (sig.booleanCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Boolean)
+      while (c < sig.booleanCount) {
+        variableStack.booleans.unsafeWrite(base + c, capturedFrame.booleans(c))
+        c += 1
+      }
+    }
+    if (sig.intCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Int)
+      while (c < sig.intCount) {
+        variableStack.ints.unsafeWrite(base + c, capturedFrame.ints(c))
+        c += 1
+      }
+    }
+    if (sig.longCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Long)
+      while (c < sig.longCount) {
+        variableStack.longs.unsafeWrite(base + c, capturedFrame.longs(c))
+        c += 1
+      }
+    }
+    if (sig.shortCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Short)
+      while (c < sig.shortCount) {
+        variableStack.shorts.unsafeWrite(base + c, capturedFrame.shorts(c))
+        c += 1
+      }
+    }
+    if (sig.byteCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Byte)
+      while (c < sig.byteCount) {
+        variableStack.bytes.unsafeWrite(base + c, capturedFrame.bytes(c))
+        c += 1
+      }
+    }
+    if (sig.charCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Char)
+      while (c < sig.charCount) {
+        variableStack.chars.unsafeWrite(base + c, capturedFrame.chars(c))
+        c += 1
+      }
+    }
+    if (sig.doubleCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Double)
+      while (c < sig.doubleCount) {
+        variableStack.doubles.unsafeWrite(base + c, capturedFrame.doubles(c))
+        c += 1
+      }
+    }
+    if (sig.floatCount > 0) {
+      var c = 0
+      val base = paramCounts(BasicTypes.Float)
+      while (c < sig.floatCount) {
+        variableStack.floats.unsafeWrite(base + c, capturedFrame.floats(c))
+        c += 1
+      }
     }
   }
 

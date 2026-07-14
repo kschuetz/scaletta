@@ -3,9 +3,10 @@ package software.kes.scaletta.internal.interpreter
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.runtime.VarAddress
 
-private[interpreter] final class CapturePlan(val sourceIndices: Array[Int],
+private[interpreter] final class CapturePlan(val signature: CaptureSignature,
+                                             val sourceIndices: Array[Int],
                                              val targetEncoded: Array[Int]) {
-  def capture(source: VarSpaceFromVariableStack, target: CapturedFrame): Unit = {
+  def capture(source: VarSpace, target: CapturedFrame): Unit = {
     var i = 0
     while (i < sourceIndices.length) {
       val sourceIndex = sourceIndices(i)
