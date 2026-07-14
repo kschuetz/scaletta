@@ -35,10 +35,12 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
       }
     }
 
-    private def createInitialEnv(signature: UserFunctionSignature, extraSlots: Int = 0): CompileEnv = {
-      val count = signature.parameterCount + extraSlots
-      val layer = (0 until count).toVector.map(BindingInfo.Val)
-      CompileEnv(List(layer), count)
+    private def createInitialEnv(signature: UserFunctionSignature,
+                                 captureBindings: Vector[BindingInfo] = Vector.empty): CompileEnv = {
+      val paramCount = signature.parameterCount
+      val paramBindings = (0 until paramCount).toVector.map(BindingInfo.Val)
+      val layer = paramBindings ++ captureBindings
+      CompileEnv(List(layer), layer.length)
     }
 
     private def emit(expression: IntermediateExpression,
@@ -95,17 +97,26 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val targetEncoded = new Array[Int](captures.length)
           val counts = new Array[Int](BasicTypes.MaxValue + 1)
 
-          captures.zipWithIndex.foreach { case (ref, i) =>
+          val captureBindings = captures.zipWithIndex.map { case (ref, i) =>
             val binding = env.resolve(ref.scope, ref.slot)
             val absIndex = binding match {
               case BindingInfo.Val(idx) => idx
-              case _ => throw new RuntimeException("Capture must be a val")
+              case BindingInfo.LazyVal(idx, _, _) => idx
+              case _ => throw new RuntimeException("Capture must be a val or lazy val")
             }
             sourceIndices(i) = absIndex
             val typ = signature.varSpace.basicTypeOf(absIndex)
             val offset = counts(typ)
             counts(typ) += 1
             targetEncoded(i) = VarAddress.encode(typ, offset)
+
+            val newAbsIndex = lambdaSignature.parameterCount + i
+            binding match {
+              case BindingInfo.Val(_) => BindingInfo.Val(newAbsIndex)
+              case BindingInfo.LazyVal(_, functionIndex, basicType) =>
+                BindingInfo.LazyVal(newAbsIndex, functionIndex, basicType)
+              case _ => throw new RuntimeException("Unreachable")
+            }
           }
 
           val captureSignature = new CaptureSignature(
@@ -124,7 +135,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val added = programBuilder.addFunction(lambdaSignature)
           assembler.makeClosure(added.index, capturePlan)
 
-          val lambdaInitialEnv = createInitialEnv(lambdaSignature, captures.length)
+          val lambdaInitialEnv = createInitialEnv(lambdaSignature, captureBindings)
           workQueue.enqueue((lambdaBody, lambdaSignature, lambdaInitialEnv, added))
 
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>

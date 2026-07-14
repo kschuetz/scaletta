@@ -268,5 +268,51 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val result = interpreter.run(emptyContextReader)
       result.value[AnyRef]() shouldNot be(null)
     }
+
+    it("should compile Lambda capturing a LazyVal") {
+      val outerSig = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
+      val lambdaSig = UserFunctionSignature(
+        VarSpaceSignature.of(
+          FrameSignature.fromSeq(Seq(CoreTypes.IntT)),
+          FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT))
+        ),
+        BasicTypes.Int,
+        1
+      )
+
+      val expr = WithBindings(
+        Vector(Binding.LazyVal(int(41))),
+        Lambda(lambdaSig, Vector(Reference(0, 0)), Reference(0, 1))
+      )
+
+      val program = compiler.compile(UserFunctionSignature(outerSig, BasicTypes.Object, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val closure = interpreter.run(emptyContextReader).value[AnyRef]()
+      closure shouldNot be(null)
+    }
+
+    it("should compile Lambda capturing a mix of Vals and LazyVals") {
+      val outerSig = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.AnyRefT)))
+      val lambdaSig = UserFunctionSignature(
+        VarSpaceSignature.of(
+          FrameSignature.empty,
+          FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.AnyRefT))
+        ),
+        BasicTypes.Int,
+        0
+      )
+
+      val expr = WithBindings(
+        Vector(Binding.Val(int(10)), Binding.LazyVal(int(31))),
+        Lambda(lambdaSig, Vector(Reference(0, 0), Reference(0, 1)),
+          NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), Reference(0, 1)))
+        )
+      )
+
+      val program = compiler.compile(UserFunctionSignature(outerSig, BasicTypes.Object, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val closure = interpreter.run(emptyContextReader).value[AnyRef]()
+      closure shouldNot be(null)
+    }
   }
 }
