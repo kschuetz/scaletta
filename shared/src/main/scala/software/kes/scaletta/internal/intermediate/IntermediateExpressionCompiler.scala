@@ -90,6 +90,9 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
               throw new RuntimeException("Cannot call a value as a function")
           }
 
+        case IntermediateExpression.Lambda(signature, body) =>
+          throw new UnsupportedOperationException("Lambda expressions are not yet supported")
+
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
           emit(condition, env, signature, assembler)
           assembler.ifElse(

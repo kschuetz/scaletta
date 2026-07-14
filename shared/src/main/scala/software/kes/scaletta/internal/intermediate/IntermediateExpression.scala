@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.intermediate
 
 import software.kes.scaletta.api.NativeFunctionId
 import software.kes.scaletta.common.BasicType
+import software.kes.scaletta.internal.runtime.UserFunctionSignature
 
 sealed trait IntermediateExpression
 
@@ -22,6 +23,9 @@ object IntermediateExpression {
 
   case class Reference(scope: Int,
                        slot: Int) extends IntermediateExpression
+
+  case class Lambda(signature: UserFunctionSignature,
+                    body: IntermediateExpression) extends IntermediateExpression
 
   case class And(lhs: IntermediateExpression, rhs: IntermediateExpression) extends IntermediateExpression
 
