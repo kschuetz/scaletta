@@ -3,8 +3,8 @@ package software.kes.scaletta.internal.intermediate
 import software.kes.scaletta.common.{BasicType, BasicTypes}
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value
-import software.kes.scaletta.internal.interpreter.{Assembler, Program, ProgramBuilder}
-import software.kes.scaletta.internal.runtime.UserFunctionSignature
+import software.kes.scaletta.internal.interpreter._
+import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarAddress}
 
 import scala.collection.mutable
 
@@ -35,10 +35,10 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
       }
     }
 
-    private def createInitialEnv(signature: UserFunctionSignature): CompileEnv = {
-      val paramCount = signature.parameterCount
-      val layer = (0 until paramCount).toVector.map(BindingInfo.Val)
-      CompileEnv(List(layer), paramCount)
+    private def createInitialEnv(signature: UserFunctionSignature, extraSlots: Int = 0): CompileEnv = {
+      val count = signature.parameterCount + extraSlots
+      val layer = (0 until count).toVector.map(BindingInfo.Val)
+      CompileEnv(List(layer), count)
     }
 
     private def emit(expression: IntermediateExpression,
@@ -90,8 +90,42 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
               throw new RuntimeException("Cannot call a value as a function")
           }
 
-        case IntermediateExpression.Lambda(signature, body) =>
-          throw new UnsupportedOperationException("Lambda expressions are not yet supported")
+        case IntermediateExpression.Lambda(lambdaSignature, captures, lambdaBody) =>
+          val sourceIndices = new Array[Int](captures.length)
+          val targetEncoded = new Array[Int](captures.length)
+          val counts = new Array[Int](BasicTypes.MaxValue + 1)
+
+          captures.zipWithIndex.foreach { case (ref, i) =>
+            val binding = env.resolve(ref.scope, ref.slot)
+            val absIndex = binding match {
+              case BindingInfo.Val(idx) => idx
+              case _ => throw new RuntimeException("Capture must be a val")
+            }
+            sourceIndices(i) = absIndex
+            val typ = signature.varSpace.basicTypeOf(absIndex)
+            val offset = counts(typ)
+            counts(typ) += 1
+            targetEncoded(i) = VarAddress.encode(typ, offset)
+          }
+
+          val captureSignature = new CaptureSignature(
+            objectCount = counts(BasicTypes.Object),
+            booleanCount = counts(BasicTypes.Boolean),
+            intCount = counts(BasicTypes.Int),
+            longCount = counts(BasicTypes.Long),
+            shortCount = counts(BasicTypes.Short),
+            byteCount = counts(BasicTypes.Byte),
+            charCount = counts(BasicTypes.Char),
+            doubleCount = counts(BasicTypes.Double),
+            floatCount = counts(BasicTypes.Float)
+          )
+
+          val capturePlan = new CapturePlan(captureSignature, sourceIndices, targetEncoded)
+          val added = programBuilder.addFunction(lambdaSignature)
+          assembler.makeClosure(added.index, capturePlan)
+
+          val lambdaInitialEnv = createInitialEnv(lambdaSignature, captures.length)
+          workQueue.enqueue((lambdaBody, lambdaSignature, lambdaInitialEnv, added))
 
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
           emit(condition, env, signature, assembler)

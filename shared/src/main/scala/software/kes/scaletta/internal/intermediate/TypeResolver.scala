@@ -44,6 +44,9 @@ object TypeResolver {
             throw new RuntimeException("Cannot call a value as a function")
         }
 
+      case IntermediateExpression.Lambda(_, _, _) =>
+        BasicTypes.Object
+
       case IntermediateExpression.Conditional(_, thenBranch, _) =>
         // Assume both branches have the same type, as validated by TypeChecker earlier in the pipeline
         resolveType(thenBranch, env, signature, nativeTable)

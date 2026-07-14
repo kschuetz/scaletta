@@ -25,6 +25,7 @@ object IntermediateExpression {
                        slot: Int) extends IntermediateExpression
 
   case class Lambda(signature: UserFunctionSignature,
+                    captures: Vector[IntermediateExpression.Reference],
                     body: IntermediateExpression) extends IntermediateExpression
 
   case class And(lhs: IntermediateExpression, rhs: IntermediateExpression) extends IntermediateExpression

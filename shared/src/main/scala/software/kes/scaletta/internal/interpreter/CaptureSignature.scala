@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.interpreter
 
-private[interpreter] final class CaptureSignature(val objectCount: Int,
+private[scaletta] final class CaptureSignature(val objectCount: Int,
                                                   val booleanCount: Int,
                                                   val intCount: Int,
                                                   val longCount: Int,

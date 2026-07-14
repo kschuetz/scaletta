@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.interpreter
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.runtime.VarAddress
 
-private[interpreter] final class CapturePlan(val signature: CaptureSignature,
+private[scaletta] final class CapturePlan(val signature: CaptureSignature,
                                              val sourceIndices: Array[Int],
                                              val targetEncoded: Array[Int]) {
   def capture(source: VarSpace, target: CapturedFrame): Unit = {

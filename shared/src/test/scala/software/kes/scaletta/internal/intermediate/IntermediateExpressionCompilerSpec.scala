@@ -232,5 +232,41 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       }
       exception.getMessage should include("Circular dependency")
     }
+
+    it("should resolve type of Lambda") {
+      val sig = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0)
+      val expr = Lambda(sig, Vector.empty, int(41))
+      TypeResolver.resolveType(expr, CompileEnv.empty, sig, nativeFunctions) shouldBe BasicTypes.Object
+    }
+
+    it("should compile Lambda without captures") {
+      val lambdaSig = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0)
+      val expr = Lambda(lambdaSig, Vector.empty, int(41))
+      val mainSig = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0)
+      val program = compiler.compile(mainSig, expr)
+
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+      result.value[AnyRef]() shouldNot be(null)
+    }
+
+    it("should compile Lambda with captures") {
+      val outerSig = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT)))
+      val lambdaSig = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))),
+        BasicTypes.Int,
+        0
+      )
+
+      val expr = WithBindings(
+        Vector(Binding.Val(int(10))),
+        Lambda(lambdaSig, Vector(Reference(0, 0)), Reference(0, 0))
+      )
+
+      val program = compiler.compile(UserFunctionSignature(outerSig, BasicTypes.Object, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+      result.value[AnyRef]() shouldNot be(null)
+    }
   }
 }
