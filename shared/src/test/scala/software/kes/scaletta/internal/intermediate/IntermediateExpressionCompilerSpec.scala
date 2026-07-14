@@ -100,6 +100,56 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       interpreter.run(emptyContextReader).intValue() shouldBe 120
     }
 
+    it("should handle closures (lambdas and ClosureCall)") {
+      // val f = (x: Int) => x + 1; f(40)
+      val lambdaSignature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), // param x
+        BasicTypes.Int,
+        1
+      )
+      val lambdaBody = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), int(1)))
+      val lambdaExpr = Lambda(lambdaSignature, Vector.empty, lambdaBody)
+
+      val expr = WithBindings(
+        Vector(Binding.Val(lambdaExpr)),
+        ClosureCall(Reference(0, 0), Vector(int(40)), BasicTypes.Int)
+      )
+
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 41
+    }
+
+    it("should handle closures with captures") {
+      // val a = 11; val f = (x: Int) => x + a; f(32)
+      val aValue = int(11)
+      val lambdaSignature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+          CoreTypes.IntT, // param x
+          CoreTypes.IntT // capture a
+        ))),
+        BasicTypes.Int,
+        1 // 1 param
+      )
+      // Reference(0, 0) is x, Reference(0, 1) is a (capture)
+      val lambdaBody = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), Reference(0, 1)))
+      // In the context of lambdaExpr definition, a is at (0, 0)
+      val lambdaExpr = Lambda(lambdaSignature, Vector(Reference(0, 0)), lambdaBody)
+
+      val expr = WithBindings(
+        Vector(Binding.Val(aValue)), // a = 11 (at slot 0 in outer scope)
+        ClosureCall(lambdaExpr, Vector(int(32)), BasicTypes.Int)
+      )
+
+      val signature = VarSpaceSignature.of(
+        FrameSignature.fromSeq(Seq(CoreTypes.IntT)) // a
+      )
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 43
+    }
+
     it("should handle short-circuiting And") {
       // false && { sideEffect(); true }
       var failingNative: software.kes.scaletta.api.NativeFunctionId = software.kes.scaletta.api.NativeFunctionId(-1)

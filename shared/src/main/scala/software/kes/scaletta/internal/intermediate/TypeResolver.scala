@@ -44,6 +44,9 @@ object TypeResolver {
             throw new RuntimeException("Cannot call a value as a function")
         }
 
+      case IntermediateExpression.ClosureCall(_, _, returnType) =>
+        returnType
+
       case IntermediateExpression.Lambda(_, _, _) =>
         BasicTypes.Object
 

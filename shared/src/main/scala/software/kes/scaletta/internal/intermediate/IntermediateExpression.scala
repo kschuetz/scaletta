@@ -14,6 +14,10 @@ object IntermediateExpression {
                        slot: Int,
                        arguments: Vector[IntermediateExpression]) extends IntermediateExpression
 
+  case class ClosureCall(target: IntermediateExpression,
+                         arguments: Vector[IntermediateExpression],
+                         returnType: BasicType) extends IntermediateExpression
+
   case class Conditional(condition: IntermediateExpression,
                          thenBranch: IntermediateExpression,
                          elseBranch: IntermediateExpression) extends IntermediateExpression

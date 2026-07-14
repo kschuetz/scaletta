@@ -88,9 +88,14 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           env.resolve(scope, slot) match {
             case BindingInfo.Def(functionIndex, _) =>
               assembler.callLocal(functionIndex)
-            case BindingInfo.Val(_) =>
+            case _ =>
               throw new RuntimeException("Cannot call a value as a function")
           }
+
+        case IntermediateExpression.ClosureCall(target, arguments, _) =>
+          arguments.foreach(arg => emit(arg, env, signature, assembler))
+          emit(target, env, signature, assembler)
+          assembler.callClosure()
 
         case IntermediateExpression.Lambda(lambdaSignature, captures, lambdaBody) =>
           val sourceIndices = new Array[Int](captures.length)
