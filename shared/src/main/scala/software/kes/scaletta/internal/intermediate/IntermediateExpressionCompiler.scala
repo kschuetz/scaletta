@@ -8,6 +8,8 @@ import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarAddress
 
 import scala.collection.mutable
 
+private final case class PreparedCaptures(capturePlan: CapturePlan, captureBindings: Vector[BindingInfo])
+
 final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTable) {
 
   def compile(mainSignature: UserFunctionSignature,
@@ -98,49 +100,11 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           assembler.callClosure()
 
         case IntermediateExpression.Lambda(lambdaSignature, captures, lambdaBody) =>
-          val sourceIndices = new Array[Int](captures.length)
-          val targetEncoded = new Array[Int](captures.length)
-          val counts = new Array[Int](BasicTypes.MaxValue + 1)
-
-          val captureBindings = captures.zipWithIndex.map { case (ref, i) =>
-            val binding = env.resolve(ref.scope, ref.slot)
-            val absIndex = binding match {
-              case BindingInfo.Val(idx) => idx
-              case BindingInfo.LazyVal(idx, _, _) => idx
-              case _ => throw new RuntimeException("Capture must be a val or lazy val")
-            }
-            sourceIndices(i) = absIndex
-            val typ = signature.varSpace.basicTypeOf(absIndex)
-            val offset = counts(typ)
-            counts(typ) += 1
-            targetEncoded(i) = VarAddress.encode(typ, offset)
-
-            val newAbsIndex = lambdaSignature.parameterCount + i
-            binding match {
-              case BindingInfo.Val(_) => BindingInfo.Val(newAbsIndex)
-              case BindingInfo.LazyVal(_, functionIndex, basicType) =>
-                BindingInfo.LazyVal(newAbsIndex, functionIndex, basicType)
-              case _ => throw new RuntimeException("Unreachable")
-            }
-          }
-
-          val captureSignature = new CaptureSignature(
-            objectCount = counts(BasicTypes.Object),
-            booleanCount = counts(BasicTypes.Boolean),
-            intCount = counts(BasicTypes.Int),
-            longCount = counts(BasicTypes.Long),
-            shortCount = counts(BasicTypes.Short),
-            byteCount = counts(BasicTypes.Byte),
-            charCount = counts(BasicTypes.Char),
-            doubleCount = counts(BasicTypes.Double),
-            floatCount = counts(BasicTypes.Float)
-          )
-
-          val capturePlan = new CapturePlan(captureSignature, sourceIndices, targetEncoded)
+          val prepared = prepareCaptures(captures, env, signature, lambdaSignature.parameterCount)
           val added = programBuilder.addFunction(lambdaSignature)
-          assembler.makeClosure(added.index, capturePlan)
+          assembler.makeClosure(added.index, prepared.capturePlan)
 
-          val lambdaInitialEnv = createInitialEnv(lambdaSignature, captureBindings)
+          val lambdaInitialEnv = createInitialEnv(lambdaSignature, prepared.captureBindings)
           workQueue.enqueue((lambdaBody, lambdaSignature, lambdaInitialEnv, added))
 
         case IntermediateExpression.FunctionValue(scope, slot, _, captures) =>
@@ -150,38 +114,8 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             case _ => throw new RuntimeException("FunctionValue must refer to a def")
           }
 
-          val sourceIndices = new Array[Int](captures.length)
-          val targetEncoded = new Array[Int](captures.length)
-          val counts = new Array[Int](BasicTypes.MaxValue + 1)
-
-          captures.zipWithIndex.foreach { case (ref, i) =>
-            val b = env.resolve(ref.scope, ref.slot)
-            val absIndex = b match {
-              case BindingInfo.Val(idx) => idx
-              case BindingInfo.LazyVal(idx, _, _) => idx
-              case _ => throw new RuntimeException("Capture must be a val or lazy val")
-            }
-            sourceIndices(i) = absIndex
-            val typ = signature.varSpace.basicTypeOf(absIndex)
-            val offset = counts(typ)
-            counts(typ) += 1
-            targetEncoded(i) = VarAddress.encode(typ, offset)
-          }
-
-          val captureSignature = new CaptureSignature(
-            objectCount = counts(BasicTypes.Object),
-            booleanCount = counts(BasicTypes.Boolean),
-            intCount = counts(BasicTypes.Int),
-            longCount = counts(BasicTypes.Long),
-            shortCount = counts(BasicTypes.Short),
-            byteCount = counts(BasicTypes.Byte),
-            charCount = counts(BasicTypes.Char),
-            doubleCount = counts(BasicTypes.Double),
-            floatCount = counts(BasicTypes.Float)
-          )
-
-          val capturePlan = new CapturePlan(captureSignature, sourceIndices, targetEncoded)
-          assembler.makeClosure(functionIndex, capturePlan)
+          val prepared = prepareCaptures(captures, env, signature, 0)
+          assembler.makeClosure(functionIndex, prepared.capturePlan)
 
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
           emit(condition, env, signature, assembler)
@@ -271,6 +205,52 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
 
           emit(body, finalEnvForBlock, signature, assembler)
       }
+    }
+
+    private def prepareCaptures(captures: Vector[IntermediateExpression.Reference],
+                                env: CompileEnv,
+                                signature: UserFunctionSignature,
+                                targetBaseIndex: Int): PreparedCaptures = {
+      val sourceIndices = new Array[Int](captures.length)
+      val targetEncoded = new Array[Int](captures.length)
+      val counts = new Array[Int](BasicTypes.MaxValue + 1)
+
+      val captureBindings = captures.zipWithIndex.map { case (ref, i) =>
+        val binding = env.resolve(ref.scope, ref.slot)
+        val absIndex = binding match {
+          case BindingInfo.Val(idx) => idx
+          case BindingInfo.LazyVal(idx, _, _) => idx
+          case _ => throw new RuntimeException("Capture must be a val or lazy val")
+        }
+        sourceIndices(i) = absIndex
+        val typ = signature.varSpace.basicTypeOf(absIndex)
+        val offset = counts(typ)
+        counts(typ) += 1
+        targetEncoded(i) = VarAddress.encode(typ, offset)
+
+        val newAbsIndex = targetBaseIndex + i
+        binding match {
+          case BindingInfo.Val(_) => BindingInfo.Val(newAbsIndex)
+          case BindingInfo.LazyVal(_, functionIndex, basicType) =>
+            BindingInfo.LazyVal(newAbsIndex, functionIndex, basicType)
+          case _ => throw new RuntimeException("Unreachable")
+        }
+      }
+
+      val captureSignature = new CaptureSignature(
+        objectCount = counts(BasicTypes.Object),
+        booleanCount = counts(BasicTypes.Boolean),
+        intCount = counts(BasicTypes.Int),
+        longCount = counts(BasicTypes.Long),
+        shortCount = counts(BasicTypes.Short),
+        byteCount = counts(BasicTypes.Byte),
+        charCount = counts(BasicTypes.Char),
+        doubleCount = counts(BasicTypes.Double),
+        floatCount = counts(BasicTypes.Float)
+      )
+
+      val capturePlan = new CapturePlan(captureSignature, sourceIndices, targetEncoded)
+      PreparedCaptures(capturePlan, captureBindings)
     }
 
     private def pushFromVar(assembler: Assembler, typ: BasicType, absoluteIndex: Int): Unit = {
