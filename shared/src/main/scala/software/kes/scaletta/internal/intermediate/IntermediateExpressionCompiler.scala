@@ -27,13 +27,13 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
     def emitMain(expression: IntermediateExpression, signature: UserFunctionSignature): Unit = {
       val assembler = programBuilder.mainAssembler()
       val initialEnv = createInitialEnv(signature)
-      emit(expression, initialEnv, signature, assembler)
+      emitTail(expression, initialEnv, signature, assembler)
     }
 
     def emitDiscoveredFunctions(): Unit = {
       while (workQueue.nonEmpty) {
         val (expression, signature, env, assembler) = workQueue.dequeue()
-        emit(expression, env, signature, assembler)
+        emitTail(expression, env, signature, assembler)
       }
     }
 
@@ -254,6 +254,98 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           }
 
           emit(body, finalEnvForBlock, signature, assembler)
+      }
+    }
+
+    private def emitTail(expression: IntermediateExpression,
+                         env: CompileEnv,
+                         signature: UserFunctionSignature,
+                         assembler: Assembler): Unit = {
+      expression match {
+        case IntermediateExpression.LocalCall(scope, slot, arguments) =>
+          env.resolve(scope, slot) match {
+            case BindingInfo.Def(functionIndex, _) if functionIndex == assembler.index =>
+              arguments.foreach(arg => emit(arg, env, signature, assembler))
+              assembler.tailCallLocal(functionIndex)
+            case BindingInfo.Def(functionIndex, _) =>
+              arguments.foreach(arg => emit(arg, env, signature, assembler))
+              assembler.callLocal(functionIndex)
+            case _ =>
+              throw new RuntimeException("Cannot call a value as a function")
+          }
+
+        case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
+          emit(condition, env, signature, assembler)
+          assembler.ifElse(
+            emitTail(thenBranch, env, signature, assembler),
+            emitTail(elseBranch, env, signature, assembler)
+          )
+
+        case IntermediateExpression.WithBindings(bindings, body) =>
+          var currentLayer = Vector.empty[BindingInfo]
+          var newVarCountInBlock = 0
+          val discoveredInBlock = mutable.ArrayBuffer.empty[(IntermediateExpression, UserFunctionSignature, Assembler)]
+
+          bindings.foreach { b =>
+            val envForBinding = env.pushLayer(currentLayer, newVarCountInBlock)
+
+            b match {
+              case Binding.Val(value) =>
+                val absoluteIndex = env.nextVarIndex + newVarCountInBlock
+                emit(value, envForBinding, signature, assembler)
+                val typ = signature.varSpace.basicTypeOf(absoluteIndex)
+                assembler.popIntoVar(typ, absoluteIndex)
+                currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
+                newVarCountInBlock += 1
+
+              case Binding.LazyVal(value) =>
+                val absoluteIndex = env.nextVarIndex + newVarCountInBlock
+
+                val placeholder = BindingInfo.LazyVal(absoluteIndex, -1, BasicTypes.Object)
+                val envForRhs = env.pushLayer(currentLayer :+ placeholder, newVarCountInBlock + 1)
+                  .pushLayer(Vector.empty, 0)
+                val underlyingType = TypeResolver.resolveType(value, envForRhs, signature, nativeFunctionTable)
+
+                assembler.lazyInit(underlyingType, absoluteIndex)
+
+                val evalSignature = UserFunctionSignature(
+                  signature.varSpace.pushFrame(software.kes.scaletta.internal.runtime.FrameSignature.empty),
+                  underlyingType,
+                  0
+                )
+                val added = programBuilder.addFunction(evalSignature)
+
+                currentLayer = currentLayer :+ BindingInfo.LazyVal(absoluteIndex, added.index, underlyingType)
+                discoveredInBlock += ((value, evalSignature, added))
+                newVarCountInBlock += 1
+
+              case Binding.Def(fSignature, fBody) =>
+                val added = programBuilder.addFunction(fSignature)
+                currentLayer = currentLayer :+ BindingInfo.Def(added.index, fSignature.returnType)
+                discoveredInBlock += ((fBody, fSignature, added))
+            }
+          }
+
+          val finalEnvForBlock = env.pushLayer(currentLayer, newVarCountInBlock)
+
+          discoveredInBlock.foreach { case (fb, fs, fa) =>
+            val captureBindings = (fs.parameterCount until fs.varSpace.slotCount).toVector.map(BindingInfo.Val)
+            val fInitialEnv = createInitialEnv(fs, captureBindings)
+            val fEnv = CompileEnv(fInitialEnv.layers ++ finalEnvForBlock.layers, fInitialEnv.nextVarIndex)
+            workQueue.enqueue((fb, fs, fEnv, fa))
+          }
+
+          emitTail(body, finalEnvForBlock, signature, assembler)
+
+        case IntermediateExpression.Convert(value, targetType) =>
+          if (TypeResolver.resolveType(value, env, signature, nativeFunctionTable) == targetType) {
+            emitTail(value, env, signature, assembler)
+          } else {
+            emit(expression, env, signature, assembler)
+          }
+
+        case other =>
+          emit(other, env, signature, assembler)
       }
     }
 
