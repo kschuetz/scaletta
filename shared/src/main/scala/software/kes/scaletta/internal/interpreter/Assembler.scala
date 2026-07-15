@@ -86,6 +86,9 @@ final class Assembler(val index: Int,
   def pushNull(): Unit =
     pushConst(BasicTypes.Object, 0)
 
+  def pushFromVar(typ: BasicType, varIndex: Int): Unit =
+    pushPop(Opcodes.PushFromVar, Opcodes.PushFromVarWide, typ, varIndex)
+
   def pushIntFromVar(varIndex: Int): Unit =
     pushFromVar(BasicTypes.Int, varIndex)
 
@@ -112,6 +115,9 @@ final class Assembler(val index: Int,
 
   def pushObjectFromVar(varIndex: Int): Unit =
     pushFromVar(BasicTypes.Object, varIndex)
+
+  def popIntoVar(typ: BasicType, varIndex: Int): Unit =
+    pushPop(Opcodes.PopIntoVar, Opcodes.PopIntoVarWide, typ, varIndex)
 
   def popIntIntoVar(varIndex: Int): Unit =
     popIntoVar(BasicTypes.Int, varIndex)
@@ -403,12 +409,6 @@ final class Assembler(val index: Int,
         }
     }
   }
-
-  private def pushFromVar(typ: BasicType, varIndex: Int): Unit =
-    pushPop(Opcodes.PushFromVar, Opcodes.PushFromVarWide, typ, varIndex)
-
-  private def popIntoVar(typ: BasicType, varIndex: Int): Unit =
-    pushPop(Opcodes.PopIntoVar, Opcodes.PopIntoVarWide, typ, varIndex)
 
   private def pushPop(narrow: Int, wide: Int, typ: BasicType, varIndex: Int): Unit = {
     val s = if (varIndex < 0) 0 else varIndex

@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.intermediate
 
-import software.kes.scaletta.common.{BasicType, BasicTypes}
+import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value
 import software.kes.scaletta.internal.interpreter._
@@ -67,7 +67,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           env.resolve(scope, slot) match {
             case BindingInfo.Val(absoluteIndex) =>
               val typ = signature.varSpace.basicTypeOf(absoluteIndex)
-              pushFromVar(assembler, typ, absoluteIndex)
+              assembler.pushFromVar(typ, absoluteIndex)
             case BindingInfo.LazyVal(absoluteIndex, functionIndex, _) =>
               assembler.lazyEval(absoluteIndex, functionIndex)
             case BindingInfo.Def(_, _) =>
@@ -161,7 +161,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
                 val absoluteIndex = env.nextVarIndex + newVarCountInBlock
                 emit(value, envForBinding, signature, assembler)
                 val typ = signature.varSpace.basicTypeOf(absoluteIndex)
-                popIntoVar(assembler, typ, absoluteIndex)
+                assembler.popIntoVar(typ, absoluteIndex)
                 currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
                 newVarCountInBlock += 1
 
@@ -253,37 +253,6 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
       PreparedCaptures(capturePlan, captureBindings)
     }
 
-    private def pushFromVar(assembler: Assembler, typ: BasicType, absoluteIndex: Int): Unit = {
-      import software.kes.scaletta.common.BasicTypes._
-      typ match {
-        case Int => assembler.pushIntFromVar(absoluteIndex)
-        case Long => assembler.pushLongFromVar(absoluteIndex)
-        case Double => assembler.pushDoubleFromVar(absoluteIndex)
-        case Float => assembler.pushFloatFromVar(absoluteIndex)
-        case Byte => assembler.pushByteFromVar(absoluteIndex)
-        case Short => assembler.pushShortFromVar(absoluteIndex)
-        case Char => assembler.pushCharFromVar(absoluteIndex)
-        case Boolean => assembler.pushBooleanFromVar(absoluteIndex)
-        case Object => assembler.pushObjectFromVar(absoluteIndex)
-        case _ => throw new RuntimeException(s"Unsupported type for pushFromVar: $typ")
-      }
-    }
-
-    private def popIntoVar(assembler: Assembler, typ: BasicType, absoluteIndex: Int): Unit = {
-      import software.kes.scaletta.common.BasicTypes._
-      typ match {
-        case Int => assembler.popIntIntoVar(absoluteIndex)
-        case Long => assembler.popLongIntoVar(absoluteIndex)
-        case Double => assembler.popDoubleIntoVar(absoluteIndex)
-        case Float => assembler.popFloatIntoVar(absoluteIndex)
-        case Byte => assembler.popByteIntoVar(absoluteIndex)
-        case Short => assembler.popShortIntoVar(absoluteIndex)
-        case Char => assembler.popCharIntoVar(absoluteIndex)
-        case Boolean => assembler.popBooleanIntoVar(absoluteIndex)
-        case Object => assembler.popObjectIntoVar(absoluteIndex)
-        case _ => throw new RuntimeException(s"Unsupported type for popIntoVar: $typ")
-      }
-    }
   }
 
 }
