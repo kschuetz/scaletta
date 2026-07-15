@@ -74,7 +74,6 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     }
   }
 
-  // TODO: fix for Scala.js
   test("price calculation with lazy tax and discount") {
     val signature = UserFunctionSignature(
       VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
@@ -188,7 +187,6 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     result.intValue() shouldBe 22
   }
 
-  // TODO: fix for Scala.js
   test("discount eligibility logic with AND and OR") {
     val signature = UserFunctionSignature(
       VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
@@ -231,5 +229,69 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
       })
       result.booleanValue() shouldBe expected
     }
+  }
+
+  test("closure capturing multiple vals") {
+    // def test(x: Int): Int = {
+    //   val y = x + 10
+    //   val z = y + 20
+    //   val f = (a: Int) => a + y + z
+    //   f(11)
+    // }
+    // if x = 1: y = 11, z = 31, f(11) = 11 + 11 + 31 = 53
+
+    val signature = UserFunctionSignature(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+        CoreTypes.IntT, // x (param 0)
+        CoreTypes.IntT, // y (local 1)
+        CoreTypes.IntT, // z (local 2)
+        CoreTypes.AnyRefT // f (lambda 3)
+      ))),
+      BasicTypes.Int,
+      1
+    )
+
+    // y = x + 10
+    // x is Reference(1, 0)
+    val yExpr = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(1, 0), int(10)))
+
+    // z = y + 20
+    // y is Reference(0, 0)
+    val zExpr = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), int(20)))
+
+    // lambda(a: Int) = a + y + z
+    // captures: y, z
+    // signature inside lambda: (a: Int, captured_y: Int, captured_z: Int)
+    val fLambda = Lambda(
+      signature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+          CoreTypes.IntT, // a
+          CoreTypes.IntT, // y
+          CoreTypes.IntT // z
+        ))),
+        BasicTypes.Int,
+        1
+      ),
+      captures = Vector(Reference(0, 0), Reference(0, 1)), // y, z from WithBindings scope
+      body = NativeCall(stdLib.arithmetic.int.add.int, Vector(
+        NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), Reference(0, 1))),
+        Reference(0, 2)
+      ))
+    )
+
+    val body = WithBindings(
+      Vector(
+        Binding.Val(yExpr),
+        Binding.Val(zExpr),
+        Binding.Val(fLambda)
+      ),
+      ClosureCall(Reference(0, 2), Vector(int(11)), BasicTypes.Int)
+    )
+
+    val program = compiler.compile(signature, body)
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 1))
+    result.intValue() shouldBe 53
   }
 }
