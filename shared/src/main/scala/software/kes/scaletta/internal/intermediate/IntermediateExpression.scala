@@ -32,6 +32,11 @@ object IntermediateExpression {
                     captures: Vector[IntermediateExpression.Reference],
                     body: IntermediateExpression) extends IntermediateExpression
 
+  case class FunctionValue(scope: Int,
+                           slot: Int,
+                           signature: UserFunctionSignature,
+                           captures: Vector[IntermediateExpression.Reference]) extends IntermediateExpression
+
   case class And(lhs: IntermediateExpression, rhs: IntermediateExpression) extends IntermediateExpression
 
   case class Or(lhs: IntermediateExpression, rhs: IntermediateExpression) extends IntermediateExpression

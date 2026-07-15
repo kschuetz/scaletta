@@ -50,6 +50,9 @@ object TypeResolver {
       case IntermediateExpression.Lambda(_, _, _) =>
         BasicTypes.Object
 
+      case IntermediateExpression.FunctionValue(_, _, _, _) =>
+        BasicTypes.Object
+
       case IntermediateExpression.Conditional(_, thenBranch, _) =>
         // Assume both branches have the same type, as validated by TypeChecker earlier in the pipeline
         resolveType(thenBranch, env, signature, nativeTable)

@@ -364,5 +364,49 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val closure = interpreter.run(emptyContextReader).value[AnyRef]()
       closure shouldNot be(null)
     }
+
+    it("should handle FunctionValue (def as a value)") {
+      val fSignature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), // param x
+        BasicTypes.Int,
+        1
+      )
+      val fBody = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), int(1)))
+
+      val expr = WithBindings(
+        Vector(Binding.Def(fSignature, fBody)),
+        ClosureCall(FunctionValue(0, 0, fSignature, Vector.empty), Vector(int(40)), BasicTypes.Int)
+      )
+
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 41
+    }
+
+    it("should handle FunctionValue with captures") {
+      val fSignature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+          CoreTypes.IntT, // param x
+          CoreTypes.IntT // capture a
+        ))),
+        BasicTypes.Int,
+        1
+      )
+      // Reference(0, 0) is x, Reference(0, 1) is a (capture)
+      val fBody = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), Reference(0, 1)))
+
+      val expr = WithBindings(
+        Vector(Binding.Val(int(10))), // a = 10
+        WithBindings(
+          Vector(Binding.Def(fSignature, fBody)),
+          ClosureCall(FunctionValue(0, 0, fSignature, Vector(Reference(1, 0))), Vector(int(32)), BasicTypes.Int)
+        )
+      )
+
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT)))
+      val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 42
+    }
   }
 }

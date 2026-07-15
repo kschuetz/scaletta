@@ -143,6 +143,46 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val lambdaInitialEnv = createInitialEnv(lambdaSignature, captureBindings)
           workQueue.enqueue((lambdaBody, lambdaSignature, lambdaInitialEnv, added))
 
+        case IntermediateExpression.FunctionValue(scope, slot, _, captures) =>
+          val binding = env.resolve(scope, slot)
+          val functionIndex = binding match {
+            case BindingInfo.Def(idx, _) => idx
+            case _ => throw new RuntimeException("FunctionValue must refer to a def")
+          }
+
+          val sourceIndices = new Array[Int](captures.length)
+          val targetEncoded = new Array[Int](captures.length)
+          val counts = new Array[Int](BasicTypes.MaxValue + 1)
+
+          captures.zipWithIndex.foreach { case (ref, i) =>
+            val b = env.resolve(ref.scope, ref.slot)
+            val absIndex = b match {
+              case BindingInfo.Val(idx) => idx
+              case BindingInfo.LazyVal(idx, _, _) => idx
+              case _ => throw new RuntimeException("Capture must be a val or lazy val")
+            }
+            sourceIndices(i) = absIndex
+            val typ = signature.varSpace.basicTypeOf(absIndex)
+            val offset = counts(typ)
+            counts(typ) += 1
+            targetEncoded(i) = VarAddress.encode(typ, offset)
+          }
+
+          val captureSignature = new CaptureSignature(
+            objectCount = counts(BasicTypes.Object),
+            booleanCount = counts(BasicTypes.Boolean),
+            intCount = counts(BasicTypes.Int),
+            longCount = counts(BasicTypes.Long),
+            shortCount = counts(BasicTypes.Short),
+            byteCount = counts(BasicTypes.Byte),
+            charCount = counts(BasicTypes.Char),
+            doubleCount = counts(BasicTypes.Double),
+            floatCount = counts(BasicTypes.Float)
+          )
+
+          val capturePlan = new CapturePlan(captureSignature, sourceIndices, targetEncoded)
+          assembler.makeClosure(functionIndex, capturePlan)
+
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
           emit(condition, env, signature, assembler)
           assembler.ifElse(
@@ -222,7 +262,9 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val finalEnvForBlock = env.pushLayer(currentLayer, newVarCountInBlock)
 
           discoveredInBlock.foreach { case (fb, fs, fa) =>
-            val fInitialEnv = createInitialEnv(fs)
+            val captureCount = fs.varSpace.slotCount - fs.parameterCount
+            val captureBindings = (fs.parameterCount until fs.varSpace.slotCount).toVector.map(BindingInfo.Val)
+            val fInitialEnv = createInitialEnv(fs, captureBindings)
             val fEnv = CompileEnv(fInitialEnv.layers ++ finalEnvForBlock.layers, fInitialEnv.nextVarIndex)
             workQueue.enqueue((fb, fs, fEnv, fa))
           }
