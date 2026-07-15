@@ -9,13 +9,14 @@ object FrameSignature {
   def of(types: Type[TypeId]*): FrameSignature =
     fromSeq(types)
 
-  def fromSeq(params: Iterable[Type[TypeId]]): FrameSignature = {
-    val types = params.map(BasicTypes.fromType).toArray
+  def fromSeq(params: Iterable[Type[TypeId]]): FrameSignature =
+    fromBasicTypes(params.map(BasicTypes.fromType))
+
+  def fromBasicTypes(types: Iterable[BasicType]): FrameSignature = {
     val occ = Array.fill[Int](BasicTypes.MaxValue + 1)(0)
-    val out = new Array[VarAddress.Encoded](params.size)
+    val out = new Array[VarAddress.Encoded](types.size)
     var i = 0
-    while (i < types.length) {
-      val t = types(i)
+    types.foreach { t =>
       val occCount = occ(t)
       occ(t) += 1
       out(i) = VarAddress.encode(t, occCount)

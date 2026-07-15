@@ -66,6 +66,9 @@ object TypeResolver {
       case IntermediateExpression.StringConcat(_) =>
         BasicTypes.Object
 
+      case IntermediateExpression.PartialNativeFunctionApplication(_, _) =>
+        BasicTypes.Object
+
       case IntermediateExpression.Convert(_, targetType) =>
         targetType
 

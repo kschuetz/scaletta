@@ -37,6 +37,9 @@ object IntermediateExpression {
                            signature: UserFunctionSignature,
                            captures: Vector[IntermediateExpression.Reference]) extends IntermediateExpression
 
+  case class PartialNativeFunctionApplication(functionId: NativeFunctionId,
+                                              arguments: Vector[Option[IntermediateExpression]]) extends IntermediateExpression
+
   case class And(lhs: IntermediateExpression, rhs: IntermediateExpression) extends IntermediateExpression
 
   case class Or(lhs: IntermediateExpression, rhs: IntermediateExpression) extends IntermediateExpression

@@ -4,7 +4,7 @@ import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value
 import software.kes.scaletta.internal.interpreter._
-import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarAddress}
+import software.kes.scaletta.internal.runtime.{FrameSignature, UserFunctionSignature, VarAddress}
 
 import scala.collection.mutable
 
@@ -116,6 +116,45 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
 
           val prepared = prepareCaptures(captures, env, signature, 0)
           assembler.makeClosure(functionIndex, prepared.capturePlan)
+
+        case IntermediateExpression.PartialNativeFunctionApplication(functionId, partialArgs) =>
+          val nativeFunction = nativeFunctionTable.get(functionId)
+          val nativeParams = nativeFunction.params
+
+          val holes = partialArgs.zipWithIndex.collect { case (None, i) => i }
+          val prefilled = partialArgs.zipWithIndex.collect { case (Some(expr), i) => (expr, i) }
+
+          val captures = prefilled.map {
+            case (ref: IntermediateExpression.Reference, _) => ref
+            case (other, _) =>
+              throw new RuntimeException(s"PartialNativeFunctionApplication currently only supports pre-filled arguments that are references. Found: $other")
+          }
+
+          val holeTypes = holes.map(i => nativeParams.basicTypeOf(i))
+          val captureTypes = prefilled.map { case (_, i) => nativeParams.basicTypeOf(i) }
+
+          val syntheticFrame = FrameSignature.fromBasicTypes(holeTypes ++ captureTypes)
+          val syntheticSignature = UserFunctionSignature(
+            software.kes.scaletta.internal.runtime.VarSpaceSignature.of(syntheticFrame),
+            nativeFunction.returnType.toByte,
+            holes.size
+          )
+
+          val prepared = prepareCaptures(captures, env, signature, holes.size)
+          val added = programBuilder.addFunction(syntheticSignature)
+          assembler.makeClosure(added.index, prepared.capturePlan)
+
+          val bodyHoleArgs = holes.zipWithIndex.map { case (_, k) => IntermediateExpression.Reference(0, k) }
+          val bodyCapturedArgs = prefilled.zipWithIndex.map { case (_, m) => IntermediateExpression.Reference(0, holes.size + m) }
+
+          val fullArgs = new Array[IntermediateExpression](partialArgs.size)
+          holes.zipWithIndex.foreach { case (origIdx, k) => fullArgs(origIdx) = bodyHoleArgs(k) }
+          prefilled.zipWithIndex.foreach { case ((_, origIdx), m) => fullArgs(origIdx) = bodyCapturedArgs(m) }
+
+          val bodyNativeCall = IntermediateExpression.NativeCall(functionId, fullArgs.toVector)
+
+          val lambdaInitialEnv = createInitialEnv(syntheticSignature, prepared.captureBindings)
+          workQueue.enqueue((bodyNativeCall, syntheticSignature, lambdaInitialEnv, added))
 
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
           emit(condition, env, signature, assembler)
