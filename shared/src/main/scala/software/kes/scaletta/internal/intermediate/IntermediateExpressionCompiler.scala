@@ -100,7 +100,8 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           assembler.callClosure()
 
         case IntermediateExpression.Lambda(lambdaSignature, captures, lambdaBody) =>
-          val prepared = prepareCaptures(captures, env, signature, lambdaSignature.parameterCount)
+          val captureBindings = captures.map(ref => env.resolve(ref.scope, ref.slot))
+          val prepared = prepareCaptures(captureBindings, signature, lambdaSignature.parameterCount)
           val added = programBuilder.addFunction(lambdaSignature)
           assembler.makeClosure(added.index, prepared.capturePlan)
 
@@ -114,7 +115,8 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             case _ => throw new RuntimeException("FunctionValue must refer to a def")
           }
 
-          val prepared = prepareCaptures(captures, env, signature, 0)
+          val captureBindings = captures.map(ref => env.resolve(ref.scope, ref.slot))
+          val prepared = prepareCaptures(captureBindings, signature, 0)
           assembler.makeClosure(functionIndex, prepared.capturePlan)
 
         case IntermediateExpression.PartialNativeFunctionApplication(functionId, partialArgs) =>
@@ -124,10 +126,19 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val holes = partialArgs.zipWithIndex.collect { case (None, i) => i }
           val prefilled = partialArgs.zipWithIndex.collect { case (Some(expr), i) => (expr, i) }
 
-          val captures = prefilled.map {
-            case (ref: IntermediateExpression.Reference, _) => ref
-            case (other, _) =>
-              throw new RuntimeException(s"PartialNativeFunctionApplication currently only supports pre-filled arguments that are references. Found: $other")
+          var currentNextVarIndex = env.nextVarIndex
+          val captureBindings = prefilled.map { case (expr, origIdx) =>
+            expr match {
+              case ref: IntermediateExpression.Reference =>
+                env.resolve(ref.scope, ref.slot)
+              case other =>
+                val typ = nativeParams.basicTypeOf(origIdx)
+                val tempIndex = currentNextVarIndex
+                currentNextVarIndex += 1
+                emit(other, env.copy(nextVarIndex = currentNextVarIndex), signature, assembler)
+                assembler.popIntoVar(typ, tempIndex)
+                BindingInfo.Val(tempIndex)
+            }
           }
 
           val holeTypes = holes.map(i => nativeParams.basicTypeOf(i))
@@ -140,7 +151,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             holes.size
           )
 
-          val prepared = prepareCaptures(captures, env, signature, holes.size)
+          val prepared = prepareCaptures(captureBindings, signature, holes.size)
           val added = programBuilder.addFunction(syntheticSignature)
           assembler.makeClosure(added.index, prepared.capturePlan)
 
@@ -246,16 +257,14 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
       }
     }
 
-    private def prepareCaptures(captures: Vector[IntermediateExpression.Reference],
-                                env: CompileEnv,
+    private def prepareCaptures(inputCaptures: Vector[BindingInfo],
                                 signature: UserFunctionSignature,
                                 targetBaseIndex: Int): PreparedCaptures = {
-      val sourceIndices = new Array[Int](captures.length)
-      val targetEncoded = new Array[Int](captures.length)
+      val sourceIndices = new Array[Int](inputCaptures.length)
+      val targetEncoded = new Array[Int](inputCaptures.length)
       val counts = new Array[Int](BasicTypes.MaxValue + 1)
 
-      val captureBindings = captures.zipWithIndex.map { case (ref, i) =>
-        val binding = env.resolve(ref.scope, ref.slot)
+      val captureBindings = inputCaptures.zipWithIndex.map { case (binding, i) =>
         val absIndex = binding match {
           case BindingInfo.Val(idx) => idx
           case BindingInfo.LazyVal(idx, _, _) => idx

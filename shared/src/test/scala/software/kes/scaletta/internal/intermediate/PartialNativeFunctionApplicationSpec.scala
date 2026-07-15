@@ -62,5 +62,49 @@ class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
       val closure = interpreter.run(emptyContextReader).value[AnyRef]()
       closure shouldNot be(null)
     }
+
+    it("should compile and execute a partial application with a literal") {
+      // val f = add(10, _)
+      // f(31) => 41
+      val addId = stdLib.arithmetic.int.add.int
+      val expr = ClosureCall(
+        PartialNativeFunctionApplication(addId, Vector(Some(int(10)), None)),
+        Vector(int(31)),
+        BasicTypes.Int
+      )
+
+      val signature = UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Int, 0)
+      val program = compiler.compile(signature, expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 41
+    }
+
+    it("should compile and execute a partial application with multiple pre-filled arguments (one literal)") {
+      val addId = stdLib.arithmetic.int.add.int
+      val expr = ClosureCall(
+        PartialNativeFunctionApplication(addId, Vector(Some(int(10)), Some(int(31)))),
+        Vector.empty,
+        BasicTypes.Int
+      )
+
+      val signature = UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))), BasicTypes.Int, 0)
+      val program = compiler.compile(signature, expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 41
+    }
+
+    it("should compile and execute a partial application with a complex expression") {
+      val addId = stdLib.arithmetic.int.add.int
+      val expr = ClosureCall(
+        PartialNativeFunctionApplication(addId, Vector(Some(NativeCall(addId, Vector(int(5), int(5)))), None)),
+        Vector(int(31)),
+        BasicTypes.Int
+      )
+
+      val signature = UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Int, 0)
+      val program = compiler.compile(signature, expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).intValue() shouldBe 41
+    }
   }
 }
