@@ -4,9 +4,9 @@ lazy val scala213 = "2.13.18"
 lazy val scala3 = "3.3.8"
 lazy val supportedScalaVersions = List(scala213, scala3)
 
-lazy val scalaTestVersion = "3.2.19"
-lazy val scalaCheckVersion = "1.18.0"
-lazy val scalaTestPlusScalaCheckVersion = "3.2.19.0"
+lazy val scalaTestVersion = "3.2.20"
+lazy val scalaCheckVersion = "1.19.0"
+lazy val scalaTestPlusScalaCheckVersion = "3.2.20.0"
 
 lazy val root = project
   .in(file("."))
@@ -30,7 +30,7 @@ lazy val scaletta = crossProject(JVMPlatform, JSPlatform)
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
       "org.scalacheck" %% "scalacheck" % scalaCheckVersion % Test,
-      "org.scalatestplus" %% "scalacheck-1-18" % scalaTestPlusScalaCheckVersion % Test,
+      "org.scalatestplus" %% "scalacheck-1-19" % scalaTestPlusScalaCheckVersion % Test,
     )
 
   )
@@ -38,6 +38,6 @@ lazy val scaletta = crossProject(JVMPlatform, JSPlatform)
     libraryDependencies ++= Seq(
       "org.scalatest" %%% "scalatest" % scalaTestVersion % Test,
       "org.scalacheck" %%% "scalacheck" % scalaCheckVersion % Test,
-      "org.scalatestplus" %%% "scalacheck-1-18" % scalaTestPlusScalaCheckVersion % Test,
+      "org.scalatestplus" %%% "scalacheck-1-19" % scalaTestPlusScalaCheckVersion % Test,
     )
   )
