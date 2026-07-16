@@ -163,6 +163,23 @@ object Disassembler {
           ip += 1
           sb.append(s"LAZY_EVAL v$varIndex, f$evalFunctionIndex")
 
+        case Opcodes.MakeClosure =>
+          val functionIndex = rawOpcode & 0xFFFFFF
+          val capturePlanIndex = userFunction.fetch(ip)
+          ip += 1
+          sb.append(s"MAKE_CLOSURE f$functionIndex, cp$capturePlanIndex")
+          if (capturePlanIndex != 0) {
+            appendConstant(sb, constantPool, BasicTypes.Object, capturePlanIndex)
+          } else {
+            sb.append(" (empty)")
+          }
+
+        case Opcodes.CallClosure =>
+          sb.append("CALL_CLOSURE")
+
+        case Opcodes.TailCallClosure =>
+          sb.append("TAIL_CALL_CLOSURE")
+
         case _ =>
           sb.append(s"UNKNOWN_OPCODE $opcode")
       }

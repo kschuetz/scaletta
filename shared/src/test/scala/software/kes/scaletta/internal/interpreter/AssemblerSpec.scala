@@ -163,6 +163,33 @@ class AssemblerSpec extends AnyFunSpec with Matchers {
         }
       }
     }
+
+    describe("Closures") {
+      it("should optimize makeClosure with empty capture plan by using 0 as operand") {
+        withEnvironment(defaultSignature) { env =>
+          import env._
+          assembler.makeClosure(41, CapturePlan.empty)
+
+          val func = userFunctionBuilder.build()
+          func.instructions(0) shouldBe ((Opcodes.MakeClosure << 24) | 41)
+          func.instructions(1) shouldBe 0
+        }
+      }
+
+      it("should NOT optimize makeClosure with non-empty capture plan") {
+        val signature = CaptureSignature.create(0, 0, 1, 0, 0, 0, 0, 0, 0) // one int
+        val plan = CapturePlan.create(signature, scala.collection.immutable.ArraySeq(0), scala.collection.immutable.ArraySeq(0))
+
+        withEnvironment(defaultSignature) { env =>
+          import env._
+          assembler.makeClosure(43, plan)
+
+          val func = userFunctionBuilder.build()
+          func.instructions(0) shouldBe ((Opcodes.MakeClosure << 24) | 43)
+          func.instructions(1) should not be 0
+        }
+      }
+    }
   }
 
   private case class Environment(assembler: Assembler,

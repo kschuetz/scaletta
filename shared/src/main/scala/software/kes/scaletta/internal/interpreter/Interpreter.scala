@@ -450,9 +450,12 @@ final class Interpreter private(private val program: Program,
         val functionIndex = rawOpcode & 0xFFFFFF
         val capturePlanIndex = currentFunction.fetch(instructionPointer)
         instructionPointer += 1
-        val capturePlan = program.constantPool.getObject(capturePlanIndex).asInstanceOf[CapturePlan]
-        val capturedFrame = capturedFramePool.acquire(capturePlan.signature)
-        capturePlan.capture(varSpace, capturedFrame)
+        val capturedFrame = if (capturePlanIndex == 0) CapturedFrame.empty else {
+          val capturePlan = program.constantPool.getObject(capturePlanIndex).asInstanceOf[CapturePlan]
+          val cf = capturedFramePool.acquire(capturePlan.signature)
+          capturePlan.capture(varSpace, cf)
+          cf
+        }
         operandStack.pushObject(new RuntimeClosure(functionIndex, capturedFrame))
 
       case Opcodes.CallClosure =>

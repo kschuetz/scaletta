@@ -55,4 +55,17 @@ class DisassemblerSpec extends AnyFunSuite with Matchers {
 
     disassembly should include("PUSH Object 1 (Hello, Scaletta!)")
   }
+
+  test("disassemble makeClosure with empty capture plan") {
+    val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0))
+    val assembler = builder.mainAssembler()
+
+    assembler.makeClosure(1, CapturePlan.empty)
+    assembler.emitReturn()
+
+    val program = builder.build()
+    val disassembly = Disassembler.disassemble(program.mainFunction, program.constantPool)
+
+    disassembly should include("MAKE_CLOSURE f1, cp0 (empty)")
+  }
 }

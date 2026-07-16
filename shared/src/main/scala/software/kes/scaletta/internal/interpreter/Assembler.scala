@@ -266,7 +266,8 @@ final class Assembler(val index: Int,
 
   def makeClosure(userFunctionIndex: Int, capturePlan: CapturePlan): Unit = {
     writer.writeAndAdvance(makeOpcode24(Opcodes.MakeClosure, userFunctionIndex))
-    writer.writeAndAdvance(interner.internObject(capturePlan))
+    val operand = if (capturePlan.isEmpty) 0 else interner.internObject(capturePlan)
+    writer.writeAndAdvance(operand)
   }
 
   def callClosure(): Unit =
