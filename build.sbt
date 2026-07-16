@@ -1,6 +1,6 @@
 import scala.collection.Seq
 
-lazy val scala213 = "2.13.17"
+lazy val scala213 = "2.13.18"
 lazy val scala3 = "3.3.7"
 lazy val supportedScalaVersions = List(scala213, scala3)
 
