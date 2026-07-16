@@ -7,6 +7,10 @@ private[interpreter] final class CapturedFramePool(maxRetained: Int) {
   private val borrowed = new ArrayBuffer[CapturedFrame]()
 
   def acquire(signature: CaptureSignature): CapturedFrame = {
+    if (signature.isEmpty) {
+      return CapturedFrame.empty
+    }
+
     var found: CapturedFrame = null
     var i = free.length - 1
     while (i >= 0 && (found eq null)) {

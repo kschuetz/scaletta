@@ -77,6 +77,21 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
       frame2 shouldNot be theSameInstanceAs frame1
     }
 
+    it("should not allow CapturedFrame.empty to take a slot in the pool") {
+      val pool = new CapturedFramePool(maxRetained = 1)
+      val sigEmpty = CaptureSignature.empty
+
+      // Acquire empty, then a real signature
+      pool.acquire(sigEmpty)
+      val frame1 = pool.acquire(sig1)
+
+      pool.endRun()
+
+      // If empty took the slot, frame1 won't be reused
+      val frame2 = pool.acquire(sig1)
+      frame2 should be theSameInstanceAs frame1
+    }
+
     it("should provide typed backing arrays") {
       val sig = CaptureSignature.create(1, 1, 1, 1, 1, 1, 1, 1, 1)
       val frame = CapturedFrame.create(sig)
