@@ -77,7 +77,7 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
 
     it("should provide typed backing arrays") {
       val sig = CaptureSignature.create(1, 1, 1, 1, 1, 1, 1, 1, 1)
-      val frame = new CapturedFrame(sig)
+      val frame = CapturedFrame.create(sig)
       frame.objects.length shouldBe 1
       frame.booleans.length shouldBe 1
       frame.ints.length shouldBe 1
@@ -106,7 +106,7 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
       varSpace.unsafeWriteObject(1, "43")
 
       val capSig = CaptureSignature.create(objectCount = 1, booleanCount = 0, intCount = 1, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
-      val target = new CapturedFrame(capSig)
+      val target = CapturedFrame.create(capSig)
 
       val plan = new CapturePlan(
         signature = capSig,

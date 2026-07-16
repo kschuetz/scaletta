@@ -1,6 +1,13 @@
 package software.kes.scaletta.internal.interpreter
 
-private[interpreter] final class CapturedFrame(val signature: CaptureSignature) {
+object CapturedFrame {
+  def create(signature: CaptureSignature): CapturedFrame =
+    if (signature.isEmpty) empty else new CapturedFrame(signature)
+
+  val empty: CapturedFrame = new CapturedFrame(CaptureSignature.empty)
+}
+
+final class CapturedFrame private(val signature: CaptureSignature) {
   private[interpreter] val objects: Array[AnyRef] = if (signature.objectCount > 0) new Array[AnyRef](signature.objectCount) else null
   private[interpreter] val booleans: Array[Boolean] = if (signature.booleanCount > 0) new Array[Boolean](signature.booleanCount) else null
   private[interpreter] val ints: Array[Int] = if (signature.intCount > 0) new Array[Int](signature.intCount) else null
@@ -10,6 +17,8 @@ private[interpreter] final class CapturedFrame(val signature: CaptureSignature) 
   private[interpreter] val chars: Array[Char] = if (signature.charCount > 0) new Array[Char](signature.charCount) else null
   private[interpreter] val doubles: Array[Double] = if (signature.doubleCount > 0) new Array[Double](signature.doubleCount) else null
   private[interpreter] val floats: Array[Float] = if (signature.floatCount > 0) new Array[Float](signature.floatCount) else null
+
+  def isEmpty: Boolean = signature.isEmpty
 
   def clearObjects(): Unit = {
     if (objects != null) {

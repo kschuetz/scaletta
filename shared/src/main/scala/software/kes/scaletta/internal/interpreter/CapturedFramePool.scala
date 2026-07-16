@@ -18,7 +18,7 @@ private[interpreter] final class CapturedFramePool(maxRetained: Int) {
       i -= 1
     }
 
-    val frame = if (found ne null) found else new CapturedFrame(signature)
+    val frame = if (found ne null) found else CapturedFrame.create(signature)
     borrowed += frame
     frame
   }
