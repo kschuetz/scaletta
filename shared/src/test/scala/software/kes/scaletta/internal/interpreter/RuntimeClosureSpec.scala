@@ -9,6 +9,8 @@ import software.kes.scaletta.internal.library.standard.testsupport.StandardLibra
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
+import scala.collection.immutable.ArraySeq
+
 class RuntimeClosureSpec extends AnyFunSuite with Matchers {
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
@@ -45,7 +47,7 @@ class RuntimeClosureSpec extends AnyFunSuite with Matchers {
 
     // Create capture plan: capture logical index 0 from main into CapturedFrame Int index 0
     val captureSignature = CaptureSignature.create(0, 0, 1, 0, 0, 0, 0, 0, 0)
-    val capturePlan = new CapturePlan(captureSignature, Array(0), Array(VarAddress.encode(BasicTypes.Int, 0)))
+    val capturePlan = CapturePlan.create(captureSignature, ArraySeq(0), ArraySeq(VarAddress.encode(BasicTypes.Int, 0)))
 
     // Make closure for child function (index 1)
     mainAssembler.makeClosure(1, capturePlan)
@@ -86,7 +88,7 @@ class RuntimeClosureSpec extends AnyFunSuite with Matchers {
     mainAssembler.popObjectIntoVar(0)
 
     val captureSignature = CaptureSignature.create(1, 0, 0, 0, 0, 0, 0, 0, 0)
-    val capturePlan = new CapturePlan(captureSignature, Array(0), Array(VarAddress.encode(BasicTypes.Object, 0)))
+    val capturePlan = CapturePlan.create(captureSignature, ArraySeq(0), ArraySeq(VarAddress.encode(BasicTypes.Object, 0)))
 
     mainAssembler.makeClosure(1, capturePlan)
     mainAssembler.callClosure()

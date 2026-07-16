@@ -6,6 +6,7 @@ import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value
 import software.kes.scaletta.internal.interpreter._
 import software.kes.scaletta.internal.runtime.{FrameSignature, UserFunctionSignature, VarAddress}
 
+import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 
 private final case class PreparedCaptures(capturePlan: CapturePlan, captureBindings: Vector[BindingInfo])
@@ -389,7 +390,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
         floatCount = counts(BasicTypes.Float)
       )
 
-      val capturePlan = new CapturePlan(captureSignature, sourceIndices, targetEncoded)
+      val capturePlan = CapturePlan.create(captureSignature, ArraySeq.unsafeWrapArray(sourceIndices), ArraySeq.unsafeWrapArray(targetEncoded))
       PreparedCaptures(capturePlan, captureBindings)
     }
 

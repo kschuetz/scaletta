@@ -5,6 +5,8 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.runtime.VarAddress
 
+import scala.collection.immutable.ArraySeq
+
 class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
   describe("CapturedFramePool") {
     val sig1 = CaptureSignature.create(objectCount = 1, booleanCount = 0, intCount = 1, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
@@ -108,10 +110,10 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
       val capSig = CaptureSignature.create(objectCount = 1, booleanCount = 0, intCount = 1, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
       val target = CapturedFrame.create(capSig)
 
-      val plan = new CapturePlan(
+      val plan = CapturePlan.create(
         signature = capSig,
-        sourceIndices = Array(0, 1),
-        targetEncoded = Array(
+        sourceIndices = ArraySeq(0, 1),
+        targetEncoded = ArraySeq(
           VarAddress.encode(BasicTypes.Int, 0),
           VarAddress.encode(BasicTypes.Object, 0)
         )
