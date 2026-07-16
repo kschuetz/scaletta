@@ -377,7 +377,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
         }
       }
 
-      val captureSignature = new CaptureSignature(
+      val captureSignature = CaptureSignature.create(
         objectCount = counts(BasicTypes.Object),
         booleanCount = counts(BasicTypes.Boolean),
         intCount = counts(BasicTypes.Int),

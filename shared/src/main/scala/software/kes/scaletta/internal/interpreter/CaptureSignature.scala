@@ -1,14 +1,34 @@
 package software.kes.scaletta.internal.interpreter
 
-private[scaletta] final class CaptureSignature(val objectCount: Int,
-                                                  val booleanCount: Int,
-                                                  val intCount: Int,
-                                                  val longCount: Int,
-                                                  val shortCount: Int,
-                                                  val byteCount: Int,
-                                                  val charCount: Int,
-                                                  val doubleCount: Int,
-                                                  val floatCount: Int) {
+object CaptureSignature {
+  def create(objectCount: Int,
+             booleanCount: Int,
+             intCount: Int,
+             longCount: Int,
+             shortCount: Int,
+             byteCount: Int,
+             charCount: Int,
+             doubleCount: Int,
+             floatCount: Int): CaptureSignature = {
+    if (objectCount <= 0 && booleanCount <= 0 && intCount <= 0 && longCount <= 0 && shortCount <= 0 &&
+      byteCount <= 0 && charCount <= 0 && doubleCount <= 0 && floatCount <= 0) {
+      empty
+    } else new CaptureSignature(objectCount, booleanCount, intCount, longCount, shortCount, byteCount, charCount,
+      doubleCount, floatCount)
+  }
+
+  val empty: CaptureSignature = new CaptureSignature(0, 0, 0, 0, 0, 0, 0, 0, 0)
+}
+
+final class CaptureSignature private(val objectCount: Int,
+                                     val booleanCount: Int,
+                                     val intCount: Int,
+                                     val longCount: Int,
+                                     val shortCount: Int,
+                                     val byteCount: Int,
+                                     val charCount: Int,
+                                     val doubleCount: Int,
+                                     val floatCount: Int) {
 
   override def equals(other: Any): Boolean = other match {
     case that: CaptureSignature =>

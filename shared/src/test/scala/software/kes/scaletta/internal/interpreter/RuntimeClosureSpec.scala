@@ -44,7 +44,7 @@ class RuntimeClosureSpec extends AnyFunSuite with Matchers {
     mainAssembler.popIntIntoVar(0)
 
     // Create capture plan: capture logical index 0 from main into CapturedFrame Int index 0
-    val captureSignature = new CaptureSignature(0, 0, 1, 0, 0, 0, 0, 0, 0)
+    val captureSignature = CaptureSignature.create(0, 0, 1, 0, 0, 0, 0, 0, 0)
     val capturePlan = new CapturePlan(captureSignature, Array(0), Array(VarAddress.encode(BasicTypes.Int, 0)))
 
     // Make closure for child function (index 1)
@@ -85,7 +85,7 @@ class RuntimeClosureSpec extends AnyFunSuite with Matchers {
     mainAssembler.pushImmediateObject(testString)
     mainAssembler.popObjectIntoVar(0)
 
-    val captureSignature = new CaptureSignature(1, 0, 0, 0, 0, 0, 0, 0, 0)
+    val captureSignature = CaptureSignature.create(1, 0, 0, 0, 0, 0, 0, 0, 0)
     val capturePlan = new CapturePlan(captureSignature, Array(0), Array(VarAddress.encode(BasicTypes.Object, 0)))
 
     mainAssembler.makeClosure(1, capturePlan)

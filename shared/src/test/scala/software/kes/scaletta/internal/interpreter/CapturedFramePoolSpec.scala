@@ -7,8 +7,8 @@ import software.kes.scaletta.internal.runtime.VarAddress
 
 class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
   describe("CapturedFramePool") {
-    val sig1 = new CaptureSignature(objectCount = 1, booleanCount = 0, intCount = 1, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
-    val sig2 = new CaptureSignature(objectCount = 0, booleanCount = 0, intCount = 2, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
+    val sig1 = CaptureSignature.create(objectCount = 1, booleanCount = 0, intCount = 1, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
+    val sig2 = CaptureSignature.create(objectCount = 0, booleanCount = 0, intCount = 2, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
 
     it("should acquire new frames when pool is empty") {
       val pool = new CapturedFramePool(maxRetained = 2)
@@ -76,7 +76,7 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
     }
 
     it("should provide typed backing arrays") {
-      val sig = new CaptureSignature(1, 1, 1, 1, 1, 1, 1, 1, 1)
+      val sig = CaptureSignature.create(1, 1, 1, 1, 1, 1, 1, 1, 1)
       val frame = new CapturedFrame(sig)
       frame.objects.length shouldBe 1
       frame.booleans.length shouldBe 1
@@ -105,7 +105,7 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
       varSpace.unsafeWriteInt(0, 41)
       varSpace.unsafeWriteObject(1, "43")
 
-      val capSig = new CaptureSignature(objectCount = 1, booleanCount = 0, intCount = 1, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
+      val capSig = CaptureSignature.create(objectCount = 1, booleanCount = 0, intCount = 1, longCount = 0, shortCount = 0, byteCount = 0, charCount = 0, doubleCount = 0, floatCount = 0)
       val target = new CapturedFrame(capSig)
 
       val plan = new CapturePlan(

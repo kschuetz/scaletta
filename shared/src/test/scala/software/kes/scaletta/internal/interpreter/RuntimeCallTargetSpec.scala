@@ -5,7 +5,7 @@ import org.scalatest.matchers.should.Matchers
 
 class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
   test("creating a runtime call target") {
-    val captureSignature = new CaptureSignature(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    val captureSignature = CaptureSignature.empty
     val capturedFrame = new CapturedFrame(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
     val target = new RuntimeCallTarget(closure, 3)
@@ -15,7 +15,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
   }
 
   test("setting and getting arguments") {
-    val captureSignature = new CaptureSignature(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    val captureSignature = CaptureSignature.empty
     val capturedFrame = new CapturedFrame(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
     val target = new RuntimeCallTarget(closure, 2)
@@ -28,7 +28,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
   }
 
   test("overwriting an argument") {
-    val captureSignature = new CaptureSignature(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    val captureSignature = CaptureSignature.empty
     val capturedFrame = new CapturedFrame(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
     val target = new RuntimeCallTarget(closure, 1)
@@ -41,7 +41,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
   }
 
   test("rejecting invalid argument indexes") {
-    val captureSignature = new CaptureSignature(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    val captureSignature = CaptureSignature.empty
     val capturedFrame = new CapturedFrame(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
     val target = new RuntimeCallTarget(closure, 2)
@@ -65,7 +65,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
   }
 
   test("preserving the wrapped target identity") {
-    val captureSignature = new CaptureSignature(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    val captureSignature = CaptureSignature.empty
     val capturedFrame = new CapturedFrame(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
     val target = new RuntimeCallTarget(closure, 0)
