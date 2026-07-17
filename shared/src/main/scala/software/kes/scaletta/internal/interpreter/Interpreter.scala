@@ -36,7 +36,7 @@ final class Interpreter private(private val program: Program,
   private var done: Boolean = true
   private val argumentReader = new OperandStackArgumentReader(operandStack, ParamsSignature.empty, closure => {
     val function = program.functions(closure.functionIndex)
-    new RuntimeCallTarget(closure, function.parameterCount)
+    new RuntimeCallTarget(closure, function.parameterCount, runtimeContexts)
   })
 
   /**

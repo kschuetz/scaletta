@@ -1,13 +1,14 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.api.CallTarget
+import software.kes.scaletta.api.{CallTarget, RuntimeContextReader}
 
 /**
  * A runtime adapter that allows interpreted function values/closures to be exposed
  * to native higher-order functions as [[CallTarget]].
  */
 private[interpreter] final class RuntimeCallTarget(val closure: RuntimeClosure,
-                                                   val parameterCount: Int) extends CallTarget {
+                                                   val parameterCount: Int,
+                                                   val runtimeContexts: RuntimeContextReader) extends CallTarget {
   private val _argumentValues = new Array[Any](parameterCount)
 
   private[interpreter] def argumentValues(index: Int): Any = {

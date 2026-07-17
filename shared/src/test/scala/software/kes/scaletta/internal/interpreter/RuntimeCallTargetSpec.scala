@@ -2,13 +2,14 @@ package software.kes.scaletta.internal.interpreter
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.testsupport.emptyContextReader
 
 class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
   test("creating a runtime call target") {
     val captureSignature = CaptureSignature.empty
     val capturedFrame = CapturedFrame.create(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
-    val target = new RuntimeCallTarget(closure, 3)
+    val target = new RuntimeCallTarget(closure, 3, emptyContextReader)
 
     target.closure shouldBe closure
     target.parameterCount shouldBe 3
@@ -18,7 +19,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
     val captureSignature = CaptureSignature.empty
     val capturedFrame = CapturedFrame.create(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
-    val target = new RuntimeCallTarget(closure, 2)
+    val target = new RuntimeCallTarget(closure, 2, emptyContextReader)
 
     target.setArgument(0, "first")
     target.setArgument(1, 43)
@@ -31,7 +32,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
     val captureSignature = CaptureSignature.empty
     val capturedFrame = CapturedFrame.create(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
-    val target = new RuntimeCallTarget(closure, 1)
+    val target = new RuntimeCallTarget(closure, 1, emptyContextReader)
 
     target.setArgument(0, "initial")
     target.argumentValues(0) shouldBe "initial"
@@ -44,7 +45,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
     val captureSignature = CaptureSignature.empty
     val capturedFrame = CapturedFrame.create(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
-    val target = new RuntimeCallTarget(closure, 2)
+    val target = new RuntimeCallTarget(closure, 2, emptyContextReader)
 
     assertThrows[IndexOutOfBoundsException] {
       target.setArgument(-1, "invalid")
@@ -68,7 +69,7 @@ class RuntimeCallTargetSpec extends AnyFunSuite with Matchers {
     val captureSignature = CaptureSignature.empty
     val capturedFrame = CapturedFrame.create(captureSignature)
     val closure = new RuntimeClosure(41, capturedFrame)
-    val target = new RuntimeCallTarget(closure, 0)
+    val target = new RuntimeCallTarget(closure, 0, emptyContextReader)
 
     target.closure shouldBe closure
   }
