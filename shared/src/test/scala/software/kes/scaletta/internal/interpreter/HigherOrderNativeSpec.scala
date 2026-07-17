@@ -98,12 +98,15 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       result.intValue() shouldBe 43
     }
 
-    it("should reject multi-step NativeStep.Call sequences") {
+    it("should handle multi-step NativeStep.Call sequences") {
       val tableBuilder = NativeFunctionTable.builder()
       val applyTwice = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT), BasicTypes.Int, FunctionImpl.higherOrder { args =>
         val target = args.readObject(0).asInstanceOf[software.kes.scaletta.api.CallTarget]
-        target.setArgument(0, 1)
-        NativeStep.Call(target, _ => NativeStep.Call(target, _ => NativeStep.Done(3)))
+        target.setArgument(0, 41)
+        NativeStep.Call(target, res1 => {
+          target.setArgument(0, res1.asInstanceOf[Int] + 2)
+          NativeStep.Call(target, res2 => NativeStep.Done(res2.asInstanceOf[Int] + 3))
+        })
       }))
       val table = tableBuilder.result()
 
@@ -119,10 +122,141 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
 
       val program = builder.build()
       val interpreter = Interpreter.create(program, table)
+      val result = interpreter.run(emptyContextReader)
 
-      intercept[UnsupportedOperationException] {
-        interpreter.run(emptyContextReader)
-      }.getMessage should include("multi-step higher-order not yet supported")
+      result.intValue() shouldBe 46 // 41 + 2 + 3
+    }
+
+    it("should handle map-like operation over a list") {
+      val tableBuilder = NativeFunctionTable.builder()
+      val intAddId = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.IntT, CoreTypes.IntT), BasicTypes.Int, FunctionImpl.intResult(args => args.readInt(0) + args.readInt(1))))
+
+      val mapHO = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT, CoreTypes.AnyRefT), BasicTypes.Object, FunctionImpl.higherOrder { args =>
+        val list = args.readObject(0).asInstanceOf[List[Int]]
+        val target = args.readObject(1).asInstanceOf[software.kes.scaletta.api.CallTarget]
+
+        def go(remaining: List[Int], acc: Vector[Int]): NativeStep = {
+          remaining match {
+            case Nil => NativeStep.Done(acc.toList)
+            case head :: tail =>
+              target.setArgument(0, head)
+              NativeStep.Call(target, res => go(tail, acc :+ res.asInstanceOf[Int]))
+          }
+        }
+
+        go(list, Vector.empty)
+      }))
+      val table = tableBuilder.result()
+
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0))
+      val doubleAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromBasicTypes(Seq(BasicTypes.Int))), BasicTypes.Int, 1))
+      doubleAssembler.pushIntFromVar(0)
+      doubleAssembler.pushIntFromVar(0)
+      doubleAssembler.callNative(intAddId)
+      doubleAssembler.emitReturn()
+
+      val mainAssembler = builder.mainAssembler()
+      mainAssembler.pushImmediateObject(List(1, 2, 3, 5, 7)) // prime numbers!
+      mainAssembler.makeClosure(doubleAssembler.index, CapturePlan.empty)
+      mainAssembler.callNative(mapHO)
+      mainAssembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, table)
+      val result = interpreter.run(emptyContextReader)
+
+      result.value[List[Int]]() shouldBe List(2, 4, 6, 10, 14)
+    }
+
+    it("should handle filter-like operation over a list") {
+      val tableBuilder = NativeFunctionTable.builder()
+      val intModId = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.IntT, CoreTypes.IntT), BasicTypes.Int, FunctionImpl.intResult(args => args.readInt(0) % args.readInt(1))))
+      val intEqId = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.IntT, CoreTypes.IntT), BasicTypes.Boolean, FunctionImpl.booleanResult(args => args.readInt(0) == args.readInt(1))))
+
+      val filterHO = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT, CoreTypes.AnyRefT), BasicTypes.Object, FunctionImpl.higherOrder { args =>
+        val list = args.readObject(0).asInstanceOf[List[Int]]
+        val target = args.readObject(1).asInstanceOf[software.kes.scaletta.api.CallTarget]
+
+        def go(remaining: List[Int], acc: Vector[Int]): NativeStep = {
+          remaining match {
+            case Nil => NativeStep.Done(acc.toList)
+            case head :: tail =>
+              target.setArgument(0, head)
+              NativeStep.Call(target, res => {
+                val nextAcc = if (res.asInstanceOf[Boolean]) acc :+ head else acc
+                go(tail, nextAcc)
+              })
+          }
+        }
+
+        go(list, Vector.empty)
+      }))
+      val table = tableBuilder.result()
+
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0))
+      val isEvenAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromBasicTypes(Seq(BasicTypes.Int))), BasicTypes.Boolean, 1))
+      isEvenAssembler.pushIntFromVar(0)
+      isEvenAssembler.pushImmediateInt(2)
+      isEvenAssembler.callNative(intModId)
+      isEvenAssembler.pushImmediateInt(0)
+      isEvenAssembler.callNative(intEqId)
+      isEvenAssembler.emitReturn()
+
+      val mainAssembler = builder.mainAssembler()
+      mainAssembler.pushImmediateObject(List(1, 2, 3, 4, 5, 6))
+      mainAssembler.makeClosure(isEvenAssembler.index, CapturePlan.empty)
+      mainAssembler.callNative(filterHO)
+      mainAssembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, table)
+      val result = interpreter.run(emptyContextReader)
+
+      result.value[List[Int]]() shouldBe List(2, 4, 6)
+    }
+
+    it("should handle foldLeft-like operation") {
+      val tableBuilder = NativeFunctionTable.builder()
+      val intAddId = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.IntT, CoreTypes.IntT), BasicTypes.Int, FunctionImpl.intResult(args => args.readInt(0) + args.readInt(1))))
+
+      val foldHO = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT, CoreTypes.IntT, CoreTypes.AnyRefT), BasicTypes.Int, FunctionImpl.higherOrder { args =>
+        val list = args.readObject(0).asInstanceOf[List[Int]]
+        val initial = args.readInt(1)
+        val target = args.readObject(2).asInstanceOf[software.kes.scaletta.api.CallTarget]
+
+        def go(remaining: List[Int], currentAcc: Int): NativeStep = {
+          remaining match {
+            case Nil => NativeStep.Done(currentAcc)
+            case head :: tail =>
+              target.setArgument(0, currentAcc)
+              target.setArgument(1, head)
+              NativeStep.Call(target, res => go(tail, res.asInstanceOf[Int]))
+          }
+        }
+
+        go(list, initial)
+      }))
+      val table = tableBuilder.result()
+
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
+      val addAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromBasicTypes(Seq(BasicTypes.Int, BasicTypes.Int))), BasicTypes.Int, 2))
+      addAssembler.pushIntFromVar(0)
+      addAssembler.pushIntFromVar(1)
+      addAssembler.callNative(intAddId)
+      addAssembler.emitReturn()
+
+      val mainAssembler = builder.mainAssembler()
+      mainAssembler.pushImmediateObject(List(1, 3, 7, 11))
+      mainAssembler.pushImmediateInt(0)
+      mainAssembler.makeClosure(addAssembler.index, CapturePlan.empty)
+      mainAssembler.callNative(foldHO)
+      mainAssembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, table)
+      val result = interpreter.run(emptyContextReader)
+
+      result.intValue() shouldBe 22
     }
 
     it("should throw IllegalArgumentException for type mismatch") {

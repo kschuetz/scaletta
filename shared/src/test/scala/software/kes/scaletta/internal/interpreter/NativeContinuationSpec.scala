@@ -23,7 +23,7 @@ class NativeContinuationSpec extends AnyFunSpec with Matchers {
         NativeStep.done(43)
       }
 
-      interpreter.pushNativeCont(k, BasicTypes.Int)
+      interpreter.pushNativeCont(k, BasicTypes.Int, -100, -200)
       interpreter.hasPendingNativeCont shouldBe true
 
       val (step, tag) = interpreter.resumeNativeCont(41)
@@ -39,8 +39,8 @@ class NativeContinuationSpec extends AnyFunSpec with Matchers {
       val k1: Any => NativeStep = res => NativeStep.done(res.asInstanceOf[Int] + 1)
       val k2: Any => NativeStep = res => NativeStep.done(res.asInstanceOf[Int] + 2)
 
-      interpreter.pushNativeCont(k1, BasicTypes.Int)
-      interpreter.pushNativeCont(k2, BasicTypes.Int)
+      interpreter.pushNativeCont(k1, BasicTypes.Int, -100, -200)
+      interpreter.pushNativeCont(k2, BasicTypes.Int, -300, -400)
 
       val (step1, tag1) = interpreter.resumeNativeCont(41)
       step1 shouldBe NativeStep.done(43)
@@ -55,7 +55,7 @@ class NativeContinuationSpec extends AnyFunSpec with Matchers {
       val interpreter = Interpreter.create(program, nativeFunctions)
       val k: Any => NativeStep = res => NativeStep.done(res)
 
-      interpreter.pushNativeCont(k, BasicTypes.Int)
+      interpreter.pushNativeCont(k, BasicTypes.Int, -100, -200)
       interpreter.hasPendingNativeCont shouldBe true
 
       interpreter.initialize(emptyContextReader)

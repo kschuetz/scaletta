@@ -286,7 +286,7 @@ final class Interpreter private(private val program: Program,
             val step = body(argumentReader)
             val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
             operandStack.contract(nativeFunction.params)
-            runHigherOrderOneCall(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
+            runHigherOrder(step, nativeFunction.returnType.toByte, userFunctionIndex, instructionPointer, nativeFunctionId.toString)
           case FunctionImpl.ObjectResultWithContext(body) =>
             val result = body(runtimeContexts, argumentReader)
             operandStack.contract(nativeFunction.params)
@@ -327,7 +327,7 @@ final class Interpreter private(private val program: Program,
             val step = body(runtimeContexts, argumentReader)
             val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
             operandStack.contract(nativeFunction.params)
-            runHigherOrderOneCall(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
+            runHigherOrder(step, nativeFunction.returnType.toByte, userFunctionIndex, instructionPointer, nativeFunctionId.toString)
         }
 
       case Opcodes.CallLocal =>
@@ -369,22 +369,26 @@ final class Interpreter private(private val program: Program,
 
           while (nextFuncIdx < 0) {
             if (nextFuncIdx == -1) {
+              // Return from lazy evaluation: update the LazyCell with the result
               operandStack.swap()
               val cell = operandStack.pop().asInstanceOf[LazyCell]
               cell.update(operandStack)
+              nextIP = callStack.pop()
+              nextFuncIdx = callStack.pop()
             } else if (nextFuncIdx == -2) {
+              // Return from callback into higher-order native: resume the native continuation
               val result = operandStack.pop()
               val (step, tag) = resumeNativeCont(result)
-              step match {
-                case NativeStep.Done(_) =>
-                  runHigherOrderOneCall(step, tag, "resumed native continuation")
-                case _ =>
-                  throw new UnsupportedOperationException("multi-step higher-order not yet supported")
+              val originalIP = callStack.pop()
+              val originalFuncIdx = callStack.pop()
+              if (runHigherOrder(step, tag, originalFuncIdx, originalIP, "resumed native continuation")) {
+                return
               }
+              nextIP = originalIP
+              nextFuncIdx = originalFuncIdx
+            } else {
+              throw new RuntimeException(s"Unknown negative opcode in call stack: $nextFuncIdx")
             }
-
-            nextIP = callStack.pop()
-            nextFuncIdx = callStack.pop()
           }
 
           instructionPointer = nextIP
@@ -512,10 +516,13 @@ final class Interpreter private(private val program: Program,
     }
   }
 
-  private[interpreter] def pushNativeCont(k: Any => NativeStep, resultTypeTag: Byte): Unit = {
+  private[interpreter] def pushNativeCont(k: Any => NativeStep,
+                                          resultTypeTag: Byte,
+                                          returnFuncIdx: Int,
+                                          returnIP: Int): Unit = {
     nativeContStack.push(NativeContFrame.HigherOrderCont(k, resultTypeTag))
-    callStack.push(userFunctionIndex)
-    callStack.push(instructionPointer)
+    callStack.push(returnFuncIdx)
+    callStack.push(returnIP)
     callStack.push(-2)
     callStack.push(0)
   }
@@ -562,24 +569,37 @@ final class Interpreter private(private val program: Program,
     transferCaptures(closure.capturedFrame, currentFunction.varSpaceSignature, currentFunction.parameterCount)
   }
 
-  private[interpreter] def runHigherOrderOneCall(step: NativeStep, resultTypeTag: Byte, contextInfo: String): Unit = {
-    step match {
-      case NativeStep.Done(value) =>
-        try {
-          NativeResultPusher.pushReturn(resultTypeTag, value, operandStack)
-        } catch {
-          case e: IllegalArgumentException =>
-            throw new IllegalArgumentException(s"Error in $contextInfo: ${e.getMessage}", e)
-        }
-      case NativeStep.Call(target, k) =>
-        target match {
-          case rct: RuntimeCallTarget =>
-            pushNativeCont(k, resultTypeTag)
-            dispatchCallTarget(rct)
-          case _ =>
-            throw new IllegalArgumentException(s"Unsupported CallTarget type in $contextInfo: ${target.getClass.getName}")
-        }
+  private[interpreter] def runHigherOrder(initialStep: NativeStep,
+                                          resultTypeTag: Byte,
+                                          returnFuncIdx: Int,
+                                          returnIP: Int,
+                                          contextInfo: String): Boolean = {
+    var step = initialStep
+    var loop = true
+    var dispatched = false
+    while (loop) {
+      step match {
+        case NativeStep.Done(value) =>
+          try {
+            NativeResultPusher.pushReturn(resultTypeTag, value, operandStack)
+          } catch {
+            case e: IllegalArgumentException =>
+              throw new IllegalArgumentException(s"Error in $contextInfo: ${e.getMessage}", e)
+          }
+          loop = false
+        case NativeStep.Call(target, k) =>
+          target match {
+            case rct: RuntimeCallTarget =>
+              pushNativeCont(k, resultTypeTag, returnFuncIdx, returnIP)
+              dispatchCallTarget(rct)
+              dispatched = true
+              loop = false
+            case _ =>
+              throw new IllegalArgumentException(s"Unsupported CallTarget type in $contextInfo: ${target.getClass.getName}")
+          }
+      }
     }
+    dispatched
   }
 
   /**
