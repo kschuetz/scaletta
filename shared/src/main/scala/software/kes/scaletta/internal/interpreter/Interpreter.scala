@@ -280,7 +280,10 @@ final class Interpreter private(private val program: Program,
             operandStack.contract(nativeFunction.params)
             operandStack.pushFloat(result)
           case FunctionImpl.HigherOrder(body) =>
-            throw new UnsupportedOperationException("Higher order functions are not supported yet")
+            val step = body(argumentReader)
+            val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
+            operandStack.contract(nativeFunction.params)
+            runHigherOrderOnce(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
           case FunctionImpl.ObjectResultWithContext(body) =>
             val result = body(runtimeContexts, argumentReader)
             operandStack.contract(nativeFunction.params)
@@ -318,7 +321,10 @@ final class Interpreter private(private val program: Program,
             operandStack.contract(nativeFunction.params)
             operandStack.pushFloat(result)
           case FunctionImpl.HigherOrderWithContext(body) =>
-            throw new UnsupportedOperationException("Higher order functions are not supported yet")
+            val step = body(runtimeContexts, argumentReader)
+            val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
+            operandStack.contract(nativeFunction.params)
+            runHigherOrderOnce(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
         }
 
       case Opcodes.CallLocal =>
@@ -366,7 +372,7 @@ final class Interpreter private(private val program: Program,
             } else if (nextFuncIdx == -2) {
               val result = operandStack.pop()
               val (step, tag) = resumeNativeCont(result)
-              handleNativeStep(step, tag)
+              runHigherOrderOnce(step, tag, "resumed native continuation")
             }
 
             nextIP = callStack.pop()
@@ -522,12 +528,17 @@ final class Interpreter private(private val program: Program,
     }
   }
 
-  private def handleNativeStep(step: NativeStep, resultTypeTag: Byte): Unit = {
+  private[interpreter] def runHigherOrderOnce(step: NativeStep, resultTypeTag: Byte, contextInfo: String): Unit = {
     step match {
       case NativeStep.Done(value) =>
-        NativeResultPusher.pushReturn(resultTypeTag, value, operandStack)
+        try {
+          NativeResultPusher.pushReturn(resultTypeTag, value, operandStack)
+        } catch {
+          case e: IllegalArgumentException =>
+            throw new IllegalArgumentException(s"Error in $contextInfo: ${e.getMessage}", e)
+        }
       case _ =>
-        throw new UnsupportedOperationException(s"NativeStep $step is not supported yet")
+        throw new UnsupportedOperationException(s"NativeStep $step is not supported yet in $contextInfo")
     }
   }
 
