@@ -1,10 +1,10 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.api.{EvalResult, FunctionImpl, RuntimeContextReader}
+import software.kes.scaletta.api.{EvalResult, FunctionImpl, NativeStep, RuntimeContextReader}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.runtime.{ParamsSignature, VarAddress, VarSpaceSignature}
-import software.kes.scaletta.util.stack.IntStack
+import software.kes.scaletta.util.stack.{IntStack, ObjectStack}
 
 object Interpreter {
   def create(program: Program,
@@ -14,8 +14,9 @@ object Interpreter {
     val variableStack = VariableStack.create()
     val varSpace = VarSpaceFromVariableStack.create(variableStack, program.mainFunction.varSpaceSignature)
     val pool = new CapturedFramePool(maxRetained = 64)
+    val nativeContStack = ObjectStack.create()
     new Interpreter(program, functionTable, callStack, operandStack, variableStack,
-      varSpace, 0, 0, pool)
+      varSpace, 0, 0, pool, nativeContStack)
   }
 }
 
@@ -27,7 +28,8 @@ final class Interpreter private(private val program: Program,
                                 private val varSpace: VarSpaceFromVariableStack,
                                 private var userFunctionIndex: Int,
                                 private var instructionPointer: Int,
-                                private val capturedFramePool: CapturedFramePool) {
+                                private val capturedFramePool: CapturedFramePool,
+                                private val nativeContStack: ObjectStack) {
   private var runtimeContexts: RuntimeContextReader = _
   private var evalResultContainer: EvalResultContainer = _
   private var currentFunction: UserFunction = _
@@ -356,10 +358,16 @@ final class Interpreter private(private val program: Program,
           var nextIP = callStack.pop()
           var nextFuncIdx = callStack.pop()
 
-          if (nextFuncIdx == -1) {
-            operandStack.swap()
-            val cell = operandStack.pop().asInstanceOf[LazyCell]
-            cell.update(operandStack)
+          while (nextFuncIdx < 0) {
+            if (nextFuncIdx == -1) {
+              operandStack.swap()
+              val cell = operandStack.pop().asInstanceOf[LazyCell]
+              cell.update(operandStack)
+            } else if (nextFuncIdx == -2) {
+              val result = operandStack.pop()
+              val (step, tag) = resumeNativeCont(result)
+              handleNativeStep(step, tag)
+            }
 
             nextIP = callStack.pop()
             nextFuncIdx = callStack.pop()
@@ -487,6 +495,39 @@ final class Interpreter private(private val program: Program,
 
       case _ =>
         throw new RuntimeException(s"Unknown opcode: $opcode")
+    }
+  }
+
+  private[interpreter] def pushNativeCont(k: Any => NativeStep, resultTypeTag: Byte): Unit = {
+    nativeContStack.push(NativeContFrame.HigherOrderCont(k, resultTypeTag))
+    callStack.push(userFunctionIndex)
+    callStack.push(instructionPointer)
+    callStack.push(-2)
+    callStack.push(0)
+  }
+
+  private[interpreter] def hasPendingNativeCont: Boolean = !nativeContStack.isEmpty
+
+  private[interpreter] def resumeNativeCont(result: Any): (NativeStep, Byte) = {
+    if (nativeContStack.isEmpty) {
+      throw new IllegalStateException("No pending native continuation")
+    }
+    val cont = nativeContStack.pop().asInstanceOf[NativeContFrame.HigherOrderCont]
+    (cont.k(result), cont.resultTypeTag)
+  }
+
+  private[interpreter] def clearTopNativeCont(): Unit = {
+    if (!nativeContStack.isEmpty) {
+      nativeContStack.pop()
+    }
+  }
+
+  private def handleNativeStep(step: NativeStep, resultTypeTag: Byte): Unit = {
+    step match {
+      case NativeStep.Done(value) =>
+        NativeResultPusher.pushReturn(resultTypeTag, value, operandStack)
+      case _ =>
+        throw new UnsupportedOperationException(s"NativeStep $step is not supported yet")
     }
   }
 
@@ -636,6 +677,7 @@ final class Interpreter private(private val program: Program,
     callStack.clear()
     operandStack.clear()
     variableStack.clear()
+    nativeContStack.clear()
     variableStack.expandFrame(targetFunction.frameSignature)
     varSpace.setSignature(targetFunction.varSpaceSignature)
     initializer(varSpace)
