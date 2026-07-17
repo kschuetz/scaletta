@@ -34,7 +34,10 @@ final class Interpreter private(private val program: Program,
   private var evalResultContainer: EvalResultContainer = _
   private var currentFunction: UserFunction = _
   private var done: Boolean = true
-  private val argumentReader = new OperandStackArgumentReader(operandStack, ParamsSignature.empty)
+  private val argumentReader = new OperandStackArgumentReader(operandStack, ParamsSignature.empty, closure => {
+    val function = program.functions(closure.functionIndex)
+    new RuntimeCallTarget(closure, function.parameterCount)
+  })
 
   /**
    * Initializes the interpreter and runs the program to completion.
@@ -283,7 +286,7 @@ final class Interpreter private(private val program: Program,
             val step = body(argumentReader)
             val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
             operandStack.contract(nativeFunction.params)
-            runHigherOrderOnce(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
+            runHigherOrderOneCall(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
           case FunctionImpl.ObjectResultWithContext(body) =>
             val result = body(runtimeContexts, argumentReader)
             operandStack.contract(nativeFunction.params)
@@ -324,7 +327,7 @@ final class Interpreter private(private val program: Program,
             val step = body(runtimeContexts, argumentReader)
             val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
             operandStack.contract(nativeFunction.params)
-            runHigherOrderOnce(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
+            runHigherOrderOneCall(step, nativeFunction.returnType.toByte, nativeFunctionId.toString)
         }
 
       case Opcodes.CallLocal =>
@@ -372,7 +375,12 @@ final class Interpreter private(private val program: Program,
             } else if (nextFuncIdx == -2) {
               val result = operandStack.pop()
               val (step, tag) = resumeNativeCont(result)
-              runHigherOrderOnce(step, tag, "resumed native continuation")
+              step match {
+                case NativeStep.Done(_) =>
+                  runHigherOrderOneCall(step, tag, "resumed native continuation")
+                case _ =>
+                  throw new UnsupportedOperationException("multi-step higher-order not yet supported")
+              }
             }
 
             nextIP = callStack.pop()
@@ -528,7 +536,33 @@ final class Interpreter private(private val program: Program,
     }
   }
 
-  private[interpreter] def runHigherOrderOnce(step: NativeStep, resultTypeTag: Byte, contextInfo: String): Unit = {
+  private def dispatchCallTarget(target: RuntimeCallTarget): Unit = {
+    val closure = target.closure
+    val functionIndex = closure.functionIndex
+    val targetFunction = program.functions(functionIndex)
+
+    if (target.parameterCount != targetFunction.parameterCount) {
+      throw new IllegalArgumentException(s"Parameter count mismatch for callback: expected ${targetFunction.parameterCount}, but got ${target.parameterCount}")
+    }
+
+    var i = 0
+    while (i < target.parameterCount) {
+      val value = target.argumentValues(i)
+      val typeTag = targetFunction.frameSignature.basicTypeOf(i)
+      NativeResultPusher.pushReturn(typeTag, value, operandStack)
+      i += 1
+    }
+
+    userFunctionIndex = functionIndex
+    instructionPointer = 0
+    currentFunction = targetFunction
+    variableStack.expandFrame(currentFunction.frameSignature)
+    varSpace.setSignature(currentFunction.varSpaceSignature)
+    transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
+    transferCaptures(closure.capturedFrame, currentFunction.varSpaceSignature, currentFunction.parameterCount)
+  }
+
+  private[interpreter] def runHigherOrderOneCall(step: NativeStep, resultTypeTag: Byte, contextInfo: String): Unit = {
     step match {
       case NativeStep.Done(value) =>
         try {
@@ -537,8 +571,14 @@ final class Interpreter private(private val program: Program,
           case e: IllegalArgumentException =>
             throw new IllegalArgumentException(s"Error in $contextInfo: ${e.getMessage}", e)
         }
-      case _ =>
-        throw new UnsupportedOperationException(s"NativeStep $step is not supported yet in $contextInfo")
+      case NativeStep.Call(target, k) =>
+        target match {
+          case rct: RuntimeCallTarget =>
+            pushNativeCont(k, resultTypeTag)
+            dispatchCallTarget(rct)
+          case _ =>
+            throw new IllegalArgumentException(s"Unsupported CallTarget type in $contextInfo: ${target.getClass.getName}")
+        }
     }
   }
 

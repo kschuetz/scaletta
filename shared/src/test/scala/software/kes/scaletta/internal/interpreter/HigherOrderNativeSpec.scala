@@ -68,24 +68,61 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       result.intValue() shouldBe 23
     }
 
-    it("should throw UnsupportedOperationException for NativeStep.Call") {
+    it("should handle single NativeStep.Call round-trip") {
       val tableBuilder = NativeFunctionTable.builder()
-      val callHO = tableBuilder.add(NativeFunction(ParamsSignature.empty, BasicTypes.Int, FunctionImpl.higherOrder { _ =>
-        NativeStep.Call(null, _ => NativeStep.Done(1))
+
+      // A native that takes a callback and calls it once
+      val applyOnce = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT), BasicTypes.Int, FunctionImpl.higherOrder { args =>
+        val target = args.readObject(0).asInstanceOf[software.kes.scaletta.api.CallTarget]
+        target.setArgument(0, 41)
+        NativeStep.Call(target, result => NativeStep.Done(result.asInstanceOf[Int] + 2))
       }))
       val table = tableBuilder.result()
 
       val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
-      val assembler = builder.mainAssembler()
-      assembler.callNative(callHO)
-      assembler.emitReturn()
+
+      // A local function that returns its argument
+      val identityAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromBasicTypes(Seq(BasicTypes.Int))), BasicTypes.Int, 1))
+      identityAssembler.pushIntFromVar(0)
+      identityAssembler.emitReturn()
+
+      val mainAssembler = builder.mainAssembler()
+      mainAssembler.makeClosure(identityAssembler.index, CapturePlan.empty)
+      mainAssembler.callNative(applyOnce)
+      mainAssembler.emitReturn()
+
+      val program = builder.build()
+      val interpreter = Interpreter.create(program, table)
+      val result = interpreter.run(emptyContextReader)
+
+      result.intValue() shouldBe 43
+    }
+
+    it("should reject multi-step NativeStep.Call sequences") {
+      val tableBuilder = NativeFunctionTable.builder()
+      val applyTwice = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT), BasicTypes.Int, FunctionImpl.higherOrder { args =>
+        val target = args.readObject(0).asInstanceOf[software.kes.scaletta.api.CallTarget]
+        target.setArgument(0, 1)
+        NativeStep.Call(target, _ => NativeStep.Call(target, _ => NativeStep.Done(3)))
+      }))
+      val table = tableBuilder.result()
+
+      val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0))
+      val identityAssembler = builder.addFunction(UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromBasicTypes(Seq(BasicTypes.Int))), BasicTypes.Int, 1))
+      identityAssembler.pushIntFromVar(0)
+      identityAssembler.emitReturn()
+
+      val mainAssembler = builder.mainAssembler()
+      mainAssembler.makeClosure(identityAssembler.index, CapturePlan.empty)
+      mainAssembler.callNative(applyTwice)
+      mainAssembler.emitReturn()
 
       val program = builder.build()
       val interpreter = Interpreter.create(program, table)
 
       intercept[UnsupportedOperationException] {
         interpreter.run(emptyContextReader)
-      }
+      }.getMessage should include("multi-step higher-order not yet supported")
     }
 
     it("should throw IllegalArgumentException for type mismatch") {

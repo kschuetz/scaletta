@@ -554,7 +554,7 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     }
 
   def argumentReader(signature: ParamsSignature): ArgumentReader =
-    new OperandStackArgumentReader(this, signature)
+    new OperandStackArgumentReader(this, signature, _ => throw new UnsupportedOperationException("CallTarget resolution not supported here"))
 
   def contract(signature: ParamsSignature): Unit = {
     val count = signature.paramCount

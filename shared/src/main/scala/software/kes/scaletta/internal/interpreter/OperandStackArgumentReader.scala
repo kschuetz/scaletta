@@ -11,7 +11,8 @@ import scala.collection.immutable.ArraySeq
  * Mutable. The same instance will be reused for every native call.
  */
 private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
-                                                      var signature: ParamsSignature) extends ArgumentReader {
+                                                      var signature: ParamsSignature,
+                                                      closureToCallTarget: RuntimeClosure => software.kes.scaletta.api.CallTarget) extends ArgumentReader {
   def argCount: Int = signature.paramCount
 
   def read(index: Int): Any =
@@ -24,7 +25,12 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
       case BasicTypes.Char => unsafeReadChar(index)
       case BasicTypes.Double => unsafeReadDouble(index)
       case BasicTypes.Float => unsafeReadFloat(index)
-      case _ => unsafeReadObject(index)
+      case _ =>
+        val obj = unsafeReadObject(index)
+        obj match {
+          case closure: RuntimeClosure => closureToCallTarget(closure)
+          case _ => obj
+        }
     }
 
   def toVector: Vector[Any] = {
@@ -154,11 +160,18 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
   def readObject(index: Int): AnyRef = {
     val basicType = signature.basicTypeOf(index)
     if (basicType == BasicTypes.Object) {
-      unsafeReadObject(index)
+      val obj = unsafeReadObject(index)
+      obj match {
+        case closure: RuntimeClosure => closureToCallTarget(closure)
+        case _ => obj
+      }
     } else {
       read(index).asInstanceOf[AnyRef]
     }
   }
+
+  override def unsafeReadFunction(index: Int): software.kes.scaletta.api.CallTarget =
+    read(index).asInstanceOf[software.kes.scaletta.api.CallTarget]
 
   def unsafeReadBooleanArray(index: Int): ArraySeq[Boolean] =
     unsafeReadObject(index).asInstanceOf[ArraySeq[Boolean]]
