@@ -23,7 +23,7 @@ object Interpreter {
 final class Interpreter private(private val program: Program,
                                 private val functionTable: NativeFunctionTable,
                                 private val callStack: IntStack,
-                                private val operandStack: OperandStack,
+                                private[interpreter] val operandStack: OperandStack,
                                 private val variableStack: VariableStack,
                                 private val varSpace: VarSpaceFromVariableStack,
                                 private var userFunctionIndex: Int,
