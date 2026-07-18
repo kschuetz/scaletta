@@ -22,14 +22,14 @@ object Interpreter {
 
 final class Interpreter private(private val program: Program,
                                 private val functionTable: NativeFunctionTable,
-                                private val callStack: IntStack,
+                                private[interpreter] val callStack: IntStack,
                                 private[interpreter] val operandStack: OperandStack,
-                                private val variableStack: VariableStack,
-                                private val varSpace: VarSpaceFromVariableStack,
+                                private[interpreter] val variableStack: VariableStack,
+                                private[interpreter] val varSpace: VarSpaceFromVariableStack,
                                 private var userFunctionIndex: Int,
                                 private var instructionPointer: Int,
                                 private val capturedFramePool: CapturedFramePool,
-                                private val nativeContStack: ObjectStack) {
+                                private[interpreter] val nativeContStack: ObjectStack) {
   private var runtimeContexts: RuntimeContextReader = _
   private var evalResultContainer: EvalResultContainer = _
   private var currentFunction: UserFunction = _
@@ -47,7 +47,13 @@ final class Interpreter private(private val program: Program,
           initialUserFunctionIndex: Int = 0): EvalResult = {
     try {
       initialize(runtimeContexts, initializer, initialUserFunctionIndex)
-      runUntilDone()
+      try {
+        runUntilDone()
+      } catch {
+        case e: Throwable =>
+          unwindAllNativeConts()
+          throw e
+      }
       getResult
     } finally {
       capturedFramePool.endRun()
@@ -540,6 +546,17 @@ final class Interpreter private(private val program: Program,
   private[interpreter] def clearTopNativeCont(): Unit = {
     if (!nativeContStack.isEmpty) {
       nativeContStack.pop()
+      // Also need to pop the 4 entries from the call stack that were pushed by pushNativeCont
+      callStack.pop() // 0
+      callStack.pop() // -2
+      callStack.pop() // returnIP
+      callStack.pop() // returnFuncIdx
+    }
+  }
+
+  private[interpreter] def unwindAllNativeConts(): Unit = {
+    while (!nativeContStack.isEmpty) {
+      clearTopNativeCont()
     }
   }
 
@@ -591,7 +608,13 @@ final class Interpreter private(private val program: Program,
           target match {
             case rct: RuntimeCallTarget =>
               pushNativeCont(k, resultTypeTag, returnFuncIdx, returnIP)
-              dispatchCallTarget(rct)
+              try {
+                dispatchCallTarget(rct)
+              } catch {
+                case e: Throwable =>
+                  clearTopNativeCont()
+                  throw e
+              }
               dispatched = true
               loop = false
             case _ =>
