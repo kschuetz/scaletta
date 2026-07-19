@@ -249,6 +249,9 @@ final class Assembler(val index: Int,
   def stringConcat(numArgs: Int): Unit =
     writer.writeAndAdvance(makeOpcode24(Opcodes.StringConcat, numArgs))
 
+  def makeTuple(numElements: Int): Unit =
+    writer.writeAndAdvance(makeOpcode24(Opcodes.MakeTuple, numElements))
+
   def emitReturn(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.Return, 0, 0))
 

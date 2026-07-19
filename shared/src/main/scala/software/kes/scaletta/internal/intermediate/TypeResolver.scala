@@ -72,6 +72,9 @@ object TypeResolver {
       case IntermediateExpression.Convert(_, targetType) =>
         targetType
 
+      case IntermediateExpression.Tuple(_) =>
+        BasicTypes.Object
+
       case IntermediateExpression.WithBindings(bindings, body) =>
         var currentLayer = Vector.empty[BindingInfo]
         var newVarCountInBlock = 0

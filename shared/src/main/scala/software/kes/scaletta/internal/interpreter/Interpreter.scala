@@ -4,6 +4,7 @@ import software.kes.scaletta.api.{EvalResult, FunctionImpl, NativeStep, RuntimeC
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.runtime.{ParamsSignature, VarAddress, VarSpaceSignature}
+import software.kes.scaletta.util.VectorTwoPlus
 import software.kes.scaletta.util.stack.{IntStack, ObjectStack}
 
 object Interpreter {
@@ -443,6 +444,16 @@ final class Interpreter private(private val program: Program,
           sb.result()
         } else ""
         operandStack.pushObject(result)
+
+      case Opcodes.MakeTuple =>
+        val numElements = rawOpcode & 0xFFFFFF
+        val items = new Array[Any](numElements)
+        var i = numElements - 1
+        while (i >= 0) {
+          items(i) = operandStack.pop()
+          i -= 1
+        }
+        operandStack.pushObject(VectorTwoPlus.from(items))
 
       case Opcodes.LazyInit =>
         val typ = (rawOpcode >> 16) & 0xFF

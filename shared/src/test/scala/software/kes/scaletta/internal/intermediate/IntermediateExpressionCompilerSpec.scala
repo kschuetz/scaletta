@@ -9,6 +9,7 @@ import software.kes.scaletta.internal.interpreter.Interpreter
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
+import software.kes.scaletta.util.VectorTwoPlus
 
 class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
@@ -407,6 +408,14 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 42
+    }
+
+    it("should handle Tuple") {
+      val expr = Tuple(VectorTwoPlus(int(11), string("hello"), boolean(true)))
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader).value[VectorTwoPlus[Any]]()
+      result shouldBe VectorTwoPlus(11, "hello", true)
     }
   }
 }

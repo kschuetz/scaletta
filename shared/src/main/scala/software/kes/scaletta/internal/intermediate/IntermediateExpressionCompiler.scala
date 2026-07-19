@@ -230,6 +230,13 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             assembler.convert(targetType)
           }
 
+        case IntermediateExpression.Tuple(elements) =>
+          elements.zipWithIndex.foreach { case (elem, index) =>
+            val useOnStack = if (index == 0) onStack else None
+            emit(elem, env, signature, assembler, useOnStack)
+          }
+          assembler.makeTuple(elements.length)
+
         case IntermediateExpression.WithBindings(bindings, body) =>
           var currentLayer = Vector.empty[BindingInfo]
           var newVarCountInBlock = 0
@@ -448,6 +455,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
         case IntermediateExpression.ClosureCall(target, args, _) =>
           if (args.nonEmpty) startsByReferenceTo(args.head, env, info)
           else startsByReferenceTo(target, env, info)
+        case IntermediateExpression.Tuple(elements) => startsByReferenceTo(elements.head, env, info)
         case _ => false
       }
     }

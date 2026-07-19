@@ -3,6 +3,7 @@ package software.kes.scaletta.internal.intermediate
 import software.kes.scaletta.api.NativeFunctionId
 import software.kes.scaletta.common.BasicType
 import software.kes.scaletta.internal.runtime.UserFunctionSignature
+import software.kes.scaletta.util.VectorTwoPlus
 
 sealed trait IntermediateExpression
 
@@ -48,6 +49,8 @@ object IntermediateExpression {
 
   case class Convert(value: IntermediateExpression,
                      targetType: BasicType) extends IntermediateExpression
+
+  case class Tuple(elements: VectorTwoPlus[IntermediateExpression]) extends IntermediateExpression
 
   sealed trait Value extends IntermediateExpression
 

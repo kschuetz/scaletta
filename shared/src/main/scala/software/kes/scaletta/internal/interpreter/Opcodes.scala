@@ -31,4 +31,5 @@ object Opcodes {
   final val MakeClosure = 27
   final val CallClosure = 28
   final val TailCallClosure = 29
+  final val MakeTuple = 30
 }
