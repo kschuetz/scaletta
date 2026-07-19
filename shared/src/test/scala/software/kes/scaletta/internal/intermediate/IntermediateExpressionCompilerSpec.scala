@@ -414,8 +414,8 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       val expr = Tuple(VectorTwoPlus(int(11), string("hello"), boolean(true)))
       val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
-      val result = interpreter.run(emptyContextReader).value[VectorTwoPlus[Any]]()
-      result shouldBe VectorTwoPlus(11, "hello", true)
+      val result = interpreter.run(emptyContextReader).value[Product]()
+      result shouldBe(11, "hello", true)
     }
   }
 }
