@@ -56,7 +56,6 @@ lazy val scalettaBenchmarks = crossProject(JVMPlatform, JSPlatform)
     publish := {},
     publishLocal := {},
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalaTestVersion
+      "org.scalatest" %%% "scalatest" % scalaTestVersion
     )
   )
-  .jvmConfigure(_.enablePlugins(JmhPlugin))

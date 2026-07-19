@@ -1,6 +1,5 @@
 package software.kes.scaletta.benchmarks
 
-import org.openjdk.jmh.annotations._
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
@@ -9,17 +8,13 @@ import software.kes.scaletta.internal.library.standard.testsupport.StandardLibra
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
-@Warmup(iterations = 5)
-@Measurement(iterations = 5)
-@Fork(1)
-@State(Scope.Thread)
-class InterpreterBenchmark extends ScalettaJVMBenchmark {
+class InterpreterBenchmark extends ScalettaBenchmark {
 
   private var program: Program = _
   private var nativeFunctions: software.kes.scaletta.internal.builtins.NativeFunctionTable = _
 
-  @Setup
-  def setup(): Unit = {
+  override def beforeAll(): Unit = {
+    super.beforeAll()
     val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
     val stdLib = StandardLibraryLookup.create(scaletta.universe)
     nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
@@ -44,11 +39,12 @@ class InterpreterBenchmark extends ScalettaJVMBenchmark {
     program = builder.build()
   }
 
-  @Benchmark
-  def benchmarkSimpleAddition(): Int = {
-    val interpreter = Interpreter.create(program, nativeFunctions)
-    val result = interpreter.run(emptyContextReader)
-    result.intValue()
+  test("simple addition") {
+    runBenchmark("simple addition") {
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      val result = interpreter.run(emptyContextReader)
+      result.intValue()
+    }
   }
 
 }
