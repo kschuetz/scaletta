@@ -331,4 +331,45 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, input))
     result.value[Any]() shouldBe List(2, 3, 4)
   }
+
+  test("list map to different type") {
+    // def test(xs: List[Int]): List[String] = xs.map(x => if (x > 10) "high" else "low")
+
+    val signature = UserFunctionSignature(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+        CoreTypes.AnyRefT // xs (param 0)
+      ))),
+      BasicTypes.Object,
+      1
+    )
+
+    // lambda(x: Int) = if (x > 10) "high" else "low"
+    val mapLambda = Lambda(
+      signature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+          CoreTypes.IntT // x
+        ))),
+        BasicTypes.Object,
+        1
+      ),
+      captures = Vector.empty,
+      body = Conditional(
+        NativeCall(stdLib.comparison.int.gt.int, Vector(Reference(0, 0), int(10))),
+        string("high"),
+        string("low")
+      )
+    )
+
+    val body = NativeCall(
+      stdLib.collections.list.map,
+      Vector(Reference(0, 0), mapLambda)
+    )
+
+    val program = compiler.compile(signature, body)
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val input = List(5, 11, 15, 2)
+    val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, input))
+    result.value[Any]() shouldBe List("low", "high", "high", "low")
+  }
 }
