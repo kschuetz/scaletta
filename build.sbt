@@ -10,9 +10,13 @@ lazy val scalaTestPlusScalaCheckVersion = "3.2.20.0"
 
 lazy val root = project
   .in(file("."))
-  .aggregate(scaletta.jvm, scaletta.js)
+  .aggregate(
+    scaletta.jvm, scaletta.js,
+    scalettaBenchmarks.jvm, scalettaBenchmarks.js,
+  )
   .settings(
     name := "scaletta",
+    scalaVersion := scala213,
     publish := {},
     publishLocal := {},
     crossScalaVersions := Nil,
@@ -41,3 +45,16 @@ lazy val scaletta = crossProject(JVMPlatform, JSPlatform)
       "org.scalatestplus" %%% "scalacheck-1-19" % scalaTestPlusScalaCheckVersion % Test,
     )
   )
+
+lazy val scalettaBenchmarks = crossProject(JVMPlatform, JSPlatform)
+  .in(file("benchmarks"))
+  .dependsOn(scaletta)
+  .settings(
+    name := "scaletta-benchmarks",
+    version := "0.1-SNAPSHOT",
+    scalaVersion := scala213,
+    crossScalaVersions := supportedScalaVersions,
+    publish := {},
+    publishLocal := {},
+  )
+  .jvmConfigure(_.enablePlugins(JmhPlugin))
