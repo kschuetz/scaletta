@@ -23,6 +23,7 @@ class TypeResolverSpec extends AnyFunSpec with Matchers {
       TypeResolver.resolveType(IntermediateExpression.Value.int(41), emptyEnv, emptySignature, nativeTable) shouldBe BasicTypes.Int
       TypeResolver.resolveType(IntermediateExpression.Value.string("hello"), emptyEnv, emptySignature, nativeTable) shouldBe BasicTypes.Object
       TypeResolver.resolveType(IntermediateExpression.Value.boolean(true), emptyEnv, emptySignature, nativeTable) shouldBe BasicTypes.Boolean
+      TypeResolver.resolveType(IntermediateExpression.Value.unit(), emptyEnv, emptySignature, nativeTable) shouldBe BasicTypes.Object
     }
 
     it("should resolve references to variables") {

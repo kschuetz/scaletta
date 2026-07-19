@@ -65,6 +65,7 @@ object IntermediateExpression {
       case x: Boolean => boolean(x)
       case x: Char => char(x)
       case x: String => string(x)
+      case () => unit()
       case x: AnyRef => object_(x)
     }
 
@@ -99,6 +100,8 @@ object IntermediateExpression {
         case other => ObjectValue(other)
       }
 
+    def unit(): Value = UnitValue
+
     case class IntValue(value: Int) extends Value
 
     case class LongValue(value: Long) extends Value
@@ -124,6 +127,8 @@ object IntermediateExpression {
     }
 
     case class CharValue(value: Char) extends Value
+
+    case object UnitValue extends Value
 
     sealed trait AnyRefValue extends Value {
       def value: AnyRef

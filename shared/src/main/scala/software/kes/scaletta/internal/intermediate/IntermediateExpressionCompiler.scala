@@ -63,6 +63,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             case Value.ByteValue(value) => assembler.pushImmediateByte(value)
             case value: Value.BooleanValue => assembler.pushImmediateBoolean(value.value)
             case Value.CharValue(value) => assembler.pushImmediateChar(value)
+            case Value.UnitValue => assembler.pushImmediateObject(scala.runtime.BoxedUnit.UNIT)
             case value: Value.AnyRefValue => assembler.pushImmediateObject(value.value)
           }
 

@@ -21,6 +21,7 @@ object TypeResolver {
           case _: IntermediateExpression.Value.BooleanValue => BasicTypes.Boolean
           case _: IntermediateExpression.Value.CharValue => BasicTypes.Char
           case _: IntermediateExpression.Value.AnyRefValue => BasicTypes.Object
+          case IntermediateExpression.Value.UnitValue => BasicTypes.Object
         }
 
       case IntermediateExpression.Reference(scope, slot) =>

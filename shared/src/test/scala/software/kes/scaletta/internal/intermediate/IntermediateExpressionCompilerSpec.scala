@@ -28,6 +28,13 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
+    it("should compile UnitValue") {
+      val expr = unit()
+      val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0), expr)
+      val interpreter = Interpreter.create(program, nativeFunctions)
+      interpreter.run(emptyContextReader).value[Unit]() shouldBe()
+    }
+
     it("should compile native calls") {
       val expr = NativeCall(stdLib.arithmetic.int.add.int, Vector(int(10), int(31)))
       val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
