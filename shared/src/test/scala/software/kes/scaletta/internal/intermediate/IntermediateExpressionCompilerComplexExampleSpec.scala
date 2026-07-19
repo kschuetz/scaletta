@@ -294,4 +294,41 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 1))
     result.intValue() shouldBe 53
   }
+
+  test("list map") {
+    // def test(xs: List[Int]): List[Int] = xs.map(x => x + 1)
+
+    val signature = UserFunctionSignature(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+        CoreTypes.AnyRefT // xs (param 0)
+      ))),
+      BasicTypes.Object,
+      1
+    )
+
+    // lambda(x: Int) = x + 1
+    val mapLambda = Lambda(
+      signature = UserFunctionSignature(
+        VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+          CoreTypes.IntT // x
+        ))),
+        BasicTypes.Int,
+        1
+      ),
+      captures = Vector.empty,
+      body = NativeCall(stdLib.arithmetic.int.add.int, Vector(Reference(0, 0), int(1)))
+    )
+
+    val body = NativeCall(
+      stdLib.collections.list.map,
+      Vector(Reference(0, 0), mapLambda)
+    )
+
+    val program = compiler.compile(signature, body)
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val input = List(1, 2, 3)
+    val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, input))
+    result.value[Any]() shouldBe List(2, 3, 4)
+  }
 }
