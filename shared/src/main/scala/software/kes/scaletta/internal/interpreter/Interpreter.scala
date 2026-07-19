@@ -780,4 +780,3 @@ final class Interpreter private(private val program: Program,
   private[interpreter] def readAllVariables(): Array[Any] =
     varSpace.readAll()
 }
-

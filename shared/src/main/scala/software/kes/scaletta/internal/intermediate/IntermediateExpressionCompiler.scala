@@ -49,9 +49,11 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
     private def emit(expression: IntermediateExpression,
                      env: CompileEnv,
                      signature: UserFunctionSignature,
-                     assembler: Assembler): Unit = {
+                     assembler: Assembler,
+                     onStack: Option[BindingInfo] = None): Unit = {
       expression match {
         case v: IntermediateExpression.Value =>
+          onStack.foreach(_ => assembler.pop())
           v match {
             case Value.IntValue(value) => assembler.pushImmediateInt(value)
             case Value.LongValue(value) => assembler.pushImmediateLong(value)
@@ -65,20 +67,28 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           }
 
         case IntermediateExpression.Reference(scope, slot) =>
-          env.resolve(scope, slot) match {
-            case BindingInfo.Val(absoluteIndex) =>
-              val typ = signature.varSpace.basicTypeOf(absoluteIndex)
-              assembler.pushFromVar(typ, absoluteIndex)
-            case BindingInfo.LazyVal(absoluteIndex, functionIndex, _) =>
-              assembler.lazyEval(absoluteIndex, functionIndex)
-            case BindingInfo.Def(_, _) =>
-              throw new RuntimeException("Cannot reference a local function as a value")
+          val info = env.resolve(scope, slot)
+          if (onStack.contains(info)) {
+            // Already on stack
+          } else {
+            onStack.foreach(_ => assembler.pop())
+            info match {
+              case BindingInfo.Val(absoluteIndex) =>
+                val typ = signature.varSpace.basicTypeOf(absoluteIndex)
+                assembler.pushFromVar(typ, absoluteIndex)
+              case BindingInfo.LazyVal(absoluteIndex, functionIndex, _) =>
+                assembler.lazyEval(absoluteIndex, functionIndex)
+              case BindingInfo.Def(_, _) =>
+                throw new RuntimeException("Cannot reference a local function as a value")
+            }
           }
 
         case IntermediateExpression.NativeCall(target, arguments) =>
           val nativeFunction = nativeFunctionTable.get(target)
+          if (arguments.isEmpty) onStack.foreach(_ => assembler.pop())
           arguments.zipWithIndex.foreach { case (arg, index) =>
-            emit(arg, env, signature, assembler)
+            val useOnStack = if (index == 0) onStack else None
+            emit(arg, env, signature, assembler, useOnStack)
             val targetType = nativeFunction.params.basicTypeOf(index)
             if (TypeResolver.resolveType(arg, env, signature, nativeFunctionTable) != targetType) {
               assembler.convert(targetType)
@@ -87,7 +97,11 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           assembler.callNative(target)
 
         case IntermediateExpression.LocalCall(scope, slot, arguments) =>
-          arguments.foreach(arg => emit(arg, env, signature, assembler))
+          if (arguments.isEmpty) onStack.foreach(_ => assembler.pop())
+          arguments.zipWithIndex.foreach { case (arg, index) =>
+            val useOnStack = if (index == 0) onStack else None
+            emit(arg, env, signature, assembler, useOnStack)
+          }
           env.resolve(scope, slot) match {
             case BindingInfo.Def(functionIndex, _) =>
               assembler.callLocal(functionIndex)
@@ -96,11 +110,23 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           }
 
         case IntermediateExpression.ClosureCall(target, arguments, _) =>
-          arguments.foreach(arg => emit(arg, env, signature, assembler))
-          emit(target, env, signature, assembler)
+          if (arguments.nonEmpty) {
+            arguments.zipWithIndex.foreach { case (arg, index) =>
+              val useOnStack = if (index == 0) onStack else None
+              emit(arg, env, signature, assembler, useOnStack)
+            }
+            if (target == arguments.last) {
+              assembler.dup()
+            } else {
+              emit(target, env, signature, assembler)
+            }
+          } else {
+            emit(target, env, signature, assembler, onStack)
+          }
           assembler.callClosure()
 
         case IntermediateExpression.Lambda(lambdaSignature, captures, lambdaBody) =>
+          onStack.foreach(_ => assembler.pop())
           val captureBindings = captures.map(ref => env.resolve(ref.scope, ref.slot))
           val prepared = prepareCaptures(captureBindings, signature, lambdaSignature.parameterCount)
           val added = programBuilder.addFunction(lambdaSignature)
@@ -110,6 +136,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           workQueue.enqueue((lambdaBody, lambdaSignature, lambdaInitialEnv, added))
 
         case IntermediateExpression.FunctionValue(scope, slot, _, captures) =>
+          onStack.foreach(_ => assembler.pop())
           val binding = env.resolve(scope, slot)
           val functionIndex = binding match {
             case BindingInfo.Def(idx, _) => idx
@@ -121,6 +148,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           assembler.makeClosure(functionIndex, prepared.capturePlan)
 
         case IntermediateExpression.PartialNativeFunctionApplication(functionId, partialArgs) =>
+          onStack.foreach(_ => assembler.pop())
           val nativeFunction = nativeFunctionTable.get(functionId)
           val nativeParams = nativeFunction.params
 
@@ -169,7 +197,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           workQueue.enqueue((bodyNativeCall, syntheticSignature, lambdaInitialEnv, added))
 
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
-          emit(condition, env, signature, assembler)
+          emit(condition, env, signature, assembler, onStack)
           assembler.ifElse(
             emit(thenBranch, env, signature, assembler),
             emit(elseBranch, env, signature, assembler)
@@ -177,24 +205,27 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
 
         case IntermediateExpression.And(lhs, rhs) =>
           val endLabel = assembler.label()
-          emit(lhs, env, signature, assembler)
+          emit(lhs, env, signature, assembler, onStack)
           assembler.logicalAnd(endLabel)
           emit(rhs, env, signature, assembler)
           endLabel.bind()
 
         case IntermediateExpression.Or(lhs, rhs) =>
           val endLabel = assembler.label()
-          emit(lhs, env, signature, assembler)
+          emit(lhs, env, signature, assembler, onStack)
           assembler.logicalOr(endLabel)
           emit(rhs, env, signature, assembler)
           endLabel.bind()
 
         case IntermediateExpression.StringConcat(segments) =>
-          segments.foreach(seg => emit(seg, env, signature, assembler))
+          segments.zipWithIndex.foreach { case (seg, index) =>
+            val useOnStack = if (index == 0) onStack else None
+            emit(seg, env, signature, assembler, useOnStack)
+          }
           assembler.stringConcat(segments.length)
 
         case IntermediateExpression.Convert(value, targetType) =>
-          emit(value, env, signature, assembler)
+          emit(value, env, signature, assembler, onStack)
           if (TypeResolver.resolveType(value, env, signature, nativeFunctionTable) != targetType) {
             assembler.convert(targetType)
           }
@@ -203,20 +234,39 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           var currentLayer = Vector.empty[BindingInfo]
           var newVarCountInBlock = 0
           val discoveredInBlock = mutable.ArrayBuffer.empty[(IntermediateExpression, UserFunctionSignature, Assembler)]
+          var currentOnStack = onStack
 
-          bindings.foreach { b =>
+          bindings.zipWithIndex.foreach { case (b, idx) =>
             val envForBinding = env.pushLayer(currentLayer, newVarCountInBlock)
 
             b match {
               case Binding.Val(value) =>
                 val absoluteIndex = env.nextVarIndex + newVarCountInBlock
-                emit(value, envForBinding, signature, assembler)
+                emit(value, envForBinding, signature, assembler, currentOnStack)
                 val typ = signature.varSpace.basicTypeOf(absoluteIndex)
+
+                val bindingInfo = BindingInfo.Val(absoluteIndex)
+                val isLast = idx == bindings.length - 1
+                val envForNext = env.pushLayer(currentLayer :+ bindingInfo, newVarCountInBlock + 1)
+                val useDup = if (isLast) startsByReferenceTo(body, envForNext, bindingInfo)
+                else (if (idx + 1 < bindings.length) bindings(idx + 1) match {
+                  case Binding.Val(nextVal) => startsByReferenceTo(nextVal, envForNext, bindingInfo)
+                  case _ => false
+                } else false)
+
+                if (useDup) {
+                  assembler.dup()
+                  currentOnStack = Some(bindingInfo)
+                } else {
+                  currentOnStack = None
+                }
                 assembler.popIntoVar(typ, absoluteIndex)
-                currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
+                currentLayer = currentLayer :+ bindingInfo
                 newVarCountInBlock += 1
 
               case Binding.LazyVal(value) =>
+                currentOnStack.foreach(_ => assembler.pop())
+                currentOnStack = None
                 val absoluteIndex = env.nextVarIndex + newVarCountInBlock
 
                 val placeholder = BindingInfo.LazyVal(absoluteIndex, -1, BasicTypes.Object)
@@ -238,6 +288,8 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
                 newVarCountInBlock += 1
 
               case Binding.Def(fSignature, fBody) =>
+                currentOnStack.foreach(_ => assembler.pop())
+                currentOnStack = None
                 val added = programBuilder.addFunction(fSignature)
                 currentLayer = currentLayer :+ BindingInfo.Def(added.index, fSignature.returnType)
                 discoveredInBlock += ((fBody, fSignature, added))
@@ -254,29 +306,38 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             workQueue.enqueue((fb, fs, fEnv, fa))
           }
 
-          emit(body, finalEnvForBlock, signature, assembler)
+          emit(body, finalEnvForBlock, signature, assembler, currentOnStack)
       }
     }
 
     private def emitTail(expression: IntermediateExpression,
                          env: CompileEnv,
                          signature: UserFunctionSignature,
-                         assembler: Assembler): Unit = {
+                         assembler: Assembler,
+                         onStack: Option[BindingInfo] = None): Unit = {
       expression match {
         case IntermediateExpression.LocalCall(scope, slot, arguments) =>
           env.resolve(scope, slot) match {
             case BindingInfo.Def(functionIndex, _) if functionIndex == assembler.index =>
-              arguments.foreach(arg => emit(arg, env, signature, assembler))
+              if (arguments.isEmpty) onStack.foreach(_ => assembler.pop())
+              arguments.zipWithIndex.foreach { case (arg, index) =>
+                val useOnStack = if (index == 0) onStack else None
+                emit(arg, env, signature, assembler, useOnStack)
+              }
               assembler.tailCallLocal(functionIndex)
             case BindingInfo.Def(functionIndex, _) =>
-              arguments.foreach(arg => emit(arg, env, signature, assembler))
+              if (arguments.isEmpty) onStack.foreach(_ => assembler.pop())
+              arguments.zipWithIndex.foreach { case (arg, index) =>
+                val useOnStack = if (index == 0) onStack else None
+                emit(arg, env, signature, assembler, useOnStack)
+              }
               assembler.callLocal(functionIndex)
             case _ =>
               throw new RuntimeException("Cannot call a value as a function")
           }
 
         case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
-          emit(condition, env, signature, assembler)
+          emit(condition, env, signature, assembler, onStack)
           assembler.ifElse(
             emitTail(thenBranch, env, signature, assembler),
             emitTail(elseBranch, env, signature, assembler)
@@ -286,20 +347,39 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           var currentLayer = Vector.empty[BindingInfo]
           var newVarCountInBlock = 0
           val discoveredInBlock = mutable.ArrayBuffer.empty[(IntermediateExpression, UserFunctionSignature, Assembler)]
+          var currentOnStack = onStack
 
-          bindings.foreach { b =>
+          bindings.zipWithIndex.foreach { case (b, idx) =>
             val envForBinding = env.pushLayer(currentLayer, newVarCountInBlock)
 
             b match {
               case Binding.Val(value) =>
                 val absoluteIndex = env.nextVarIndex + newVarCountInBlock
-                emit(value, envForBinding, signature, assembler)
+                emit(value, envForBinding, signature, assembler, currentOnStack)
                 val typ = signature.varSpace.basicTypeOf(absoluteIndex)
+
+                val bindingInfo = BindingInfo.Val(absoluteIndex)
+                val isLast = idx == bindings.length - 1
+                val envForNext = env.pushLayer(currentLayer :+ bindingInfo, newVarCountInBlock + 1)
+                val useDup = if (isLast) startsByReferenceTo(body, envForNext, bindingInfo)
+                else (if (idx + 1 < bindings.length) bindings(idx + 1) match {
+                  case Binding.Val(nextVal) => startsByReferenceTo(nextVal, envForNext, bindingInfo)
+                  case _ => false
+                } else false)
+
+                if (useDup) {
+                  assembler.dup()
+                  currentOnStack = Some(bindingInfo)
+                } else {
+                  currentOnStack = None
+                }
                 assembler.popIntoVar(typ, absoluteIndex)
-                currentLayer = currentLayer :+ BindingInfo.Val(absoluteIndex)
+                currentLayer = currentLayer :+ bindingInfo
                 newVarCountInBlock += 1
 
               case Binding.LazyVal(value) =>
+                currentOnStack.foreach(_ => assembler.pop())
+                currentOnStack = None
                 val absoluteIndex = env.nextVarIndex + newVarCountInBlock
 
                 val placeholder = BindingInfo.LazyVal(absoluteIndex, -1, BasicTypes.Object)
@@ -321,6 +401,8 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
                 newVarCountInBlock += 1
 
               case Binding.Def(fSignature, fBody) =>
+                currentOnStack.foreach(_ => assembler.pop())
+                currentOnStack = None
                 val added = programBuilder.addFunction(fSignature)
                 currentLayer = currentLayer :+ BindingInfo.Def(added.index, fSignature.returnType)
                 discoveredInBlock += ((fBody, fSignature, added))
@@ -336,17 +418,37 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             workQueue.enqueue((fb, fs, fEnv, fa))
           }
 
-          emitTail(body, finalEnvForBlock, signature, assembler)
+          emitTail(body, finalEnvForBlock, signature, assembler, currentOnStack)
 
         case IntermediateExpression.Convert(value, targetType) =>
           if (TypeResolver.resolveType(value, env, signature, nativeFunctionTable) == targetType) {
-            emitTail(value, env, signature, assembler)
+            emitTail(value, env, signature, assembler, onStack)
           } else {
-            emit(expression, env, signature, assembler)
+            emit(expression, env, signature, assembler, onStack)
           }
 
         case other =>
-          emit(other, env, signature, assembler)
+          emit(other, env, signature, assembler, onStack)
+      }
+    }
+
+    private def startsByReferenceTo(expr: IntermediateExpression,
+                                    env: CompileEnv,
+                                    info: BindingInfo): Boolean = {
+      expr match {
+        case IntermediateExpression.Reference(s, l) =>
+          try {
+            env.resolve(s, l) == info
+          } catch {
+            case _: Throwable => false
+          }
+        case IntermediateExpression.Convert(v, _) => startsByReferenceTo(v, env, info)
+        case IntermediateExpression.NativeCall(_, args) => args.nonEmpty && startsByReferenceTo(args.head, env, info)
+        case IntermediateExpression.LocalCall(_, _, args) => args.nonEmpty && startsByReferenceTo(args.head, env, info)
+        case IntermediateExpression.ClosureCall(target, args, _) =>
+          if (args.nonEmpty) startsByReferenceTo(args.head, env, info)
+          else startsByReferenceTo(target, env, info)
+        case _ => false
       }
     }
 
