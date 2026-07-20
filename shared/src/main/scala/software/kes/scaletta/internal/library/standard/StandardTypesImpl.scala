@@ -3,11 +3,18 @@ package software.kes.scaletta.internal.library.standard
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.types._
+import software.kes.scaletta.util.NonEmptyVector
+
+object StandardTypesImpl {
+  private val singleCovariant: NonEmptyVector[TypeParameter[TypeId]] =
+    NonEmptyVector(TypeParameter.covariant)
+}
 
 private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   extends StandardTypes {
 
   import StandardTypes.names
+  import StandardTypesImpl._
   import software.kes.scaletta.api.Packages
 
   val AnyT: ProperType[TypeId] = {
@@ -68,31 +75,38 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.registerCoreRefType(base(names.StringT), CoreTypes.StringT)
 
   val OptionT: Type.Constructor[TypeId] =
-    registry.addTypeConstructor(base(names.OptionT), TypeParameter.covariant)
+    registry.addTypeConstructor(base(names.OptionT),
+      singleCovariant)
 
   val SomeT: Type.Constructor[TypeId] =
-    registry.addTypeConstructor(base(names.SomeT), TypeParameter.covariant)
+    registry.addTypeConstructor(base(names.SomeT),
+      singleCovariant)
 
   val NoneT: Type.Applied[TypeId] =
     TypeApplier.fromNode(OptionT).applyAll(NothingT).asInstanceOf[Type.Applied[TypeId]]
 
   val VectorT: Type.Constructor[TypeId] =
-    registry.addTypeConstructor(collection(names.VectorT), TypeParameter.covariant)
+    registry.addTypeConstructor(collection(names.VectorT),
+      singleCovariant)
 
   val SetT: Type.Constructor[TypeId] =
-    registry.addTypeConstructor(collection(names.SetT), TypeParameter.covariant)
+    registry.addTypeConstructor(collection(names.SetT),
+      singleCovariant)
 
   val ListT: Type.Constructor[TypeId] =
-    registry.addTypeConstructor(collection(names.ListT), TypeParameter.covariant)
+    registry.addTypeConstructor(collection(names.ListT),
+      singleCovariant)
 
   val ConsT: Type.Constructor[TypeId] =
-    registry.addTypeConstructor(collection(names.ConsT), TypeParameter.covariant)
+    registry.addTypeConstructor(collection(names.ConsT),
+      singleCovariant)
 
   val NilT: Type.Applied[TypeId] =
     TypeApplier.fromNode(ListT).applyAll(NothingT).asInstanceOf[Type.Applied[TypeId]]
 
   val MapT: Type.Constructor[TypeId] =
-    registry.addTypeConstructor(collection(names.MapT), TypeParameter.invariant, TypeParameter.covariant)
+    registry.addTypeConstructor(collection(names.MapT),
+      NonEmptyVector(TypeParameter.invariant, TypeParameter.covariant))
 
   registry.addRelationship(
     supertype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)),
@@ -108,4 +122,5 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
 
   private def collection(name: Name): QualifiedName.Full =
     Packages.scalettaCollection.qualify(name)
+
 }

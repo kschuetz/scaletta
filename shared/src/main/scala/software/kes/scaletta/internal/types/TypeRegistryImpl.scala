@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.types
 
 import software.kes.scaletta.api._
+import software.kes.scaletta.util.NonEmptyVector
 
 import scala.collection.mutable
 
@@ -24,12 +25,10 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
   }
 
   def addTypeConstructor(name: QualifiedName.Full,
-                         first: TypeParameter[TypeId],
-                         more: TypeParameter[TypeId]*): Type.Constructor[TypeId] = {
-    val params = software.kes.scaletta.util.NonEmptyVector(first, more: _*)
-    val (newIndex, id) = nameIndex.internConstructor(name, params)
+                         parameters: NonEmptyVector[TypeParameter[TypeId]]): Type.Constructor[TypeId] = {
+    val (newIndex, id) = nameIndex.internConstructor(name, parameters)
     nameIndex = newIndex
-    Type.Constructor(id, params)
+    Type.Constructor(id, parameters)
   }
 
   def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit = {

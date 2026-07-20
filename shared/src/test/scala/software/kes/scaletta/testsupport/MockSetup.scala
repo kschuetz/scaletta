@@ -75,11 +75,8 @@ object MockSetup {
         Type.Nominal(getNextTypeId())
 
       def addTypeConstructor(name: QualifiedName.Full,
-                             first: TypeParameter[TypeId],
-                             more: TypeParameter[TypeId]*): Type.Constructor[TypeId] = {
-        val params = NonEmptyVector(first, more: _*)
-        Type.Constructor(getNextTypeId(), params)
-      }
+                             parameters: NonEmptyVector[TypeParameter[TypeId]]): Type.Constructor[TypeId] =
+        Type.Constructor(getNextTypeId(), parameters)
 
       def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit = ()
 
