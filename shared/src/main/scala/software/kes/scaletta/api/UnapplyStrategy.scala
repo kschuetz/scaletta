@@ -15,6 +15,9 @@ object UnapplyStrategy {
   def unapplyOne(fn: Any => UnapplyResult): UnapplyStrategy =
     new UnapplyOne(fn)
 
+  def unapplyTwo(fn: Any => UnapplyResult): UnapplyStrategy =
+    new UnapplyTwo(fn)
+
   def unapplyDynamic(fn: (Int, Any) => UnapplyResult): UnapplyStrategy =
     new UnapplyN(fn)
 
@@ -38,6 +41,13 @@ object UnapplyStrategy {
                    argCount: Int,
                    value: Any): UnapplyResult =
       if (argCount == 1) fn(value) else UnapplyResult.failure
+  }
+
+  private class UnapplyTwo(fn: Any => UnapplyResult) extends UnapplyStrategy {
+    def tryUnapply(runtimeContextReader: RuntimeContextReader,
+                   argCount: Int,
+                   value: Any): UnapplyResult =
+      if (argCount == 2) fn(value) else UnapplyResult.failure
   }
 
   private class UnapplyN(fn: (Int, Any) => UnapplyResult) extends UnapplyStrategy {

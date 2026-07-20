@@ -14,6 +14,8 @@ object UnapplyResult {
 
   def success1(arg: Any): UnapplyResult = Success(Iterable.single(arg))
 
+  def success2(arg1: Any, arg2: Any): UnapplyResult = Success(Iterable(arg1, arg2))
+
   case class Success(extractedValues: Iterable[Any]) extends UnapplyResult
 
   case object Failure extends UnapplyResult
