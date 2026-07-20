@@ -1,10 +1,11 @@
 package software.kes.scaletta.internal.library.standard.typeinfo
 
 import software.kes.scaletta.api.RuntimeTypeInfo
+import software.kes.scaletta.util.reflection.Primitives
 
 class CoreTypeInfo {
   final val AnyT = RuntimeTypeInfo(_ => true)
-  // TODO: AnyValT
+  final val AnyValT = RuntimeTypeInfo(Primitives.isAnyVal)
   final val AnyRefT = RuntimeTypeInfo(_.isInstanceOf[AnyRef])
   final val BooleanT = RuntimeTypeInfo(_.isInstanceOf[Boolean])
   final val ByteT = RuntimeTypeInfo(_.isInstanceOf[Byte])
