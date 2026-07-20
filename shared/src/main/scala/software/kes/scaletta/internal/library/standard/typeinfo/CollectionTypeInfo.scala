@@ -1,29 +1,12 @@
 package software.kes.scaletta.internal.library.standard.typeinfo
 
-import software.kes.scaletta.api.{RuntimeContextReader, UnapplyResult, UnapplyStrategy}
+import software.kes.scaletta.api.RuntimeTypeInfo
+import software.kes.scaletta.api.UnapplyStrategy.unapplySeq
 
 object CollectionTypeInfo {
-  object ListTypeInfo extends UnapplyStrategy {
-    def tryUnapply(runtimeContextReader: RuntimeContextReader,
-                   argCount: Int,
-                   value: Any): UnapplyResult =
-      value match {
-        case x: List[_] =>
-          if (x.lengthCompare(argCount) == 0) UnapplyResult.success(x)
-          else UnapplyResult.failure
-        case _ => UnapplyResult.failure
-      }
-  }
+  val ListT = RuntimeTypeInfo(_.isInstanceOf[List[_]],
+    unapplySeq(_.isInstanceOf[List[_]]))
 
-  object VectorTypeInfo extends UnapplyStrategy {
-    def tryUnapply(runtimeContextReader: RuntimeContextReader,
-                   argCount: Int,
-                   value: Any): UnapplyResult =
-      value match {
-        case x: Vector[_] =>
-          if (x.lengthCompare(argCount) == 0) UnapplyResult.success(x)
-          else UnapplyResult.failure
-        case _ => UnapplyResult.failure
-      }
-  }
+  val VectorT = RuntimeTypeInfo(_.isInstanceOf[Vector[_]],
+    unapplySeq(_.isInstanceOf[Vector[_]]))
 }
