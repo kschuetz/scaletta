@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.types
 
-import software.kes.scaletta.api.{QualifiedName, Type, TypeId, TypeRegistry}
+import software.kes.scaletta.api._
 
 trait TypeRegistryBootstrap extends TypeRegistry {
   /**
@@ -8,8 +8,10 @@ trait TypeRegistryBootstrap extends TypeRegistry {
    * Used for core types that have pre-assigned type IDs.
    */
   def registerCoreValueType(name: QualifiedName.Full,
-                            typ: Type.Nominal[TypeId]): Type.Nominal[TypeId]
+                            typ: Type.Nominal[TypeId],
+                            info: RuntimeTypeInfo): Type.Nominal[TypeId]
 
   def registerCoreRefType(name: QualifiedName.Full,
-                          typ: Type.Nominal[TypeId]): Type.Nominal[TypeId]
+                          typ: Type.Nominal[TypeId],
+                          info: RuntimeTypeInfo): Type.Nominal[TypeId]
 }

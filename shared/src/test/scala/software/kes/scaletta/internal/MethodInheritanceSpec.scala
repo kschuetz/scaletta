@@ -13,12 +13,12 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should find a method defined on a supertype") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")))
-      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")))
+      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")), RuntimeTypeInfo.any)
+      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(baseType, derivedType)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
       val params = Vector(FormalParameter(Name("n"), intT))
 
       val mb = MethodUniverseBuilder.create()
@@ -35,12 +35,12 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should prefer a method defined on the subtype over one on the supertype") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")))
-      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")))
+      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")), RuntimeTypeInfo.any)
+      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(baseType, derivedType)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
       val params = Vector(FormalParameter(Name("n"), intT))
 
       val mb = MethodUniverseBuilder.create()
@@ -59,14 +59,14 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should find a method defined on a grandparent") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val grandparentType = typeRegistry.addRefType(ns.qualify(Name("Grandparent")))
-      val parentType = typeRegistry.addRefType(ns.qualify(Name("Parent")))
-      val childType = typeRegistry.addRefType(ns.qualify(Name("Child")))
+      val grandparentType = typeRegistry.addRefType(ns.qualify(Name("Grandparent")), RuntimeTypeInfo.any)
+      val parentType = typeRegistry.addRefType(ns.qualify(Name("Parent")), RuntimeTypeInfo.any)
+      val childType = typeRegistry.addRefType(ns.qualify(Name("Child")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(grandparentType, parentType)
       typeRegistry.addRelationship(parentType, childType)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
       val params = Vector(FormalParameter(Name("n"), intT))
 
       val mb = MethodUniverseBuilder.create()
@@ -84,14 +84,14 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should pick the closest method in a 3-level hierarchy") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val grandparentType = typeRegistry.addRefType(ns.qualify(Name("Grandparent")))
-      val parentType = typeRegistry.addRefType(ns.qualify(Name("Parent")))
-      val childType = typeRegistry.addRefType(ns.qualify(Name("Child")))
+      val grandparentType = typeRegistry.addRefType(ns.qualify(Name("Grandparent")), RuntimeTypeInfo.any)
+      val parentType = typeRegistry.addRefType(ns.qualify(Name("Parent")), RuntimeTypeInfo.any)
+      val childType = typeRegistry.addRefType(ns.qualify(Name("Child")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(grandparentType, parentType)
       typeRegistry.addRelationship(parentType, childType)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
       val params = Vector(FormalParameter(Name("n"), intT))
 
       val mb = MethodUniverseBuilder.create()
@@ -110,13 +110,13 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should resolve overloads across the hierarchy") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")))
-      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")))
+      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")), RuntimeTypeInfo.any)
+      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(baseType, derivedType)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
-      val stringT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("String")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
+      val stringT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("String")), RuntimeTypeInfo.any)
 
       val mb = MethodUniverseBuilder.create()
       val idBaseInt = mb.addMethod(MethodName(ReceiverType.Instance(baseType), Name("foo")), Vector(FormalParameter(Name("n"), intT)), intT, null)
@@ -137,14 +137,14 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should resolve methods from multiple supertypes") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val traitA = typeRegistry.addRefType(ns.qualify(Name("TraitA")))
-      val traitB = typeRegistry.addRefType(ns.qualify(Name("TraitB")))
-      val impl = typeRegistry.addRefType(ns.qualify(Name("Impl")))
+      val traitA = typeRegistry.addRefType(ns.qualify(Name("TraitA")), RuntimeTypeInfo.any)
+      val traitB = typeRegistry.addRefType(ns.qualify(Name("TraitB")), RuntimeTypeInfo.any)
+      val impl = typeRegistry.addRefType(ns.qualify(Name("Impl")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(traitA, impl)
       typeRegistry.addRelationship(traitB, impl)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
 
       val mb = MethodUniverseBuilder.create()
       val idA = mb.addMethod(MethodName(ReceiverType.Instance(traitA), Name("foo")), Vector.empty, intT, null)
@@ -165,14 +165,14 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should report ambiguity when multiple supertypes provide the same method") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val traitA = typeRegistry.addRefType(ns.qualify(Name("TraitA")))
-      val traitB = typeRegistry.addRefType(ns.qualify(Name("TraitB")))
-      val impl = typeRegistry.addRefType(ns.qualify(Name("Impl")))
+      val traitA = typeRegistry.addRefType(ns.qualify(Name("TraitA")), RuntimeTypeInfo.any)
+      val traitB = typeRegistry.addRefType(ns.qualify(Name("TraitB")), RuntimeTypeInfo.any)
+      val impl = typeRegistry.addRefType(ns.qualify(Name("Impl")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(traitA, impl)
       typeRegistry.addRelationship(traitB, impl)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
 
       val mb = MethodUniverseBuilder.create()
       mb.addMethod(MethodName(ReceiverType.Instance(traitA), Name("foo")), Vector.empty, intT, null)
@@ -188,12 +188,12 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
     it("should resolve methods with multiple parameter groups across the hierarchy") {
       val ns = PackagePath.absolute(PackageSegment("test"))
       val typeRegistry = new TypeRegistryImpl()
-      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")))
-      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")))
+      val baseType = typeRegistry.addRefType(ns.qualify(Name("Base")), RuntimeTypeInfo.any)
+      val derivedType = typeRegistry.addRefType(ns.qualify(Name("Derived")), RuntimeTypeInfo.any)
       typeRegistry.addRelationship(baseType, derivedType)
       val typeUniverse = typeRegistry.build()
 
-      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
+      val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
 
       val mb = MethodUniverseBuilder.create()
       val idBase = mb.addMultiParamGroupMethod(MethodName(ReceiverType.Instance(baseType), Name("foo")),

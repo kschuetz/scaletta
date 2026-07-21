@@ -65,9 +65,9 @@ class UniverseSpec extends AnyFunSpec with Matchers {
     val ns2: PackagePath.Absolute = PackagePath.absolute(PackageSegment("pkg2"))
 
     val typeRegistry: TypeRegistryImpl = new TypeRegistryImpl()
-    val intT: Type.Nominal[TypeId] = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")))
-    val stringT: Type.Nominal[TypeId] = typeRegistry.addRefType(Packages.scaletta.qualify(Name("String")))
-    val typeA: Type.Nominal[TypeId] = typeRegistry.addRefType(ns1.qualify(Name("A")))
+    val intT: Type.Nominal[TypeId] = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
+    val stringT: Type.Nominal[TypeId] = typeRegistry.addRefType(Packages.scaletta.qualify(Name("String")), RuntimeTypeInfo.any)
+    val typeA: Type.Nominal[TypeId] = typeRegistry.addRefType(ns1.qualify(Name("A")), RuntimeTypeInfo.any)
     val typeUniverse: TypeUniverse = typeRegistry.build()
 
     val params1: Vector[FormalParameter] = Vector(FormalParameter(Name("p"), intT))

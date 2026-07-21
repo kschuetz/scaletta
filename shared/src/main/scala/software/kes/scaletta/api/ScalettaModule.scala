@@ -73,8 +73,8 @@ object ScalettaModule {
   /**
    * Create a module consisting of a single ref type
    */
-  def refType(name: QualifiedName.Full): ScalettaModule[Type.Nominal[TypeId]] =
-    ScalettaModule.typesOnly(_.addRefType(name))
+  def refType(name: QualifiedName.Full, info: RuntimeTypeInfo): ScalettaModule[Type.Nominal[TypeId]] =
+    ScalettaModule.typesOnly(_.addRefType(name, info))
 
   /**
    * Create a module that registers a new runtime context type

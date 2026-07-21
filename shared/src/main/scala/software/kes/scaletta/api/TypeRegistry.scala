@@ -3,12 +3,15 @@ package software.kes.scaletta.api
 import software.kes.scaletta.util.NonEmptyVector
 
 trait TypeRegistry {
-  def addValueType(name: QualifiedName.Full): Type.Nominal[TypeId]
+  def addValueType(name: QualifiedName.Full,
+                   info: RuntimeTypeInfo): Type.Nominal[TypeId]
 
-  def addRefType(name: QualifiedName.Full): Type.Nominal[TypeId]
+  def addRefType(name: QualifiedName.Full,
+                 info: RuntimeTypeInfo): Type.Nominal[TypeId]
 
   def addTypeConstructor(name: QualifiedName.Full,
-                         parameters: NonEmptyVector[TypeParameter[TypeId]]): Type.Constructor[TypeId]
+                         parameters: NonEmptyVector[TypeParameter[TypeId]],
+                         info: RuntimeTypeInfo): Type.Constructor[TypeId]
 
   def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit
 

@@ -13,8 +13,8 @@ class TypeUniverseSpec extends AnyFunSpec with Matchers {
       val name1 = ns.qualify(Name("Type1"))
       val name2 = ns.qualify(Name("Type2"))
 
-      val type1 = registry.addValueType(name1)
-      val type2 = registry.addValueType(name2)
+      val type1 = registry.addValueType(name1, RuntimeTypeInfo.any)
+      val type2 = registry.addValueType(name2, RuntimeTypeInfo.any)
 
       type1.name should not be type2.name
       registry.build().nameIndex.get(name1) shouldBe Some(type1)
@@ -26,8 +26,8 @@ class TypeUniverseSpec extends AnyFunSpec with Matchers {
       val superName = ns.qualify(Name("Super"))
       val subName = ns.qualify(Name("Sub"))
 
-      val superType = registry.addRefType(superName)
-      val subType = registry.addRefType(subName)
+      val superType = registry.addRefType(superName, RuntimeTypeInfo.any)
+      val subType = registry.addRefType(subName, RuntimeTypeInfo.any)
 
       registry.addRelationship(superType, subType)
 
@@ -42,9 +42,9 @@ class TypeUniverseSpec extends AnyFunSpec with Matchers {
       val bName = ns.qualify(Name("B"))
       val cName = ns.qualify(Name("C"))
 
-      val typeA = registry.addRefType(aName)
-      val typeB = registry.addRefType(bName)
-      val typeC = registry.addRefType(cName)
+      val typeA = registry.addRefType(aName, RuntimeTypeInfo.any)
+      val typeB = registry.addRefType(bName, RuntimeTypeInfo.any)
+      val typeC = registry.addRefType(cName, RuntimeTypeInfo.any)
 
       registry.addRelationship(typeA, typeB)
       registry.addRelationship(typeB, typeC)
@@ -60,10 +60,10 @@ class TypeUniverseSpec extends AnyFunSpec with Matchers {
       val rightName = ns.qualify(Name("Right"))
       val leafName = ns.qualify(Name("Leaf"))
 
-      val root = registry.addRefType(rootName)
-      val left = registry.addRefType(leftName)
-      val right = registry.addRefType(rightName)
-      val leaf = registry.addRefType(leafName)
+      val root = registry.addRefType(rootName, RuntimeTypeInfo.any)
+      val left = registry.addRefType(leftName, RuntimeTypeInfo.any)
+      val right = registry.addRefType(rightName, RuntimeTypeInfo.any)
+      val leaf = registry.addRefType(leafName, RuntimeTypeInfo.any)
 
       registry.addRelationship(root, left)
       registry.addRelationship(root, right)

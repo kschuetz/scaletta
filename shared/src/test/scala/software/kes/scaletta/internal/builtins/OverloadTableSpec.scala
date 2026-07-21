@@ -159,10 +159,10 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
   object Fixtures {
     val ns: PackagePath.Absolute = Packages.scaletta
     val registry: TypeRegistryImpl = new TypeRegistryImpl()
-    val anyT: Type.Nominal[TypeId] = registry.addRefType(ns.qualify(Name("Any")))
-    val numberT: Type.Nominal[TypeId] = registry.addRefType(ns.qualify(Name("Number")))
-    val intT: Type.Nominal[TypeId] = registry.addValueType(ns.qualify(Name("Int")))
-    val stringT: Type.Nominal[TypeId] = registry.addRefType(ns.qualify(Name("String")))
+    val anyT: Type.Nominal[TypeId] = registry.addRefType(ns.qualify(Name("Any")), RuntimeTypeInfo.any)
+    val numberT: Type.Nominal[TypeId] = registry.addRefType(ns.qualify(Name("Number")), RuntimeTypeInfo.any)
+    val intT: Type.Nominal[TypeId] = registry.addValueType(ns.qualify(Name("Int")), RuntimeTypeInfo.any)
+    val stringT: Type.Nominal[TypeId] = registry.addRefType(ns.qualify(Name("String")), RuntimeTypeInfo.any)
 
     registry.addRelationship(anyT, numberT)
     registry.addRelationship(numberT, intT)

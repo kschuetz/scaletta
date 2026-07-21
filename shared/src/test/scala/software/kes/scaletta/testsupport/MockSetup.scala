@@ -68,23 +68,24 @@ object MockSetup {
     }
 
     val typeRegistry: TypeRegistryBootstrap = new TypeRegistryBootstrap {
-      def addValueType(name: QualifiedName.Full): Type.Nominal[TypeId] =
+      def addValueType(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Nominal[TypeId] =
         Type.Nominal(getNextTypeId())
 
-      def addRefType(name: QualifiedName.Full): Type.Nominal[TypeId] =
+      def addRefType(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Nominal[TypeId] =
         Type.Nominal(getNextTypeId())
 
       def addTypeConstructor(name: QualifiedName.Full,
-                             parameters: NonEmptyVector[TypeParameter[TypeId]]): Type.Constructor[TypeId] =
+                             parameters: NonEmptyVector[TypeParameter[TypeId]],
+                             info: RuntimeTypeInfo): Type.Constructor[TypeId] =
         Type.Constructor(getNextTypeId(), parameters)
 
       def addRelationship(supertype: Type[TypeId], subtype: Type[TypeId]): Unit = ()
 
       def addAlias(name: QualifiedName.Full, target: Type[TypeId]): Unit = ()
 
-      def registerCoreValueType(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
+      def registerCoreValueType(name: QualifiedName.Full, typ: Type.Nominal[TypeId], info: RuntimeTypeInfo): Type.Nominal[TypeId] = typ
 
-      def registerCoreRefType(name: QualifiedName.Full, typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = typ
+      def registerCoreRefType(name: QualifiedName.Full, typ: Type.Nominal[TypeId], info: RuntimeTypeInfo): Type.Nominal[TypeId] = typ
     }
 
     val runtimeContextRegistry: RuntimeContextRegistry = () => getNextRuntimeContextId()

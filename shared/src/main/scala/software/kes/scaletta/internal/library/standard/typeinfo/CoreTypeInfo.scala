@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.library.standard.typeinfo
 import software.kes.scaletta.api.RuntimeTypeInfo
 import software.kes.scaletta.util.reflection.Primitives
 
-class CoreTypeInfo {
+object CoreTypeInfo {
   final val AnyT = RuntimeTypeInfo(_ => true)
   final val AnyValT = RuntimeTypeInfo(Primitives.isAnyVal)
   final val AnyRefT = RuntimeTypeInfo(_.isInstanceOf[AnyRef])

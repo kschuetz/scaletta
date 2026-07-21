@@ -21,4 +21,8 @@ object CollectionTypeInfo {
 
   final val VectorT = RuntimeTypeInfo(_.isInstanceOf[Vector[_]],
     unapplySeq(_.isInstanceOf[Vector[_]]))
+
+  final val SetT = RuntimeTypeInfo(_.isInstanceOf[Set[_]])
+
+  final val MapT = RuntimeTypeInfo(_.isInstanceOf[Map[_, _]])
 }

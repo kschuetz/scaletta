@@ -16,7 +16,7 @@ class InterpreterNodeTraversalExampleSpec extends AnyFunSuite with Matchers {
    * Module to register Node accessors and capture their IDs.
    */
   private val nodeModule: ScalettaModule[NodeLib] = ScalettaModule { setup =>
-    val nodeType = setup.typeRegistry.addRefType(PackagePath.root.qualify(Name("Node")))
+    val nodeType = setup.typeRegistry.addRefType(PackagePath.root.qualify(Name("Node")), RuntimeTypeInfo.any)
 
     val nextId = setup.methodRegistry.addMethod(
       MethodName(ReceiverType.Instance(nodeType), Name("next")),

@@ -9,25 +9,31 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
   private var nameIndex = TypeNameIndex.empty
   private val supertypeMap = mutable.Map[Type[TypeId], mutable.Set[Type[TypeId]]]()
   private val valueTypes = mutable.Set[Type.Nominal[TypeId]]()
+  private val typeInfoMap = mutable.Map[TypeId, RuntimeTypeInfo]()
 
-  def addValueType(name: QualifiedName.Full): Type.Nominal[TypeId] = {
+  def addValueType(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Nominal[TypeId] = {
     val (newIndex, id) = nameIndex.intern(name)
     nameIndex = newIndex
     val typ = Type.Nominal(id)
     valueTypes += typ
+    typeInfoMap += (id -> info)
     typ
   }
 
-  def addRefType(name: QualifiedName.Full): Type.Nominal[TypeId] = {
+  def addRefType(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Nominal[TypeId] = {
     val (newIndex, id) = nameIndex.intern(name)
     nameIndex = newIndex
-    Type.Nominal(id)
+    val typ = Type.Nominal(id)
+    typeInfoMap += (id -> info)
+    typ
   }
 
   def addTypeConstructor(name: QualifiedName.Full,
-                         parameters: NonEmptyVector[TypeParameter[TypeId]]): Type.Constructor[TypeId] = {
+                         parameters: NonEmptyVector[TypeParameter[TypeId]],
+                         info: RuntimeTypeInfo): Type.Constructor[TypeId] = {
     val (newIndex, id) = nameIndex.internConstructor(name, parameters)
     nameIndex = newIndex
+    typeInfoMap += (id -> info)
     Type.Constructor(id, parameters)
   }
 
@@ -41,15 +47,19 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
   }
 
   def registerCoreValueType(name: QualifiedName.Full,
-                            typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
+                            typ: Type.Nominal[TypeId],
+                            info: RuntimeTypeInfo): Type.Nominal[TypeId] = {
     nameIndex = nameIndex.registerCore(name, typ)
     valueTypes += typ
+    typeInfoMap += (typ.name -> info)
     typ
   }
 
   def registerCoreRefType(name: QualifiedName.Full,
-                          typ: Type.Nominal[TypeId]): Type.Nominal[TypeId] = {
+                          typ: Type.Nominal[TypeId],
+                          info: RuntimeTypeInfo): Type.Nominal[TypeId] = {
     nameIndex = nameIndex.registerCore(name, typ)
+    typeInfoMap += (typ.name -> info)
     typ
   }
 
@@ -61,6 +71,6 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
       supertypeMap.view.mapValues(_.toSet).toMap,
       valueTypes.toSet
     )
-    new TypeUniverse(nameIndex, hierarchy)
+    new TypeUniverse(nameIndex, hierarchy, typeInfoMap.toMap)
   }
 }
