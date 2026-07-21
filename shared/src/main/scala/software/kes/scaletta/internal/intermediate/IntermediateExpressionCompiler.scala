@@ -239,6 +239,9 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           }
           assembler.makeTuple(elements.length)
 
+        case IntermediateExpression.Match(scrutinee, cases) =>
+          emitMatch(scrutinee, cases, env, signature, assembler, onStack, tail = false)
+
         case IntermediateExpression.WithBindings(bindings, body) =>
           var currentLayer = Vector.empty[BindingInfo]
           var newVarCountInBlock = 0
@@ -316,9 +319,6 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           }
 
           emit(body, finalEnvForBlock, signature, assembler, currentOnStack)
-
-        case IntermediateExpression.Match(scrutinee, cases) =>
-          throw new UnsupportedOperationException("Match expressions are not yet supported")
       }
     }
 
@@ -439,9 +439,214 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
             emit(expression, env, signature, assembler, onStack)
           }
 
+        case IntermediateExpression.Match(scrutinee, cases) =>
+          emitMatch(scrutinee, cases, env, signature, assembler, onStack, tail = true)
+
         case other =>
           emit(other, env, signature, assembler, onStack)
       }
+    }
+
+    private val tupleUnapplyStrategy = software.kes.scaletta.api.UnapplyStrategy.unapplyDynamic { (arity, value) =>
+      value match {
+        case t: Product if t.productArity == arity => software.kes.scaletta.api.UnapplyResult.success(t.productIterator.toSeq)
+        case _ => software.kes.scaletta.api.UnapplyResult.failure
+      }
+    }
+
+    private def emitMatch(scrutinee: IntermediateExpression,
+                          cases: software.kes.scaletta.util.NonEmptyVector[Case],
+                          env: CompileEnv,
+                          signature: UserFunctionSignature,
+                          assembler: Assembler,
+                          onStack: Option[BindingInfo],
+                          tail: Boolean): Unit = {
+      val endLabel = assembler.label()
+      val scrutineeType = TypeResolver.resolveType(scrutinee, env, signature, nativeFunctionTable)
+      val scrutineeSlot = env.nextVarIndex
+      val envWithTemp = env.copy(nextVarIndex = env.nextVarIndex + 1)
+
+      emit(scrutinee, env, signature, assembler, onStack)
+      assembler.popIntoVar(scrutineeType, scrutineeSlot)
+
+      cases.zipWithIndex.foreach { case (c, idx) =>
+        val envForCase = growEnvForPattern(c.pattern, envWithTemp, signature)
+        val nextCase = assembler.label()
+
+        assembler.pushFromVar(scrutineeType, scrutineeSlot)
+        emitPattern(c.pattern, envForCase, signature, assembler, nextCase)
+
+        c.guard.foreach { g =>
+          emit(g, envForCase, signature, assembler)
+          assembler.branchUnless(nextCase)
+        }
+
+        if (tail) emitTail(c.body, envForCase, signature, assembler)
+        else emit(c.body, envForCase, signature, assembler)
+
+        if (idx < cases.length - 1) {
+          assembler.branch(endLabel)
+        }
+
+        nextCase.bind()
+      }
+      endLabel.bind()
+    }
+
+    private def emitPattern(pattern: Pattern,
+                            env: CompileEnv,
+                            signature: UserFunctionSignature,
+                            assembler: Assembler,
+                            onFailure: Assembler.Label): Unit = {
+      pattern match {
+        case Pattern.Wildcard =>
+          assembler.pop()
+
+        case Pattern.Slot(scope, slot) =>
+          val info = env.resolve(scope, slot)
+          info match {
+            case BindingInfo.Val(absIndex) =>
+              val typ = signature.varSpace.basicTypeOf(absIndex)
+              assembler.popIntoVar(typ, absIndex)
+            case _ => throw new RuntimeException("Slot pattern must refer to a val")
+          }
+
+        case Pattern.Literal(v) =>
+          val rawLit = getRawValue(v)
+          val predicate: Any => Boolean = _ == rawLit
+          assembler.dup()
+          assembler.pushImmediateObject(predicate)
+          assembler.applyPredicate()
+          val success = assembler.label()
+          assembler.branchIf(success)
+          assembler.pop()
+          assembler.branch(onFailure)
+          success.bind()
+          assembler.pop()
+
+        case Pattern.Typed(inner, typeInfo) =>
+          assembler.dup()
+          assembler.pushImmediateObject(typeInfo.isInstance)
+          assembler.applyPredicate()
+          val success = assembler.label()
+          assembler.branchIf(success)
+          assembler.pop()
+          assembler.branch(onFailure)
+          success.bind()
+          emitPattern(inner, env, signature, assembler, onFailure)
+
+        case Pattern.Tuple(elements) =>
+          assembler.dup()
+          assembler.pushImmediateObject(tupleUnapplyStrategy)
+          assembler.pushImmediateInt(elements.length)
+          assembler.unapply()
+          val success = assembler.label()
+          assembler.branchIf(success)
+          assembler.pop()
+          assembler.branch(onFailure)
+
+          success.bind()
+          elements.zipWithIndex.reverse.foreach { case (elem, i) =>
+            val elementSuccess = assembler.label()
+            val elementFailure = assembler.label()
+            emitPattern(elem, env, signature, assembler, elementFailure)
+            assembler.branch(elementSuccess)
+
+            elementFailure.bind()
+            (0 until i).foreach(_ => assembler.pop())
+            assembler.pop()
+            assembler.branch(onFailure)
+
+            elementSuccess.bind()
+          }
+          assembler.pop()
+
+        case Pattern.Product(typeInfo, args) =>
+          assembler.dup()
+          assembler.pushImmediateObject(typeInfo.unapplyStrategy)
+          assembler.pushImmediateInt(args.length)
+          assembler.unapply()
+          val success = assembler.label()
+          assembler.branchIf(success)
+          assembler.pop()
+          assembler.branch(onFailure)
+
+          success.bind()
+          args.zipWithIndex.reverse.foreach { case (arg, i) =>
+            val argSuccess = assembler.label()
+            val argFailure = assembler.label()
+            emitPattern(arg, env, signature, assembler, argFailure)
+            assembler.branch(argSuccess)
+
+            argFailure.bind()
+            (0 until i).foreach(_ => assembler.pop())
+            assembler.pop()
+            assembler.branch(onFailure)
+
+            argSuccess.bind()
+          }
+          assembler.pop()
+
+        case Pattern.As(scope, slot, inner) =>
+          val info = env.resolve(scope, slot)
+          info match {
+            case BindingInfo.Val(absIndex) =>
+              val typ = signature.varSpace.basicTypeOf(absIndex)
+              assembler.dup()
+              assembler.popIntoVar(typ, absIndex)
+              emitPattern(inner, env, signature, assembler, onFailure)
+            case _ => throw new RuntimeException("As pattern must refer to a val")
+          }
+      }
+    }
+
+    private def growEnvForPattern(pattern: Pattern,
+                                  env: CompileEnv,
+                                  signature: UserFunctionSignature): CompileEnv = {
+      val slots = mutable.Set.empty[Int]
+
+      def collect(p: Pattern): Unit = p match {
+        case Pattern.Slot(0, slot) => slots += slot
+        case Pattern.As(0, slot, inner) =>
+          slots += slot
+          collect(inner)
+        case Pattern.Typed(inner, _) => collect(inner)
+        case Pattern.Tuple(elements) => elements.foreach(collect)
+        case Pattern.Product(_, args) => args.foreach(collect)
+        case _ => ()
+      }
+
+      collect(pattern)
+
+      if (slots.isEmpty) env
+      else {
+        val maxSlot = slots.max
+        val currentLayer = env.layers.head
+        if (maxSlot < currentLayer.size) env
+        else {
+          val baseIndex = env.nextVarIndex - currentLayer.size
+          val newBindings = (currentLayer.size to maxSlot).toVector.map { i =>
+            BindingInfo.Val(baseIndex + i)
+          }
+          val newLayer = currentLayer ++ newBindings
+          env.copy(layers = newLayer :: env.layers.tail, nextVarIndex = baseIndex + newLayer.size)
+        }
+      }
+    }
+
+    private def getRawValue(v: Value): Any = v match {
+      case Value.IntValue(x) => x
+      case Value.LongValue(x) => x
+      case Value.FloatValue(x) => x
+      case Value.DoubleValue(x) => x
+      case Value.ShortValue(x) => x
+      case Value.ByteValue(x) => x
+      case v: Value.BooleanValue => v.value
+      case Value.CharValue(x) => x
+      case Value.UnitValue => scala.runtime.BoxedUnit.UNIT
+      case Value.StringValue(x) => x
+      case Value.ObjectValue(x) => x
+      case Value.Null => null
     }
 
     @tailrec

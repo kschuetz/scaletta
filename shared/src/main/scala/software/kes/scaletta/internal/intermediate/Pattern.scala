@@ -17,4 +17,6 @@ object Pattern {
   case class Tuple(elements: VectorTwoPlus[Pattern]) extends Pattern
 
   case class Product(runtimeType: RuntimeTypeInfo, args: Vector[Pattern]) extends Pattern
+
+  case class As(scope: Int, slot: Int, inner: Pattern) extends Pattern
 }
