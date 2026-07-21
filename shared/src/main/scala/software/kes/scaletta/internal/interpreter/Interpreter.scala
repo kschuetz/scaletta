@@ -528,6 +528,11 @@ final class Interpreter private(private val program: Program,
         transferParameters(currentFunction.frameSignature, currentFunction.parameterCount)
         transferCaptures(closure.capturedFrame, currentFunction.varSpaceSignature, currentFunction.parameterCount)
 
+      case Opcodes.ApplyPredicate =>
+        val predicate = operandStack.unsafePopObject().asInstanceOf[Any => Boolean]
+        val value = operandStack.pop()
+        operandStack.pushBoolean(predicate(value))
+
       case _ =>
         throw new RuntimeException(s"Unknown opcode: $opcode")
     }

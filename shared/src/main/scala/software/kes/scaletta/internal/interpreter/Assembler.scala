@@ -303,6 +303,14 @@ final class Assembler(val index: Int,
     writer.writeAndAdvance(userFunctionIndex)
   }
 
+  /**
+   * Pops a predicate (Any => Boolean) from the top of the stack.
+   * Then pops a value.
+   * Applies the predicate to the value and pushes the boolean result to the stack.
+   */
+  def applyPredicate(): Unit =
+    writer.writeAndAdvance(makeOpcode(Opcodes.ApplyPredicate, 0, 0))
+
   def label(): Assembler.Label = new LabelImpl()
 
   /**
