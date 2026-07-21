@@ -33,4 +33,5 @@ object Opcodes {
   final val TailCallClosure = 29
   final val MakeTuple = 30
   final val ApplyPredicate = 31
+  final val Unapply = 32
 }

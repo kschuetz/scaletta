@@ -311,6 +311,16 @@ final class Assembler(val index: Int,
   def applyPredicate(): Unit =
     writer.writeAndAdvance(makeOpcode(Opcodes.ApplyPredicate, 0, 0))
 
+  /**
+   * Pops an UnapplyStrategy, argCount, and value.
+   * Runs tryUnapply on the UnapplyStrategy with the given argCount and value.
+   * If successful, pushes all the unapplied values onto the stack and finally pushes the boolean "true".
+   * If failed, pushes the boolean "false".
+   */
+  def unapply(): Unit = {
+    writer.writeAndAdvance(makeOpcode(Opcodes.Unapply, 0, 0))
+  }
+
   def label(): Assembler.Label = new LabelImpl()
 
   /**

@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.api.{EvalResult, FunctionImpl, NativeStep, RuntimeContextReader}
+import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.runtime.{ParamsSignature, VarAddress, VarSpaceSignature}
@@ -532,6 +532,22 @@ final class Interpreter private(private val program: Program,
         val predicate = operandStack.unsafePopObject().asInstanceOf[Any => Boolean]
         val value = operandStack.pop()
         operandStack.pushBoolean(predicate(value))
+
+      case Opcodes.Unapply =>
+        val strategy = operandStack.unsafePopObject().asInstanceOf[software.kes.scaletta.api.UnapplyStrategy]
+        val argCount = operandStack.unsafePopInt()
+        val value = operandStack.pop()
+        val result = strategy.tryUnapply(runtimeContexts, argCount, value)
+        result match {
+          case UnapplyResult.Success(extractedValues) =>
+            val it = extractedValues.iterator
+            while (it.hasNext) {
+              operandStack.push(it.next())
+            }
+            operandStack.pushBoolean(true)
+          case UnapplyResult.Failure =>
+            operandStack.pushBoolean(false)
+        }
 
       case _ =>
         throw new RuntimeException(s"Unknown opcode: $opcode")
