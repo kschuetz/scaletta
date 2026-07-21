@@ -6,6 +6,7 @@ import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value
 import software.kes.scaletta.internal.interpreter._
 import software.kes.scaletta.internal.runtime.{FrameSignature, UserFunctionSignature, VarAddress}
 
+import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 
@@ -315,6 +316,9 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           }
 
           emit(body, finalEnvForBlock, signature, assembler, currentOnStack)
+
+        case IntermediateExpression.Match(scrutinee, cases) =>
+          throw new UnsupportedOperationException("Match expressions are not yet supported")
       }
     }
 
@@ -440,6 +444,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
       }
     }
 
+    @tailrec
     private def startsByReferenceTo(expr: IntermediateExpression,
                                     env: CompileEnv,
                                     info: BindingInfo): Boolean = {
