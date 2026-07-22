@@ -240,8 +240,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       test(3, 3) shouldBe 13
     }
 
-    // TODO: fix
-    ignore("should handle nested Tuple patterns and bindings with Reference components") {
+    it("should handle nested Tuple patterns and bindings with Reference components") {
       // (x, (y, z)) match { case (1, (2, a)) => a }
       val innerTuple = Tuple(VectorTwoPlus(Reference(0, 1), Reference(0, 2)))
       val scrutinee = Tuple(VectorTwoPlus(Reference(0, 0), innerTuple))
@@ -254,7 +253,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
         Case(Pattern.Wildcard, None, int(-1))
       ))
 
-      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT, CoreTypes.AnyRefT))) // x, y, z, a, temp
+      val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT, CoreTypes.AnyRefT, CoreTypes.IntT))) // x, y, z, temp, a
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 3), expr)
       val interpreter = Interpreter.create(program, nativeFunctions)
 
