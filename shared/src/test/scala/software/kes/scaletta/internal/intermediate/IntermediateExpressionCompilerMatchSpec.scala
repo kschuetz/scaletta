@@ -270,8 +270,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       }).intValue() shouldBe -1
     }
 
-    // TODO: fix
-    ignore("should handle tail calls in Match") {
+    it("should handle tail calls in Match") {
       // def f(n: Int): Int = n match { case 0 => 1; case _ => f(n - 1) }
       // This tests emitMatch with tail = true
 

@@ -23,6 +23,67 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
     programBuilder.build()
   }
 
+  private def findMaxCaptureIndex(expr: IntermediateExpression, parameterCount: Int): Int = {
+    var maxIndex = parameterCount - 1
+
+    def scan(e: IntermediateExpression, depth: Int): Unit = {
+      e match {
+        case IntermediateExpression.Reference(d, slot) =>
+          if (d == depth && slot > maxIndex) maxIndex = slot
+        case IntermediateExpression.NativeCall(_, arguments) =>
+          arguments.foreach(scan(_, depth))
+        case IntermediateExpression.LocalCall(d, _, arguments) =>
+          if (d == depth) {
+            // function slot itself doesn't count as a variable capture
+          }
+          arguments.foreach(scan(_, depth))
+        case IntermediateExpression.ClosureCall(target, arguments, _) =>
+          scan(target, depth)
+          arguments.foreach(scan(_, depth))
+        case IntermediateExpression.Conditional(condition, thenBranch, elseBranch) =>
+          scan(condition, depth)
+          scan(thenBranch, depth)
+          scan(elseBranch, depth)
+        case IntermediateExpression.WithBindings(bindings, body) =>
+          bindings.foreach {
+            case Binding.Val(value) => scan(value, depth)
+            case Binding.LazyVal(value) => scan(value, depth + 1)
+            case Binding.Def(_, fBody) => scan(fBody, depth + 1)
+          }
+          scan(body, depth)
+        case IntermediateExpression.Lambda(_, captures, body) =>
+          captures.foreach(scan(_, depth))
+          scan(body, depth + 1)
+        case IntermediateExpression.FunctionValue(_, _, _, captures) =>
+          captures.foreach(scan(_, depth))
+        case IntermediateExpression.PartialNativeFunctionApplication(_, arguments) =>
+          arguments.flatten.foreach(scan(_, depth))
+        case IntermediateExpression.And(lhs, rhs) =>
+          scan(lhs, depth)
+          scan(rhs, depth)
+        case IntermediateExpression.Or(lhs, rhs) =>
+          scan(lhs, depth)
+          scan(rhs, depth)
+        case IntermediateExpression.StringConcat(segments) =>
+          segments.foreach(scan(_, depth))
+        case IntermediateExpression.Convert(value, _) =>
+          scan(value, depth)
+        case IntermediateExpression.Tuple(elements) =>
+          elements.foreach(scan(_, depth))
+        case IntermediateExpression.Match(scrutinee, cases) =>
+          scan(scrutinee, depth)
+          cases.foreach { c =>
+            c.guard.foreach(scan(_, depth))
+            scan(c.body, depth)
+          }
+        case _: IntermediateExpression.Value => ()
+      }
+    }
+
+    scan(expr, 0)
+    maxIndex
+  }
+
   private final class Emitter(programBuilder: ProgramBuilder) {
     private val workQueue = mutable.Queue[(IntermediateExpression, UserFunctionSignature, CompileEnv, Assembler)]()
 
@@ -311,8 +372,9 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val finalEnvForBlock = env.pushLayer(currentLayer, newVarCountInBlock)
 
           discoveredInBlock.foreach { case (fb, fs, fa) =>
-            val captureCount = fs.varSpace.slotCount - fs.parameterCount
-            val captureBindings = (fs.parameterCount until fs.varSpace.slotCount).toVector.map(BindingInfo.Val)
+            val maxCaptureIndex = findMaxCaptureIndex(fb, fs.parameterCount)
+            val captureCount = math.max(0, maxCaptureIndex - fs.parameterCount + 1)
+            val captureBindings = (fs.parameterCount until (fs.parameterCount + captureCount)).toVector.map(BindingInfo.Val)
             val fInitialEnv = createInitialEnv(fs, captureBindings)
             val fEnv = CompileEnv(fInitialEnv.layers ++ finalEnvForBlock.layers, fInitialEnv.nextVarIndex)
             workQueue.enqueue((fb, fs, fEnv, fa))
@@ -424,7 +486,9 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
           val finalEnvForBlock = env.pushLayer(currentLayer, newVarCountInBlock)
 
           discoveredInBlock.foreach { case (fb, fs, fa) =>
-            val captureBindings = (fs.parameterCount until fs.varSpace.slotCount).toVector.map(BindingInfo.Val)
+            val maxCaptureIndex = findMaxCaptureIndex(fb, fs.parameterCount)
+            val captureCount = math.max(0, maxCaptureIndex - fs.parameterCount + 1)
+            val captureBindings = (fs.parameterCount until (fs.parameterCount + captureCount)).toVector.map(BindingInfo.Val)
             val fInitialEnv = createInitialEnv(fs, captureBindings)
             val fEnv = CompileEnv(fInitialEnv.layers ++ finalEnvForBlock.layers, fInitialEnv.nextVarIndex)
             workQueue.enqueue((fb, fs, fEnv, fa))
