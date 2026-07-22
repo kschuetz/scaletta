@@ -372,4 +372,106 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, input))
     result.value[Any]() shouldBe List("low", "high", "high", "low")
   }
+
+  test("complex match with guards and nested patterns") {
+    import Pattern._
+    import software.kes.scaletta.api.RuntimeTypeInfo
+
+    // def test(x: Any): Int = x match {
+    //   case (a: Int, b: Int) if a > b => 1
+    //   case (a: Int, b: Int) if a < b => 2
+    //   case (a: Int, b: Int) => 3
+    //   case s: String if s == "special" => 4
+    //   case _: String => 5
+    //   case _ => 6
+    // }
+
+    // signature for the whole function
+    // param 0: x (AnyRef)
+    // slot 1: scrutinee temp
+    // slot 2: a or s
+    // slot 3: b
+    val signature = UserFunctionSignature(
+      software.kes.scaletta.internal.runtime.VarSpaceSignature.of(software.kes.scaletta.internal.runtime.FrameSignature.fromSeq(Seq(
+        CoreTypes.AnyRefT, // param 0
+        CoreTypes.AnyRefT, // slot 1
+        CoreTypes.IntT, // slot 2
+        CoreTypes.IntT, // slot 3
+        CoreTypes.AnyRefT // slot 4
+      ))),
+      BasicTypes.Int,
+      1
+    )
+
+    val intTypeInfo = RuntimeTypeInfo(_.isInstanceOf[Int])
+    val stringTypeInfo = RuntimeTypeInfo(_.isInstanceOf[String])
+
+    val case1 = Case(
+      pattern = Tuple(software.kes.scaletta.util.VectorTwoPlus(
+        Typed(Slot(0, 2), intTypeInfo),
+        Typed(Slot(0, 3), intTypeInfo)
+      )),
+      guard = Some(NativeCall(stdLib.comparison.int.gt.int, Vector(Reference(0, 2), Reference(0, 3)))),
+      body = int(1)
+    )
+
+    val case2 = Case(
+      pattern = Tuple(software.kes.scaletta.util.VectorTwoPlus(
+        Typed(Slot(0, 2), intTypeInfo),
+        Typed(Slot(0, 3), intTypeInfo)
+      )),
+      guard = Some(NativeCall(stdLib.comparison.int.lt.int, Vector(Reference(0, 2), Reference(0, 3)))),
+      body = int(2)
+    )
+
+    val case3 = Case(
+      pattern = Tuple(software.kes.scaletta.util.VectorTwoPlus(
+        Typed(Slot(0, 2), intTypeInfo),
+        Typed(Slot(0, 3), intTypeInfo)
+      )),
+      guard = None,
+      body = int(3)
+    )
+
+    val case4 = Case(
+      pattern = Typed(Slot(0, 4), stringTypeInfo),
+      guard = Some(NativeCall(stdLib.equality.string.eq.any, Vector(Reference(0, 4), string("special")))),
+      body = int(4)
+    )
+
+    val case5 = Case(
+      pattern = Typed(Wildcard, stringTypeInfo),
+      guard = None,
+      body = int(5)
+    )
+
+    val case6 = Case(
+      pattern = Wildcard,
+      guard = None,
+      body = int(6)
+    )
+
+    val body = Match(
+      Reference(0, 0),
+      software.kes.scaletta.util.NonEmptyVector(case1, case2, case3, case4, case5, case6)
+    )
+
+    val program = compiler.compile(signature, body)
+    val interpreter = Interpreter.create(program, nativeFunctions)
+
+    val testCases = Seq(
+      (10, 5) -> 1, // (10, 5) if 10 > 5 -> 1
+      (5, 10) -> 2, // (5, 10) if 5 < 10 -> 2
+      (7, 7) -> 3, // (7, 7) -> 3
+      "special" -> 4, // "special" if "special" == "special" -> 4
+      "other" -> 5, // "other" : String -> 5
+      1.23 -> 6, // other -> 6
+      (null: AnyRef) -> 6 // other -> 6
+    )
+
+    testCases.foreach { case (input, expected) =>
+      val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, input.asInstanceOf[AnyRef]))
+      result.intValue() shouldBe expected
+    }
+  }
 }

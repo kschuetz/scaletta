@@ -528,9 +528,12 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
       val endLabel = assembler.label()
       val scrutineeType = TypeResolver.resolveType(scrutinee, env, signature, nativeFunctionTable)
       val scrutineeSlot = env.nextVarIndex
-      val envWithTemp = env.copy(nextVarIndex = env.nextVarIndex + 1)
+      val envWithTemp = env.copy(
+        layers = (env.layers.head :+ BindingInfo.Val(scrutineeSlot)) :: env.layers.tail,
+        nextVarIndex = env.nextVarIndex + 1
+      )
 
-      emit(scrutinee, env, signature, assembler, onStack)
+      emit(scrutinee, env, signature, assembler, None)
       assembler.popIntoVar(scrutineeType, scrutineeSlot)
 
       cases.zipWithIndex.foreach { case (c, idx) =>

@@ -324,6 +324,142 @@ final class OperandStack(private[interpreter] val control: ByteStack,
     floats.pop()
   }
 
+  def popAsObject(): AnyRef = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Object => objects.pop()
+      case BasicTypes.Boolean => java.lang.Boolean.valueOf(booleans.pop())
+      case BasicTypes.Int => java.lang.Integer.valueOf(ints.pop())
+      case BasicTypes.Long => java.lang.Long.valueOf(longs.pop())
+      case BasicTypes.Short => java.lang.Short.valueOf(shorts.pop())
+      case BasicTypes.Byte => java.lang.Byte.valueOf(bytes.pop())
+      case BasicTypes.Char => java.lang.Character.valueOf(chars.pop())
+      case BasicTypes.Double => java.lang.Double.valueOf(doubles.pop())
+      case BasicTypes.Float => java.lang.Float.valueOf(floats.pop())
+      case _ => throw new IllegalStateException(s"Unknown type: $basicType")
+    }
+  }
+
+  def popAsBoolean(): Boolean = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Boolean => booleans.pop()
+      case BasicTypes.Int => ints.pop() != 0
+      case BasicTypes.Long => longs.pop() != 0L
+      case BasicTypes.Short => shorts.pop() != 0
+      case BasicTypes.Byte => bytes.pop() != 0
+      case BasicTypes.Char => chars.pop() != 0
+      case BasicTypes.Double => doubles.pop() != 0.0d
+      case BasicTypes.Float => floats.pop() != 0.0f
+      case _ => ObjectToPrimitive.objectToBoolean(objects.pop())
+    }
+  }
+
+  def popAsInt(): Int = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Int => ints.pop()
+      case BasicTypes.Long => longs.pop().toInt
+      case BasicTypes.Short => shorts.pop().toInt
+      case BasicTypes.Byte => bytes.pop().toInt
+      case BasicTypes.Char => chars.pop().toInt
+      case BasicTypes.Double => doubles.pop().toInt
+      case BasicTypes.Float => floats.pop().toInt
+      case BasicTypes.Boolean => if (booleans.pop()) 1 else 0
+      case _ => ObjectToPrimitive.objectToInt(objects.pop())
+    }
+  }
+
+  def popAsLong(): Long = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Long => longs.pop()
+      case BasicTypes.Int => ints.pop().toLong
+      case BasicTypes.Short => shorts.pop().toLong
+      case BasicTypes.Byte => bytes.pop().toLong
+      case BasicTypes.Char => chars.pop().toLong
+      case BasicTypes.Double => doubles.pop().toLong
+      case BasicTypes.Float => floats.pop().toLong
+      case BasicTypes.Boolean => if (booleans.pop()) 1L else 0L
+      case _ => ObjectToPrimitive.objectToLong(objects.pop())
+    }
+  }
+
+  def popAsShort(): Short = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Short => shorts.pop()
+      case BasicTypes.Int => ints.pop().toShort
+      case BasicTypes.Long => longs.pop().toShort
+      case BasicTypes.Byte => bytes.pop().toShort
+      case BasicTypes.Char => chars.pop().toShort
+      case BasicTypes.Double => doubles.pop().toShort
+      case BasicTypes.Float => floats.pop().toShort
+      case BasicTypes.Boolean => if (booleans.pop()) 1.toShort else 0.toShort
+      case _ => ObjectToPrimitive.objectToShort(objects.pop())
+    }
+  }
+
+  def popAsByte(): Byte = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Byte => bytes.pop()
+      case BasicTypes.Int => ints.pop().toByte
+      case BasicTypes.Long => longs.pop().toByte
+      case BasicTypes.Short => shorts.pop().toByte
+      case BasicTypes.Char => chars.pop().toByte
+      case BasicTypes.Double => doubles.pop().toByte
+      case BasicTypes.Float => floats.pop().toByte
+      case BasicTypes.Boolean => if (booleans.pop()) 1.toByte else 0.toByte
+      case _ => ObjectToPrimitive.objectToByte(objects.pop())
+    }
+  }
+
+  def popAsChar(): Char = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Char => chars.pop()
+      case BasicTypes.Int => ints.pop().toChar
+      case BasicTypes.Long => longs.pop().toChar
+      case BasicTypes.Short => shorts.pop().toChar
+      case BasicTypes.Byte => bytes.pop().toChar
+      case BasicTypes.Double => doubles.pop().toChar
+      case BasicTypes.Float => floats.pop().toChar
+      case BasicTypes.Boolean => if (booleans.pop()) 1.toChar else 0.toChar
+      case _ => ObjectToPrimitive.objectToChar(objects.pop())
+    }
+  }
+
+  def popAsDouble(): Double = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Double => doubles.pop()
+      case BasicTypes.Int => ints.pop().toDouble
+      case BasicTypes.Long => longs.pop().toDouble
+      case BasicTypes.Short => shorts.pop().toDouble
+      case BasicTypes.Byte => bytes.pop().toDouble
+      case BasicTypes.Char => chars.pop().toDouble
+      case BasicTypes.Float => floats.pop().toDouble
+      case BasicTypes.Boolean => if (booleans.pop()) 1.0d else 0.0d
+      case _ => ObjectToPrimitive.objectToDouble(objects.pop())
+    }
+  }
+
+  def popAsFloat(): Float = {
+    val basicType = control.pop()
+    (basicType: @annotation.switch) match {
+      case BasicTypes.Float => floats.pop()
+      case BasicTypes.Int => ints.pop().toFloat
+      case BasicTypes.Long => longs.pop().toFloat
+      case BasicTypes.Short => shorts.pop().toFloat
+      case BasicTypes.Byte => bytes.pop().toFloat
+      case BasicTypes.Char => chars.pop().toFloat
+      case BasicTypes.Double => doubles.pop().toFloat
+      case BasicTypes.Boolean => if (booleans.pop()) 1.0f else 0.0f
+      case _ => ObjectToPrimitive.objectToFloat(objects.pop())
+    }
+  }
+
   def unsafeReadControl(position: Int): Byte =
     control.unsafeRead(position)
 

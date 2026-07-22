@@ -134,7 +134,7 @@ private[interpreter] object EvalResultContainer {
 
   private class BooleanEvalResult(var result: Boolean) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopBoolean()
+      result = operandStack.popAsBoolean()
 
     def value[A](): A = result.asInstanceOf[A]
 
@@ -157,7 +157,7 @@ private[interpreter] object EvalResultContainer {
 
   private class IntEvalResult(var result: Int) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopInt()
+      result = operandStack.popAsInt()
 
     def value[A](): A = result.asInstanceOf[A]
 
@@ -180,7 +180,7 @@ private[interpreter] object EvalResultContainer {
 
   private class LongEvalResult(var result: Long) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopLong()
+      result = operandStack.popAsLong()
 
     def value[A](): A = result.asInstanceOf[A]
 
@@ -203,7 +203,7 @@ private[interpreter] object EvalResultContainer {
 
   private class ShortEvalResult(var result: Short) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopShort()
+      result = operandStack.popAsShort()
 
     def value[A](): A = result.asInstanceOf[A]
 
@@ -226,7 +226,7 @@ private[interpreter] object EvalResultContainer {
 
   private class ByteEvalResult(var result: Byte) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopByte()
+      result = operandStack.popAsByte()
 
     def value[A](): A = result.asInstanceOf[A]
 
@@ -249,7 +249,7 @@ private[interpreter] object EvalResultContainer {
 
   private class CharEvalResult(var result: Char) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopChar()
+      result = operandStack.popAsChar()
 
     def value[A](): A = result.asInstanceOf[A]
 
@@ -272,7 +272,7 @@ private[interpreter] object EvalResultContainer {
 
   private class DoubleEvalResult(var result: Double) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopDouble()
+      result = operandStack.popAsDouble()
 
     def value[A](): A = result.asInstanceOf[A]
 
@@ -295,7 +295,7 @@ private[interpreter] object EvalResultContainer {
 
   private class FloatEvalResult(var result: Float) extends EvalResultContainer {
     def loadFromOperandStack(operandStack: OperandStack): Unit =
-      result = operandStack.unsafePopFloat()
+      result = operandStack.popAsFloat()
 
     def value[A](): A = result.asInstanceOf[A]
 

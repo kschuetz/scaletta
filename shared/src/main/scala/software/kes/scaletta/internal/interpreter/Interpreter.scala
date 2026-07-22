@@ -773,15 +773,15 @@ final class Interpreter private(private val program: Program,
 
   private def popIntoVar(typeTag: Int, varIndex: Int): Unit =
     (typeTag: @annotation.switch) match {
-      case BasicTypes.Long => varSpace.unsafeWriteLong(varIndex, operandStack.unsafePopLong())
-      case BasicTypes.Double => varSpace.unsafeWriteDouble(varIndex, operandStack.unsafePopDouble())
-      case BasicTypes.Float => varSpace.unsafeWriteFloat(varIndex, operandStack.unsafePopFloat())
-      case BasicTypes.Boolean => varSpace.unsafeWriteBoolean(varIndex, operandStack.unsafePopBoolean())
-      case BasicTypes.Int => varSpace.unsafeWriteInt(varIndex, operandStack.unsafePopInt())
-      case BasicTypes.Short => varSpace.unsafeWriteShort(varIndex, operandStack.unsafePopShort())
-      case BasicTypes.Byte => varSpace.unsafeWriteByte(varIndex, operandStack.unsafePopByte())
-      case BasicTypes.Char => varSpace.unsafeWriteChar(varIndex, operandStack.unsafePopChar())
-      case _ => varSpace.unsafeWriteObject(varIndex, operandStack.unsafePopObject())
+      case BasicTypes.Long => varSpace.unsafeWriteLong(varIndex, operandStack.popAsLong())
+      case BasicTypes.Double => varSpace.unsafeWriteDouble(varIndex, operandStack.popAsDouble())
+      case BasicTypes.Float => varSpace.unsafeWriteFloat(varIndex, operandStack.popAsFloat())
+      case BasicTypes.Boolean => varSpace.unsafeWriteBoolean(varIndex, operandStack.popAsBoolean())
+      case BasicTypes.Int => varSpace.unsafeWriteInt(varIndex, operandStack.popAsInt())
+      case BasicTypes.Short => varSpace.unsafeWriteShort(varIndex, operandStack.popAsShort())
+      case BasicTypes.Byte => varSpace.unsafeWriteByte(varIndex, operandStack.popAsByte())
+      case BasicTypes.Char => varSpace.unsafeWriteChar(varIndex, operandStack.popAsChar())
+      case _ => varSpace.unsafeWriteObject(varIndex, operandStack.popAsObject())
     }
 
   private def storeInVar(typeTag: Int, varIndex: Int, value: Int): Unit =

@@ -49,11 +49,11 @@ class RuntimeClosureSpec extends AnyFunSuite with Matchers {
     val captureSignature = CaptureSignature.create(0, 0, 1, 0, 0, 0, 0, 0, 0)
     val capturePlan = CapturePlan.create(captureSignature, ArraySeq(0), ArraySeq(VarAddress.encode(BasicTypes.Int, 0)))
 
-    // Make closure for child function (index 1)
-    mainAssembler.makeClosure(1, capturePlan)
-
     // Push parameter 13
     mainAssembler.pushImmediateInt(13)
+
+    // Make closure for child function (index 1)
+    mainAssembler.makeClosure(1, capturePlan)
 
     // Call closure
     mainAssembler.callClosure()
