@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.intermediate
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.Scaletta
+import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.interpreter.Interpreter
@@ -160,13 +160,13 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
 
     it("should handle short-circuiting And") {
       // false && { sideEffect(); true }
-      var failingNative: software.kes.scaletta.api.NativeFunctionId = software.kes.scaletta.api.NativeFunctionId(-1)
-      val module = software.kes.scaletta.api.ScalettaModule { setup =>
+      var failingNative: NativeFunctionId = NativeFunctionId(-1)
+      val module = ScalettaModule { setup =>
         failingNative = setup.methodRegistry.addMethod(
-          software.kes.scaletta.api.MethodName(software.kes.scaletta.api.ReceiverType.Static(software.kes.scaletta.api.PackagePath.root), software.kes.scaletta.api.Name("failAnd")),
+          MethodName(ReceiverType.Static(PackagePath.root), Name("failAnd")),
           Vector.empty,
           CoreTypes.BooleanT,
-          software.kes.scaletta.api.FunctionImpl.booleanResult(_ => throw new RuntimeException("Should not be called"))
+          FunctionImpl.booleanResult(_ => throw new RuntimeException("Should not be called"))
         )
       }
       val customScaletta = Scaletta.create(Scaletta.addModule(module)).asInstanceOf[ScalettaFacade]
@@ -180,13 +180,13 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
 
     it("should handle short-circuiting Or") {
       // true || { sideEffect(); false }
-      var failingNative: software.kes.scaletta.api.NativeFunctionId = software.kes.scaletta.api.NativeFunctionId(-1)
-      val module = software.kes.scaletta.api.ScalettaModule { setup =>
+      var failingNative: NativeFunctionId = NativeFunctionId(-1)
+      val module = ScalettaModule { setup =>
         failingNative = setup.methodRegistry.addMethod(
-          software.kes.scaletta.api.MethodName(software.kes.scaletta.api.ReceiverType.Static(software.kes.scaletta.api.PackagePath.root), software.kes.scaletta.api.Name("failOr")),
+          MethodName(ReceiverType.Static(PackagePath.root), Name("failOr")),
           Vector.empty,
           CoreTypes.BooleanT,
-          software.kes.scaletta.api.FunctionImpl.booleanResult(_ => throw new RuntimeException("Should not be called"))
+          FunctionImpl.booleanResult(_ => throw new RuntimeException("Should not be called"))
         )
       }
       val customScaletta = Scaletta.create(Scaletta.addModule(module)).asInstanceOf[ScalettaFacade]
@@ -232,14 +232,14 @@ class IntermediateExpressionCompilerSpec extends AnyFunSpec with Matchers {
 
     it("should handle LazyVal and evaluate it only once") {
       var callCount = 0
-      var incrementId: software.kes.scaletta.api.NativeFunctionId = software.kes.scaletta.api.NativeFunctionId(-1)
+      var incrementId: NativeFunctionId = NativeFunctionId(-1)
 
-      val module = software.kes.scaletta.api.ScalettaModule { setup =>
+      val module = ScalettaModule { setup =>
         incrementId = setup.methodRegistry.addMethod(
-          software.kes.scaletta.api.MethodName(software.kes.scaletta.api.ReceiverType.Static(software.kes.scaletta.api.PackagePath.root), software.kes.scaletta.api.Name("increment")),
+          MethodName(ReceiverType.Static(PackagePath.root), Name("increment")),
           Vector.empty,
           CoreTypes.IntT,
-          software.kes.scaletta.api.FunctionImpl.intResult { _ =>
+          FunctionImpl.intResult { _ =>
             callCount += 1
             callCount
           }

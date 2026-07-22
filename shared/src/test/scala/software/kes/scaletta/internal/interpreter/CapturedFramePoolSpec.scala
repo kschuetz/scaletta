@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.interpreter
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.internal.runtime.VarAddress
+import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, VarAddress, VarSpaceSignature}
 
 import scala.collection.immutable.ArraySeq
 
@@ -109,13 +109,13 @@ class CapturedFramePoolSpec extends AnyFunSpec with Matchers {
     it("should capture variables from VarSpaceFromVariableStack") {
       val stack = VariableStack.create()
       // We need to create a VarSpaceSignature that matches our data
-      val frameSig = software.kes.scaletta.internal.runtime.FrameSignature.fromSeq(
+      val frameSig = FrameSignature.fromSeq(
         List(
-          software.kes.scaletta.internal.runtime.CoreTypes.IntT,
-          software.kes.scaletta.internal.runtime.CoreTypes.StringT
+          CoreTypes.IntT,
+          CoreTypes.StringT
         )
       )
-      val signature = software.kes.scaletta.internal.runtime.VarSpaceSignature.of(frameSig)
+      val signature = VarSpaceSignature.of(frameSig)
       val varSpace = VarSpaceFromVariableStack.create(stack, signature)
       stack.expandFrame(frameSig)
 

@@ -44,7 +44,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
 
         val table = tableBuilder.result()
 
-        def testDone(id: software.kes.scaletta.api.NativeFunctionId, expectedType: Byte, expectedValue: Any): Unit = {
+        def testDone(id: NativeFunctionId, expectedType: Byte, expectedValue: Any): Unit = {
           val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, expectedType, 0))
           val assembler = builder.mainAssembler()
           assembler.callNative(id)

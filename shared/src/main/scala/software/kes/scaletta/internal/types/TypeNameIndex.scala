@@ -1,7 +1,8 @@
 package software.kes.scaletta.internal.types
 
-import software.kes.scaletta.api.{ImportScope, QualifiedName, Type, TypeId}
+import software.kes.scaletta.api._
 import software.kes.scaletta.internal.symbols.{SymbolEntry, SymbolIndex}
+import software.kes.scaletta.util.NonEmptyVector
 
 object TypeNameIndex {
   /**
@@ -49,7 +50,7 @@ final class TypeNameIndex private(symbolIndex: SymbolIndex[Type[TypeId]],
    * @return A tuple containing the (potentially updated) TypeNameIndex and the TypeId.
    */
   def internConstructor(name: QualifiedName.Full,
-                        parameters: software.kes.scaletta.util.NonEmptyVector[software.kes.scaletta.api.TypeParameter[TypeId]]): (TypeNameIndex, TypeId) = {
+                        parameters: NonEmptyVector[TypeParameter[TypeId]]): (TypeNameIndex, TypeId) = {
     symbolIndex.get(name) match {
       case Some(Type.Constructor(_, existingParams)) if existingParams == parameters =>
         val id = TypeId(allNames.indexOf(name))

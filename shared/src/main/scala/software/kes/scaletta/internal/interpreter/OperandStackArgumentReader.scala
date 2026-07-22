@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.api.ArgumentReader
+import software.kes.scaletta.api.{ArgumentReader, CallTarget}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.runtime.ParamsSignature
 import software.kes.scaletta.util.conversions.ObjectToPrimitive
@@ -12,7 +12,7 @@ import scala.collection.immutable.ArraySeq
  */
 private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
                                                       var signature: ParamsSignature,
-                                                      closureToCallTarget: RuntimeClosure => software.kes.scaletta.api.CallTarget) extends ArgumentReader {
+                                                      closureToCallTarget: RuntimeClosure => CallTarget) extends ArgumentReader {
   def argCount: Int = signature.paramCount
 
   def read(index: Int): Any =
@@ -170,8 +170,8 @@ private[interpreter] class OperandStackArgumentReader(stack: OperandStack,
     }
   }
 
-  override def unsafeReadFunction(index: Int): software.kes.scaletta.api.CallTarget =
-    read(index).asInstanceOf[software.kes.scaletta.api.CallTarget]
+  override def unsafeReadFunction(index: Int): CallTarget =
+    read(index).asInstanceOf[CallTarget]
 
   def unsafeReadBooleanArray(index: Int): ArraySeq[Boolean] =
     unsafeReadObject(index).asInstanceOf[ArraySeq[Boolean]]

@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.interpreter
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.api.NativeFunctionId
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarSpaceSignature}
 
@@ -12,7 +13,7 @@ class DisassemblerSpec extends AnyFunSuite with Matchers {
 
     assembler.pushImmediateInt(43)
     assembler.pushImmediateInt(13)
-    assembler.callNative(software.kes.scaletta.api.NativeFunctionId(101))
+    assembler.callNative(NativeFunctionId(101))
     assembler.emitReturn()
 
     val program = builder.build()

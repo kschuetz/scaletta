@@ -174,7 +174,7 @@ class TypeSpec extends AnyFunSpec with Matchers {
 
         // We can check the type signature of the factory methods
         "Type.union(typeInt, typeString)" should compile
-        "val params = software.kes.scaletta.util.NonEmptyVector(software.kes.scaletta.api.TypeParameter.invariant[String]); val c = Type.constructor(\"Option\", params); Type.union(Type.nominal(\"Int\"), c)" shouldNot compile
+        "val params = NonEmptyVector(TypeParameter.invariant[String]); val c = Type.constructor(\"Option\", params); Type.union(Type.nominal(\"Int\"), c)" shouldNot compile
       }
     }
   }

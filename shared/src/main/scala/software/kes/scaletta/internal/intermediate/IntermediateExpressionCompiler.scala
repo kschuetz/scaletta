@@ -1,10 +1,12 @@
 package software.kes.scaletta.internal.intermediate
 
+import software.kes.scaletta.api.{UnapplyResult, UnapplyStrategy}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value
 import software.kes.scaletta.internal.interpreter._
-import software.kes.scaletta.internal.runtime.{FrameSignature, UserFunctionSignature, VarAddress}
+import software.kes.scaletta.internal.runtime.{FrameSignature, UserFunctionSignature, VarAddress, VarSpaceSignature}
+import software.kes.scaletta.util.NonEmptyVector
 
 import scala.annotation.tailrec
 import scala.collection.immutable.ArraySeq
@@ -238,7 +240,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
 
           val syntheticFrame = FrameSignature.fromBasicTypes(holeTypes ++ captureTypes)
           val syntheticSignature = UserFunctionSignature(
-            software.kes.scaletta.internal.runtime.VarSpaceSignature.of(syntheticFrame),
+            VarSpaceSignature.of(syntheticFrame),
             nativeFunction.returnType.toByte,
             holes.size
           )
@@ -350,7 +352,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
                 assembler.lazyInit(underlyingType, absoluteIndex)
 
                 val evalSignature = UserFunctionSignature(
-                  signature.varSpace.pushFrame(software.kes.scaletta.internal.runtime.FrameSignature.empty),
+                  signature.varSpace.pushFrame(FrameSignature.empty),
                   underlyingType,
                   0
                 )
@@ -464,7 +466,7 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
                 assembler.lazyInit(underlyingType, absoluteIndex)
 
                 val evalSignature = UserFunctionSignature(
-                  signature.varSpace.pushFrame(software.kes.scaletta.internal.runtime.FrameSignature.empty),
+                  signature.varSpace.pushFrame(FrameSignature.empty),
                   underlyingType,
                   0
                 )
@@ -511,15 +513,15 @@ final class IntermediateExpressionCompiler(nativeFunctionTable: NativeFunctionTa
       }
     }
 
-    private val tupleUnapplyStrategy = software.kes.scaletta.api.UnapplyStrategy.unapplyDynamic { (arity, value) =>
+    private val tupleUnapplyStrategy = UnapplyStrategy.unapplyDynamic { (arity, value) =>
       value match {
-        case t: Product if t.productArity == arity => software.kes.scaletta.api.UnapplyResult.success(t.productIterator.toSeq)
-        case _ => software.kes.scaletta.api.UnapplyResult.failure
+        case t: Product if t.productArity == arity => UnapplyResult.success(t.productIterator.toSeq)
+        case _ => UnapplyResult.failure
       }
     }
 
     private def emitMatch(scrutinee: IntermediateExpression,
-                          cases: software.kes.scaletta.util.NonEmptyVector[Case],
+                          cases: NonEmptyVector[Case],
                           env: CompileEnv,
                           signature: UserFunctionSignature,
                           assembler: Assembler,

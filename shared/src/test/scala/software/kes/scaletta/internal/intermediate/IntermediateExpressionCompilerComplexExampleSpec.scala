@@ -9,6 +9,7 @@ import software.kes.scaletta.internal.interpreter.Interpreter
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
+import software.kes.scaletta.util.{NonEmptyVector, VectorTwoPlus}
 
 class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with Matchers {
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
@@ -392,7 +393,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     // slot 2: a or s
     // slot 3: b
     val signature = UserFunctionSignature(
-      software.kes.scaletta.internal.runtime.VarSpaceSignature.of(software.kes.scaletta.internal.runtime.FrameSignature.fromSeq(Seq(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
         CoreTypes.AnyRefT, // param 0
         CoreTypes.AnyRefT, // slot 1
         CoreTypes.IntT, // slot 2
@@ -407,7 +408,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     val stringTypeInfo = RuntimeTypeInfo(_.isInstanceOf[String])
 
     val case1 = Case(
-      pattern = Tuple(software.kes.scaletta.util.VectorTwoPlus(
+      pattern = Tuple(VectorTwoPlus(
         Typed(Slot(0, 2), intTypeInfo),
         Typed(Slot(0, 3), intTypeInfo)
       )),
@@ -416,7 +417,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val case2 = Case(
-      pattern = Tuple(software.kes.scaletta.util.VectorTwoPlus(
+      pattern = Tuple(VectorTwoPlus(
         Typed(Slot(0, 2), intTypeInfo),
         Typed(Slot(0, 3), intTypeInfo)
       )),
@@ -425,7 +426,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val case3 = Case(
-      pattern = Tuple(software.kes.scaletta.util.VectorTwoPlus(
+      pattern = Tuple(VectorTwoPlus(
         Typed(Slot(0, 2), intTypeInfo),
         Typed(Slot(0, 3), intTypeInfo)
       )),
@@ -453,7 +454,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
 
     val body = Match(
       Reference(0, 0),
-      software.kes.scaletta.util.NonEmptyVector(case1, case2, case3, case4, case5, case6)
+      NonEmptyVector(case1, case2, case3, case4, case5, case6)
     )
 
     val program = compiler.compile(signature, body)

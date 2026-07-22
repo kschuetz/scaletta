@@ -1,6 +1,6 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.internal.ast.{Call, Expression, Literal, Reference}
+import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.util.functional.Id._
 
 object AstDiff {
@@ -27,14 +27,14 @@ object AstDiff {
                 } else {
                   a.args.zip(e.args).zipWithIndex.collectFirst {
                     case ((aaGroup, eeGroup), i) =>
-                      val actualGroup = aaGroup.asInstanceOf[software.kes.scaletta.internal.ast.ArgumentGroup[Id]]
-                      val expectedGroup = eeGroup.asInstanceOf[software.kes.scaletta.internal.ast.ArgumentGroup[Id]]
+                      val actualGroup = aaGroup.asInstanceOf[ArgumentGroup[Id]]
+                      val expectedGroup = eeGroup.asInstanceOf[ArgumentGroup[Id]]
                       diffArgumentGroup(actualGroup, expectedGroup, s"$path -> args($i)")
                   }.flatten
                 }
               }
           case (a: Call.Infix[_], e: Call.Infix[_]) =>
-            if (a.operation.asInstanceOf[Id[software.kes.scaletta.internal.ast.Identifier[Id]]] != e.operation.asInstanceOf[Id[software.kes.scaletta.internal.ast.Identifier[Id]]]) {
+            if (a.operation.asInstanceOf[Id[Identifier[Id]]] != e.operation.asInstanceOf[Id[Identifier[Id]]]) {
               Some(s"$path -> operation: mismatch (actual: ${a.operation}, expected: ${e.operation})")
             } else {
               diff(a.left.asInstanceOf[Expression[Id]], e.left.asInstanceOf[Expression[Id]], s"$path -> left")
@@ -44,8 +44,8 @@ object AstDiff {
             if (a.value != e.value) Some(s"$path: value mismatch (actual: ${a.value}, expected: ${e.value})")
             else None
           case (a: Reference[_], e: Reference[_]) =>
-            val actualId = a.id.asInstanceOf[Id[software.kes.scaletta.internal.ast.Identifier[Id]]]
-            val expectedId = e.id.asInstanceOf[Id[software.kes.scaletta.internal.ast.Identifier[Id]]]
+            val actualId = a.id.asInstanceOf[Id[Identifier[Id]]]
+            val expectedId = e.id.asInstanceOf[Id[Identifier[Id]]]
             if (actualId.name != expectedId.name) Some(s"$path: name mismatch (actual: ${actualId.name}, expected: ${expectedId.name})")
             else None
           case _ => Some(s"$path: mismatch\n  Actual:   $actual\n  Expected: $expected")
@@ -56,8 +56,8 @@ object AstDiff {
     }
   }
 
-  private def diffArgumentGroup(actual: software.kes.scaletta.internal.ast.ArgumentGroup[Id],
-                                expected: software.kes.scaletta.internal.ast.ArgumentGroup[Id],
+  private def diffArgumentGroup(actual: ArgumentGroup[Id],
+                                expected: ArgumentGroup[Id],
                                 path: String): Option[String] = {
     if (actual.arguments.length != expected.arguments.length) {
       Some(s"$path: argument length mismatch (actual: ${actual.arguments.length}, expected: ${expected.arguments.length})")

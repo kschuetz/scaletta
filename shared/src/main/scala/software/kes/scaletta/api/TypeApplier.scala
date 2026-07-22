@@ -18,7 +18,7 @@ object TypeApplier {
 }
 
 final class TypeApplier[T] private(val target: Type[T],
-                                   val parameters: software.kes.scaletta.util.NonEmptyVector[TypeParameter[T]],
+                                   val parameters: NonEmptyVector[TypeParameter[T]],
                                    private val applied: Vector[TypeArgument[T]]) {
 
   def name: T = target match {

@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.interpreter
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{FunctionImpl, NativeStep}
+import software.kes.scaletta.api.{CallTarget, FunctionImpl, NativeFunctionId, NativeStep}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.{NativeFunction, NativeFunctionTable}
 import software.kes.scaletta.internal.runtime._
@@ -20,7 +20,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
 
       val table = tableBuilder.result()
 
-      def testDone(id: software.kes.scaletta.api.NativeFunctionId, expectedType: Byte, expectedValue: Any): Unit = {
+      def testDone(id: NativeFunctionId, expectedType: Byte, expectedValue: Any): Unit = {
         val builder = ProgramBuilder.create(UserFunctionSignature(VarSpaceSignature.empty, expectedType, 0))
         val assembler = builder.mainAssembler()
         assembler.callNative(id)
@@ -73,7 +73,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
 
       // A native that takes a callback and calls it once
       val applyOnce = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT), BasicTypes.Int, FunctionImpl.higherOrder { args =>
-        val target = args.readObject(0).asInstanceOf[software.kes.scaletta.api.CallTarget]
+        val target = args.readObject(0).asInstanceOf[CallTarget]
         target.setArgument(0, 41)
         NativeStep.Call(target, result => NativeStep.Done(result.asInstanceOf[Int] + 2))
       }))
@@ -101,7 +101,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
     it("should handle multi-step NativeStep.Call sequences") {
       val tableBuilder = NativeFunctionTable.builder()
       val applyTwice = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT), BasicTypes.Int, FunctionImpl.higherOrder { args =>
-        val target = args.readObject(0).asInstanceOf[software.kes.scaletta.api.CallTarget]
+        val target = args.readObject(0).asInstanceOf[CallTarget]
         target.setArgument(0, 41)
         NativeStep.Call(target, res1 => {
           target.setArgument(0, res1.asInstanceOf[Int] + 2)
@@ -133,7 +133,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
 
       val mapHO = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT, CoreTypes.AnyRefT), BasicTypes.Object, FunctionImpl.higherOrder { args =>
         val list = args.readObject(0).asInstanceOf[List[Int]]
-        val target = args.readObject(1).asInstanceOf[software.kes.scaletta.api.CallTarget]
+        val target = args.readObject(1).asInstanceOf[CallTarget]
 
         def go(remaining: List[Int], acc: Vector[Int]): NativeStep = {
           remaining match {
@@ -175,7 +175,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
 
       val filterHO = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT, CoreTypes.AnyRefT), BasicTypes.Object, FunctionImpl.higherOrder { args =>
         val list = args.readObject(0).asInstanceOf[List[Int]]
-        val target = args.readObject(1).asInstanceOf[software.kes.scaletta.api.CallTarget]
+        val target = args.readObject(1).asInstanceOf[CallTarget]
 
         def go(remaining: List[Int], acc: Vector[Int]): NativeStep = {
           remaining match {
@@ -222,7 +222,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       val foldHO = tableBuilder.add(NativeFunction(ParamsSignature.of(CoreTypes.AnyRefT, CoreTypes.IntT, CoreTypes.AnyRefT), BasicTypes.Int, FunctionImpl.higherOrder { args =>
         val list = args.readObject(0).asInstanceOf[List[Int]]
         val initial = args.readInt(1)
-        val target = args.readObject(2).asInstanceOf[software.kes.scaletta.api.CallTarget]
+        val target = args.readObject(2).asInstanceOf[CallTarget]
 
         def go(remaining: List[Int], currentAcc: Int): NativeStep = {
           remaining match {

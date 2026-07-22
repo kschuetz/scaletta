@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.interpreter
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
-import software.kes.scaletta.internal.runtime.{ParamsSignature, VarAddress, VarSpaceSignature}
+import software.kes.scaletta.internal.runtime.{FrameSignature, ParamsSignature, VarAddress, VarSpaceSignature}
 import software.kes.scaletta.util.conversions.CollectionToTuple
 import software.kes.scaletta.util.stack.{IntStack, ObjectStack}
 
@@ -250,7 +250,7 @@ final class Interpreter private(private val program: Program,
 
       case Opcodes.CallNative =>
         val nativeId = rawOpcode & 0xFFFFFF
-        val nativeFunction = functionTable.get(software.kes.scaletta.api.NativeFunctionId(nativeId))
+        val nativeFunction = functionTable.get(NativeFunctionId(nativeId))
         argumentReader.signature = nativeFunction.params
         nativeFunction.impl match {
           case FunctionImpl.ObjectResult(body) =>
@@ -291,7 +291,7 @@ final class Interpreter private(private val program: Program,
             operandStack.pushFloat(result)
           case FunctionImpl.HigherOrder(body) =>
             val step = body(argumentReader)
-            val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
+            val nativeFunctionId = NativeFunctionId(nativeId)
             operandStack.contract(nativeFunction.params)
             runHigherOrder(step, nativeFunction.returnType.toByte, userFunctionIndex, instructionPointer, nativeFunctionId.toString)
           case FunctionImpl.ObjectResultWithContext(body) =>
@@ -332,7 +332,7 @@ final class Interpreter private(private val program: Program,
             operandStack.pushFloat(result)
           case FunctionImpl.HigherOrderWithContext(body) =>
             val step = body(runtimeContexts, argumentReader)
-            val nativeFunctionId = software.kes.scaletta.api.NativeFunctionId(nativeId)
+            val nativeFunctionId = NativeFunctionId(nativeId)
             operandStack.contract(nativeFunction.params)
             runHigherOrder(step, nativeFunction.returnType.toByte, userFunctionIndex, instructionPointer, nativeFunctionId.toString)
         }
@@ -534,7 +534,7 @@ final class Interpreter private(private val program: Program,
         operandStack.pushBoolean(predicate(value))
 
       case Opcodes.Unapply =>
-        val strategy = operandStack.unsafePopObject().asInstanceOf[software.kes.scaletta.api.UnapplyStrategy]
+        val strategy = operandStack.unsafePopObject().asInstanceOf[UnapplyStrategy]
         val argCount = operandStack.unsafePopInt()
         val value = operandStack.pop()
         val result = strategy.tryUnapply(runtimeContexts, argCount, value)
@@ -672,7 +672,7 @@ final class Interpreter private(private val program: Program,
     evalResultContainer
   }
 
-  private def transferParameters(frameSignature: software.kes.scaletta.internal.runtime.FrameSignature,
+  private def transferParameters(frameSignature: FrameSignature,
                                  parameterCount: Int): Unit = {
     var i = parameterCount - 1
     while (i >= 0) {

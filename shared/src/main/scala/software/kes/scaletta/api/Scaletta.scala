@@ -1,9 +1,11 @@
 package software.kes.scaletta.api
 
+import software.kes.scaletta.internal.ScalettaFacade
+
 object Scaletta {
 
   def builder: Builder =
-    software.kes.scaletta.internal.ScalettaFacade.builder
+    ScalettaFacade.builder
 
   trait Builder {
     /**
