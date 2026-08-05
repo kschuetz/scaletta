@@ -1,5 +1,6 @@
 package software.kes.scaletta.internal.parser
 
+import software.kes.scaletta.internal.ast.ParsingPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.internal.scanner.{Scanner, Token}

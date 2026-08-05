@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal
 
-import software.kes.scaletta.internal.ast.{Declaration, Expression, Pattern, TypeIdentifier}
+import software.kes.scaletta.internal.ast.ParsingPhase.{Declaration, Expression, Pattern}
+import software.kes.scaletta.internal.ast.TypeIdentifier
 
 package object parser {
   type ExprResult[F[_]] = ParseResult[F, F[Expression[F]]]

@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.ast
 
 import software.kes.scaletta.internal.types.ConjunctionType
-import software.kes.scaletta.util.functional.{Functor, ~>}
+import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
 sealed trait TypeIdentifier[F[_]] {
   def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): TypeIdentifier[G]
@@ -103,6 +103,11 @@ object TypeIdentifier {
   case class Tuple[F[_]](elements: Vector[F[TypeIdentifier[F]]]) extends TypeIdentifier[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Tuple[G] =
       Tuple(elements.map(e => phi(F.map(e)(_.mapK(phi)))))
+  }
+
+  implicit object typeIdentifierFunctorK extends FunctorK[TypeIdentifier] {
+    def mapK[F[_], G[_]](tf: TypeIdentifier[F])(nt: F ~> G)(implicit F: Functor[F]): TypeIdentifier[G] =
+      tf.mapK(nt)
   }
 
   private def conjunction[F[_]](conjunctionType: ConjunctionType,
