@@ -12,6 +12,15 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+### Metals ###
+.metals/
+.bloop/
+.bsp/
+.scala-build/
+*.metals.sbt
+project/metals.sbt
+project/project/metals.sbt
+
 ### Eclipse ###
 .apt_generated
 .classpath
@@ -39,9 +48,6 @@ build/
 
 ### Mac OS ###
 .DS_Store
-
-### Scala ###
-.bsp/
 
 ### local ###
 .local/
