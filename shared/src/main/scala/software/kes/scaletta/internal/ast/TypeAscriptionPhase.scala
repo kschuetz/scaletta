@@ -10,10 +10,12 @@ object TypeAscriptionPhase extends Phase {
 
   protected implicit def identFunctorK: FunctorK[Ident] = Identifier.identifierFunctorK
 
-  protected implicit lazy val typeIdentFunctorK: FunctorK[TypeIdent] = new FunctorK[TypeIdent] {
-    def mapK[F[_], G[_]](tf: TypeIdent[F])
+  protected implicit def typeIdentFunctorK: FunctorK[TypeIdent] = TypeIdentFunctorK
+
+  private object TypeIdentFunctorK extends FunctorK[TypeIdent] {
+    def mapK[F[_], G[_]](tf: F[Either[TypeResolutionError, ProperType[TypeId]]])
                         (nt: F ~> G)
-                        (implicit F: Functor[F]): TypeIdent[G] =
+                        (implicit F: Functor[F]): G[Either[TypeResolutionError, ProperType[TypeId]]] =
       nt(tf)
   }
 }

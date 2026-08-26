@@ -1,0 +1,3 @@
+package software.kes.scaletta.internal.ast
+
+object PreResolutionPhase extends PhaseWithPreResolutionInfo with PhaseWithPlainTypeIdentifier 
