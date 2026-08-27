@@ -30,6 +30,7 @@ lazy val scaletta = crossProject(JVMPlatform, JSPlatform)
     crossScalaVersions := supportedScalaVersions,
   )
   .jvmSettings(
+    scalacOptions += "-release:11",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
       "org.scalacheck" %% "scalacheck" % scalaCheckVersion % Test,
@@ -58,4 +59,7 @@ lazy val scalettaBenchmarks = crossProject(JVMPlatform, JSPlatform)
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion
     )
+  )
+  .jvmSettings(
+    scalacOptions += "-release:11",
   )
