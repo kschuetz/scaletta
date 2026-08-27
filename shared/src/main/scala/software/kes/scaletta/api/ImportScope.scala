@@ -6,6 +6,12 @@ object ImportScope {
    */
   val empty: ImportScope = new ImportScope(Map.empty, Set.empty, Map.empty)
 
+  val default: ImportScope = fromRules(
+    ImportRule.Wildcard(Packages.scaletta),
+    ImportRule.Wildcard(Packages.scalettaCollection),
+    ImportRule.Wildcard(Packages.scalettaMath),
+  )
+
   def importPackage(paths: PackagePath.Absolute*): ImportScope =
     empty.importPackage(paths: _*)
 

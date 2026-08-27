@@ -18,6 +18,8 @@ object Scaletta {
      */
     def modifySettings(fns: Settings => Settings*): Builder
 
+    def modifyImportScope(fns: ImportScope => ImportScope*): Builder
+
     def build: Scaletta
   }
 

@@ -14,21 +14,29 @@ object ScalettaFacade {
 
   def builder: Builder = {
     val settings = Settings()
-    new Builder(settings, Nil)
+    new Builder(settings, ImportScope.default, Nil)
   }
 
   final class Builder private[ScalettaFacade](val settings: Settings,
+                                              val importScope: ImportScope,
                                               private val modules: List[ScalettaModule[Unit]])
     extends Scaletta.Builder {
 
     def addModule[A](modulesToAdd: ScalettaModule[A]*): Builder =
-      new Builder(settings, modulesToAdd.toList.map(_.unit) ++ modules)
+      new Builder(settings, importScope, modulesToAdd.toList.map(_.unit) ++ modules)
 
     def modifySettings(fns: Settings => Settings*): Builder = {
       val updatedSettings = fns.foldLeft(settings) {
         case (acc, fn) => fn(acc)
       }
-      new Builder(updatedSettings, modules)
+      new Builder(updatedSettings, importScope, modules)
+    }
+
+    def modifyImportScope(fns: ImportScope => ImportScope*): Builder = {
+      val updatedImportScope = fns.foldLeft(importScope) {
+        case (acc, fn) => fn(acc)
+      }
+      new Builder(settings, updatedImportScope, modules)
     }
 
     def build: ScalettaFacade = {
@@ -45,7 +53,7 @@ object ScalettaFacade {
       modules.reverse.foreach(_.configure(setup))
 
       val universe = Universe.create(typeRegistry.build(), methodRegistry.build())
-      new ScalettaFacade(settings, universe, runtimeContextRegistry)
+      new ScalettaFacade(settings, universe, importScope, runtimeContextRegistry)
     }
   }
 
@@ -53,6 +61,7 @@ object ScalettaFacade {
 
 final class ScalettaFacade(settings: Settings,
                            val universe: Universe,
+                           val importScope: ImportScope,
                            val runtimeContextRegistry: RuntimeContextRegistry) extends Scaletta {
 
   def compile(input: String): CompileResult = {
