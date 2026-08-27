@@ -1,4 +1,3 @@
-import scala.collection.Seq
 
 lazy val scala213 = "2.13.18"
 lazy val scala3 = "3.3.8"
@@ -9,12 +8,13 @@ lazy val scalaCheckVersion = "1.19.0"
 lazy val scalaTestPlusScalaCheckVersion = "3.2.20.0"
 
 lazy val root = project
-  .in(file("."))
+  .in(file("project-root")) // empty directory, just for aggregation
   .aggregate(
     scaletta.jvm, scaletta.js
+    // excludes benchmarks
   )
   .settings(
-    name := "scaletta",
+    name := "root",
     scalaVersion := scala213,
     publish := {},
     publishLocal := {},
@@ -35,13 +35,12 @@ lazy val scaletta = crossProject(JVMPlatform, JSPlatform)
       "org.scalacheck" %% "scalacheck" % scalaCheckVersion % Test,
       "org.scalatestplus" %% "scalacheck-1-19" % scalaTestPlusScalaCheckVersion % Test,
     )
-
   )
   .jsSettings(
     libraryDependencies ++= Seq(
-      "org.scalatest" %%% "scalatest" % scalaTestVersion % Test,
-      "org.scalacheck" %%% "scalacheck" % scalaCheckVersion % Test,
-      "org.scalatestplus" %%% "scalacheck-1-19" % scalaTestPlusScalaCheckVersion % Test,
+      "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
+      "org.scalacheck" %% "scalacheck" % scalaCheckVersion % Test,
+      "org.scalatestplus" %% "scalacheck-1-19" % scalaTestPlusScalaCheckVersion % Test,
     )
   )
 
@@ -55,7 +54,8 @@ lazy val scalettaBenchmarks = crossProject(JVMPlatform, JSPlatform)
     crossScalaVersions := supportedScalaVersions,
     publish := {},
     publishLocal := {},
+    Test / parallelExecution := false,
     libraryDependencies ++= Seq(
-      "org.scalatest" %%% "scalatest" % scalaTestVersion
+      "org.scalatest" %% "scalatest" % scalaTestVersion
     )
   )
