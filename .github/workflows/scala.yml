@@ -15,8 +15,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 11
+          java-version: 17
       - name: Setup sbt launcher
         uses: sbt/setup-sbt@v1
       - name: Build and Test
-        run: sbt -v +test
+        run: sbt -v +testFull
