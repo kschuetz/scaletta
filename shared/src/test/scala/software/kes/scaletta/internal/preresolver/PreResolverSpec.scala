@@ -3,45 +3,34 @@ package software.kes.scaletta.internal.preresolver
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
+import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.ast._
-import software.kes.scaletta.internal.builtins._
+import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.parser.Parser
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, LineMapBuilder, Pos}
+import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.scanner.{IdentifierPolicy, Scanner}
-import software.kes.scaletta.internal.types.TypeRegistryImpl
 
-class PreResolverSpec extends AnyFunSpec with Matchers {
+final class PreResolverSpec extends AnyFunSpec with Matchers {
 
-  private val nsMath: PackagePath.Absolute = PackagePath.parseAbsolute("scaletta.math")
+  private val nsMath: PackagePath.Absolute = Packages.scalettaMath
   private val nsUtil: PackagePath.Absolute = PackagePath.parseAbsolute("scaletta.util")
 
-  private val (typeUniverse, methodUniverse, absId, minId1, minId2, utilFnId) = {
-    val typeRegistry = new TypeRegistryImpl()
-    val intT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Int")), RuntimeTypeInfo.any)
-    val doubleT = typeRegistry.addValueType(Packages.scaletta.qualify(Name("Double")), RuntimeTypeInfo.any)
-    val tu = typeRegistry.build()
-
-    val mb = MethodUniverseBuilder.create()
-
-    // scaletta.math.abs(Int): Int -> single overload
-    val absParams = Vector(FormalParameter(Name("n"), intT))
-    val absNativeId = mb.addMethod(MethodName(ReceiverType.Static(nsMath), Name("abs")), absParams, intT, null)
-
-    // scaletta.math.min: 2 overloads (Int, Int) and (Double, Double)
-    val minParamsInt = Vector(FormalParameter(Name("a"), intT), FormalParameter(Name("b"), intT))
-    val minNativeId1 = mb.addMethod(MethodName(ReceiverType.Static(nsMath), Name("min")), minParamsInt, intT, null)
-
-    val minParamsDouble = Vector(FormalParameter(Name("a"), doubleT), FormalParameter(Name("b"), doubleT))
-    val minNativeId2 = mb.addMethod(MethodName(ReceiverType.Static(nsMath), Name("min")), minParamsDouble, doubleT, null)
-
-    // scaletta.util.abs(Int): Int -> same simple name as math.abs for ambiguity testing
-    val utilParams = Vector(FormalParameter(Name("x"), intT))
-    val utilNativeId = mb.addMethod(MethodName(ReceiverType.Static(nsUtil), Name("abs")), utilParams, intT, null)
-
-    val mu = mb.build()
-    (tu, mu, absNativeId, minNativeId1, minNativeId2, utilNativeId)
+  private val utilModule: ScalettaModule[Unit] = ScalettaModule { setup =>
+    setup.methodRegistry.addMethod(
+      MethodName(ReceiverType.Static(nsUtil), Name("sqrt")),
+      Vector(FormalParameter.double(Name("x"))),
+      CoreTypes.DoubleT,
+      FunctionImpl.doubleResult(args => args.readDouble(0))
+    )
   }
+
+  private val scaletta: ScalettaFacade =
+    Scaletta.create(Scaletta.addModule(utilModule)).asInstanceOf[ScalettaFacade]
+  private val stdLib: StandardLibraryLookup = StandardLibraryLookup.create(scaletta.universe)
+  private val sqrtId: software.kes.scaletta.internal.ast.NativeFunctionId =
+    software.kes.scaletta.internal.ast.NativeFunctionId(stdLib.math.sqrt.value.toLong)
 
   private def parseExpr(source: String): Pos[ParsingPhase.Expression[Pos]] = {
     val reader = SourceReader.create(source.iterator, LineMapBuilder.create(LineMap.create()))
@@ -53,7 +42,7 @@ class PreResolverSpec extends AnyFunSpec with Matchers {
 
   private def preResolve(source: String, importScope: ImportScope = ImportScope.default): PreResolutionPhase.Expression[Pos] = {
     val parsed = parseExpr(source)
-    val resolver = PreResolver.create(methodUniverse.symbolTable, importScope)
+    val resolver = PreResolver.create(scaletta.universe.methodUniverse.symbolTable, importScope)
     resolver.preResolve(parsed.value)
   }
 
@@ -75,7 +64,7 @@ class PreResolverSpec extends AnyFunSpec with Matchers {
         val p1: Pos[ParsingPhase.Expression[Pos]] = Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
         val p2: Pos[ParsingPhase.Expression[Pos]] = Pos(ParsingPhase.Literal.true_[Pos](), CharIndex(3), CharIndex(7))
         val rawTuple = ParsingPhase.Tuple[Pos](Vector(p1, p2))
-        val resolver = PreResolver.create(methodUniverse.symbolTable, ImportScope.default)
+        val resolver = PreResolver.create(scaletta.universe.methodUniverse.symbolTable, ImportScope.default)
         val resTuple = resolver.preResolve(rawTuple)
         resTuple should matchPattern { case _: PreResolutionPhase.Tuple[_] => }
       }
@@ -122,7 +111,7 @@ class PreResolverSpec extends AnyFunSpec with Matchers {
         val body = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](bodyIdent), CharIndex(6), CharIndex(7))
         val rawLambda = ParsingPhase.Lambda[Pos](Vector(param), body)
 
-        val resolver = PreResolver.create(methodUniverse.symbolTable, ImportScope.default)
+        val resolver = PreResolver.create(scaletta.universe.methodUniverse.symbolTable, ImportScope.default)
         val ast = resolver.preResolve(rawLambda)
 
         ast match {
@@ -173,7 +162,7 @@ class PreResolverSpec extends AnyFunSpec with Matchers {
         val targetExpr = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
         val rawMatch = ParsingPhase.Match[Pos](targetExpr, Vector(kase))
 
-        val resolver = PreResolver.create(methodUniverse.symbolTable, ImportScope.default)
+        val resolver = PreResolver.create(scaletta.universe.methodUniverse.symbolTable, ImportScope.default)
         val ast = resolver.preResolve(rawMatch)
 
         ast match {
@@ -199,13 +188,13 @@ class PreResolverSpec extends AnyFunSpec with Matchers {
     describe("static functions and imports") {
       it("should resolve single unambiguous static function to Bound") {
         val scope = ImportScope.empty.importWildcard(nsMath)
-        val ast = preResolve("abs(-5)", scope)
+        val ast = preResolve("sqrt(41.0)", scope)
         ast match {
           case PreResolutionPhase.Call.Standard(target, _, args) =>
             args.size shouldBe 1
             target.value match {
               case PreResolutionPhase.Reference(id) =>
-                id.value.value shouldBe PreResolutionInfo.Bound(software.kes.scaletta.internal.ast.NativeFunctionId(absId.value.toLong))
+                id.value.value shouldBe PreResolutionInfo.Bound(sqrtId)
               case other => fail(s"Expected Reference target, got $other")
             }
           case other => fail(s"Expected Standard call, got $other")
@@ -231,12 +220,12 @@ class PreResolverSpec extends AnyFunSpec with Matchers {
         val scope = ImportScope.empty
           .importWildcard(nsMath)
           .importWildcard(nsUtil)
-        val ast = preResolve("abs(41)", scope)
+        val ast = preResolve("sqrt(41.0)", scope)
         ast match {
           case PreResolutionPhase.Call.Standard(target, _, _) =>
             target.value match {
               case PreResolutionPhase.Reference(id) =>
-                id.value.value shouldBe PreResolutionInfo.AmbiguousName("abs", 2)
+                id.value.value shouldBe PreResolutionInfo.AmbiguousName("sqrt", 2)
               case other => fail(s"Expected Reference target, got $other")
             }
           case other => fail(s"Expected Standard call, got $other")
@@ -244,12 +233,12 @@ class PreResolverSpec extends AnyFunSpec with Matchers {
       }
 
       it("should resolve fully qualified static function call") {
-        val ast = preResolve("scaletta.math.abs(-5)", ImportScope.empty)
+        val ast = preResolve("scaletta.math.sqrt(41.0)", ImportScope.empty)
         ast match {
           case PreResolutionPhase.Call.Standard(target, _, _) =>
             target.value match {
               case PreResolutionPhase.Select(_, name) =>
-                name.value.value shouldBe PreResolutionInfo.Bound(software.kes.scaletta.internal.ast.NativeFunctionId(absId.value.toLong))
+                name.value.value shouldBe PreResolutionInfo.Bound(sqrtId)
               case other => fail(s"Expected Select target, got $other")
             }
           case other => fail(s"Expected Standard call, got $other")
