@@ -287,7 +287,7 @@ final class PreResolver private(symbolTable: FunctionSymbolTable,
             }
             matchingArity match {
               case single :: Nil if overloads.size == 1 =>
-                PreResolutionInfo.Bound(software.kes.scaletta.internal.ast.NativeFunctionId(single.nativeFunctionId.value.toLong))
+                PreResolutionInfo.Bound(NativeFunctionSymbolId(single.nativeFunctionId))
               case _ =>
                 val qualifiedNameStr = entry.container.fold(entry.name.value)(c => s"${c}.${entry.name.value}")
                 PreResolutionInfo.StaticFunctionSite(qualifiedNameStr, arities)
@@ -295,7 +295,7 @@ final class PreResolver private(symbolTable: FunctionSymbolTable,
 
           case None =>
             if (overloads.size == 1) {
-              PreResolutionInfo.Bound(software.kes.scaletta.internal.ast.NativeFunctionId(overloads.head.nativeFunctionId.value.toLong))
+              PreResolutionInfo.Bound(NativeFunctionSymbolId(overloads.head.nativeFunctionId))
             } else {
               val qualifiedNameStr = entry.container.fold(entry.name.value)(c => s"${c}.${entry.name.value}")
               PreResolutionInfo.StaticFunctionSite(qualifiedNameStr, Vector.empty)

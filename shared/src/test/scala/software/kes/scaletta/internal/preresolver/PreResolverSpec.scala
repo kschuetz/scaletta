@@ -29,8 +29,7 @@ final class PreResolverSpec extends AnyFunSpec with Matchers {
   private val scaletta: ScalettaFacade =
     Scaletta.create(Scaletta.addModule(utilModule)).asInstanceOf[ScalettaFacade]
   private val stdLib: StandardLibraryLookup = StandardLibraryLookup.create(scaletta.universe)
-  private val sqrtId: software.kes.scaletta.internal.ast.NativeFunctionId =
-    software.kes.scaletta.internal.ast.NativeFunctionId(stdLib.math.sqrt.value.toLong)
+  private val sqrtId: NativeFunctionSymbolId = NativeFunctionSymbolId(stdLib.math.sqrt)
 
   private def parseExpr(source: String): Pos[ParsingPhase.Expression[Pos]] = {
     val reader = SourceReader.create(source.iterator, LineMapBuilder.create(LineMap.create()))
