@@ -1,6 +1,6 @@
 package software.kes.scaletta.common
 
-import software.kes.scaletta.api.{Type, TypeId}
+import software.kes.scaletta.api.{ProperType, Type, TypeId}
 import software.kes.scaletta.internal.runtime.CoreTypes
 
 object BasicTypes {
@@ -25,6 +25,19 @@ object BasicTypes {
       case CoreTypes.DoubleT => Double
       case CoreTypes.FloatT => Float
       case _ => Object
+    }
+
+  def toType(basicType: BasicType): ProperType[TypeId] =
+    basicType match {
+      case BasicTypes.Boolean => CoreTypes.BooleanT
+      case BasicTypes.Int => CoreTypes.IntT
+      case BasicTypes.Long => CoreTypes.LongT
+      case BasicTypes.Short => CoreTypes.ShortT
+      case BasicTypes.Byte => CoreTypes.ByteT
+      case BasicTypes.Char => CoreTypes.CharT
+      case BasicTypes.Double => CoreTypes.DoubleT
+      case BasicTypes.Float => CoreTypes.FloatT
+      case _ => CoreTypes.AnyRefT
     }
 
   def friendlyName(value: BasicType): String =

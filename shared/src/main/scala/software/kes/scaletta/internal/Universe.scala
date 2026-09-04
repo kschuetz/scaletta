@@ -18,6 +18,9 @@ final class Universe private(val typeUniverse: TypeUniverse,
   lazy val compiler: IntermediateExpressionCompiler =
     new IntermediateExpressionCompiler(methodUniverse.dispatchTable)
 
+  def getNativeFunctionDefinition(id: NativeFunctionId): NativeFunctionDefinition =
+    methodUniverse.dispatchTable.getDefinition(id)
+
   def getMethodCandidates(typ: Type[TypeId],
                           name: Name,
                           signatureQuery: SignatureQuery): List[NativeFunctionDefinition] = {
