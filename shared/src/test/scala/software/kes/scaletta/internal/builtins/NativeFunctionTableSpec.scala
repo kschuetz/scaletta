@@ -14,7 +14,7 @@ final class NativeFunctionTableSpec extends AnyFunSpec with Matchers {
       val fn = NativeFunction(ParamsSignature.empty, BasicTypes.Int, FunctionImpl.intResult(_ => 41))
       val paramGroups = ParameterGroup.single(FormalParameter(Name("x"), CoreTypes.IntT))
 
-      val id = builder.add(
+      val definition = builder.add(
         fn,
         allocatedId => NativeFunctionDefinition(
           paramGroups = paramGroups,
@@ -23,6 +23,7 @@ final class NativeFunctionTableSpec extends AnyFunSpec with Matchers {
           nativeFunctionId = allocatedId
         )
       )
+      val id = definition.nativeFunctionId
 
       id.value shouldBe 0
       builder.size shouldBe 1
@@ -65,8 +66,10 @@ final class NativeFunctionTableSpec extends AnyFunSpec with Matchers {
       val fn3 = NativeFunction(ParamsSignature.empty, BasicTypes.Int, FunctionImpl.intResult(_ => 47))
 
       val id1 = builder.add(fn1, id => NativeFunctionDefinition(Vector.empty, CoreTypes.IntT, pure = true, id))
+        .nativeFunctionId
       val id2 = builder.add(fn2)
       val id3 = builder.add(fn3, id => NativeFunctionDefinition(Vector.empty, CoreTypes.StringT, pure = false, id))
+        .nativeFunctionId
 
       id1.value shouldBe 0
       id2.value shouldBe 1

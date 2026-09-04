@@ -42,7 +42,7 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
     val flattenedParams = updatedParamGroups.flatMap(_.params).map(_.typ)
     val nativeFunction = NativeFunction(ParamsSignature.fromSeq(flattenedParams), BasicTypes.fromType(returnType).toInt, impl)
 
-    val nativeFunctionId = nativeFunctionTableBuilder.add(
+    val definition = nativeFunctionTableBuilder.add(
       nativeFunction,
       id => NativeFunctionDefinition(
         paramGroups = updatedParamGroups,
@@ -53,8 +53,6 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
       )
     )
 
-    val definition = nativeFunctionTableBuilder.getDefinition(nativeFunctionId)
-
     methodName.receiverType match {
       case Static(path) =>
         functionSymbolTableBuilder.addStatic(QualifiedName.full(path, methodName.name), definition)
@@ -62,7 +60,7 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
         functionSymbolTableBuilder.addInstance(typ, methodName.name, definition)
     }
 
-    nativeFunctionId
+    definition.nativeFunctionId
   }
 
   def overloadRegistryFor(methodName: MethodName): OverloadRegistry = new OverloadRegistry {

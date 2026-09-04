@@ -16,12 +16,12 @@ object NativeFunctionTable {
     def getDefinition(id: NativeFunctionId): NativeFunctionDefinition = definitions(id.value)
 
     def add(function: NativeFunction,
-            createDefinition: NativeFunctionId => NativeFunctionDefinition): NativeFunctionId = {
+            createDefinition: NativeFunctionId => NativeFunctionDefinition): NativeFunctionDefinition = {
       val result = NativeFunctionId(functions.size)
       val definition = createDefinition(result)
       functions += function
       definitions += definition
-      result
+      definition
     }
 
     def add(function: NativeFunction,
