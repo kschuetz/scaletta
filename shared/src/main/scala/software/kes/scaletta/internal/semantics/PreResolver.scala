@@ -1,10 +1,10 @@
-package software.kes.scaletta.internal.preresolver
+package software.kes.scaletta.internal.semantics
 
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.builtins.{FunctionSymbolTable, NativeFunctionDefinition, OverloadTable}
-import software.kes.scaletta.internal.preresolver.PreResolver.{Input, Output}
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
+import software.kes.scaletta.internal.semantics.PreResolver.{Input, Output}
 import software.kes.scaletta.internal.symbols.SymbolEntry
 
 object PreResolver {

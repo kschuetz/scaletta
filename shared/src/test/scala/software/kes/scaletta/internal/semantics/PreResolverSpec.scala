@@ -1,4 +1,4 @@
-package software.kes.scaletta.internal.preresolver
+package software.kes.scaletta.internal.semantics
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
