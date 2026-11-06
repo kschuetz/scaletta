@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.semantics
 
-import software.kes.scaletta.api.DiagnosticMessage
+import software.kes.scaletta.api.{DiagnosticMessage, ProperType, Type, TypeId}
 import software.kes.scaletta.internal.ast.LinkedPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.reporting.{LineMap, Pos}
@@ -234,6 +234,58 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
       s"Unknown identifier '$name'"
     case SemanticError.DuplicateDefinition(name) =>
       s"Duplicate definition of '$name'"
+    case SemanticError.TypeMismatch(expected, actual) =>
+      s"Type mismatch: expected ${formatType(expected)}, found ${formatType(actual)}"
+    case SemanticError.ConditionNotBoolean(actual) =>
+      s"Condition expression must be of type Boolean, but found ${formatType(actual)}"
+    case SemanticError.NoSuchMethod(receiverType, name, argTypes) =>
+      val argsFormatted = formatTypeList(argTypes)
+      s"No matching method '$name' on type ${formatType(receiverType)} with arguments ($argsFormatted)"
+    case SemanticError.NoSuchFunction(name, argTypes) =>
+      val argsFormatted = formatTypeList(argTypes)
+      s"No matching function '$name' with arguments ($argsFormatted)"
+    case SemanticError.AmbiguousCall(name, candidateCount) =>
+      s"Ambiguous call to '$name' ($candidateCount candidates)"
+    case SemanticError.NoSuchField(receiverType, name) =>
+      s"No field '$name' found on type ${formatType(receiverType)}"
+    case SemanticError.NotCallable(targetType) =>
+      s"Expression of type ${formatType(targetType)} cannot be called as a function"
+    case SemanticError.RefutableValPattern(description) =>
+      s"Pattern in val definition must be irrefutable: $description"
+    case SemanticError.InexhaustiveMatch(description) =>
+      s"Match expression is not exhaustive: $description"
+    case SemanticError.UnreachableCase() =>
+      "Unreachable case pattern in match expression"
+    case SemanticError.UnsatisfiedContextRequirement(contextType) =>
+      s"Required runtime context '$contextType' is not satisfied"
+  }
+
+  private def formatTypeList(types: Vector[ProperType[TypeId]]): String =
+    types.foldLeft(Vector.empty[String])((acc, t) => acc :+ formatType(t)).mkString(", ")
+
+  private def formatType(t: Type[_]): String = t match {
+    case Type.Nominal(name) => name.toString
+    case Type.Constructor(name, _) => name.toString
+    case Type.Applied(constructor, arguments) =>
+      val argsFormatted = arguments.toVector.foldLeft(Vector.empty[String])((acc, a) => acc :+ formatType(a.value)).mkString(", ")
+      s"${formatType(constructor)}[$argsFormatted]"
+    case Type.Function(parameters, result) =>
+      val paramsFormatted = parameters.foldLeft(Vector.empty[String])((acc, p) => acc :+ formatType(p)).mkString(", ")
+      s"($paramsFormatted) => ${formatType(result)}"
+    case Type.Tuple(elements) =>
+      val elemsFormatted = elements.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(", ")
+      s"($elemsFormatted)"
+    case Type.Union(types) =>
+      types.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(" | ")
+    case Type.Intersection(types) =>
+      types.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(" & ")
+    case Type.Unit => "Unit"
+    case Type.Top => "Any"
+    case Type.TopValue => "AnyVal"
+    case Type.TopRef => "AnyRef"
+    case Type.BottomRef => "Null"
+    case Type.Bottom => "Nothing"
+    case Type.Variable(_, paramIndex) => s"?$paramIndex"
   }
 
   private def formatTypeResolutionError(error: TypeResolutionError): String = error match {
