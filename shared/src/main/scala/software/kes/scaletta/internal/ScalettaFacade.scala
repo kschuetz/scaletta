@@ -7,6 +7,7 @@ import software.kes.scaletta.internal.parser.{ParseOptions, Parser}
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{LineMapBuilder, Pos}
 import software.kes.scaletta.internal.scanner.Scanner
+import software.kes.scaletta.internal.semantics.{Linker, PreResolver, SemanticDiagnostics, TypeAscriber}
 import software.kes.scaletta.internal.types.TypeRegistryImpl
 import software.kes.scaletta.util.NonEmptyVector
 
@@ -79,18 +80,34 @@ final class ScalettaFacade(settings: Settings,
       DiagnosticMessage(message, begin, end)
     }
 
-    val errors = parseResult.errors.map(e => toDiagnosticMessage(e, e.value.toString))
+    val parseErrors = parseResult.errors.map(e => toDiagnosticMessage(e, e.value.toString))
     val warnings = parseResult.warnings.map(w => toDiagnosticMessage(w, w.value.toString))
     val hints = parseResult.hints.map(h => toDiagnosticMessage(h, h.value.toString))
 
     val value: Either[CompileErrors, CompiledExpression] = parseResult.value match {
-      case Some(_) if !parseResult.hasErrors =>
-        // For now, return a placeholder as the linker/typechecker are not yet integrated
-        Right(new CompiledExpression {})
+      case Some(parsedExpr) if !parseResult.hasErrors =>
+        val preResolver = PreResolver.create(universe.methodUniverse.symbolTable, importScope)
+        val preResolved = preResolver.preResolve(parsedExpr.value)
+        val typeAscriber = TypeAscriber.create(universe.typeUniverse.nameIndex, importScope)
+        val ascribed = typeAscriber.ascribeTypes(preResolved)
+        val linker = Linker.create()
+        val linked = linker.link(ascribed)
+
+        val semanticErrors = SemanticDiagnostics.collect(linked, lineMap)
+        val allErrors = parseErrors ++ semanticErrors
+
+        if (allErrors.isEmpty) {
+          Right(new CompiledExpression {})
+        } else {
+          Left(CompileErrors(NonEmptyVector(allErrors.head, allErrors.tail: _*)))
+        }
+
       case _ =>
-        val errorList = if (errors.isEmpty) {
+        val errorList = if (parseErrors.isEmpty) {
           Vector(DiagnosticMessage("Unknown parsing error", Position.first, Position.first))
-        } else errors
+        } else {
+          parseErrors
+        }
         Left(CompileErrors(NonEmptyVector(errorList.head, errorList.tail: _*)))
     }
 
