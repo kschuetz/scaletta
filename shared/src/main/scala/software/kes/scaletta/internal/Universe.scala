@@ -3,7 +3,7 @@ package software.kes.scaletta.internal
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins._
 import software.kes.scaletta.internal.intermediate.IntermediateExpressionCompiler
-import software.kes.scaletta.internal.symbols.SignatureQuery
+import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryParameter}
 import software.kes.scaletta.internal.types.TypeUniverse
 
 object Universe {
@@ -18,8 +18,16 @@ final class Universe private(val typeUniverse: TypeUniverse,
   lazy val compiler: IntermediateExpressionCompiler =
     new IntermediateExpressionCompiler(methodUniverse.dispatchTable)
 
-  def getNativeFunctionDefinition(id: NativeFunctionId): NativeFunctionDefinition =
-    methodUniverse.dispatchTable.getDefinition(id)
+  def getNativeFunctionDefinition(id: NativeFunctionId): Option[NativeFunctionDefinition] = {
+    if (id.value >= 0 && id.value < methodUniverse.dispatchTable.size) {
+      Some(methodUniverse.dispatchTable.getDefinition(id))
+    } else {
+      None
+    }
+  }
+
+  def getStaticFunctionName(id: NativeFunctionId): Option[QualifiedName.Full] =
+    methodUniverse.symbolTable.getStaticFunctionName(id)
 
   def getMethodCandidates(typ: Type[TypeId],
                           name: Name,
@@ -29,6 +37,23 @@ final class Universe private(val typeUniverse: TypeUniverse,
       List.empty[NativeFunctionDefinition]
     } else {
       val updatedQuery = updateQueryWithReceiver(typ, signatureQuery)
+      OverloadTable(overloads).findCandidates(typeUniverse, updatedQuery)
+    }
+  }
+
+  def getMethodCandidates(name: Name,
+                          signatureQuery: SignatureQuery): List[NativeFunctionDefinition] = {
+    val overloads = methodUniverse.symbolTable.getMethodsByName(name)
+    if (overloads.isEmpty) {
+      List.empty[NativeFunctionDefinition]
+    } else {
+      val updatedQuery = signatureQuery.groups match {
+        case groups if groups.isEmpty => SignatureQuery.of(SignatureQueryParameter.Unknown)
+        case groups =>
+          val firstGroup = groups(0)
+          val updatedFirstGroup = SignatureQuery.Group(SignatureQueryParameter.Unknown +: firstGroup.parameters)
+          SignatureQuery.ofGroups(updatedFirstGroup +: groups.tail: _*)
+      }
       OverloadTable(overloads).findCandidates(typeUniverse, updatedQuery)
     }
   }

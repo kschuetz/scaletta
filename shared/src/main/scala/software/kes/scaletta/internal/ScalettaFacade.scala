@@ -90,7 +90,7 @@ final class ScalettaFacade(settings: Settings,
         val preResolved = preResolver.preResolve(parsedExpr.value)
         val typeAscriber = TypeAscriber.create(universe.typeUniverse.nameIndex, importScope)
         val ascribed = typeAscriber.ascribeTypes(preResolved)
-        val linker = Linker.create()
+        val linker = Linker.create(universe, importScope)
         val linked = linker.link(ascribed)
 
         val semanticErrors = SemanticDiagnostics.collect(linked, lineMap)

@@ -8,6 +8,7 @@ import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.parser.Parser
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, LineMapBuilder, Pos}
+import software.kes.scaletta.internal.runtime.CoreTypes._
 import software.kes.scaletta.internal.scanner.{IdentifierPolicy, Scanner}
 
 final class LinkerSpec extends AnyFunSpec with Matchers {
@@ -33,7 +34,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
     val preResolved = preResolver.preResolve(parsed)
     val ascriber = TypeAscriber.create(scaletta.universe.typeUniverse.nameIndex, importScope)
     val ascribed = ascriber.ascribeTypes(preResolved)
-    val linker = Linker.create()
+    val linker = Linker.create(scaletta.universe, importScope)
     linker.link(ascribed)
   }
 
@@ -278,7 +279,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
                   case LinkedPhase.Call.Standard(target, _, _) =>
                     target.value match {
                       case LinkedPhase.Reference(id) =>
-                        id.value.value shouldBe LinkedInfo.Error(SemanticError.UnknownIdentifier("f"))
+                        id.value.value shouldBe LinkedInfo.Error(SemanticError.NoSuchFunction("f", Vector.empty))
                       case other => fail(s"Expected Reference, got $other")
                     }
                   case other => fail(s"Expected Call.Standard, got $other")
@@ -394,6 +395,98 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
               case other => fail(s"Expected Reference, got $other")
             }
           case other => fail(s"Expected Block, got $other")
+        }
+      }
+    }
+    describe("call site candidate overload enrichment") {
+      it("should resolve single candidate static function with exact arity match") {
+        val ast = link("sqrt(16.0)")
+        ast match {
+          case LinkedPhase.Call.Standard(target, _, args) =>
+            args.size shouldBe 1
+            target.value match {
+              case LinkedPhase.Reference(id) =>
+                id.value.value match {
+                  case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
+                    name shouldBe "scaletta.math.sqrt"
+                    arities shouldBe Vector(1)
+                    candidates.size shouldBe 1
+                    candidates.head.returnType shouldBe DoubleT
+                  case other => fail(s"Expected StaticFunctionCandidates, got $other")
+                }
+              case other => fail(s"Expected Reference, got $other")
+            }
+          case other => fail(s"Expected Call.Standard, got $other")
+        }
+      }
+
+      it("should preserve multiple candidate overloads when parameter shapes match") {
+        val ast = link("abs(41)")
+        ast match {
+          case LinkedPhase.Call.Standard(target, _, args) =>
+            args.size shouldBe 1
+            target.value match {
+              case LinkedPhase.Reference(id) =>
+                id.value.value match {
+                  case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
+                    name shouldBe "scaletta.math.abs"
+                    arities shouldBe Vector(1)
+                    candidates.size shouldBe 4
+                  case other => fail(s"Expected StaticFunctionCandidates with 4 overloads, got $other")
+                }
+              case other => fail(s"Expected Reference, got $other")
+            }
+          case other => fail(s"Expected Call.Standard, got $other")
+        }
+      }
+
+      it("should report NoSuchFunction error when no static function matches") {
+        val ast = link("nonexistentFunction(41, 43)")
+        ast match {
+          case LinkedPhase.Call.Standard(target, _, _) =>
+            target.value match {
+              case LinkedPhase.Reference(id) =>
+                id.value.value match {
+                  case LinkedInfo.Error(SemanticError.NoSuchFunction(name, _)) =>
+                    name shouldBe "nonexistentFunction"
+                  case other => fail(s"Expected NoSuchFunction error, got $other")
+                }
+              case other => fail(s"Expected Reference, got $other")
+            }
+          case other => fail(s"Expected Call.Standard, got $other")
+        }
+      }
+
+      it("should enrich infix calls with matching method candidates from MethodResolver") {
+        val ast = link("41 + 43")
+        ast match {
+          case LinkedPhase.Call.Infix(_, op, _, _) =>
+            op.value.value match {
+              case LinkedInfo.MethodCandidates(name, arities, candidates) =>
+                name shouldBe "+"
+                arities shouldBe Vector(1)
+                candidates.nonEmpty shouldBe true
+              case other => fail(s"Expected MethodCandidates, got $other")
+            }
+          case other => fail(s"Expected Call.Infix, got $other")
+        }
+      }
+
+      it("should narrow method candidates when receiver type is explicitly ascribed") {
+        val ast = link("(41: Int) + (43: Int)")
+        ast match {
+          case LinkedPhase.Call.Infix(_, op, _, _) =>
+            op.value.value match {
+              case LinkedInfo.MethodCandidates(name, arities, candidates) =>
+                name shouldBe "+"
+                arities shouldBe Vector(1)
+                candidates.nonEmpty shouldBe true
+                candidates.foreach { c =>
+                  c.paramGroups.head.params.head.typ shouldBe IntT
+                }
+              case other => fail(s"Expected MethodCandidates for Int, got $other")
+            }
+          case other => fail(s"Expected Call.Infix, got $other")
         }
       }
     }

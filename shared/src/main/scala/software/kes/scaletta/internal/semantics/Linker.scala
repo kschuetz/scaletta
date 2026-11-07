@@ -1,22 +1,29 @@
 package software.kes.scaletta.internal.semantics
 
+import software.kes.scaletta.api._
 import software.kes.scaletta.internal.ast._
+import software.kes.scaletta.internal.builtins.MethodResolver
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.internal.semantics.Linker.{Input, Output}
+import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryParameter}
 
 object Linker {
-  def create(): Linker = new Linker()
-
   type Input = TypeAscriptionPhase.Expression[Pos]
   type Output = LinkedPhase.Expression[Pos]
+
+  def create(methodResolver: MethodResolver,
+             importScope: ImportScope = ImportScope.default): Linker =
+    new Linker(methodResolver, importScope)
 }
 
 /**
  * Traverses the AST in a single linear pass to resolve lexical scoping and coordinate
  * variable slot assignments. Enforces strict forward-reference checks within blocks,
- * binds local variables to (depth, slot) coordinates, and detects semantic scoping errors.
+ * binds local variables to (depth, slot) coordinates, detects semantic scoping errors,
+ * and enriches call sites with candidate overload collections.
  */
-final class Linker private() {
+final class Linker private(methodResolver: MethodResolver,
+                           importScope: ImportScope) {
 
   def link(input: Input): Output = linkExpression(input, LexicalScope.empty, Set.empty)
 
@@ -59,18 +66,46 @@ final class Linker private() {
         )
 
       case TypeAscriptionPhase.Call.Infix(left, operation, typeArgs, right) =>
+        val receiverTypeOpt = extractAscribedType(left.value)
+        val rightParam = extractAscribedType(right.value) match {
+          case Some(t) => SignatureQueryParameter.OfType(t)
+          case None => SignatureQueryParameter.Unknown
+        }
+        val query = SignatureQuery.of(rightParam)
+        val opName = extractIdentName(operation)
+        val candidates = receiverTypeOpt match {
+          case Some(recType) =>
+            methodResolver.getMethodCandidates(recType, Name(opName), query)
+          case None =>
+            methodResolver.getMethodCandidates(Name(opName), query)
+        }
+        val linkedOpInfo = if (candidates.nonEmpty) {
+          LinkedInfo.MethodCandidates(opName, Vector(1), candidates.toVector)
+        } else {
+          val ascribedArgs = extractAscribedType(right.value).toVector
+          val err = receiverTypeOpt match {
+            case Some(recType) => SemanticError.NoSuchMethod(recType, opName, ascribedArgs)
+            case None => SemanticError.NoSuchFunction(opName, ascribedArgs)
+          }
+          LinkedInfo.Error(err)
+        }
+        val linkedOp = posIdent(linkedOpInfo, operation.begin, operation.end)
         LinkedPhase.Call.Infix(
           linkPosExpression(left, env, futureInBlock),
-          linkMethodSite(operation),
+          linkedOp,
           linkTypeArgs(typeArgs),
           linkPosExpression(right, env, futureInBlock)
         )
 
       case TypeAscriptionPhase.Call.Standard(target, typeArgs, args) =>
+        val (argArities, query, ascribedArgs) = buildSignatureQueryForArgs(args)
+        val linkedTypeArgs = linkTypeArgs(typeArgs)
+        val linkedArgs = linkArgumentGroups(args, env, futureInBlock)
+        val linkedTarget = linkCallTarget(target, argArities, query, ascribedArgs, env, futureInBlock)
         LinkedPhase.Call.Standard(
-          linkPosExpression(target, env, futureInBlock),
-          linkTypeArgs(typeArgs),
-          linkArgumentGroups(args, env, futureInBlock)
+          linkedTarget,
+          linkedTypeArgs,
+          linkedArgs
         )
 
       case TypeAscriptionPhase.Lambda(params, body) =>
@@ -90,6 +125,128 @@ final class Linker private() {
         linkBlock(declarations, result, env)
     }
   }
+
+  private def linkCallTarget(target: Pos[TypeAscriptionPhase.Expression[Pos]],
+                             argArities: Vector[Int],
+                             query: SignatureQuery,
+                             ascribedArgs: Vector[ProperType[TypeId]],
+                             env: LexicalScope,
+                             futureInBlock: Set[String]): Pos[LinkedPhase.Expression[Pos]] = {
+    target.value match {
+      case TypeAscriptionPhase.Reference(id) =>
+        val linkedInfo = id.value.value match {
+          case PreResolutionInfo.Bound(NativeFunctionSymbolId(fnId)) =>
+            methodResolver.getNativeFunctionDefinition(fnId) match {
+              case Some(defn) =>
+                val fnName = methodResolver.getStaticFunctionName(fnId).fold("function")(q => s"${q.qualifier.fullName}.${q.name.value}")
+                LinkedInfo.StaticFunctionCandidates(fnName, argArities, Vector(defn))
+              case None =>
+                LinkedInfo.Error(SemanticError.NoSuchFunction(s"Function #$fnId", ascribedArgs))
+            }
+
+          case _ =>
+            val name = extractIdentName(id)
+            env.lookup(name) match {
+              case Some((depth, binding)) =>
+                LinkedInfo.Local(depth, binding.slot, name, binding.kind)
+              case None =>
+                if (futureInBlock.contains(name)) {
+                  LinkedInfo.Error(SemanticError.ForwardReference(name))
+                } else {
+                  val qName = QualifiedName.tryParsePartial(name).fold(_ => QualifiedName.local(Name(name)), identity)
+                  val candidates = methodResolver.getStaticFunctionCandidates(qName, importScope, query)
+                  if (candidates.nonEmpty) {
+                    LinkedInfo.StaticFunctionCandidates(name, argArities, candidates.toVector)
+                  } else {
+                    LinkedInfo.Error(SemanticError.NoSuchFunction(name, ascribedArgs))
+                  }
+                }
+            }
+        }
+        Pos(LinkedPhase.Reference(posIdent(linkedInfo, id.begin, id.end)), target.begin, target.end)
+
+      case TypeAscriptionPhase.Select(qualifier, nameIdent) =>
+        val nameStr = extractIdentName(nameIdent)
+        val linkedInfo = nameIdent.value.value match {
+          case PreResolutionInfo.Bound(NativeFunctionSymbolId(fnId)) =>
+            methodResolver.getNativeFunctionDefinition(fnId) match {
+              case Some(defn) =>
+                val fnName = methodResolver.getStaticFunctionName(fnId).fold(nameStr)(q => s"${q.qualifier.fullName}.${q.name.value}")
+                LinkedInfo.StaticFunctionCandidates(fnName, argArities, Vector(defn))
+              case None =>
+                LinkedInfo.Error(SemanticError.NoSuchFunction(s"Function #$fnId", ascribedArgs))
+            }
+
+          case PreResolutionInfo.StaticFunctionSite(qname, _) =>
+            val qName = QualifiedName.tryParsePartial(qname).fold(_ => QualifiedName.local(Name(qname)), identity)
+            val candidates = methodResolver.getStaticFunctionCandidates(qName, importScope, query)
+            if (candidates.nonEmpty) {
+              LinkedInfo.StaticFunctionCandidates(nameStr, argArities, candidates.toVector)
+            } else {
+              LinkedInfo.Error(SemanticError.NoSuchFunction(nameStr, ascribedArgs))
+            }
+
+          case _ =>
+            val receiverTypeOpt = extractAscribedType(qualifier.value)
+            val candidates = receiverTypeOpt match {
+              case Some(recType) =>
+                methodResolver.getMethodCandidates(recType, Name(nameStr), query)
+              case None =>
+                methodResolver.getMethodCandidates(Name(nameStr), query)
+            }
+            if (candidates.nonEmpty) {
+              LinkedInfo.MethodCandidates(nameStr, argArities, candidates.toVector)
+            } else {
+              val err = receiverTypeOpt match {
+                case Some(recType) => SemanticError.NoSuchMethod(recType, nameStr, ascribedArgs)
+                case None => SemanticError.NoSuchFunction(nameStr, ascribedArgs)
+              }
+              LinkedInfo.Error(err)
+            }
+        }
+        Pos(LinkedPhase.Select(linkPosExpression(qualifier, env, futureInBlock), posIdent(linkedInfo, nameIdent.begin, nameIdent.end)), target.begin, target.end)
+
+      case _ =>
+        linkPosExpression(target, env, futureInBlock)
+    }
+  }
+
+  private def buildSignatureQueryForArgs(groups: Vector[Pos[TypeAscriptionPhase.ArgumentGroup[Pos]]]): (Vector[Int], SignatureQuery, Vector[ProperType[TypeId]]) = {
+    case class Acc(arities: Vector[Int],
+                   queryGroups: Vector[SignatureQuery.Group],
+                   ascribedTypes: Vector[ProperType[TypeId]])
+
+    val initial = Acc(Vector.empty, Vector.empty, Vector.empty)
+    val res = groups.foldLeft(initial) { (acc, group) =>
+      case class GroupAcc(params: Vector[SignatureQueryParameter],
+                          ascribed: Vector[ProperType[TypeId]])
+      val gInitial = GroupAcc(Vector.empty, Vector.empty)
+      val gRes = group.value.arguments.foldLeft(gInitial) { (gAcc, arg) =>
+        extractAscribedType(arg.value.value.value) match {
+          case Some(t) =>
+            GroupAcc(gAcc.params :+ SignatureQueryParameter.OfType(t), gAcc.ascribed :+ t)
+          case None =>
+            GroupAcc(gAcc.params :+ SignatureQueryParameter.Unknown, gAcc.ascribed)
+        }
+      }
+      Acc(
+        acc.arities :+ group.value.arguments.size,
+        acc.queryGroups :+ SignatureQuery.Group(gRes.params),
+        acc.ascribedTypes ++ gRes.ascribed
+      )
+    }
+    (res.arities, SignatureQuery.ofGroups(res.queryGroups: _*), res.ascribedTypes)
+  }
+
+  private def extractAscribedType(expr: TypeAscriptionPhase.Expression[Pos]): Option[ProperType[TypeId]] =
+    expr match {
+      case TypeAscriptionPhase.Typed(_, ascription) =>
+        ascription.value.value match {
+          case Right(t) => Some(t)
+          case Left(_) => None
+        }
+      case _ => None
+    }
 
   private def linkIdentifier(id: Pos[TypeAscriptionPhase.Ident[Pos]],
                              env: LexicalScope,
@@ -111,10 +268,13 @@ final class Linker private() {
         LinkedInfo.Bound(symbol)
 
       case PreResolutionInfo.MethodSite(name, arity) =>
-        LinkedInfo.MethodSite(name, arity)
+        val candidates = methodResolver.getMethodCandidates(Name(name), SignatureQuery.empty)
+        LinkedInfo.MethodCandidates(name, arity, candidates.toVector)
 
       case PreResolutionInfo.StaticFunctionSite(qname, arity) =>
-        LinkedInfo.StaticFunctionSite(qname, arity)
+        val qName = QualifiedName.tryParsePartial(qname).fold(_ => QualifiedName.local(Name(qname)), identity)
+        val candidates = methodResolver.getStaticFunctionCandidates(qName, importScope, SignatureQuery.empty)
+        LinkedInfo.StaticFunctionCandidates(qname, arity, candidates.toVector)
 
       case PreResolutionInfo.FieldSite(name) =>
         LinkedInfo.FieldSite(name)
@@ -125,25 +285,18 @@ final class Linker private() {
     posIdent(info, id.begin, id.end)
   }
 
-  private def linkMethodSite(op: Pos[TypeAscriptionPhase.Ident[Pos]]): Pos[LinkedPhase.Ident[Pos]] = {
-    val info = op.value.value match {
-      case PreResolutionInfo.MethodSite(name, arity) => LinkedInfo.MethodSite(name, arity)
-      case PreResolutionInfo.StaticFunctionSite(qname, arity) => LinkedInfo.StaticFunctionSite(qname, arity)
-      case PreResolutionInfo.Bound(symbol) => LinkedInfo.Bound(symbol)
-      case PreResolutionInfo.Unresolved(name) => LinkedInfo.MethodSite(name, Vector(1))
-      case PreResolutionInfo.FieldSite(name) => LinkedInfo.FieldSite(name)
-      case PreResolutionInfo.AmbiguousName(name, count) => LinkedInfo.AmbiguousName(name, count)
-    }
-    posIdent(info, op.begin, op.end)
-  }
-
   private def linkFieldSite(name: Pos[TypeAscriptionPhase.Ident[Pos]]): Pos[LinkedPhase.Ident[Pos]] = {
     val info = name.value.value match {
       case PreResolutionInfo.FieldSite(n) => LinkedInfo.FieldSite(n)
       case PreResolutionInfo.Unresolved(n) => LinkedInfo.FieldSite(n)
       case PreResolutionInfo.Bound(symbol) => LinkedInfo.Bound(symbol)
-      case PreResolutionInfo.MethodSite(n, arity) => LinkedInfo.MethodSite(n, arity)
-      case PreResolutionInfo.StaticFunctionSite(qname, arity) => LinkedInfo.StaticFunctionSite(qname, arity)
+      case PreResolutionInfo.MethodSite(n, arity) =>
+        val candidates = methodResolver.getMethodCandidates(Name(n), SignatureQuery.empty)
+        LinkedInfo.MethodCandidates(n, arity, candidates.toVector)
+      case PreResolutionInfo.StaticFunctionSite(qname, arity) =>
+        val qName = QualifiedName.tryParsePartial(qname).fold(_ => QualifiedName.local(Name(qname)), identity)
+        val candidates = methodResolver.getStaticFunctionCandidates(qName, importScope, SignatureQuery.empty)
+        LinkedInfo.StaticFunctionCandidates(qname, arity, candidates.toVector)
       case PreResolutionInfo.AmbiguousName(n, count) => LinkedInfo.AmbiguousName(n, count)
     }
     posIdent(info, name.begin, name.end)
@@ -492,6 +645,8 @@ final class Linker private() {
   private def extractIdentName(id: Pos[TypeAscriptionPhase.Ident[Pos]]): String = {
     id.value.value match {
       case PreResolutionInfo.Unresolved(name) => name
+      case PreResolutionInfo.Bound(NativeFunctionSymbolId(fnId)) =>
+        methodResolver.getStaticFunctionName(fnId).fold(s"function_$fnId")(q => s"${q.qualifier.fullName}.${q.name.value}")
       case PreResolutionInfo.Bound(symbol) => symbol.toString
       case PreResolutionInfo.MethodSite(name, _) => name
       case PreResolutionInfo.StaticFunctionSite(qname, _) => qname
