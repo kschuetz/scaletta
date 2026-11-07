@@ -37,7 +37,7 @@ final class PreResolver private(symbolTable: FunctionSymbolTable,
       case ParsingPhase.Expression.Error(err) =>
         PreResolutionPhase.Expression.Error(err)
 
-      case lit: ParsingPhase.Literal[Pos @unchecked] =>
+      case lit: ParsingPhase.Literal[Pos] @unchecked =>
         preResolveLiteral(lit)
 
       case ParsingPhase.Reference(id) =>

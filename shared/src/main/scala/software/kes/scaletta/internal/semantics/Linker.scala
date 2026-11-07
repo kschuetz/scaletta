@@ -32,7 +32,7 @@ final class Linker private() {
       case TypeAscriptionPhase.Expression.Error(err) =>
         LinkedPhase.Expression.Error(err)
 
-      case lit: TypeAscriptionPhase.Literal[Pos @unchecked] =>
+      case lit: TypeAscriptionPhase.Literal[Pos] @unchecked =>
         linkLiteral(lit)
 
       case TypeAscriptionPhase.Reference(id) =>

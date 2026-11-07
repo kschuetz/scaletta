@@ -34,7 +34,7 @@ final class TypeAscriber private(typeNameIndex: TypeNameIndex,
       case PreResolutionPhase.Expression.Error(err) =>
         TypeAscriptionPhase.Expression.Error(err)
 
-      case lit: PreResolutionPhase.Literal[Pos @unchecked] =>
+      case lit: PreResolutionPhase.Literal[Pos] @unchecked =>
         ascribeLiteral(lit)
 
       case PreResolutionPhase.Reference(id) =>
