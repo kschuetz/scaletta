@@ -7,7 +7,7 @@ import software.kes.scaletta.internal.parser.{ParseOptions, Parser}
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{LineMapBuilder, Pos}
 import software.kes.scaletta.internal.scanner.Scanner
-import software.kes.scaletta.internal.semantics.{Linker, PreResolver, SemanticDiagnostics, TypeAscriber}
+import software.kes.scaletta.internal.semantics.{Linker, SemanticDiagnostics}
 import software.kes.scaletta.internal.types.TypeRegistryImpl
 import software.kes.scaletta.util.NonEmptyVector
 
@@ -86,12 +86,8 @@ final class ScalettaFacade(settings: Settings,
 
     val value: Either[CompileErrors, CompiledExpression] = parseResult.value match {
       case Some(parsedExpr) if !parseResult.hasErrors =>
-        val preResolver = PreResolver.create(universe.methodUniverse.symbolTable, importScope)
-        val preResolved = preResolver.preResolve(parsedExpr.value)
-        val typeAscriber = TypeAscriber.create(universe.typeUniverse.nameIndex, importScope)
-        val ascribed = typeAscriber.ascribeTypes(preResolved)
         val linker = Linker.create(universe, importScope)
-        val linked = linker.link(ascribed)
+        val linked = linker.link(parsedExpr.value)
 
         val semanticErrors = SemanticDiagnostics.collect(linked, lineMap)
         val allErrors = parseErrors ++ semanticErrors

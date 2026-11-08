@@ -1,3 +1,0 @@
-package software.kes.scaletta.internal.ast
-
-object TypeAscriptionPhase extends PhaseWithPreResolutionInfo with PhaseWithAscribedTypes

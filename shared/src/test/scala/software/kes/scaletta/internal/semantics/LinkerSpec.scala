@@ -10,6 +10,7 @@ import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, LineMapBuilder, Pos}
 import software.kes.scaletta.internal.runtime.CoreTypes._
 import software.kes.scaletta.internal.scanner.{IdentifierPolicy, Scanner}
+import software.kes.scaletta.internal.types.TypeResolutionError
 
 final class LinkerSpec extends AnyFunSpec with Matchers {
 
@@ -30,13 +31,14 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
   }
 
   private def linkAst(parsed: ParsingPhase.Expression[Pos], importScope: ImportScope = ImportScope.default): LinkedPhase.Expression[Pos] = {
-    val preResolver = PreResolver.create(scaletta.universe.methodUniverse.symbolTable, importScope)
-    val preResolved = preResolver.preResolve(parsed)
-    val ascriber = TypeAscriber.create(scaletta.universe.typeUniverse.nameIndex, importScope)
-    val ascribed = ascriber.ascribeTypes(preResolved)
     val linker = Linker.create(scaletta.universe, importScope)
-    linker.link(ascribed)
+    linker.link(parsed)
   }
+
+  private def typeOf(ta: LinkedPhase.TypeIdent[Pos]): Either[TypeResolutionError, ProperType[TypeId]] = ta.value
+
+  private def typeName(name: String): Pos[TypeIdentifier[Pos]] =
+    Pos(TypeIdentifier.name[Pos](Pos(Identifier[Pos](name), CharIndex(0), CharIndex(name.length))), CharIndex(0), CharIndex(name.length))
 
   describe("Linker") {
     describe("literals and primitives") {
@@ -398,6 +400,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
         }
       }
     }
+
     describe("call site candidate overload enrichment") {
       it("should resolve single candidate static function with exact arity match") {
         val ast = link("sqrt(16.0)")
@@ -408,7 +411,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
               case LinkedPhase.Reference(id) =>
                 id.value.value match {
                   case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
-                    name shouldBe "scaletta.math.sqrt"
+                    name shouldBe "sqrt"
                     arities shouldBe Vector(1)
                     candidates.size shouldBe 1
                     candidates.head.returnType shouldBe DoubleT
@@ -429,7 +432,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
               case LinkedPhase.Reference(id) =>
                 id.value.value match {
                   case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
-                    name shouldBe "scaletta.math.abs"
+                    name shouldBe "abs"
                     arities shouldBe Vector(1)
                     candidates.size shouldBe 4
                   case other => fail(s"Expected StaticFunctionCandidates with 4 overloads, got $other")
@@ -487,6 +490,123 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
               case other => fail(s"Expected MethodCandidates for Int, got $other")
             }
           case other => fail(s"Expected Call.Infix, got $other")
+        }
+      }
+
+      it("should resolve qualified static function calls") {
+        val ast = link("scaletta.math.sqrt(16.0)")
+        ast match {
+          case LinkedPhase.Call.Standard(target, _, args) =>
+            args.size shouldBe 1
+            target.value match {
+              case LinkedPhase.Select(_, nameIdent) =>
+                nameIdent.value.value match {
+                  case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
+                    name shouldBe "sqrt"
+                    arities shouldBe Vector(1)
+                    candidates.nonEmpty shouldBe true
+                  case other => fail(s"Expected StaticFunctionCandidates, got $other")
+                }
+              case other => fail(s"Expected Select, got $other")
+            }
+          case other => fail(s"Expected Call.Standard, got $other")
+        }
+      }
+    }
+
+    describe("type ascriptions and resolution") {
+      describe("simple named types") {
+        it("should resolve a known nominal type by name") {
+          val ast = link("41: Int")
+          ast match {
+            case LinkedPhase.Typed(_, ascription) =>
+              typeOf(ascription.value) shouldBe Right(IntT)
+            case other => fail(s"Expected Typed, got $other")
+          }
+        }
+
+        it("should report an unknown type name") {
+          val ast = link("41: DoesNotExist")
+          ast match {
+            case LinkedPhase.Typed(_, ascription) =>
+              typeOf(ascription.value) shouldBe Left(TypeResolutionError.UnknownType("DoesNotExist"))
+            case other => fail(s"Expected Typed, got $other")
+          }
+        }
+      }
+
+      describe("compound types") {
+        it("should resolve tuple type ascriptions") {
+          val linker = Linker.create(scaletta.universe, ImportScope.default)
+          val tupleTypeIdent: TypeIdentifier[Pos] =
+            TypeIdentifier.tuple[Pos](Vector(typeName("Int"), typeName("String")))
+          val target = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+          val typedExpr = ParsingPhase.Typed[Pos](target, Pos(tupleTypeIdent, CharIndex(4), CharIndex(20)))
+          val ast = linker.link(typedExpr)
+          ast match {
+            case LinkedPhase.Typed(_, ascription) =>
+              typeOf(ascription.value) shouldBe Right(Type.tuple(IntT, StringT))
+            case other => fail(s"Expected Typed, got $other")
+          }
+        }
+
+        it("should resolve union type ascriptions") {
+          val ast = link("41: Int | String")
+          ast match {
+            case LinkedPhase.Typed(_, ascription) =>
+              typeOf(ascription.value) shouldBe Right(Type.union(IntT, StringT))
+            case other => fail(s"Expected Typed, got $other")
+          }
+        }
+
+        it("should propagate an error from a nested type component") {
+          val ast = link("41: (Int, DoesNotExist)")
+          ast match {
+            case LinkedPhase.Typed(_, ascription) =>
+              typeOf(ascription.value) shouldBe Left(TypeResolutionError.UnknownType("DoesNotExist"))
+            case other => fail(s"Expected Typed, got $other")
+          }
+        }
+      }
+
+      describe("applied generic types") {
+        it("should resolve a type constructor applied to its type arguments") {
+          val ast = link("41: List[Int]")
+          val stdLib = scaletta.universe.typeUniverse.nameIndex
+          val listT = stdLib.resolve(QualifiedName.local(Name("List")), ImportScope.default) match {
+            case entry :: Nil => entry.value
+            case other => fail(s"Expected a single List entry, got $other")
+          }
+          ast match {
+            case LinkedPhase.Typed(_, ascription) =>
+              typeOf(ascription.value) shouldBe Right(TypeApplier.fromNode(listT.asInstanceOf[Type.Constructor[TypeId]]).applyAll(IntT))
+            case other => fail(s"Expected Typed, got $other")
+          }
+        }
+
+        it("should report wrong arity when applying too many type arguments") {
+          val ast = link("41: List[Int, String]")
+          ast match {
+            case LinkedPhase.Typed(_, ascription) =>
+              typeOf(ascription.value) shouldBe a[Left[_, _]]
+            case other => fail(s"Expected Typed, got $other")
+          }
+        }
+      }
+
+      describe("def parameters and return types") {
+        it("should resolve formal parameter and return types in a def") {
+          val ast = link("{ def fn(a: Int): String = \"x\"; fn }")
+          ast match {
+            case LinkedPhase.Block(decls, _) =>
+              decls.head.value match {
+                case LinkedPhase.Declaration.Def(_, params, returnType, _) =>
+                  typeOf(params.head.value.parameters.head.value.typ.value) shouldBe Right(IntT)
+                  returnType.map(rt => typeOf(rt.value)) shouldBe Some(Right(StringT))
+                case other => fail(s"Expected Def, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
         }
       }
     }
