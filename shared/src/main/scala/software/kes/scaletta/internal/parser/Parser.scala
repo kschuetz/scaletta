@@ -108,7 +108,7 @@ final class Parser private() {
         case Token.False => ParseResult.create(token.as(Literal.false_()))
         case Token.Null => ParseResult.create(token.as(Literal.null_()))
         case idToken: Token.Identifier =>
-          val id = token.as(Identifier[Pos](idToken.name))
+          val id = token.as(Identifier(idToken.name))
           ParseResult.create(token.as(Reference(id)))
         case Token.LParen =>
           parseParenthesizedExpression(token)
@@ -321,7 +321,7 @@ final class Parser private() {
 
       while (continue() && variadic.isEmpty) {
         val nameToken = expectIdentifier("formal parameter")
-        val name = nameToken.as(Identifier[Pos](nameToken.value.name))
+        val name = nameToken.as(Identifier(nameToken.value.name))
         val colon = expect(Token.Colon, "formal parameter")
         if (colon.value == Token.Colon) {
           val typeResult = TypeIdentifierParser.parse(scanner)
@@ -399,7 +399,7 @@ final class Parser private() {
 
     private def parseDefDeclaration(defToken: Pos[Token]): DeclResult[Pos] = {
       val nameToken = expectIdentifier("def declaration")
-      val name = nameToken.as(Identifier[Pos](nameToken.value.name))
+      val name = nameToken.as(Identifier(nameToken.value.name))
 
       // Step 4: Parse multiple parameter groups (currying support)
       val paramGroups = Vector.newBuilder[Pos[FormalParameterGroup[Pos]]]
@@ -441,7 +441,7 @@ final class Parser private() {
       val firstToken = scanner.get()
       val baseResult: PatResult[Pos] = firstToken.value match {
         case idToken: Token.Identifier =>
-          val id = firstToken.as(Identifier[Pos](idToken.name))
+          val id = firstToken.as(Identifier(idToken.name))
           ParseResult.create(firstToken.as(Pattern.Identifier(id)))
         case Token.Underscore =>
           ParseResult.create(firstToken.as(Pattern.Wildcard()))
@@ -496,7 +496,7 @@ final class Parser private() {
 
     private def parseSelection(leftResult: ExprResult[Pos], dotToken: Pos[Token]): ExprResult[Pos] = {
       val nameToken = expectIdentifier("selection")
-      val name = nameToken.as(Identifier[Pos](nameToken.value.name))
+      val name = nameToken.as(Identifier(nameToken.value.name))
       leftResult.value match {
         case Some(qualifier) =>
           val selection: Expression[Pos] = Select[Pos](qualifier, name)
@@ -578,7 +578,7 @@ final class Parser private() {
 
       (leftResult.value, rightResult.value) match {
         case (Some(left), Some(right)) =>
-          val opId = Pos(Identifier[Pos](opName), opToken.begin, opToken.end)
+          val opId = Pos(Identifier(opName), opToken.begin, opToken.end)
           val resValue = Pos(
             Call.infix(left, opId, Vector.empty, right),
             left.begin,
@@ -591,7 +591,7 @@ final class Parser private() {
         case (Some(left), None) =>
           val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("infix rhs")
           val right = syntheticExpression(error, scanner.peek(1).begin, scanner.peek(1).end)
-          val opId = Pos(Identifier[Pos](opName), opToken.begin, opToken.end)
+          val opId = Pos(Identifier(opName), opToken.begin, opToken.end)
           val resValue = Pos(
             Call.infix(left, opId, Vector.empty, right),
             left.begin,
@@ -601,7 +601,7 @@ final class Parser private() {
         case (None, Some(right)) =>
           val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("infix lhs")
           val left = syntheticExpression(error, opToken.begin, opToken.begin)
-          val opId = Pos(Identifier[Pos](opName), opToken.begin, opToken.end)
+          val opId = Pos(Identifier(opName), opToken.begin, opToken.end)
           val resValue = Pos(
             Call.infix(left, opId, Vector.empty, right),
             left.begin,

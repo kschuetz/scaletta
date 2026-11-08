@@ -88,7 +88,7 @@ private[scaletta] object TypeIdentifierParser {
         case Some(qualifierPos) =>
           expect(Token.Dot, "type selection")
           val idToken = expectIdentifier("type selection")
-          val idPos: Pos[Identifier[Pos]] = Pos(Identifier(idToken.value.name), idToken.begin, idToken.end)
+          val idPos: Pos[Identifier] = Pos(Identifier(idToken.value.name), idToken.begin, idToken.end)
           val selectPos: Pos[TypeIdentifier[Pos]] = Pos(TypeIdentifier.Select(qualifierPos, idPos), qualifierPos.begin, idToken.end)
           ParseResult.create(selectPos)
         case None => qualifierResult

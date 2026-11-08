@@ -277,9 +277,9 @@ final class Linker private(methodResolver: MethodResolver,
       case _ => None
     }
 
-  private def linkIdentifier(id: Pos[Identifier[Pos]],
+  private def linkIdentifier(id: Pos[Identifier],
                              env: LexicalScope,
-                             futureInBlock: Set[String]): Pos[LinkedPhase.Ident[Pos]] = {
+                             futureInBlock: Set[String]): Pos[LinkedPhase.Ident] = {
     val name = id.value.name
     val info = env.lookup(name) match {
       case Some((depth, binding)) =>
@@ -300,7 +300,7 @@ final class Linker private(methodResolver: MethodResolver,
     posIdent(info, id.begin, id.end)
   }
 
-  private def linkFieldSite(name: Pos[Identifier[Pos]]): Pos[LinkedPhase.Ident[Pos]] = {
+  private def linkFieldSite(name: Pos[Identifier]): Pos[LinkedPhase.Ident] = {
     val info = LinkedInfo.FieldSite(name.value.name)
     posIdent(info, name.begin, name.end)
   }
@@ -331,14 +331,14 @@ final class Linker private(methodResolver: MethodResolver,
     groups.foldLeft(Vector.empty[Pos[LinkedPhase.ArgumentGroup[Pos]]]) { (acc, ag) =>
       val newArgs = ag.value.arguments.foldLeft(Vector.empty[Pos[LinkedPhase.Argument[Pos]]]) { (aAcc, arg) =>
         val linkedValue = linkPosExpression(arg.value.value, env, futureInBlock)
-        val linkedName = arg.value.name.fold[Option[Pos[LinkedPhase.Ident[Pos]]]](None) { n =>
+        val linkedName = arg.value.name.fold[Option[Pos[LinkedPhase.Ident]]](None) { n =>
           Some(linkIdentifier(n, env, futureInBlock))
         }
         aAcc :+ Pos(LinkedPhase.Argument(linkedValue, linkedName), arg.begin, arg.end)
       }
       val newSplat = ag.value.splat.fold[Option[Pos[LinkedPhase.Argument[Pos]]]](None) { s =>
         val linkedValue = linkPosExpression(s.value.value, env, futureInBlock)
-        val linkedName = s.value.name.fold[Option[Pos[LinkedPhase.Ident[Pos]]]](None) { n =>
+        val linkedName = s.value.name.fold[Option[Pos[LinkedPhase.Ident]]](None) { n =>
           Some(linkIdentifier(n, env, futureInBlock))
         }
         Some(Pos(LinkedPhase.Argument(linkedValue, linkedName), s.begin, s.end))
@@ -656,7 +656,7 @@ final class Linker private(methodResolver: MethodResolver,
 
   private def ascribeTypeIdent(ti: Pos[TypeIdentifier[Pos]]): Pos[LinkedPhase.TypeIdent[Pos]] = {
     val resolved = resolveTypeIdentifier(ti.value)
-    Pos(Pos[Either[TypeResolutionError, ProperType[TypeId]]](resolved, ti.begin, ti.end), ti.begin, ti.end)
+    Pos(resolved, ti.begin, ti.end)
   }
 
   private def resolveTypeIdentifier(ti: TypeIdentifier[Pos]): Either[TypeResolutionError, ProperType[TypeId]] = {
@@ -809,6 +809,6 @@ final class Linker private(methodResolver: MethodResolver,
       }
     }
 
-  private def posIdent(info: LinkedInfo, begin: CharIndex, end: CharIndex): Pos[LinkedPhase.Ident[Pos]] =
-    Pos(Pos(info, begin, end), begin, end)
+  private def posIdent(info: LinkedInfo, begin: CharIndex, end: CharIndex): Pos[LinkedPhase.Ident] =
+    Pos(info, begin, end)
 }

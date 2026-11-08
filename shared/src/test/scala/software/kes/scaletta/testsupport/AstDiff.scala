@@ -35,7 +35,7 @@ object AstDiff {
                 }
               }
           case (a: Call.Infix[_], e: Call.Infix[_]) =>
-            if (a.operation.asInstanceOf[Id[Identifier[Id]]] != e.operation.asInstanceOf[Id[Identifier[Id]]]) {
+            if (a.operation.asInstanceOf[Id[Identifier]] != e.operation.asInstanceOf[Id[Identifier]]) {
               Some(s"$path -> operation: mismatch (actual: ${a.operation}, expected: ${e.operation})")
             } else {
               diff(a.left.asInstanceOf[Expression[Id]], e.left.asInstanceOf[Expression[Id]], s"$path -> left")
@@ -45,8 +45,8 @@ object AstDiff {
             if (a.value != e.value) Some(s"$path: value mismatch (actual: ${a.value}, expected: ${e.value})")
             else None
           case (a: Reference[_], e: Reference[_]) =>
-            val actualId = a.id.asInstanceOf[Id[Identifier[Id]]]
-            val expectedId = e.id.asInstanceOf[Id[Identifier[Id]]]
+            val actualId = a.id.asInstanceOf[Id[Identifier]]
+            val expectedId = e.id.asInstanceOf[Id[Identifier]]
             if (actualId.name != expectedId.name) Some(s"$path: name mismatch (actual: ${actualId.name}, expected: ${expectedId.name})")
             else None
           case _ => Some(s"$path: mismatch\n  Actual:   $actual\n  Expected: $expected")

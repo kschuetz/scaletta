@@ -8,7 +8,7 @@ import software.kes.scaletta.internal.types.ConjunctionType
 import software.kes.scaletta.testsupport.{ParseErrorMatchers, ParserTestSupport}
 import software.kes.scaletta.util.functional.Id.Id
 
-class TypeIdentifierParserSpec extends AnyFunSpec with Matchers {
+final class TypeIdentifierParserSpec extends AnyFunSpec with Matchers {
   private implicit val support: ParserTestSupport = new ParserTestSupport() with Matchers
   private implicit val matchers: Matchers = Matchers
 
@@ -106,7 +106,7 @@ class TypeIdentifierParserSpec extends AnyFunSpec with Matchers {
     }
   }
 
-  private def id(name: String): Id[Identifier[Id]] = Identifier[Id](name)
+  private def id(name: String): Id[Identifier] = Identifier(name)
 
   private def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.Name[Id](id(name))
 

@@ -13,9 +13,9 @@ final class SemanticDiagnosticsSpec extends AnyFunSpec with Matchers {
   private val typeString: ProperType[TypeId] = Type.nominal(TypeId(3))
   private val typeBoolean: ProperType[TypeId] = Type.nominal(TypeId(5))
 
-  private def createPosIdent(error: SemanticError, begin: Int = 0, end: Int = 5): Pos[LinkedPhase.Ident[Pos]] =
+  private def createPosIdent(error: SemanticError, begin: Int = 0, end: Int = 5): Pos[LinkedPhase.Ident] =
     Pos(
-      Pos(LinkedInfo.Error(error), CharIndex(begin), CharIndex(end)),
+      LinkedInfo.Error(error),
       CharIndex(begin),
       CharIndex(end)
     )

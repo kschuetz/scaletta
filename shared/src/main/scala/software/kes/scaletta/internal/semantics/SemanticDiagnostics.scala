@@ -203,19 +203,19 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
     patternDiagnostics ++ guardDiagnostics ++ bodyDiagnostics
   }
 
-  private def collectFromIdent(id: Pos[LinkedPhase.Ident[Pos]]): Vector[DiagnosticMessage] = {
-    id.value.value match {
+  private def collectFromIdent(id: Pos[LinkedPhase.Ident]): Vector[DiagnosticMessage] = {
+    id.value match {
       case LinkedInfo.Error(err) =>
-        Vector(toDiagnostic(id.value, formatSemanticError(err)))
+        Vector(toDiagnostic(id, formatSemanticError(err)))
       case _ =>
         Vector.empty
     }
   }
 
   private def collectFromTypeIdent(typeIdent: Pos[LinkedPhase.TypeIdent[Pos]]): Vector[DiagnosticMessage] = {
-    typeIdent.value.value match {
+    typeIdent.value match {
       case Left(err) =>
-        Vector(toDiagnostic(typeIdent.value, formatTypeResolutionError(err)))
+        Vector(toDiagnostic(typeIdent, formatTypeResolutionError(err)))
       case Right(_) =>
         Vector.empty
     }

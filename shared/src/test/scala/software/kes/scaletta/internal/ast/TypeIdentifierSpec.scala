@@ -6,32 +6,32 @@ import software.kes.scaletta.internal.types.ConjunctionType
 import software.kes.scaletta.util.functional.Id.Id
 import software.kes.scaletta.util.functional.{Id, ~>}
 
-class TypeIdentifierSpec extends AnyFunSpec with Matchers {
+final class TypeIdentifierSpec extends AnyFunSpec with Matchers {
 
   import Id.idFunctor
 
   private def id[A](a: A): Id[A] = a
 
-  private val typeA = TypeIdentifier.name(id(Identifier[Id]("A")))
-  private val typeB = TypeIdentifier.name(id(Identifier[Id]("B")))
-  private val typeC = TypeIdentifier.name(id(Identifier[Id]("C")))
+  private val typeA = TypeIdentifier.name(id(Identifier("A")))
+  private val typeB = TypeIdentifier.name(id(Identifier("B")))
+  private val typeC = TypeIdentifier.name(id(Identifier("C")))
 
   describe("TypeIdentifier") {
     describe("name") {
       it("should create a Name node") {
-        val ti = TypeIdentifier.name(id(Identifier[Id]("Int")))
-        ti shouldBe TypeIdentifier.Name(id(Identifier[Id]("Int")))
+        val ti = TypeIdentifier.name(id(Identifier("Int")))
+        ti shouldBe TypeIdentifier.Name(id(Identifier("Int")))
       }
     }
 
     describe("applied") {
       it("should create an Applied node with arguments") {
-        val ti = TypeIdentifier.applied(id(TypeIdentifier.name(id(Identifier[Id]("List")))), id(typeA))
-        ti shouldBe TypeIdentifier.Applied(id(TypeIdentifier.name(id(Identifier[Id]("List")))), ::(id(typeA), Nil))
+        val ti = TypeIdentifier.applied(id(TypeIdentifier.name(id(Identifier("List")))), id(typeA))
+        ti shouldBe TypeIdentifier.Applied(id(TypeIdentifier.name(id(Identifier("List")))), ::(id(typeA), Nil))
       }
 
       it("should fall back to Name for zero arguments when possible") {
-        val nameId = id(Identifier[Id]("Int"))
+        val nameId = id(Identifier("Int"))
         val qualifier: TypeIdentifier[Id] = TypeIdentifier.name(nameId)
         val ti = TypeIdentifier.applied[Id](qualifier)
         ti shouldBe TypeIdentifier.Name(nameId)
@@ -142,13 +142,13 @@ class TypeIdentifierSpec extends AnyFunSpec with Matchers {
       }
 
       it("should transform Name") {
-        val ti: TypeIdentifier[Id] = TypeIdentifier.name(id(Identifier[Id]("Int")))
+        val ti: TypeIdentifier[Id] = TypeIdentifier.name(id(Identifier("Int")))
         val mapped = ti.mapK(toId)
         mapped shouldBe ti
       }
 
       it("should transform Applied") {
-        val ti: TypeIdentifier[Id] = TypeIdentifier.applied(id(TypeIdentifier.name(id(Identifier[Id]("List")))), id(typeA))
+        val ti: TypeIdentifier[Id] = TypeIdentifier.applied(id(TypeIdentifier.name(id(Identifier("List")))), id(typeA))
         val mapped = ti.mapK(toId)
         mapped shouldBe ti
       }

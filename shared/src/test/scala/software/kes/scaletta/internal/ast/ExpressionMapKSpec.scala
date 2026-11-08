@@ -7,7 +7,7 @@ import software.kes.scaletta.internal.ast.ParsingPhase._
 import software.kes.scaletta.util.functional.Id._
 import software.kes.scaletta.util.functional.~>
 
-class ExpressionMapKSpec extends AnyFunSpec with Matchers {
+final class ExpressionMapKSpec extends AnyFunSpec with Matchers {
 
   private val idToOption = new(Id ~> Option) {
     def apply[A](fa: Id[A]): Option[A] = Some(fa)
@@ -28,21 +28,21 @@ class ExpressionMapKSpec extends AnyFunSpec with Matchers {
     }
 
     it("should transform Reference") {
-      val expr = Reference[Id](Identifier[Id]("a"))
+      val expr = Reference[Id](Identifier("a"))
       val result = expr.mapK(idToOption)
-      result shouldBe Reference[Option](Some(Identifier[Option]("a")))
+      result shouldBe Reference[Option](Some(Identifier("a")))
     }
 
     it("should transform Select") {
-      val expr = Select[Id](Reference[Id](Identifier[Id]("a")), Identifier[Id]("b"))
+      val expr = Select[Id](Reference[Id](Identifier("a")), Identifier("b"))
       val result = expr.mapK(idToOption)
-      result shouldBe Select[Option](Some(Reference[Option](Some(Identifier[Option]("a")))), Some(Identifier[Option]("b")))
+      result shouldBe Select[Option](Some(Reference[Option](Some(Identifier("a")))), Some(Identifier("b")))
     }
 
     it("should transform Typed") {
-      val expr = Typed[Id](Literal.Null[Id](), TypeIdentifier.name[Id](Identifier[Id]("Int")))
+      val expr = Typed[Id](Literal.Null[Id](), TypeIdentifier.name[Id](Identifier("Int")))
       val result = expr.mapK(idToOption)
-      result shouldBe Typed[Option](Some(Literal.Null[Option]()), Some(TypeIdentifier.name[Option](Some(Identifier[Option]("Int")))))
+      result shouldBe Typed[Option](Some(Literal.Null[Option]()), Some(TypeIdentifier.name[Option](Some(Identifier("Int")))))
     }
 
     it("should transform all Literal types") {
@@ -74,8 +74,8 @@ class ExpressionMapKSpec extends AnyFunSpec with Matchers {
     }
 
     it("should transform Call.Standard") {
-      val target = Reference[Id](Identifier[Id]("f"))
-      val typeArg = TypeArgument[Id](TypeIdentifier.name[Id](Identifier[Id]("T")))
+      val target = Reference[Id](Identifier("f"))
+      val typeArg = TypeArgument[Id](TypeIdentifier.name[Id](Identifier("T")))
       val argGroup = ArgumentGroup[Id](Vector(Argument[Id](Literal.IntLiteral[Id](1))))
       val expr = Call.Standard[Id](target, Vector(typeArg), Vector(argGroup))
 
@@ -90,21 +90,21 @@ class ExpressionMapKSpec extends AnyFunSpec with Matchers {
     it("should transform Call.Infix") {
       val left = Literal.IntLiteral[Id](1)
       val right = Literal.IntLiteral[Id](2)
-      val op = Identifier[Id]("+")
+      val op = Identifier("+")
       val expr = Call.Infix[Id](left, op, Vector.empty, right)
 
       val result = expr.mapK(idToOption)
       result shouldBe Call.Infix[Option](
         Some(left.mapK(idToOption)),
-        Some(op.mapK(idToOption)),
+        Some(op),
         Vector.empty,
         Some(right.mapK(idToOption))
       )
     }
 
     it("should transform Lambda") {
-      val param = LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name[Id](Identifier[Id]("Int"))))
-      val body = Reference[Id](Identifier[Id]("x"))
+      val param = LambdaParameter[Id](Identifier("x"), Some(TypeIdentifier.name[Id](Identifier("Int"))))
+      val body = Reference[Id](Identifier("x"))
       val expr = Lambda[Id](Vector(param), body)
 
       val result = expr.mapK(idToOption)
@@ -155,11 +155,11 @@ class ExpressionMapKSpec extends AnyFunSpec with Matchers {
     }
 
     it("should transform Def") {
-      val paramGroup = FormalParameterGroup[Id](Vector(FormalParameter[Id](Identifier[Id]("p"), TypeIdentifier.name[Id](Identifier[Id]("Int")), None)))
-      val expr = Declaration.def_[Id](Identifier[Id]("f"), Vector(paramGroup), None, Literal.Null[Id]())
+      val paramGroup = FormalParameterGroup[Id](Vector(FormalParameter[Id](Identifier("p"), TypeIdentifier.name[Id](Identifier("Int")), None)))
+      val expr = Declaration.def_[Id](Identifier("f"), Vector(paramGroup), None, Literal.Null[Id]())
       val result = expr.mapK(idToOption)
       result shouldBe Declaration.Def[Option](
-        Some(Identifier[Option]("f")),
+        Some(Identifier("f")),
         Vector(Some(paramGroup.mapK(idToOption))),
         None,
         Some(Literal.Null[Option]())
@@ -175,9 +175,9 @@ class ExpressionMapKSpec extends AnyFunSpec with Matchers {
 
   describe("Pattern.mapK") {
     it("should transform Identifier pattern") {
-      val pat = Pattern.Identifier[Id](Identifier[Id]("x"))
+      val pat = Pattern.Identifier[Id](Identifier("x"))
       val result = pat.mapK(idToOption)
-      result shouldBe Pattern.Identifier[Option](Some(Identifier[Option]("x")))
+      result shouldBe Pattern.Identifier[Option](Some(Identifier("x")))
     }
 
     it("should transform Wildcard pattern") {
@@ -194,27 +194,27 @@ class ExpressionMapKSpec extends AnyFunSpec with Matchers {
     }
 
     it("should transform As pattern") {
-      val pat = Pattern.As[Id](Identifier[Id]("x"), Pattern.Wildcard[Id]())
+      val pat = Pattern.As[Id](Identifier("x"), Pattern.Wildcard[Id]())
       val result = pat.mapK(idToOption)
-      result shouldBe Pattern.As[Option](Some(Identifier[Option]("x")), Some(Pattern.Wildcard[Option]()))
+      result shouldBe Pattern.As[Option](Some(Identifier("x")), Some(Pattern.Wildcard[Option]()))
     }
 
     it("should transform Typed pattern") {
-      val pat = Pattern.Typed[Id](Pattern.Wildcard[Id](), TypeIdentifier.name[Id](Identifier[Id]("Int")))
+      val pat = Pattern.Typed[Id](Pattern.Wildcard[Id](), TypeIdentifier.name[Id](Identifier("Int")))
       val result = pat.mapK(idToOption)
-      result shouldBe Pattern.Typed[Option](Some(Pattern.Wildcard[Option]()), Some(TypeIdentifier.name[Option](Some(Identifier[Option]("Int")))))
+      result shouldBe Pattern.Typed[Option](Some(Pattern.Wildcard[Option]()), Some(TypeIdentifier.name[Option](Some(Identifier("Int")))))
     }
 
     it("should transform Tuple pattern") {
-      val pat = Pattern.Tuple[Id](Vector(Pattern.Wildcard[Id](), Pattern.Identifier[Id](Identifier[Id]("y"))))
+      val pat = Pattern.Tuple[Id](Vector(Pattern.Wildcard[Id](), Pattern.Identifier[Id](Identifier("y"))))
       val result = pat.mapK(idToOption)
-      result shouldBe Pattern.Tuple[Option](Vector(Some(Pattern.Wildcard[Option]()), Some(Pattern.Identifier[Option](Some(Identifier[Option]("y"))))))
+      result shouldBe Pattern.Tuple[Option](Vector(Some(Pattern.Wildcard[Option]()), Some(Pattern.Identifier[Option](Some(Identifier("y"))))))
     }
 
     it("should transform Product pattern") {
-      val pat = Pattern.Product[Id](TypeIdentifier.name[Id](Identifier[Id]("Some")), Vector(Pattern.Wildcard[Id]()))
+      val pat = Pattern.Product[Id](TypeIdentifier.name[Id](Identifier("Some")), Vector(Pattern.Wildcard[Id]()))
       val result = pat.mapK(idToOption)
-      result shouldBe Pattern.Product[Option](Some(TypeIdentifier.name[Option](Some(Identifier[Option]("Some")))), Vector(Some(Pattern.Wildcard[Option]())))
+      result shouldBe Pattern.Product[Option](Some(TypeIdentifier.name[Option](Some(Identifier("Some")))), Vector(Some(Pattern.Wildcard[Option]())))
     }
   }
 }

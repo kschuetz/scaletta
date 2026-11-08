@@ -6,11 +6,9 @@ import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
 trait Phase {
   phase =>
-  type Ident[_[_]]
+  type Ident
 
   type TypeIdent[_[_]]
-
-  protected implicit def identFunctorK: FunctorK[Ident]
 
   protected implicit def typeIdentFunctorK: FunctorK[TypeIdent]
 
@@ -33,14 +31,14 @@ trait Phase {
       )
   }
 
-  case class Select[F[_]](qualifier: F[Expression[F]], name: F[Ident[F]]) extends Expression[F] {
+  case class Select[F[_]](qualifier: F[Expression[F]], name: F[Ident]) extends Expression[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Select[G] =
-      Select(phi(F.map(qualifier)(_.mapK(phi))), phi(F.map(name)(ident => identFunctorK.mapK(ident)(phi))))
+      Select(phi(F.map(qualifier)(_.mapK(phi))), phi(name))
   }
 
-  case class Reference[F[_]](id: F[Ident[F]]) extends Expression[F] {
+  case class Reference[F[_]](id: F[Ident]) extends Expression[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Reference[G] =
-      Reference(phi(F.map(id)(ident => identFunctorK.mapK(ident)(phi))))
+      Reference(phi(id))
   }
 
   case class Typed[F[_]](expression: F[Expression[F]],
@@ -153,7 +151,7 @@ trait Phase {
       Standard(target, typeArgs, args)
 
     def infix[F[_]](left: F[Expression[F]],
-                    operation: F[Ident[F]],
+                    operation: F[Ident],
                     typeArgs: Vector[F[TypeArgument[F]]],
                     right: F[Expression[F]]): Call[F] =
       Infix(left, operation, typeArgs, right)
@@ -170,7 +168,7 @@ trait Phase {
     }
 
     case class Infix[F[_]](left: F[Expression[F]],
-                           operation: F[Ident[F]],
+                           operation: F[Ident],
                            typeArgs: Vector[F[TypeArgument[F]]],
                            right: F[Expression[F]]) extends Call[F] {
       def target: F[Expression[F]] = left
@@ -178,7 +176,7 @@ trait Phase {
       def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Infix[G] =
         Infix(
           phi(F.map(left)(_.mapK(phi))),
-          phi(F.map(operation)(ident => identFunctorK.mapK(ident)(phi))),
+          phi(operation),
           typeArgs.map(ta => phi(F.map(ta)(_.mapK(phi)))),
           phi(F.map(right)(_.mapK(phi)))
         )
@@ -236,7 +234,7 @@ trait Phase {
     def lazyVal[F[_]](pattern: F[Pattern[F]], rhs: F[Expression[F]]): Declaration[F] =
       LazyVal(pattern, rhs)
 
-    def def_[F[_]](name: F[Ident[F]],
+    def def_[F[_]](name: F[Ident],
                    params: Vector[F[FormalParameterGroup[F]]],
                    returnType: Option[F[TypeIdent[F]]],
                    body: F[Expression[F]]): Declaration[F] =
@@ -251,13 +249,13 @@ trait Phase {
         )
     }
 
-    case class Def[F[_]](name: F[Ident[F]],
+    case class Def[F[_]](name: F[Ident],
                          params: Vector[F[FormalParameterGroup[F]]],
                          returnType: Option[F[TypeIdent[F]]],
                          body: F[Expression[F]]) extends Declaration[F] {
       def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Def[G] =
         Def(
-          phi(F.map(name)(ident => identFunctorK.mapK(ident)(phi))),
+          phi(name),
           params.map(p => phi(F.map(p)(_.mapK(phi)))),
           returnType.map(rt => phi(F.map(rt)(typeIdent => typeIdentFunctorK.mapK(typeIdent)(phi)))),
           phi(F.map(body)(_.mapK(phi)))
@@ -278,12 +276,12 @@ trait Phase {
     }
   }
 
-  case class FormalParameter[F[_]](name: F[Ident[F]],
+  case class FormalParameter[F[_]](name: F[Ident],
                                    typ: F[TypeIdent[F]],
                                    default: Option[F[Expression[F]]] = None) {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): FormalParameter[G] =
       FormalParameter(
-        phi(F.map(name)(ident => identFunctorK.mapK(ident)(phi))),
+        phi(name),
         phi(F.map(typ)(typeIdent => typeIdentFunctorK.mapK(typeIdent)(phi))),
         default.map(d => phi(F.map(d)(_.mapK(phi))))
       )
@@ -298,16 +296,16 @@ trait Phase {
       )
   }
 
-  case class LambdaParameter[F[_]](name: F[Ident[F]], typ: Option[F[TypeIdent[F]]]) {
+  case class LambdaParameter[F[_]](name: F[Ident], typ: Option[F[TypeIdent[F]]]) {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): LambdaParameter[G] =
-      LambdaParameter(phi(F.map(name)(ident => identFunctorK.mapK(ident)(phi))),
+      LambdaParameter(phi(name),
         typ.map(t => phi(F.map(t)(typeIdent => typeIdentFunctorK.mapK(typeIdent)(phi)))))
   }
 
   case class Argument[F[_]](value: F[Expression[F]],
-                            name: Option[F[Ident[F]]] = None) {
+                            name: Option[F[Ident]] = None) {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Argument[G] =
-      Argument(phi(F.map(value)(_.mapK(phi))), name.map(n => phi(F.map(n)(ident => identFunctorK.mapK(ident)(phi)))))
+      Argument(phi(F.map(value)(_.mapK(phi))), name.map(n => phi(n)))
   }
 
   case class ArgumentGroup[F[_]](arguments: Vector[F[Argument[F]]],
@@ -330,9 +328,9 @@ trait Phase {
 
   object Pattern {
     /** Matches any value and binds it to a name. */
-    case class Identifier[F[_]](name: F[Ident[F]]) extends Pattern[F] {
+    case class Identifier[F[_]](name: F[Ident]) extends Pattern[F] {
       def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Identifier[G] =
-        Identifier(phi(F.map(name)(ident => identFunctorK.mapK(ident)(phi))))
+        Identifier(phi(name))
     }
 
     /** Wildcard pattern `_` that matches anything without binding. */
@@ -347,9 +345,9 @@ trait Phase {
     }
 
     /** Binds a name to a value if it matches another pattern: `name @ pattern`. */
-    case class As[F[_]](name: F[Ident[F]], pattern: F[Pattern[F]]) extends Pattern[F] {
+    case class As[F[_]](name: F[Ident], pattern: F[Pattern[F]]) extends Pattern[F] {
       def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): As[G] =
-        As(phi(F.map(name)(ident => identFunctorK.mapK(ident)(phi))), phi(F.map(pattern)(_.mapK(phi))))
+        As(phi(name), phi(F.map(pattern)(_.mapK(phi))))
     }
 
     /** Matches if the value satisfies a type test: `pattern: Type`. */

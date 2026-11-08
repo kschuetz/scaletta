@@ -7,7 +7,7 @@ import software.kes.scaletta.internal.ast.ParsingPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.util.functional.Id._
 
-class AstRendererSpec extends AnyFunSuite with Matchers {
+final class AstRendererSpec extends AnyFunSuite with Matchers {
 
   test("render simple literal") {
     AstRenderer.render(Literal.int(1)) shouldBe "1"
@@ -16,7 +16,7 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
   }
 
   test("render reference") {
-    val ref = Select[Id](Reference[Id](Identifier[Id]("foo")), Identifier[Id]("bar"))
+    val ref = Select[Id](Reference[Id](Identifier("foo")), Identifier("bar"))
     AstRenderer.render(ref) shouldBe "foo.bar"
   }
 
@@ -35,8 +35,8 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
     AstRenderer.render(block) shouldBe "{\n  1\n}"
 
     val blockWithDecls = Block[Id](
-      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier[Id]("x")), Literal.int(1))),
-      Reference[Id](Identifier[Id]("x"))
+      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier("x")), Literal.int(1))),
+      Reference[Id](Identifier("x"))
     )
     AstRenderer.render(blockWithDecls) shouldBe "{\n  val x = 1\n  x\n}"
   }
@@ -44,8 +44,8 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
   test("render settings: compact mode") {
     val settings = AstRenderer.Settings(compact = true)
     val block = Block[Id](
-      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier[Id]("x")), Literal.int(1))),
-      Reference[Id](Identifier[Id]("x"))
+      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier("x")), Literal.int(1))),
+      Reference[Id](Identifier("x"))
     )
     AstRenderer.render(block, settings) shouldBe "{ val x = 1 x }"
 
@@ -62,8 +62,8 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
   test("render settings: indent size") {
     val settings = AstRenderer.Settings(indentSize = 4)
     val block = Block[Id](
-      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier[Id]("x")), Literal.int(1))),
-      Reference[Id](Identifier[Id]("x"))
+      Vector(Declaration.val_[Id](Pattern.Identifier[Id](Identifier("x")), Literal.int(1))),
+      Reference[Id](Identifier("x"))
     )
     AstRenderer.render(block, settings) shouldBe "{\n    val x = 1\n    x\n}"
   }
@@ -71,7 +71,7 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
   test("render settings: parenthesize all calls") {
     val settings = AstRenderer.Settings(parenthesizeAllCalls = true)
     val call = Call.standard[Id](
-      Reference[Id](Identifier[Id]("foo")),
+      Reference[Id](Identifier("foo")),
       Vector.empty,
       Vector(ArgumentGroup[Id](Vector(Argument[Id](Literal.int(1)))))
     )
@@ -79,8 +79,8 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
   }
 
   test("render infix call with precedence") {
-    val plus = Identifier[Id]("+")
-    val times = Identifier[Id]("*")
+    val plus = Identifier("+")
+    val times = Identifier("*")
 
     // (1 + 2) * 3
     val expr1 = Call.infix[Id](
@@ -103,8 +103,8 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
 
   test("render lambda") {
     val lambda = Lambda[Id](
-      Vector(LambdaParameter[Id](Identifier[Id]("x"), Some(TypeIdentifier.name[Id](Identifier[Id]("Int"))))),
-      Call.infix[Id](Reference[Id](Identifier[Id]("x")), Identifier[Id]("+"), Vector.empty, Literal.int(1))
+      Vector(LambdaParameter[Id](Identifier("x"), Some(TypeIdentifier.name[Id](Identifier("Int"))))),
+      Call.infix[Id](Reference[Id](Identifier("x")), Identifier("+"), Vector.empty, Literal.int(1))
     )
     AstRenderer.render(lambda) shouldBe "(x: Int) => x + 1"
   }
@@ -121,9 +121,9 @@ class AstRendererSpec extends AnyFunSuite with Matchers {
   }
 
   test("render conjunction types") {
-    val typeA = TypeIdentifier.name[Id](Identifier[Id]("A"))
-    val typeB = TypeIdentifier.name[Id](Identifier[Id]("B"))
-    val typeC = TypeIdentifier.name[Id](Identifier[Id]("C"))
+    val typeA = TypeIdentifier.name[Id](Identifier("A"))
+    val typeB = TypeIdentifier.name[Id](Identifier("B"))
+    val typeC = TypeIdentifier.name[Id](Identifier("C"))
     val union = TypeIdentifier.union[Id](typeA, typeB)
 
     // Simple union

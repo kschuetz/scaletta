@@ -8,9 +8,9 @@ sealed trait TypeIdentifier[F[_]] {
 }
 
 object TypeIdentifier {
-  def name[F[_]](name: F[Identifier[F]]): TypeIdentifier[F] = Name(name)
+  def name[F[_]](name: F[Identifier]): TypeIdentifier[F] = Name(name)
 
-  def select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier[F]]): TypeIdentifier[F] =
+  def select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier]): TypeIdentifier[F] =
     Select(qualifier, name)
 
   def applied[F[_]](qualifier: F[TypeIdentifier[F]],
@@ -46,15 +46,15 @@ object TypeIdentifier {
     Tuple(elements)
 
   /** A simple type referred to by name (e.g., `Int`, `String`). */
-  case class Name[F[_]](name: F[Identifier[F]]) extends TypeIdentifier[F] {
+  case class Name[F[_]](name: F[Identifier]) extends TypeIdentifier[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Name[G] =
-      Name(phi(F.map(name)(_.mapK(phi))))
+      Name(phi(name))
   }
 
   /** A qualified type (e.g., `foo.Bar`). */
-  case class Select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier[F]]) extends TypeIdentifier[F] {
+  case class Select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier]) extends TypeIdentifier[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Select[G] =
-      Select(phi(F.map(qualifier)(_.mapK(phi))), phi(F.map(name)(_.mapK(phi))))
+      Select(phi(F.map(qualifier)(_.mapK(phi))), phi(name))
   }
 
   /**

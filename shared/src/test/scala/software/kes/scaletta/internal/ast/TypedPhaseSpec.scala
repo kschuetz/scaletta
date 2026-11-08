@@ -64,15 +64,13 @@ final class TypedPhaseSpec extends AnyFunSpec with Matchers {
       }
 
       val identInfo: TypedInfo = TypedInfo.Local(0, 0, "n", LocalBindingKind.Val, intType)
-      val innerPos = Pos[TypedInfo](identInfo, CharIndex(11), CharIndex(13))
-      val outerPos = Pos[Pos[TypedInfo]](innerPos, CharIndex(11), CharIndex(13))
-      val ref = TypedPhase.Reference[Pos](outerPos)
+      val pos = Pos[TypedInfo](identInfo, CharIndex(11), CharIndex(13))
+      val ref = TypedPhase.Reference[Pos](pos)
       val transformed = ref.mapK(posToAttributed)
 
-      val innerAttr = Attributed[TypedInfo](identInfo, CharIndex(11), CharIndex(13), intType)
-      val outerAttr = Attributed[Attributed[TypedInfo]](innerAttr, CharIndex(11), CharIndex(13), intType)
+      val attr = Attributed[TypedInfo](identInfo, CharIndex(11), CharIndex(13), intType)
 
-      transformed shouldBe TypedPhase.Reference[Attributed](outerAttr)
+      transformed shouldBe TypedPhase.Reference[Attributed](attr)
     }
   }
 

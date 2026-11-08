@@ -29,12 +29,12 @@ object AstBuilders {
 
   def errPat(error: ParseError): Pattern[Id] = Pattern.Error[Id](error)
 
-  def ref(name: Identifier[Id]): Expression[Id] = Reference[Id](name)
+  def ref(name: Identifier): Expression[Id] = Reference[Id](name)
 
-  def select(qualifier: Expression[Id], name: Identifier[Id]): Expression[Id] =
+  def select(qualifier: Expression[Id], name: Identifier): Expression[Id] =
     Select[Id](qualifier, name)
 
-  def infix(left: Expression[Id], op: Identifier[Id], right: Expression[Id]): Expression[Id] =
+  def infix(left: Expression[Id], op: Identifier, right: Expression[Id]): Expression[Id] =
     Call.infix[Id](left, op, Vector.empty, right)
 
   def call(target: Expression[Id]): CallBuilder =
@@ -49,9 +49,9 @@ object AstBuilders {
   def typed(expr: Expression[Id], ascription: TypeIdentifier[Id]): Expression[Id] =
     Typed[Id](expr, ascription)
 
-  implicit def tName(name: Identifier[Id]): TypeIdentifier[Id] = TypeIdentifier.name[Id](name)
+  implicit def tName(name: Identifier): TypeIdentifier[Id] = TypeIdentifier.name[Id](name)
 
-  implicit def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier[Id](name))
+  implicit def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.name[Id](Identifier(name))
 
   def tApplied(name: TypeIdentifier[Id], args: TypeIdentifier[Id]*): TypeIdentifier[Id] =
     TypeIdentifier.applied[Id](name, args: _*)
@@ -96,7 +96,7 @@ object AstBuilders {
 
   def pWild: Pattern[Id] = Pattern.Wildcard[Id]()
 
-  def pId(name: Identifier[Id]): Pattern[Id] = Pattern.Identifier[Id](name)
+  def pId(name: Identifier): Pattern[Id] = Pattern.Identifier[Id](name)
 
   def pTypedId(name: String, typeId: TypeIdentifier[Id]): Pattern[Id] =
     pTyped(pId(name), typeId)
@@ -106,7 +106,7 @@ object AstBuilders {
 
   def pLit(expr: Literal[Id]): Pattern[Id] = Pattern.Literal[Id](expr)
 
-  def pAs(name: Identifier[Id], pattern: Pattern[Id]): Pattern[Id] = Pattern.As[Id](name, pattern)
+  def pAs(name: Identifier, pattern: Pattern[Id]): Pattern[Id] = Pattern.As[Id](name, pattern)
 
   def pAsTyped(name: String, pattern: Pattern[Id], typeName: String): Pattern[Id] =
     pTyped(pAs(name, pattern), typeName)
@@ -125,10 +125,10 @@ object AstBuilders {
   def caseExpr(pat: Pattern[Id], result: Expression[Id]): Case[Id] =
     Case[Id](pat, None, result)
 
-  def param(name: Identifier[Id], typ: TypeIdentifier[Id]): FormalParameter[Id] =
+  def param(name: Identifier, typ: TypeIdentifier[Id]): FormalParameter[Id] =
     FormalParameter[Id](name, typ, None)
 
-  def param(name: Identifier[Id], typ: TypeIdentifier[Id], default: Expression[Id]): FormalParameter[Id] =
+  def param(name: Identifier, typ: TypeIdentifier[Id], default: Expression[Id]): FormalParameter[Id] =
     FormalParameter[Id](name, typ, Some(default))
 
   def paramGroup(params: FormalParameter[Id]*): FormalParameterGroup[Id] =
@@ -137,9 +137,9 @@ object AstBuilders {
   implicit def arg(expression: Expression[Id]): Argument[Id] = Argument[Id](expression)
 
   def namedArg(name: String, expression: Expression[Id]): Argument[Id] =
-    Argument[Id](expression, Some(Identifier[Id](name)))
+    Argument[Id](expression, Some(Identifier(name)))
 
-  implicit def identifier(name: String): Identifier[Id] = Identifier[Id](name)
+  implicit def identifier(name: String): Identifier = Identifier(name)
 
   final class DefDeclBuilder(private val result: Def[Id]) {
     def group(params: FormalParameter[Id]*): DefDeclBuilder =
