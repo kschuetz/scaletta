@@ -148,6 +148,294 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           case other => fail(s"Expected Block, got $other")
         }
       }
+
+      it("should flag a forward reference in a nested block as an error") {
+        val ast = link("{ val a = { val inner = futureVal; inner }; val futureVal = 41; a }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Block(innerDecls, _) =>
+                    innerDecls.head.value match {
+                      case LinkedPhase.Declaration.Val(_, innerRhs) =>
+                        innerRhs.value match {
+                          case LinkedPhase.Reference(id) =>
+                            id.value.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("futureVal"))
+                          case other => fail(s"Expected Reference, got $other")
+                        }
+                      case other => fail(s"Expected Val, got $other")
+                    }
+                  case other => fail(s"Expected Block, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag a forward reference in a lambda body as an error") {
+        val pName = Pos(Identifier[Pos]("x"), CharIndex(1), CharIndex(2))
+        val param = Pos(ParsingPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(8))
+        val refX = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("x"), CharIndex(12), CharIndex(13))), CharIndex(12), CharIndex(13))
+        val opIdent = Pos(Identifier[Pos]("+"), CharIndex(14), CharIndex(15))
+        val refFuture = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(16), CharIndex(25))), CharIndex(16), CharIndex(25))
+        val bodyInfix = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Call.Infix[Pos](refX, opIdent, Vector.empty, refFuture), CharIndex(12), CharIndex(25))
+        val rawLambda = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Lambda[Pos](Vector(param), bodyInfix), CharIndex(0), CharIndex(25))
+
+        val valF = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("f"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1)),
+            rawLambda
+          ),
+          CharIndex(0), CharIndex(25)
+        )
+        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(27), CharIndex(36))), CharIndex(27), CharIndex(36)),
+            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(39), CharIndex(41))
+          ),
+          CharIndex(27), CharIndex(41)
+        )
+        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("f"), CharIndex(43), CharIndex(44))), CharIndex(43), CharIndex(44))
+        val rawBlock = ParsingPhase.Block[Pos](Vector(valF, valFuture), resRef)
+
+        val ast = linkAst(rawBlock)
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Lambda(_, body) =>
+                    body.value match {
+                      case LinkedPhase.Call.Infix(_, _, _, right) =>
+                        right.value match {
+                          case LinkedPhase.Reference(id) =>
+                            id.value.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("futureVal"))
+                          case other => fail(s"Expected Reference, got $other")
+                        }
+                      case other => fail(s"Expected Infix, got $other")
+                    }
+                  case other => fail(s"Expected Lambda, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag a forward reference in a pattern match guard as an error") {
+        val pIdent: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
+        val guardRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(2), CharIndex(11))), CharIndex(2), CharIndex(11))
+        val bodyRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("x"), CharIndex(13), CharIndex(14))), CharIndex(13), CharIndex(14))
+        val c = Pos(ParsingPhase.Case[Pos](pIdent, Some(guardRef), bodyRef), CharIndex(0), CharIndex(14))
+        val scrutinee = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+        val rawMatch = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Match[Pos](scrutinee, Vector(c)), CharIndex(0), CharIndex(14))
+
+        val valRes = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("res"), CharIndex(0), CharIndex(3))), CharIndex(0), CharIndex(3)),
+            rawMatch
+          ),
+          CharIndex(0), CharIndex(14)
+        )
+        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(16), CharIndex(25))), CharIndex(16), CharIndex(25)),
+            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(28), CharIndex(30))
+          ),
+          CharIndex(16), CharIndex(30)
+        )
+        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("res"), CharIndex(32), CharIndex(35))), CharIndex(32), CharIndex(35))
+        val rawBlock = ParsingPhase.Block[Pos](Vector(valRes, valFuture), resRef)
+
+        val ast = linkAst(rawBlock)
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Match(_, cases) =>
+                    cases.head.value match {
+                      case LinkedPhase.Case(_, Some(guard), _) =>
+                        guard.value match {
+                          case LinkedPhase.Reference(id) =>
+                            id.value.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("futureVal"))
+                          case other => fail(s"Expected Reference, got $other")
+                        }
+                      case other => fail(s"Expected Case with guard, got $other")
+                    }
+                  case other => fail(s"Expected Match, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag a forward reference in a pattern match body as an error") {
+        val pIdent: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
+        val bodyRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(3), CharIndex(12))), CharIndex(3), CharIndex(12))
+        val c = Pos(ParsingPhase.Case[Pos](pIdent, None, bodyRef), CharIndex(0), CharIndex(12))
+        val scrutinee = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+        val rawMatch = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Match[Pos](scrutinee, Vector(c)), CharIndex(0), CharIndex(12))
+
+        val valRes = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("res"), CharIndex(0), CharIndex(3))), CharIndex(0), CharIndex(3)),
+            rawMatch
+          ),
+          CharIndex(0), CharIndex(12)
+        )
+        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(14), CharIndex(23))), CharIndex(14), CharIndex(23)),
+            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(26), CharIndex(28))
+          ),
+          CharIndex(14), CharIndex(28)
+        )
+        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("res"), CharIndex(30), CharIndex(33))), CharIndex(30), CharIndex(33))
+        val rawBlock = ParsingPhase.Block[Pos](Vector(valRes, valFuture), resRef)
+
+        val ast = linkAst(rawBlock)
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Match(_, cases) =>
+                    cases.head.value match {
+                      case LinkedPhase.Case(_, _, body) =>
+                        body.value match {
+                          case LinkedPhase.Reference(id) =>
+                            id.value.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("futureVal"))
+                          case other => fail(s"Expected Reference, got $other")
+                        }
+                    }
+                  case other => fail(s"Expected Match, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag a forward reference in a def body as an error") {
+        val ast = link("{ def f(x: Int): Int = futureVal; val futureVal = 41; f(1) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Def(_, _, _, body) =>
+                body.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("futureVal"))
+                  case other => fail(s"Expected Reference, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should not flag a forward reference when an inner parameter shadows an outer pending binding") {
+        val pName = Pos(Identifier[Pos]("futureVal"), CharIndex(1), CharIndex(10))
+        val param = Pos(ParsingPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(15))
+        val bodyRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(17), CharIndex(26))), CharIndex(17), CharIndex(26))
+        val rawLambda = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Lambda[Pos](Vector(param), bodyRef), CharIndex(0), CharIndex(26))
+
+        val valF = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("f"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1)),
+            rawLambda
+          ),
+          CharIndex(0), CharIndex(26)
+        )
+        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(28), CharIndex(37))), CharIndex(28), CharIndex(37)),
+            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(40), CharIndex(42))
+          ),
+          CharIndex(28), CharIndex(42)
+        )
+        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("f"), CharIndex(44), CharIndex(45))), CharIndex(44), CharIndex(45))
+        val rawBlock = ParsingPhase.Block[Pos](Vector(valF, valFuture), resRef)
+
+        val ast = linkAst(rawBlock)
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Lambda(_, body) =>
+                    body.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value.value shouldBe LinkedInfo.Local(0, 0, "futureVal", LocalBindingKind.Parameter)
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Lambda, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should preserve outer scope resolution when outer binding is already declared") {
+        val pName = Pos(Identifier[Pos]("x"), CharIndex(1), CharIndex(2))
+        val param = Pos(ParsingPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(8))
+        val refOuter = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("outerVal"), CharIndex(10), CharIndex(18))), CharIndex(10), CharIndex(18))
+        val opIdent = Pos(Identifier[Pos]("+"), CharIndex(19), CharIndex(20))
+        val refX = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("x"), CharIndex(21), CharIndex(22))), CharIndex(21), CharIndex(22))
+        val bodyInfix = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Call.Infix[Pos](refOuter, opIdent, Vector.empty, refX), CharIndex(10), CharIndex(22))
+        val rawLambda = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Lambda[Pos](Vector(param), bodyInfix), CharIndex(0), CharIndex(22))
+
+        val valOuter = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("outerVal"), CharIndex(0), CharIndex(8))), CharIndex(0), CharIndex(8)),
+            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(11), CharIndex(13))
+          ),
+          CharIndex(0), CharIndex(13)
+        )
+        val valF = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("f"), CharIndex(15), CharIndex(16))), CharIndex(15), CharIndex(16)),
+            rawLambda
+          ),
+          CharIndex(15), CharIndex(35)
+        )
+        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
+          ParsingPhase.Declaration.Val[Pos](
+            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier[Pos]("futureVal"), CharIndex(37), CharIndex(46))), CharIndex(37), CharIndex(46)),
+            Pos(ParsingPhase.Literal.int[Pos](43), CharIndex(49), CharIndex(51))
+          ),
+          CharIndex(37), CharIndex(51)
+        )
+        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier[Pos]("f"), CharIndex(53), CharIndex(54))), CharIndex(53), CharIndex(54))
+        val rawBlock = ParsingPhase.Block[Pos](Vector(valOuter, valF, valFuture), resRef)
+
+        val ast = linkAst(rawBlock)
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls(1).value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Lambda(_, body) =>
+                    body.value match {
+                      case LinkedPhase.Call.Infix(left, _, _, _) =>
+                        left.value match {
+                          case LinkedPhase.Reference(id) =>
+                            id.value.value shouldBe LinkedInfo.Local(1, 0, "outerVal", LocalBindingKind.Val)
+                          case other => fail(s"Expected Reference, got $other")
+                        }
+                      case other => fail(s"Expected Infix, got $other")
+                    }
+                  case other => fail(s"Expected Lambda, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
     }
 
     describe("duplicate definitions") {

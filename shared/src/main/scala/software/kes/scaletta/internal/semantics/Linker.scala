@@ -120,7 +120,7 @@ final class Linker private(methodResolver: MethodResolver,
         )
 
       case ParsingPhase.Lambda(params, body) =>
-        linkLambda(params, body, env)
+        linkLambda(params, body, env, futureInBlock)
 
       case ParsingPhase.InterpolatedString(interpolator, initial, segments) =>
         val newSegments = segments.foldLeft(Vector.empty[(Pos[LinkedPhase.Expression[Pos]], String)]) {
@@ -130,10 +130,10 @@ final class Linker private(methodResolver: MethodResolver,
         LinkedPhase.InterpolatedString(interpolator, initial, newSegments)
 
       case ParsingPhase.Match(expression, cases) =>
-        LinkedPhase.Match(linkPosExpression(expression, env, futureInBlock), linkCases(cases, env))
+        LinkedPhase.Match(linkPosExpression(expression, env, futureInBlock), linkCases(cases, env, futureInBlock))
 
       case ParsingPhase.Block(declarations, result) =>
-        linkBlock(declarations, result, env)
+        linkBlock(declarations, result, env, futureInBlock)
     }
   }
 
@@ -349,7 +349,8 @@ final class Linker private(methodResolver: MethodResolver,
 
   private def linkLambda(params: Vector[Pos[ParsingPhase.LambdaParameter[Pos]]],
                          body: Pos[ParsingPhase.Expression[Pos]],
-                         env: LexicalScope): LinkedPhase.Lambda[Pos] = {
+                         env: LexicalScope,
+                         futureInBlock: Set[String]): LinkedPhase.Lambda[Pos] = {
     case class Acc(seen: Set[String],
                    bindings: Vector[ScopeBinding],
                    linkedParams: Vector[Pos[LinkedPhase.LambdaParameter[Pos]]])
@@ -373,19 +374,21 @@ final class Linker private(methodResolver: MethodResolver,
     }
 
     val lambdaEnv = env.pushLayer(result.bindings)
-    val linkedBody = linkPosExpression(body, lambdaEnv, Set.empty)
+    val linkedBody = linkPosExpression(body, lambdaEnv, futureInBlock)
     LinkedPhase.Lambda(result.linkedParams, linkedBody)
   }
 
   private def linkCases(cases: Vector[Pos[ParsingPhase.Case[Pos]]],
-                        env: LexicalScope): Vector[Pos[LinkedPhase.Case[Pos]]] = {
+                        env: LexicalScope,
+                        futureInBlock: Set[String]): Vector[Pos[LinkedPhase.Case[Pos]]] = {
     cases.foldLeft(Vector.empty[Pos[LinkedPhase.Case[Pos]]]) { (acc, c) =>
-      acc :+ linkCase(c, env)
+      acc :+ linkCase(c, env, futureInBlock)
     }
   }
 
   private def linkCase(c: Pos[ParsingPhase.Case[Pos]],
-                       env: LexicalScope): Pos[LinkedPhase.Case[Pos]] = {
+                       env: LexicalScope,
+                       futureInBlock: Set[String]): Pos[LinkedPhase.Case[Pos]] = {
     val varNames = extractPatternVarNames(c.value.pattern)
 
     val (bindings, bindingMap) = varNames.foldLeft((Vector.empty[ScopeBinding], Map.empty[String, ScopeBinding])) {
@@ -402,16 +405,17 @@ final class Linker private(methodResolver: MethodResolver,
     val caseEnv = env.pushLayer(bindings)
     val linkedPattern = linkPattern(c.value.pattern, 0, bindingMap)
     val linkedGuard = c.value.guard.fold[Option[Pos[LinkedPhase.Expression[Pos]]]](None) { g =>
-      Some(linkPosExpression(g, caseEnv, Set.empty))
+      Some(linkPosExpression(g, caseEnv, futureInBlock))
     }
-    val linkedBody = linkPosExpression(c.value.body, caseEnv, Set.empty)
+    val linkedBody = linkPosExpression(c.value.body, caseEnv, futureInBlock)
     Pos(LinkedPhase.Case(linkedPattern, linkedGuard, linkedBody), c.begin, c.end)
   }
 
   private def linkBlock(declarations: Vector[Pos[ParsingPhase.Declaration[Pos]]],
                         result: Pos[ParsingPhase.Expression[Pos]],
-                        env: LexicalScope): LinkedPhase.Block[Pos] = {
-    val allFutureNames: Set[String] = declarations.foldLeft(Set.empty[String]) { (acc, d) =>
+                        env: LexicalScope,
+                        futureInBlock: Set[String]): LinkedPhase.Block[Pos] = {
+    val allFutureNames: Set[String] = futureInBlock ++ declarations.foldLeft(Set.empty[String]) { (acc, d) =>
       acc ++ declaredNamesIn(d)
     }
 
@@ -481,7 +485,7 @@ final class Linker private(methodResolver: MethodResolver,
 
           val (paramBindings, linkedParamGroups) = linkFormalParamGroups(paramGroups)
           val defEnv = currentEnv.pushLayer(paramBindings)
-          val linkedBody = linkPosExpression(body, defEnv, Set.empty)
+          val linkedBody = linkPosExpression(body, defEnv, remainingFuture)
           val linkedReturnType = returnType.fold[Option[Pos[LinkedPhase.TypeIdent[Pos]]]](None) { rt =>
             Some(ascribeTypeIdent(rt))
           }
@@ -499,7 +503,7 @@ final class Linker private(methodResolver: MethodResolver,
     }
 
     val finalBlockEnv = env.pushLayer(blockResult.currentBindings)
-    val linkedResult = linkPosExpression(result, finalBlockEnv, Set.empty)
+    val linkedResult = linkPosExpression(result, finalBlockEnv, futureInBlock)
     LinkedPhase.Block(blockResult.linkedDecls, linkedResult)
   }
 
