@@ -1,3 +1,19 @@
 package software.kes.scaletta.internal.ast
 
-object TypedPhase extends PhaseWithTypedInfo with PhaseWithAscribedTypes
+import software.kes.scaletta.api.{ProperType, TypeId}
+import software.kes.scaletta.internal.types.TypeResolutionError
+import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
+
+object TypedPhase extends Phase {
+  type Ident = TypedInfo
+  type TypeIdent[F[_]] = Either[TypeResolutionError, ProperType[TypeId]]
+
+  protected implicit def typeIdentFunctorK: FunctorK[TypeIdent] = TypeIdentFunctorK
+
+  private object TypeIdentFunctorK extends FunctorK[TypeIdent] {
+    def mapK[F[_], G[_]](tf: Either[TypeResolutionError, ProperType[TypeId]])
+                        (nt: F ~> G)
+                        (implicit F: Functor[F]): Either[TypeResolutionError, ProperType[TypeId]] =
+      tf
+  }
+}

@@ -1,5 +1,10 @@
 package software.kes.scaletta.internal.ast
 
-object ParsingPhase extends PhaseWithPlainTypeIdentifier {
+import software.kes.scaletta.util.functional.FunctorK
+
+object ParsingPhase extends Phase {
   type Ident = Identifier
+  type TypeIdent[F[_]] = TypeIdentifier[F]
+
+  protected implicit def typeIdentFunctorK: FunctorK[TypeIdent] = TypeIdentifier.typeIdentifierFunctorK
 }

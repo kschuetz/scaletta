@@ -72,6 +72,61 @@ final class TypedPhaseSpec extends AnyFunSpec with Matchers {
 
       transformed shouldBe TypedPhase.Reference[Attributed](attr)
     }
+
+    it("should support mapK on Block and Typed with ascribed types") {
+      val posToAttributed = new(Pos ~> Attributed) {
+        def apply[A](fa: Pos[A]): Attributed[A] =
+          Attributed(fa.value, fa.begin, fa.end, intType)
+      }
+
+      val identInfo: TypedInfo = TypedInfo.Local(0, 0, "n", LocalBindingKind.Val, intType)
+      val identPos = Pos[TypedInfo](identInfo, CharIndex(11), CharIndex(13))
+      val typePos = Pos[TypedPhase.TypeIdent[Pos]](Right(intType), CharIndex(17), CharIndex(23))
+      val exprPos = Pos[TypedPhase.Expression[Pos]](TypedPhase.Reference[Pos](identPos), CharIndex(11), CharIndex(13))
+      val typedExpr = TypedPhase.Typed[Pos](exprPos, typePos)
+
+      val patternPos = Pos[TypedPhase.Pattern[Pos]](TypedPhase.Pattern.Identifier[Pos](identPos), CharIndex(5), CharIndex(7))
+      val valDecl = Pos[TypedPhase.Declaration[Pos]](
+        TypedPhase.Declaration.Val[Pos](patternPos, Pos(typedExpr, CharIndex(11), CharIndex(23))),
+        CharIndex(1),
+        CharIndex(23)
+      )
+
+      val block = TypedPhase.Block[Pos](
+        Vector(valDecl),
+        Pos(TypedPhase.Reference[Pos](identPos), CharIndex(29), CharIndex(31))
+      )
+
+      val transformed = block.mapK(posToAttributed)
+
+      val expectedIdentAttr = Attributed[TypedInfo](identInfo, CharIndex(11), CharIndex(13), intType)
+      val expectedTypeAttr = Attributed[TypedPhase.TypeIdent[Attributed]](Right(intType), CharIndex(17), CharIndex(23), intType)
+      val expectedExprAttr = Attributed[TypedPhase.Expression[Attributed]](
+        TypedPhase.Reference[Attributed](expectedIdentAttr),
+        CharIndex(11),
+        CharIndex(13),
+        intType
+      )
+      val expectedTypedExpr = TypedPhase.Typed[Attributed](expectedExprAttr, expectedTypeAttr)
+      val expectedPatternAttr = Attributed[TypedPhase.Pattern[Attributed]](
+        TypedPhase.Pattern.Identifier[Attributed](expectedIdentAttr),
+        CharIndex(5),
+        CharIndex(7),
+        intType
+      )
+      val expectedValDecl = Attributed[TypedPhase.Declaration[Attributed]](
+        TypedPhase.Declaration.Val[Attributed](expectedPatternAttr, Attributed(expectedTypedExpr, CharIndex(11), CharIndex(23), intType)),
+        CharIndex(1),
+        CharIndex(23),
+        intType
+      )
+      val expectedBlock = TypedPhase.Block[Attributed](
+        Vector(expectedValDecl),
+        Attributed(TypedPhase.Reference[Attributed](expectedIdentAttr), CharIndex(29), CharIndex(31), intType)
+      )
+
+      transformed shouldBe expectedBlock
+    }
   }
 
 }
