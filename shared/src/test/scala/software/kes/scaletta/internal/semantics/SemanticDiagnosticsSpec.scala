@@ -32,6 +32,16 @@ final class SemanticDiagnosticsSpec extends AnyFunSpec with Matchers {
         diagnostics.head.end shouldBe Position.of(1, 6)
       }
 
+      it("should format RecursiveReference error") {
+        val expr = LinkedPhase.Reference[Pos](createPosIdent(SemanticError.RecursiveReference("factorial"), begin = 2, end = 11))
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "Recursive reference to 'factorial' is not allowed"
+        diagnostics.head.begin shouldBe Position.of(1, 3)
+        diagnostics.head.end shouldBe Position.of(1, 12)
+      }
+
       it("should format UnknownIdentifier error") {
         val expr = LinkedPhase.Reference[Pos](createPosIdent(SemanticError.UnknownIdentifier("missingVar")))
         val diagnostics = SemanticDiagnostics.collect(expr, lineMap)

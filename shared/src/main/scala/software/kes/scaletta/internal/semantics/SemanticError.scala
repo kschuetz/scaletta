@@ -8,6 +8,8 @@ object SemanticError {
   // Scoping and declaration errors
   final case class ForwardReference(name: String) extends SemanticError
 
+  final case class RecursiveReference(name: String) extends SemanticError
+
   final case class UnknownIdentifier(name: String) extends SemanticError
 
   final case class DuplicateDefinition(name: String) extends SemanticError

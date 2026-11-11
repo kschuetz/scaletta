@@ -230,6 +230,8 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
   private def formatSemanticError(error: SemanticError): String = error match {
     case SemanticError.ForwardReference(name) =>
       s"Forward reference to '$name' is not allowed"
+    case SemanticError.RecursiveReference(name) =>
+      s"Recursive reference to '$name' is not allowed"
     case SemanticError.UnknownIdentifier(name) =>
       s"Unknown identifier '$name'"
     case SemanticError.DuplicateDefinition(name) =>

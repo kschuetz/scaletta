@@ -569,7 +569,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
                   case LinkedPhase.Call.Standard(target, _, _) =>
                     target.value match {
                       case LinkedPhase.Reference(id) =>
-                        id.value shouldBe LinkedInfo.Error(SemanticError.NoSuchFunction("f", Vector.empty))
+                        id.value shouldBe LinkedInfo.Error(SemanticError.RecursiveReference("f"))
                       case other => fail(s"Expected Reference, got $other")
                     }
                   case other => fail(s"Expected Call.Standard, got $other")
@@ -895,6 +895,317 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
               }
             case other => fail(s"Expected Block, got $other")
           }
+        }
+      }
+    }
+
+    describe("recursion and self-reference constraints") {
+      it("should flag direct def self-recursion as an error") {
+        val ast = link("{ def factorial(n: Int): Int = factorial(n - 1); factorial(5) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Def(_, _, _, body) =>
+                body.value match {
+                  case LinkedPhase.Call.Standard(target, _, _) =>
+                    target.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Error(SemanticError.RecursiveReference("factorial"))
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Call.Standard, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag self-reference in a parameterless def body") {
+        val ast = link("{ def f: Int = f; f }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Def(_, _, _, body) =>
+                body.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value shouldBe LinkedInfo.Error(SemanticError.RecursiveReference("f"))
+                  case other => fail(s"Expected Reference, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should prioritize recursive error over shadowing an outer symbol with the same name") {
+        val ast = link("{ val f = 11; def f(x: Int): Int = f(x); f(5) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls(1).value match {
+              case LinkedPhase.Declaration.Def(_, _, _, body) =>
+                body.value match {
+                  case LinkedPhase.Call.Standard(target, _, _) =>
+                    target.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Error(SemanticError.RecursiveReference("f"))
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Call.Standard, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should resolve to formal parameter when a parameter shadows the def name") {
+        val ast = link("{ def f(f: Int): Int = f; f(5) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Def(_, _, _, body) =>
+                body.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value shouldBe LinkedInfo.Local(0, 0, "f", LocalBindingKind.Parameter)
+                  case other => fail(s"Expected Reference, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should resolve to local val when an inner block shadows the def name") {
+        val ast = link("{ def f(x: Int): Int = { val f = 41; f }; f(5) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Def(_, _, _, body) =>
+                body.value match {
+                  case LinkedPhase.Block(innerDecls, innerResult) =>
+                    innerDecls.head.value match {
+                      case LinkedPhase.Declaration.Val(pattern, _) =>
+                        pattern.value match {
+                          case LinkedPhase.Pattern.Identifier(id) =>
+                            id.value shouldBe LinkedInfo.Local(0, 0, "f", LocalBindingKind.Val)
+                          case other => fail(s"Expected Pattern.Identifier, got $other")
+                        }
+                      case other => fail(s"Expected Val, got $other")
+                    }
+                    innerResult.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Local(0, 0, "f", LocalBindingKind.Val)
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Block, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag recursive references to enclosing defs within nested defs") {
+        val ast = link("{ def outer(x: Int): Int = { def inner(y: Int): Int = outer(y); inner(x) }; outer(5) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Def(_, _, _, outerBody) =>
+                outerBody.value match {
+                  case LinkedPhase.Block(innerDecls, _) =>
+                    innerDecls.head.value match {
+                      case LinkedPhase.Declaration.Def(_, _, _, innerBody) =>
+                        innerBody.value match {
+                          case LinkedPhase.Call.Standard(target, _, _) =>
+                            target.value match {
+                              case LinkedPhase.Reference(id) =>
+                                id.value shouldBe LinkedInfo.Error(SemanticError.RecursiveReference("outer"))
+                              case other => fail(s"Expected Reference, got $other")
+                            }
+                          case other => fail(s"Expected Call.Standard, got $other")
+                        }
+                      case other => fail(s"Expected Def, got $other")
+                    }
+                  case other => fail(s"Expected Block, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+    }
+
+    describe("lazy val and val self-reference and forward reference checks") {
+      it("should flag self-reference in lazy val rhs as forward reference error") {
+        val ast = link("{ lazy val x: Int = x + 1; x }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.LazyVal(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Call.Infix(left, _, _, _) =>
+                    left.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("x"))
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Infix, got $other")
+                }
+              case other => fail(s"Expected LazyVal, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag lazy val self-reference rather than binding to outer symbol") {
+        val ast = link("{ val x = 11; { lazy val x: Int = x + 1; x } }")
+        ast match {
+          case LinkedPhase.Block(_, outerResult) =>
+            outerResult.value match {
+              case LinkedPhase.Block(innerDecls, _) =>
+                innerDecls.head.value match {
+                  case LinkedPhase.Declaration.LazyVal(_, rhs) =>
+                    rhs.value match {
+                      case LinkedPhase.Call.Infix(left, _, _, _) =>
+                        left.value match {
+                          case LinkedPhase.Reference(id) =>
+                            id.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("x"))
+                          case other => fail(s"Expected Reference, got $other")
+                        }
+                      case other => fail(s"Expected Infix, got $other")
+                    }
+                  case other => fail(s"Expected LazyVal, got $other")
+                }
+              case other => fail(s"Expected inner Block, got $other")
+            }
+          case other => fail(s"Expected outer Block, got $other")
+        }
+      }
+
+      it("should resolve to inner local val when nested block in lazy val rhs defines the symbol") {
+        val ast = link("{ lazy val x: Int = { val x = 41; x }; x }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.LazyVal(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Block(innerDecls, innerResult) =>
+                    innerDecls.head.value match {
+                      case LinkedPhase.Declaration.Val(pattern, _) =>
+                        pattern.value match {
+                          case LinkedPhase.Pattern.Identifier(id) =>
+                            id.value shouldBe LinkedInfo.Local(0, 0, "x", LocalBindingKind.Val)
+                          case other => fail(s"Expected Pattern.Identifier, got $other")
+                        }
+                      case other => fail(s"Expected Val, got $other")
+                    }
+                    innerResult.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Local(0, 0, "x", LocalBindingKind.Val)
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Block, got $other")
+                }
+              case other => fail(s"Expected LazyVal, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag self-reference in val rhs as forward reference error") {
+        val ast = link("{ val x: Int = x + 1; x }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Call.Infix(left, _, _, _) =>
+                    left.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("x"))
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Infix, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag forward reference across multiple nested block levels") {
+        val ast = link("{ val a = { { futureVal } }; val futureVal = 41; a }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Block(_, midResult) =>
+                    midResult.value match {
+                      case LinkedPhase.Block(_, innerResult) =>
+                        innerResult.value match {
+                          case LinkedPhase.Reference(id) =>
+                            id.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("futureVal"))
+                          case other => fail(s"Expected Reference, got $other")
+                        }
+                      case other => fail(s"Expected innermost Block, got $other")
+                    }
+                  case other => fail(s"Expected middle Block, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should flag forward reference between sibling def declarations") {
+        val ast = link("{ def first(x: Int): Int = second(x); def second(x: Int): Int = x; first(5) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Def(_, _, _, body) =>
+                body.value match {
+                  case LinkedPhase.Call.Standard(target, _, _) =>
+                    target.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("second"))
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                  case other => fail(s"Expected Call.Standard, got $other")
+                }
+              case other => fail(s"Expected Def, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      // TODO: Un-ignore once Parser supports concrete syntax for lambdas and match expressions.
+      ignore("should flag forward reference inside pattern match inside lambda") {
+        val ast = link("{ val f = (x: Int) => x match { case 0 => futureVal; case _ => 41 }; val futureVal = 43; f(0) }")
+        ast match {
+          case LinkedPhase.Block(decls, _) =>
+            decls.head.value match {
+              case LinkedPhase.Declaration.Val(_, rhs) =>
+                rhs.value match {
+                  case LinkedPhase.Lambda(_, lambdaBody) =>
+                    lambdaBody.value match {
+                      case LinkedPhase.Match(_, cases) =>
+                        cases.head.value match {
+                          case LinkedPhase.Case(_, _, caseBody) =>
+                            caseBody.value match {
+                              case LinkedPhase.Reference(id) =>
+                                id.value shouldBe LinkedInfo.Error(SemanticError.ForwardReference("futureVal"))
+                              case other => fail(s"Expected Reference, got $other")
+                            }
+                        }
+                      case other => fail(s"Expected Match, got $other")
+                    }
+                  case other => fail(s"Expected Lambda, got $other")
+                }
+              case other => fail(s"Expected Val, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
         }
       }
     }
