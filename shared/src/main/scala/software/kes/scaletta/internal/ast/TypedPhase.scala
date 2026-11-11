@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.ast
 
 import software.kes.scaletta.api.{ProperType, TypeId}
+import software.kes.scaletta.internal.reporting.Pos
 import software.kes.scaletta.internal.types.TypeResolutionError
 import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
@@ -16,4 +17,7 @@ object TypedPhase extends Phase {
                         (implicit F: Functor[F]): Either[TypeResolutionError, ProperType[TypeId]] =
       tf
   }
+
+  def posToAttributed(defaultType: ProperType[TypeId]): Pos ~> Attributed =
+    Attributed.lift(defaultType)
 }
