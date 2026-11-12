@@ -125,6 +125,9 @@ object AstBuilders {
   def caseExpr(pat: Pattern[Id], result: Expression[Id]): Case[Id] =
     Case[Id](pat, None, result)
 
+  def caseGuarded(pat: Pattern[Id], guard: Expression[Id], result: Expression[Id]): Case[Id] =
+    Case[Id](pat, Some(guard), result)
+
   def param(name: Identifier, typ: TypeIdentifier[Id]): FormalParameter[Id] =
     FormalParameter[Id](name, typ, None)
 

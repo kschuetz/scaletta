@@ -444,6 +444,95 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
     }
   }
 
+  describe("Match Expressions") {
+    describe("Basic Matching") {
+      it("should parse match expressions with literal and wildcard patterns") {
+        "x match { case 0 => 41; case _ => 43 }" shouldParseTo matchExpr(
+          ref("x"),
+          caseExpr(pLit(Literal.int(0)), lit(41)),
+          caseExpr(pWild, lit(43))
+        )
+      }
+
+      it("should parse match expressions with identifier, tuple, and product patterns") {
+        "x match { case (a, b) => 41; case Some(v) => 43 }" shouldParseTo matchExpr(
+          ref("x"),
+          caseExpr(pTuple(pId("a"), pId("b")), lit(41)),
+          caseExpr(pProduct("Some", pId("v")), lit(43))
+        )
+      }
+    }
+
+    describe("Guards") {
+      it("should parse case clauses with guards") {
+        "x match { case n if n > 0 => n; case _ => 0 }" shouldParseTo matchExpr(
+          ref("x"),
+          caseGuarded(pId("n"), infix(ref("n"), ">", lit(0)), ref("n")),
+          caseExpr(pWild, lit(0))
+        )
+      }
+    }
+
+    describe("Precedence & Infix Interactions") {
+      it("should parse arithmetic expressions as match target") {
+        "1 + 2 match { case 3 => 41 }" shouldParseTo matchExpr(
+          infix(lit(1), "+", lit(2)),
+          caseExpr(pLit(Literal.int(3)), lit(41))
+        )
+      }
+
+      it("should parse member selection as match target") {
+        "user.age match { case 18 => true; case _ => false }" shouldParseTo matchExpr(
+          select(ref("user"), "age"),
+          caseExpr(pLit(Literal.int(18)), lit(true)),
+          caseExpr(pWild, lit(false))
+        )
+      }
+
+      it("should parse nested match expressions in case bodies") {
+        "x match { case 0 => y match { case 1 => 41 } }" shouldParseTo matchExpr(
+          ref("x"),
+          caseExpr(pLit(Literal.int(0)), matchExpr(ref("y"), caseExpr(pLit(Literal.int(1)), lit(41))))
+        )
+      }
+    }
+
+    describe("Multi-line Formatting & Delimiters") {
+      it("should parse newline-separated cases without explicit semicolons") {
+        """x match {
+          |  case 0 => 41
+          |  case _ => 43
+          |}""".stripMargin shouldParseTo matchExpr(
+          ref("x"),
+          caseExpr(pLit(Literal.int(0)), lit(41)),
+          caseExpr(pWild, lit(43))
+        )
+      }
+
+      it("should parse explicit semicolon-separated cases on a single line") {
+        "x match { case 0 => 41; case _ => 43; }" shouldParseTo matchExpr(
+          ref("x"),
+          caseExpr(pLit(Literal.int(0)), lit(41)),
+          caseExpr(pWild, lit(43))
+        )
+      }
+    }
+
+    describe("Error Recovery") {
+      it("should report error on missing closing brace") {
+        "x match { case 0 => 41" shouldFailWith containErrorOfType[ParseError.UnclosedDelimiter]
+      }
+
+      it("should report error on missing => in case clause") {
+        "x match { case 0 41 }" shouldFailWith containErrorOfType[ParseError.ExpectedToken]
+      }
+
+      it("should parse empty match body") {
+        "x match { }" shouldParseTo matchExpr(ref("x"))
+      }
+    }
+  }
+
   describe("Conditionals") {
     it("should parse a standard if-else expression with parentheses") {
       "if (x > 0) a else b" shouldParseTo cond(infix(ref("x"), ">", lit(0)), ref("a"), ref("b"))

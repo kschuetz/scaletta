@@ -587,6 +587,8 @@ final class Parser private() {
 
     private def led(leftResult: ExprResult[Pos], opToken: Pos[Token]): ExprResult[Pos] = {
       opToken.value match {
+        case Token.Match =>
+          parseMatchExpression(leftResult, opToken)
         case Token.LParen =>
           parseFunctionCall(leftResult, opToken)
         case Token.Dot =>
@@ -757,9 +759,85 @@ final class Parser private() {
     }
 
     private def isStructuralBoundary(token: Token): Boolean = {
-      token match {
-        case Token.Val | Token.Def | Token.Else | Token.Then | Token.Case | Token.Semicolon | Token.RBrace | Token.EndOfInput => true
+      ParserSupport.isStructuralBoundary(token)
+    }
+
+    private def parseMatchExpression(leftResult: ExprResult[Pos], matchToken: Pos[Token]): ExprResult[Pos] = {
+      val target = leftResult.value.getOrElse {
+        val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("match target")
+        if (!diagnostics.hasErrors) {
+          reportError(Pos(error, matchToken.begin, matchToken.end))
+        }
+        syntheticExpression(error, matchToken.begin, matchToken.begin)
+      }
+
+      val lBrace = expect(Token.LBrace, "match expression", Some(matchToken.begin))
+      val cases = Vector.newBuilder[Pos[Case[Pos]]]
+
+      skipDelimiters()
+
+      while (scanner.peek(1).value != Token.RBrace && scanner.peek(1).value != Token.EndOfInput) {
+        if (scanner.peek(1).value == Token.Case) {
+          val caseToken = scanner.get()
+          val patternResult = parsePattern()
+          val pattern = patternResult.value.getOrElse {
+            val lastError = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.ExpectedIdentifier(scanner.peek(1).value, "pattern")
+            syntheticPattern(lastError, caseToken.end, scanner.peek(1).begin)
+          }
+
+          val guard: Option[Pos[Expression[Pos]]] = if (scanner.peek(1).value == Token.If) {
+            val ifToken = scanner.get()
+            val guardResult = parseExpression(BindingPower.Minimum)
+            val guardExpr = guardResult.value.getOrElse {
+              val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("guard expression")
+              if (!diagnostics.hasErrors) reportError(Pos(error, ifToken.begin, ifToken.end))
+              syntheticExpression(error, ifToken.begin, ifToken.end)
+            }
+            Some(guardExpr)
+          } else {
+            None
+          }
+
+          val arrowToken = expect(Token.RDoubleArrow, "case clause")
+          val bodyResult = parseExpression(BindingPower.Minimum)
+          val bodyExpr = bodyResult.value.getOrElse {
+            val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("case body")
+            if (!diagnostics.hasErrors) reportError(Pos(error, arrowToken.begin, arrowToken.end))
+            syntheticExpression(error, arrowToken.begin, arrowToken.end)
+          }
+
+          cases += Pos(Case(pattern, guard, bodyExpr), caseToken.begin, bodyExpr.end)
+          skipDelimiters()
+        } else {
+          val next = scanner.peek(1)
+          reportError(Pos(ParseError.ExpectedToken(Token.Case, next.value, "match expression"), next.begin, next.end))
+          synchronizeToNextCase()
+        }
+      }
+
+      val rBrace = expect(Token.RBrace, "match expression", Some(lBrace.begin))
+      val matchExpr: Expression[Pos] = Match(target, cases.result())
+      ParseResult.create(Pos(matchExpr, target.begin, rBrace.end))
+    }
+
+    private def synchronizeToNextCase(): Boolean = {
+      val isSyncBoundary: Token => Boolean = {
+        case Token.Case | Token.Semicolon | Token.Newline | Token.RBrace | Token.EndOfInput => true
         case _ => false
+      }
+      val isFatal: Token => Boolean = {
+        case Token.RBrace | Token.EndOfInput => true
+        case _ => false
+      }
+      synchronizeTo(isSyncBoundary, isFatal)
+      skipDelimiters()
+      val next = scanner.peek(1).value
+      next == Token.Case
+    }
+
+    private def skipDelimiters(): Unit = {
+      while (scanner.peek(1).value == Token.Semicolon || scanner.peek(1).value == Token.Newline) {
+        scanner.get()
       }
     }
 

@@ -185,6 +185,30 @@ class ParserComplexExampleSpec extends AnyFunSuite with Matchers {
       )
   }
 
+  // Match Expression in Block with Guards and Nested Patterns
+  test(example) {
+    """{
+      |  val result = opt match {
+      |    case Some(x) if x > 0 => x * 41
+      |    case Some(_) => 43
+      |    case None => 0
+      |  }
+      |  result
+      |}""".stripMargin shouldParseTo
+      block(
+        ref("result"),
+        valId(
+          "result",
+          matchExpr(
+            ref("opt"),
+            caseGuarded(pProduct("Some", pId("x")), infix(ref("x"), ">", lit(0)), infix(ref("x"), "*", lit(41))),
+            caseExpr(pProduct("Some", pWild), lit(43)),
+            caseExpr(pId("None"), lit(0))
+          )
+        )
+      )
+  }
+
   private def example(implicit pos: Position): String =
     s"Example on line ${pos.lineNumber}"
 

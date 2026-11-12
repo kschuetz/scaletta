@@ -31,6 +31,8 @@ sealed trait BindingPower {
 object BindingPower {
   case object Minimum extends BindingPower
 
+  case object Match extends BindingPower
+
   case object Ascription extends BindingPower
 
   case object Alphanumeric extends BindingPower
@@ -62,6 +64,7 @@ object BindingPower {
    */
   val allBaseLevels: Vector[BindingPower] = Vector(
     Minimum,
+    Match,
     Ascription,
     Alphanumeric,
     LogicalOr,
@@ -88,18 +91,19 @@ object BindingPower {
     private def major(bindingPower: BindingPower): Int =
       bindingPower match {
         case Minimum => 0
-        case Ascription => 1
-        case Alphanumeric => 2
-        case LogicalOr => 3
-        case LogicalXor => 4
-        case LogicalAnd => 5
-        case Equality => 6
-        case Comparison => 7
-        case ColonOperator => 8
-        case Addition => 9
-        case Multiplication => 10
-        case OtherSymbolicOperators => 11
-        case MemberAccess => 12
+        case Match => 1
+        case Ascription => 2
+        case Alphanumeric => 3
+        case LogicalOr => 4
+        case LogicalXor => 5
+        case LogicalAnd => 6
+        case Equality => 7
+        case Comparison => 8
+        case ColonOperator => 9
+        case Addition => 10
+        case Multiplication => 11
+        case OtherSymbolicOperators => 12
+        case MemberAccess => 13
         case Nudge(bp, _) => major(bp)
       }
 

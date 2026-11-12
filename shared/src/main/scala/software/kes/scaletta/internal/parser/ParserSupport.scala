@@ -96,7 +96,7 @@ private[parser] object ParserSupport {
 
   def isStructuralBoundary(token: Token): Boolean = {
     token match {
-      case Token.Val | Token.Def | Token.Else | Token.Then | Token.Case | Token.Semicolon | Token.RBrace |
+      case Token.Val | Token.Def | Token.Else | Token.Then | Token.Case | Token.RDoubleArrow | Token.Semicolon | Token.RBrace |
            Token.EndOfInput =>
         true
       case _ => false

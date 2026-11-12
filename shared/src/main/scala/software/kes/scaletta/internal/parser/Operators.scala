@@ -12,10 +12,11 @@ object Operators {
 
   def bindingPower(reservedWord: Token.ReservedWord): BindingPower = {
     reservedWord match {
+      case Token.Match => BindingPower.Match
       case Token.Colon => BindingPower.Ascription
       case Token.Pipe => BindingPower.LogicalOr
       case Token.Ampersand => BindingPower.LogicalAnd
-      case Token.Eq => BindingPower.Minimum
+      case Token.Eq | Token.RDoubleArrow => BindingPower.Minimum
       case _ => bindingPowerByName(reservedWord.name)
     }
   }

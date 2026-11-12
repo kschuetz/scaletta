@@ -56,6 +56,14 @@ class BindingPowerSpec extends AnyFunSpec with Matchers {
     check("===", BindingPower.Equality)
     checkId("foo", BindingPower.Alphanumeric)
     checkId("Bar", BindingPower.Alphanumeric)
+
+    it("should return BindingPower.Match for Token.Match") {
+      Operators.bindingPower(Token.Match) shouldBe BindingPower.Match
+    }
+
+    it("should return BindingPower.Minimum for Token.RDoubleArrow") {
+      Operators.bindingPower(Token.RDoubleArrow) shouldBe BindingPower.Minimum
+    }
   }
 
   describe("BindingPower ordering") {
