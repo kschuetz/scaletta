@@ -128,6 +128,18 @@ object AstBuilders {
   def caseGuarded(pat: Pattern[Id], guard: Expression[Id], result: Expression[Id]): Case[Id] =
     Case[Id](pat, Some(guard), result)
 
+  def lambdaParam(name: Identifier, typ: TypeIdentifier[Id]): LambdaParameter[Id] =
+    LambdaParameter[Id](name, Some(typ))
+
+  def lambdaParam(name: Identifier): LambdaParameter[Id] =
+    LambdaParameter[Id](name, None)
+
+  def lambda(params: Vector[LambdaParameter[Id]], body: Expression[Id]): Expression[Id] =
+    Lambda[Id](params, body)
+
+  def lambda(body: Expression[Id], params: LambdaParameter[Id]*): Expression[Id] =
+    Lambda[Id](params.toVector, body)
+
   def param(name: Identifier, typ: TypeIdentifier[Id]): FormalParameter[Id] =
     FormalParameter[Id](name, typ, None)
 

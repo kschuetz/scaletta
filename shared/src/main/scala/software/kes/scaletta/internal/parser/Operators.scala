@@ -16,7 +16,8 @@ object Operators {
       case Token.Colon => BindingPower.Ascription
       case Token.Pipe => BindingPower.LogicalOr
       case Token.Ampersand => BindingPower.LogicalAnd
-      case Token.Eq | Token.RDoubleArrow => BindingPower.Minimum
+      case Token.Eq => BindingPower.Minimum
+      case Token.RDoubleArrow => BindingPower.Lambda
       case _ => bindingPowerByName(reservedWord.name)
     }
   }

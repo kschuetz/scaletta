@@ -134,9 +134,37 @@ final class Parser private() {
         val rParen = scanner.get()
         ParseResult.create(Pos(Literal.unit(), token.begin, rParen.end))
       } else {
-        val result = parseExpression(BindingPower.Minimum)
-        val next = expect(Token.RParen, "parenthesized expression", Some(token.begin))
-        processParenthesizedResult(token, result, next)
+        val first = parseExpression(BindingPower.Minimum)
+        if (scanner.peek(1).value == Token.Comma) {
+          val elements = Vector.newBuilder[Pos[Expression[Pos]]]
+          first.value match {
+            case Some(expr) => elements += expr
+            case None =>
+              val isSyncPoint: Token => Boolean = {
+                case Token.Comma | Token.RParen | Token.EndOfInput => true
+                case _ => false
+              }
+              ParserSupport.synchronizeTo(scanner, isSyncPoint, isStructuralBoundary)
+          }
+          while (scanner.peek(1).value == Token.Comma) {
+            scanner.get() // consume comma
+            val nextExpr = parseExpression(BindingPower.Minimum)
+            nextExpr.value match {
+              case Some(expr) => elements += expr
+              case None =>
+                val isSyncPoint: Token => Boolean = {
+                  case Token.Comma | Token.RParen | Token.EndOfInput => true
+                  case _ => false
+                }
+                ParserSupport.synchronizeTo(scanner, isSyncPoint, isStructuralBoundary)
+            }
+          }
+          val rParen = expect(Token.RParen, "parenthesized expression", Some(token.begin))
+          ParseResult.create(Pos(Tuple(elements.result()), token.begin, rParen.end))
+        } else {
+          val next = expect(Token.RParen, "parenthesized expression", Some(token.begin))
+          processParenthesizedResult(token, first, next)
+        }
       }
     }
 
@@ -589,6 +617,8 @@ final class Parser private() {
       opToken.value match {
         case Token.Match =>
           parseMatchExpression(leftResult, opToken)
+        case Token.RDoubleArrow =>
+          parseLambdaExpression(leftResult, opToken)
         case Token.LParen =>
           parseFunctionCall(leftResult, opToken)
         case Token.Dot =>
@@ -787,7 +817,7 @@ final class Parser private() {
 
           val guard: Option[Pos[Expression[Pos]]] = if (scanner.peek(1).value == Token.If) {
             val ifToken = scanner.get()
-            val guardResult = parseExpression(BindingPower.Minimum)
+            val guardResult = parseExpression(BindingPower.Lambda)
             val guardExpr = guardResult.value.getOrElse {
               val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("guard expression")
               if (!diagnostics.hasErrors) reportError(Pos(error, ifToken.begin, ifToken.end))
@@ -818,6 +848,75 @@ final class Parser private() {
       val rBrace = expect(Token.RBrace, "match expression", Some(lBrace.begin))
       val matchExpr: Expression[Pos] = Match(target, cases.result())
       ParseResult.create(Pos(matchExpr, target.begin, rBrace.end))
+    }
+
+    private def parseLambdaExpression(leftResult: ExprResult[Pos], arrowToken: Pos[Token]): ExprResult[Pos] = {
+      val params: Vector[Pos[LambdaParameter[Pos]]] = leftResult.value match {
+        case Some(left) =>
+          extractLambdaParameters(left, arrowToken)
+        case None =>
+          val dummyParam = Pos(LambdaParameter[Pos](Pos(Identifier("<error>"), arrowToken.begin, arrowToken.begin), None), arrowToken.begin, arrowToken.begin)
+          Vector(dummyParam)
+      }
+
+      val bodyResult = parseExpression(BindingPower.Minimum)
+      val body = bodyResult.value.getOrElse {
+        val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("lambda body")
+        if (!diagnostics.hasErrors) {
+          reportError(Pos(error, arrowToken.begin, arrowToken.end))
+        }
+        syntheticExpression(error, arrowToken.begin, arrowToken.end)
+      }
+
+      val begin = leftResult.value.fold(arrowToken.begin)(_.begin)
+      val lambdaExpr: Expression[Pos] = Lambda(params, body)
+      ParseResult.create(Pos(lambdaExpr, begin, body.end))
+    }
+
+    private def extractLambdaParameters(left: Pos[Expression[Pos]], arrowToken: Pos[Token]): Vector[Pos[LambdaParameter[Pos]]] = {
+      left.value match {
+        case _: Literal.UnitLiteral[Pos] @unchecked =>
+          Vector.empty
+
+        case Reference(id) =>
+          Vector(Pos(LambdaParameter[Pos](id, None), left.begin, left.end))
+
+        case Typed(inner, ascription) =>
+          inner.value match {
+            case Reference(id) =>
+              Vector(Pos(LambdaParameter[Pos](id, Some(ascription)), left.begin, left.end))
+            case _ =>
+              reportError(Pos(ParseError.InvalidLambdaParameter, inner.begin, inner.end))
+              val dummyId = Pos(Identifier("<error>"), inner.begin, inner.end)
+              Vector(Pos(LambdaParameter[Pos](dummyId, Some(ascription)), left.begin, left.end))
+          }
+
+        case Tuple(elements) =>
+          elements.map { elem =>
+            elem.value match {
+              case Reference(id) =>
+                Pos(LambdaParameter[Pos](id, None), elem.begin, elem.end)
+              case Typed(inner, ascription) =>
+                inner.value match {
+                  case Reference(id) =>
+                    Pos(LambdaParameter[Pos](id, Some(ascription)), elem.begin, elem.end)
+                  case _ =>
+                    reportError(Pos(ParseError.InvalidLambdaParameter, inner.begin, inner.end))
+                    val dummyId = Pos(Identifier("<error>"), inner.begin, inner.end)
+                    Pos(LambdaParameter[Pos](dummyId, Some(ascription)), elem.begin, elem.end)
+                }
+              case _ =>
+                reportError(Pos(ParseError.InvalidLambdaParameter, elem.begin, elem.end))
+                val dummyId = Pos(Identifier("<error>"), elem.begin, elem.end)
+                Pos(LambdaParameter[Pos](dummyId, None), elem.begin, elem.end)
+            }
+          }
+
+        case _ =>
+          reportError(Pos(ParseError.InvalidLambdaParameter, left.begin, left.end))
+          val dummyId = Pos(Identifier("<error>"), left.begin, left.end)
+          Vector(Pos(LambdaParameter[Pos](dummyId, None), left.begin, left.end))
+      }
     }
 
     private def synchronizeToNextCase(): Boolean = {

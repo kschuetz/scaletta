@@ -497,6 +497,126 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       }
     }
 
+    describe("Tuples") {
+      it("should parse tuple expressions") {
+        val tupleTests = Table(
+          ("input", "expectedAst"),
+          ("(1, 2)", tuple(lit(1), lit(2))),
+          ("(1, \"two\", true)", tuple(lit(1), lit("two"), lit(true))),
+          ("(a, b, c, d)", tuple(ref("a"), ref("b"), ref("c"), ref("d")))
+        )
+
+        forAll(tupleTests) { (input, expected) =>
+          input shouldParseTo expected
+        }
+      }
+    }
+
+    describe("Lambda Expressions") {
+      describe("Single Parameters") {
+        it("should parse a bare identifier parameter (x => x + 1)") {
+          "x => x + 1" shouldParseTo lambda(infix(ref("x"), "+", lit(1)), lambdaParam("x"))
+        }
+
+        it("should parse a parenthesized untyped parameter ((x) => x + 1)") {
+          "(x) => x + 1" shouldParseTo lambda(infix(ref("x"), "+", lit(1)), lambdaParam("x"))
+        }
+
+        it("should parse a parenthesized typed parameter ((x: Int) => x + 1)") {
+          "(x: Int) => x + 1" shouldParseTo lambda(infix(ref("x"), "+", lit(1)), lambdaParam("x", "Int"))
+        }
+      }
+
+      describe("Multiple Parameters") {
+        it("should parse multiple typed parameters ((x: Int, y: String) => x)") {
+          "(x: Int, y: String) => x" shouldParseTo lambda(
+            ref("x"),
+            lambdaParam("x", "Int"),
+            lambdaParam("y", "String")
+          )
+        }
+
+        it("should parse multiple untyped parameters ((x, y) => x + y)") {
+          "(x, y) => x + y" shouldParseTo lambda(
+            infix(ref("x"), "+", ref("y")),
+            lambdaParam("x"),
+            lambdaParam("y")
+          )
+        }
+
+        it("should parse mixed typed and untyped parameters ((x: Int, y) => x)") {
+          "(x: Int, y) => x" shouldParseTo lambda(
+            ref("x"),
+            lambdaParam("x", "Int"),
+            lambdaParam("y")
+          )
+        }
+      }
+
+      describe("Zero Parameters") {
+        it("should parse a nullary lambda (() => 41)") {
+          "() => 41" shouldParseTo lambda(lit(41))
+        }
+      }
+
+      describe("Chaining & Nested Lambdas") {
+        it("should parse curried/chained lambdas (x => y => x + y)") {
+          "x => y => x + y" shouldParseTo lambda(
+            lambda(
+              infix(ref("x"), "+", ref("y")),
+              lambdaParam("y")
+            ),
+            lambdaParam("x")
+          )
+        }
+
+        it("should parse lambdas returning blocks ((x: Int) => { val y = x + 1; y })") {
+          "(x: Int) => { val y = x + 1; y }" shouldParseTo lambda(
+            block(ref("y"), valId("y", infix(ref("x"), "+", lit(1)))),
+            lambdaParam("x", "Int")
+          )
+        }
+
+        it("should parse lambdas returning match expressions ((x: Int) => x match { case 0 => 41; case _ => 43 })") {
+          "(x: Int) => x match { case 0 => 41; case _ => 43 }" shouldParseTo lambda(
+            matchExpr(
+              ref("x"),
+              caseExpr(pLit(Literal.int(0)), lit(41)),
+              caseExpr(pWild, lit(43))
+            ),
+            lambdaParam("x", "Int")
+          )
+        }
+      }
+
+      describe("Calls & Declarations") {
+        it("should parse a lambda as an argument in a function call") {
+          "map(items, (x: Int) => x + 1)" shouldParseTo callSimple(
+            ref("map"),
+            ref("items"),
+            lambda(infix(ref("x"), "+", lit(1)), lambdaParam("x", "Int"))
+          )
+        }
+
+        it("should parse a lambda assigned in a val declaration") {
+          "{ val f = (x: Int) => x * 2; f }" shouldParseTo block(
+            ref("f"),
+            valId("f", lambda(infix(ref("x"), "*", lit(2)), lambdaParam("x", "Int")))
+          )
+        }
+      }
+
+      describe("Error Recovery") {
+        it("should report diagnostic and recover on invalid parameter expression ((1 + 2) => 3)") {
+          "(1 + 2) => 3" shouldFailWith (ParseError.InvalidLambdaParameter at 0)
+        }
+
+        it("should report diagnostic and recover on missing lambda body (x =>)") {
+          "x =>" shouldFailWith (ParseError.ExpectedIdentifier(Token.EndOfInput, "expression") at 4)
+        }
+      }
+    }
+
     describe("Multi-line Formatting & Delimiters") {
       it("should parse newline-separated cases without explicit semicolons") {
         """x match {

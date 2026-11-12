@@ -145,7 +145,8 @@ private class AstRenderer(settings: Settings,
         dedent()
         newline()
         writeIndent()
-        write("}")
+      case _: Expression.Error[_] =>
+        write("<error>")
     }
   }
 
@@ -187,9 +188,10 @@ private class AstRenderer(settings: Settings,
     case Literal.LongLiteral(v) => write(v.toString + "L")
     case Literal.FloatLiteral(v) => write(v.toString + "f")
     case Literal.DoubleLiteral(v) => write(v.toString)
-    case _: Literal.True[Id] => write("true")
-    case _: Literal.False[Id] => write("false")
-    case _: Literal.Null[Id] => write("null")
+    case _: Literal.True[_] => write("true")
+    case _: Literal.False[_] => write("false")
+    case _: Literal.Null[_] => write("null")
+    case _: Literal.UnitLiteral[_] => write("()")
     case Literal.CharLiteral(v) => write("'" + escapeChar(v) + "'")
     case Literal.StringLiteral(v) => write("\"" + escapeString(v) + "\"")
   }
@@ -205,6 +207,10 @@ private class AstRenderer(settings: Settings,
       write("[")
       renderCommaSeparated(args, renderType)
       write("]")
+    case TypeIdentifier.Tuple(elements) =>
+      write("(")
+      renderCommaSeparated(elements, renderType)
+      write(")")
     case TypeIdentifier.Function(params, result) =>
       if (params.size == 1) {
         renderType(params.head)
@@ -257,11 +263,13 @@ private class AstRenderer(settings: Settings,
       }
       write(" = ")
       render(body)
+    case _: Declaration.Error[_] =>
+      write("<error>")
   }
 
   private def renderPattern(pat: Pattern[Id]): Unit = pat match {
     case Pattern.Identifier(name) => write(name.name)
-    case _: Pattern.Wildcard[Id] => write("_")
+    case _: Pattern.Wildcard[_] => write("_")
     case Pattern.Literal(lit) => renderLiteral(lit)
     case Pattern.As(name, p) =>
       write(name.name)
@@ -280,6 +288,8 @@ private class AstRenderer(settings: Settings,
       write("(")
       renderCommaSeparated(args, renderPattern)
       write(")")
+    case _: Pattern.Error[_] =>
+      write("<error>")
   }
 
   private def renderArgumentGroup(ag: ArgumentGroup[Id]): Unit = {

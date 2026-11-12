@@ -61,8 +61,8 @@ class BindingPowerSpec extends AnyFunSpec with Matchers {
       Operators.bindingPower(Token.Match) shouldBe BindingPower.Match
     }
 
-    it("should return BindingPower.Minimum for Token.RDoubleArrow") {
-      Operators.bindingPower(Token.RDoubleArrow) shouldBe BindingPower.Minimum
+    it("should return BindingPower.Lambda for Token.RDoubleArrow") {
+      Operators.bindingPower(Token.RDoubleArrow) shouldBe BindingPower.Lambda
     }
   }
 

@@ -24,4 +24,6 @@ object ParseError {
   case class Message(message: String) extends ParseError
 
   case object PositionalAfterNamedArgument extends ParseError
+
+  case object InvalidLambdaParameter extends ParseError
 }
