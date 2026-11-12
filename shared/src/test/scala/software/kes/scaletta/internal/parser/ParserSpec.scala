@@ -174,6 +174,43 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         "{ val () = (); () }" shouldParseTo block(litUnit, valDecl(pLit(Literal.unit()), litUnit))
       }
 
+      describe("Patterns in Declarations") {
+        it("should parse literal patterns in val declarations") {
+          "{ val 41 = x; 0 }" shouldParseTo block(lit(0), valDecl(pLit(Literal.int(41)), ref("x")))
+          "{ val \"hello\" = x; 0 }" shouldParseTo block(lit(0), valDecl(pLit(Literal.string("hello")), ref("x")))
+          "{ val true = x; 0 }" shouldParseTo block(lit(0), valDecl(pLit(Literal.true_()), ref("x")))
+          "{ val false = x; 0 }" shouldParseTo block(lit(0), valDecl(pLit(Literal.false_()), ref("x")))
+          "{ val null = x; 0 }" shouldParseTo block(lit(0), valDecl(pLit(Literal.null_()), ref("x")))
+        }
+
+        it("should parse tuple patterns in val declarations") {
+          "{ val (a, b) = pair; a }" shouldParseTo block(ref("a"), valDecl(pTuple(pId("a"), pId("b")), ref("pair")))
+          "{ val (a, (b, c)) = nested; a }" shouldParseTo block(ref("a"), valDecl(pTuple(pId("a"), pTuple(pId("b"), pId("c"))), ref("nested")))
+          "{ val (a) = x; a }" shouldParseTo block(ref("a"), valDecl(pId("a"), ref("x")))
+        }
+
+        it("should parse as-patterns in val declarations") {
+          "{ val all @ (head, tail) = pair; all }" shouldParseTo block(ref("all"), valDecl(pAs("all", pTuple(pId("head"), pId("tail"))), ref("pair")))
+        }
+
+        it("should parse product patterns in val declarations") {
+          "{ val Some(inner) = opt; inner }" shouldParseTo block(ref("inner"), valDecl(pProduct(tName("Some"), pId("inner")), ref("opt")))
+          "{ val Pair(a, b) = p; a }" shouldParseTo block(ref("a"), valDecl(pProduct(tName("Pair"), pId("a"), pId("b")), ref("p")))
+          "{ val None() = opt; 0 }" shouldParseTo block(lit(0), valDecl(pProduct(tName("None")), ref("opt")))
+        }
+
+        it("should parse typed patterns in val declarations") {
+          "{ val (a: Int, b: String) = pair; a }" shouldParseTo block(ref("a"), valDecl(pTuple(pTypedId("a", "Int"), pTypedId("b", "String")), ref("pair")))
+          "{ val opt: Option[Int] = x; opt }" shouldParseTo block(ref("opt"), valDecl(pTyped(pId("opt"), tApplied("Option", "Int")), ref("x")))
+          "{ val item @ (x: Int) = data; item }" shouldParseTo block(ref("item"), valDecl(pAs("item", pTypedId("x", "Int")), ref("data")))
+        }
+
+        it("should parse patterns in lazy val declarations") {
+          "{ lazy val (a, b) = pair; a }" shouldParseTo block(ref("a"), lazyValDecl(pTuple(pId("a"), pId("b")), ref("pair")))
+          "{ lazy val Some(x) = opt; x }" shouldParseTo block(ref("x"), lazyValDecl(pProduct(tName("Some"), pId("x")), ref("opt")))
+        }
+      }
+
       it("should parse a lazy val declaration") {
         "{ lazy val x = 1; x }" shouldParseTo block(ref("x"), lazyValDecl(pId("x"), lit(1)))
       }
@@ -481,6 +518,10 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
 
     it("should report ExpectedIdentifier in selection") {
       "a." shouldFailWith (ParseError.ExpectedIdentifier(Token.EndOfInput, "selection") spanning(2, 2))
+    }
+
+    it("should report ExpectedToken for unclosed tuple pattern in val declaration") {
+      "{ val (a, b = x; 0 }" shouldFailWith containErrorOfType[ParseError.ExpectedToken]
     }
   }
 }

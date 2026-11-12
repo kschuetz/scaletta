@@ -441,20 +441,41 @@ final class Parser private() {
       val firstToken = scanner.get()
       val baseResult: PatResult[Pos] = firstToken.value match {
         case idToken: Token.Identifier =>
-          val id = firstToken.as(Identifier(idToken.name))
-          ParseResult.create(firstToken.as(Pattern.Identifier(id)))
+          parseIdentifierOrProductOrAsPattern(firstToken, idToken)
+
         case Token.Underscore =>
           ParseResult.create(firstToken.as(Pattern.Wildcard()))
+
         case Token.LParen =>
-          if (scanner.peek(1).value == Token.RParen) {
-            val rParen = scanner.get()
-            val lit = Pos(Literal.unit[Pos](), firstToken.begin, rParen.end)
-            ParseResult.create(Pos(Pattern.Literal(lit), firstToken.begin, rParen.end))
-          } else {
-            // Future: Tuples in patterns
-            reportError(Pos(ParseError.ExpectedIdentifier(firstToken.value, "pattern"), firstToken.begin, firstToken.end))
-            ParseResult.empty
-          }
+          parseParenthesizedOrTuplePattern(firstToken)
+
+        case Token.IntLiteral(v) =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.int(v)))))
+
+        case Token.LongLiteral(v) =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.long(v)))))
+
+        case Token.FloatLiteral(v) =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.float(v)))))
+
+        case Token.DoubleLiteral(v) =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.double(v)))))
+
+        case Token.StringLiteral(v) =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.string(v)))))
+
+        case Token.CharLiteral(v) =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.char(v)))))
+
+        case Token.True =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.true_()))))
+
+        case Token.False =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.false_()))))
+
+        case Token.Null =>
+          ParseResult.create(firstToken.as(Pattern.Literal(firstToken.as(Literal.null_()))))
+
         case _ =>
           reportError(Pos(ParseError.ExpectedIdentifier(firstToken.value, "pattern"), firstToken.begin, firstToken.end))
           ParseResult.empty
@@ -475,6 +496,92 @@ final class Parser private() {
           }
         case _ =>
           baseResult
+      }
+    }
+
+    private def parseParenthesizedOrTuplePattern(firstToken: Pos[Token]): PatResult[Pos] = {
+      if (scanner.peek(1).value == Token.RParen) {
+        val rParen = scanner.get()
+        val lit = Pos(Literal.unit[Pos](), firstToken.begin, rParen.end)
+        ParseResult.create(Pos(Pattern.Literal(lit), firstToken.begin, rParen.end))
+      } else {
+        val elements = Vector.newBuilder[Pos[Pattern[Pos]]]
+        var continue = true
+        while (continue && scanner.peek(1).value != Token.RParen && scanner.peek(1).value != Token.EndOfInput) {
+          val patResult = parsePattern()
+          patResult.value match {
+            case Some(pat) =>
+              elements += pat
+            case None =>
+              val isSyncPoint: Token => Boolean = {
+                case Token.Comma | Token.RParen | Token.EndOfInput => true
+                case _ => false
+              }
+              ParserSupport.synchronizeTo(scanner, isSyncPoint, isStructuralBoundary)
+          }
+          val next = scanner.peek(1)
+          if (next.value == Token.Comma) {
+            scanner.get() // consume comma
+          } else {
+            continue = false
+          }
+        }
+        val rParen = expect(Token.RParen, "pattern", Some(firstToken.begin))
+        val elems = elements.result()
+        if (elems.isEmpty) {
+          ParseResult.empty
+        } else if (elems.length == 1) {
+          ParseResult.create(Pos(elems.head.value, firstToken.begin, rParen.end))
+        } else {
+          ParseResult.create(Pos(Pattern.Tuple(elems), firstToken.begin, rParen.end))
+        }
+      }
+    }
+
+    private def parseIdentifierOrProductOrAsPattern(firstToken: Pos[Token], idToken: Token.Identifier): PatResult[Pos] = {
+      val id = firstToken.as(Identifier(idToken.name))
+      scanner.peek(1).value match {
+        case Token.LParen =>
+          val lParen = scanner.get()
+          val typeId = firstToken.as(TypeIdentifier.name[Pos](id))
+          val args = Vector.newBuilder[Pos[Pattern[Pos]]]
+          var continue = true
+          while (continue && scanner.peek(1).value != Token.RParen && scanner.peek(1).value != Token.EndOfInput) {
+            val argResult = parsePattern()
+            argResult.value match {
+              case Some(arg) =>
+                args += arg
+              case None =>
+                val isSyncPoint: Token => Boolean = {
+                  case Token.Comma | Token.RParen | Token.EndOfInput => true
+                  case _ => false
+                }
+                ParserSupport.synchronizeTo(scanner, isSyncPoint, isStructuralBoundary)
+            }
+            val next = scanner.peek(1)
+            if (next.value == Token.Comma) {
+              scanner.get()
+            } else {
+              continue = false
+            }
+          }
+          val rParen = expect(Token.RParen, "pattern", Some(lParen.begin))
+          val productPat: Pattern[Pos] = Pattern.Product(typeId, args.result())
+          ParseResult.create(Pos(productPat, firstToken.begin, rParen.end))
+
+        case Token.At =>
+          scanner.get() // consume '@'
+          val innerResult = parsePattern()
+          innerResult.value match {
+            case Some(innerPat) =>
+              val asPat: Pattern[Pos] = Pattern.As(id, innerPat)
+              ParseResult.create(Pos(asPat, firstToken.begin, innerPat.end))
+            case None =>
+              ParseResult.empty
+          }
+
+        case _ =>
+          ParseResult.create(firstToken.as(Pattern.Identifier(id)))
       }
     }
 
