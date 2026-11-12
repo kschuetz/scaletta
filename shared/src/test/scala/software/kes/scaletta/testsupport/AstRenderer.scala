@@ -145,6 +145,7 @@ private class AstRenderer(settings: Settings,
         dedent()
         newline()
         writeIndent()
+        write("}")
       case Expression.Error(_) =>
         write("<error>")
     }
