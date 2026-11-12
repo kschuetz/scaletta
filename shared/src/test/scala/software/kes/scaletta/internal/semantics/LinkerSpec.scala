@@ -1180,8 +1180,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
         }
       }
 
-      // TODO: Un-ignore once Parser supports concrete syntax for lambdas and match expressions.
-      ignore("should flag forward reference inside pattern match inside lambda") {
+      it("should flag forward reference inside pattern match inside lambda") {
         val ast = link("{ val f = (x: Int) => x match { case 0 => futureVal; case _ => 41 }; val futureVal = 43; f(0) }")
         ast match {
           case LinkedPhase.Block(decls, _) =>
