@@ -4,6 +4,7 @@ import org.scalactic.source.Position
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.ast.AstBuilders._
+import software.kes.scaletta.internal.ast.ParsingPhase.Literal
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 
 class ParserComplexExampleSpec extends AnyFunSuite with Matchers {
@@ -206,6 +207,82 @@ class ParserComplexExampleSpec extends AnyFunSuite with Matchers {
             caseExpr(pId("None"), lit(0))
           )
         )
+      )
+  }
+
+  // Lambda with Pattern Matching and Guards
+  test(example) {
+    """{
+      |  val classifier = (n: Int) => n match {
+      |    case 0 => "zero"
+      |    case x if x > 0 => "positive"
+      |    case _ => "negative"
+      |  }
+      |  classifier(41)
+      |}""".stripMargin shouldParseTo
+      block(
+        callSimple(ref("classifier"), lit(41)),
+        valId(
+          "classifier",
+          lambda(
+            matchExpr(
+              ref("n"),
+              caseExpr(pLit(Literal.int(0)), lit("zero")),
+              caseGuarded(pId("x"), infix(ref("x"), ">", lit(0)), lit("positive")),
+              caseExpr(pWild, lit("negative"))
+            ),
+            lambdaParam("n", tName("Int"))
+          )
+        )
+      )
+  }
+
+  // Higher-Order Functions & Curried Lambdas
+  test(example) {
+    """{
+      |  val makeAdder = (x: Int) => (y: Int) => x + y
+      |  val add5 = makeAdder(5)
+      |  add5(41)
+      |}""".stripMargin shouldParseTo
+      block(
+        callSimple(ref("add5"), lit(41)),
+        valId("makeAdder", lambda(lambda(infix(ref("x"), "+", ref("y")), lambdaParam("y", tName("Int"))), lambdaParam("x", tName("Int")))),
+        valId("add5", callSimple(ref("makeAdder"), lit(5)))
+      )
+  }
+
+  // Tuple Destructuring & Product Matching in Lambdas
+  test(example) {
+    """{
+      |  val transform = (pair: Option) => pair match {
+      |    case Some((a, b)) => a + b
+      |    case None => 0
+      |  }
+      |  transform(opt)
+      |}""".stripMargin shouldParseTo
+      block(
+        callSimple(ref("transform"), ref("opt")),
+        valId(
+          "transform",
+          lambda(
+            matchExpr(
+              ref("pair"),
+              caseExpr(pProduct("Some", pTuple(pId("a"), pId("b"))), infix(ref("a"), "+", ref("b"))),
+              caseExpr(pId("None"), lit(0))
+            ),
+            lambdaParam("pair", tName("Option"))
+          )
+        )
+      )
+  }
+
+  // Lambda as Function Argument with Infix Precedence
+  test(example) {
+    """process(items, (x: Int) => x * 2 + 1)""" shouldParseTo
+      callSimple(
+        ref("process"),
+        arg(ref("items")),
+        arg(lambda(infix(infix(ref("x"), "*", lit(2)), "+", lit(1)), lambdaParam("x", tName("Int"))))
       )
   }
 
