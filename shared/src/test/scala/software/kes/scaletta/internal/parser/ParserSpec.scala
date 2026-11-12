@@ -614,6 +614,10 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
         it("should report diagnostic and recover on missing lambda body (x =>)") {
           "x =>" shouldFailWith (ParseError.ExpectedIdentifier(Token.EndOfInput, "expression") at 4)
         }
+
+        it("should report diagnostic on unparenthesized typed lambda parameter (x: Int => x + 1)") {
+          "x: Int => x + 1" shouldFailWith (ParseError.LambdaParameterNeedsParentheses at 0)
+        }
       }
     }
 

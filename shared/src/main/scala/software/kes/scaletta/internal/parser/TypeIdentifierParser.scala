@@ -8,14 +8,14 @@ import software.kes.scaletta.internal.types.ConjunctionType
 import scala.annotation.tailrec
 
 private[scaletta] object TypeIdentifierParser {
-  def parse(scanner: Scanner): TypeResult[Pos] =
-    new Session(scanner).run()
+  def parse(scanner: Scanner, minPower: BindingPower = BindingPower.Minimum): TypeResult[Pos] =
+    new Session(scanner, minPower).run()
 
-  private class Session(scanner: Scanner) {
+  private class Session(scanner: Scanner, minPower: BindingPower) {
     private var diagnostics: ParseDiagnostics = ParseDiagnostics.empty
 
     def run(): TypeResult[Pos] = {
-      val result = parseTypeIdentifier(BindingPower.Minimum)
+      val result = parseTypeIdentifier(minPower)
       result.addDiagnostics(diagnostics)
     }
 

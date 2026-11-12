@@ -651,7 +651,7 @@ final class Parser private() {
     }
 
     private def parseTypeAscription(leftResult: ExprResult[Pos], colonToken: Pos[Token]): ExprResult[Pos] = {
-      val typeResult: TypeResult[Pos] = TypeIdentifierParser.parse(scanner)
+      val typeResult: TypeResult[Pos] = TypeIdentifierParser.parse(scanner, BindingPower.Ascription)
       addDiagnostics(typeResult.diagnostics)
 
       (leftResult.value, typeResult.value) match {
@@ -882,13 +882,20 @@ final class Parser private() {
           Vector(Pos(LambdaParameter[Pos](id, None), left.begin, left.end))
 
         case Typed(inner, ascription) =>
-          inner.value match {
-            case Reference(id) =>
-              Vector(Pos(LambdaParameter[Pos](id, Some(ascription)), left.begin, left.end))
-            case _ =>
-              reportError(Pos(ParseError.InvalidLambdaParameter, inner.begin, inner.end))
-              val dummyId = Pos(Identifier("<error>"), inner.begin, inner.end)
-              Vector(Pos(LambdaParameter[Pos](dummyId, Some(ascription)), left.begin, left.end))
+          val isParenthesized = left.begin.value < inner.begin.value && left.end.value > ascription.end.value
+          if (!isParenthesized) {
+            reportError(Pos(ParseError.LambdaParameterNeedsParentheses, left.begin, left.end))
+            val dummyId = Pos(Identifier("<error>"), left.begin, left.end)
+            Vector(Pos(LambdaParameter[Pos](dummyId, Some(ascription)), left.begin, left.end))
+          } else {
+            inner.value match {
+              case Reference(id) =>
+                Vector(Pos(LambdaParameter[Pos](id, Some(ascription)), left.begin, left.end))
+              case _ =>
+                reportError(Pos(ParseError.InvalidLambdaParameter, inner.begin, inner.end))
+                val dummyId = Pos(Identifier("<error>"), inner.begin, inner.end)
+                Vector(Pos(LambdaParameter[Pos](dummyId, Some(ascription)), left.begin, left.end))
+            }
           }
 
         case Tuple(elements) =>

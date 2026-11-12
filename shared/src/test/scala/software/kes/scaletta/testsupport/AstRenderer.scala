@@ -145,7 +145,7 @@ private class AstRenderer(settings: Settings,
         dedent()
         newline()
         writeIndent()
-      case _: Expression.Error[_] =>
+      case Expression.Error(_) =>
         write("<error>")
     }
   }
@@ -188,10 +188,10 @@ private class AstRenderer(settings: Settings,
     case Literal.LongLiteral(v) => write(v.toString + "L")
     case Literal.FloatLiteral(v) => write(v.toString + "f")
     case Literal.DoubleLiteral(v) => write(v.toString)
-    case _: Literal.True[_] => write("true")
-    case _: Literal.False[_] => write("false")
-    case _: Literal.Null[_] => write("null")
-    case _: Literal.UnitLiteral[_] => write("()")
+    case Literal.True() => write("true")
+    case Literal.False() => write("false")
+    case Literal.Null() => write("null")
+    case Literal.UnitLiteral() => write("()")
     case Literal.CharLiteral(v) => write("'" + escapeChar(v) + "'")
     case Literal.StringLiteral(v) => write("\"" + escapeString(v) + "\"")
   }
@@ -263,13 +263,13 @@ private class AstRenderer(settings: Settings,
       }
       write(" = ")
       render(body)
-    case _: Declaration.Error[_] =>
+    case Declaration.Error(_) =>
       write("<error>")
   }
 
   private def renderPattern(pat: Pattern[Id]): Unit = pat match {
     case Pattern.Identifier(name) => write(name.name)
-    case _: Pattern.Wildcard[_] => write("_")
+    case Pattern.Wildcard() => write("_")
     case Pattern.Literal(lit) => renderLiteral(lit)
     case Pattern.As(name, p) =>
       write(name.name)
@@ -288,7 +288,7 @@ private class AstRenderer(settings: Settings,
       write("(")
       renderCommaSeparated(args, renderPattern)
       write(")")
-    case _: Pattern.Error[_] =>
+    case Pattern.Error(_) =>
       write("<error>")
   }
 

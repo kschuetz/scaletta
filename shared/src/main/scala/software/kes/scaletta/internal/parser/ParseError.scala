@@ -26,4 +26,6 @@ object ParseError {
   case object PositionalAfterNamedArgument extends ParseError
 
   case object InvalidLambdaParameter extends ParseError
+
+  case object LambdaParameterNeedsParentheses extends ParseError
 }
