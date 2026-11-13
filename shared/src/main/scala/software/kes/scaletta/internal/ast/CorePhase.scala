@@ -4,7 +4,14 @@ import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.parser.ParseError
 import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
-trait Phase {
+/**
+ * Houses all core semantic AST nodes shared across compilation phases.
+ *
+ * This provides a uniform structural representation for the semantic pipeline
+ * (linking, type checking, evaluation), while allowing parsing to introduce
+ * surface-level constructs.
+ */
+trait CorePhase {
   phase =>
   type Ident
 
@@ -12,7 +19,7 @@ trait Phase {
 
   protected implicit def typeIdentFunctorK: FunctorK[TypeIdent]
 
-  sealed trait Expression[F[_]] {
+  trait Expression[F[_]] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Expression[G]
   }
 

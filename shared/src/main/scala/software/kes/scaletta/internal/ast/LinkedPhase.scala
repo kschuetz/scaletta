@@ -4,7 +4,7 @@ import software.kes.scaletta.api.{ProperType, TypeId}
 import software.kes.scaletta.internal.types.TypeResolutionError
 import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
-object LinkedPhase extends Phase {
+object LinkedPhase extends CorePhase {
   type Ident = LinkedInfo
   type TypeIdent[F[_]] = Either[TypeResolutionError, ProperType[TypeId]]
 

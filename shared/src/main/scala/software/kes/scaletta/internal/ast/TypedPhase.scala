@@ -5,7 +5,7 @@ import software.kes.scaletta.internal.reporting.Pos
 import software.kes.scaletta.internal.types.TypeResolutionError
 import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
-object TypedPhase extends Phase {
+object TypedPhase extends CorePhase {
   type Ident = TypedInfo
   type TypeIdent[F[_]] = Either[TypeResolutionError, ProperType[TypeId]]
 
