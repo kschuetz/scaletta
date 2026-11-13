@@ -20,6 +20,7 @@ final class CollectionsLookup(methodResolver: MethodResolver) {
     }
 
     val map: NativeFunctionId = resolve("map", SignatureQuery.of(SignatureQueryParameter.unknown))
+    val flatMap: NativeFunctionId = resolve("flatMap", SignatureQuery.of(SignatureQueryParameter.unknown))
     val filter: NativeFunctionId = resolve("filter", SignatureQuery.of(SignatureQueryParameter.unknown))
 
     private def resolve(name: String, query: SignatureQuery): NativeFunctionId =

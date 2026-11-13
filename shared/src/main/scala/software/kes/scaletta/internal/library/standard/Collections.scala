@@ -26,6 +26,14 @@ object Collections {
           FunctionImpl.higherOrder(base.mapImpl)
         )
 
+        // flatMap[B](f: A => List[B]): List[B]
+        registry.addMethod(
+          MethodName(receiverType, Name("flatMap")),
+          Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(tc.applyAll(typeB)))),
+          tc.applyAll(typeB),
+          FunctionImpl.higherOrder(base.flatMapImpl)
+        )
+
         // filter(f: A => Boolean): List[A]
         registry.addMethod(
           MethodName(receiverType, Name("filter")),
@@ -67,6 +75,33 @@ object Collections {
             NativeStep.call(fn, keep => {
               if (keep.asInstanceOf[Boolean]) {
                 addElement(builder, elem)
+              }
+              go()
+            })
+          } else NativeStep.done(makeResult(builder))
+        }
+
+        go()
+      }
+    }
+
+    def flatMapImpl(argumentReader: ArgumentReader): NativeStep = {
+      val input = argumentReader.readObject(0).asInstanceOf[C]
+      if (input.isEmpty) NativeStep.done(makeEmpty())
+      else {
+        val fn = argumentReader.unsafeReadFunction(1)
+        val builder = makeBuilder()
+        val iter = input.iterator
+
+        def go(): NativeStep = {
+          if (iter.hasNext) {
+            val elem = iter.next()
+            fn.setArgument(0, elem)
+            NativeStep.call(fn, mapped => {
+              val inner = mapped.asInstanceOf[Iterable[_]]
+              val innerIter = inner.iterator
+              while (innerIter.hasNext) {
+                addElement(builder, innerIter.next())
               }
               go()
             })

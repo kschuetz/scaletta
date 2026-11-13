@@ -54,6 +54,18 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
   }
 
   /**
+   * Constructs a unary lambda accepting an Int and returning an Object (such as a List or Vector).
+   */
+  private def makeIntToObjectLambda(bodyFn: Reference => IntermediateExpression): Lambda = {
+    val sig = UserFunctionSignature(
+      VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))),
+      BasicTypes.Object,
+      1
+    )
+    Lambda(sig, Vector.empty, bodyFn(Reference(0, 0)))
+  }
+
+  /**
    * Constructs a unary predicate lambda accepting an Int and returning a Boolean.
    */
   private def makeIntPredicateLambda(bodyFn: Reference => IntermediateExpression): Lambda = {
@@ -123,6 +135,81 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
           )
           val interpreter = Interpreter.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe List(21, 33, 39)
+        }
+      }
+
+      describe("flatMap") {
+        it("should return Nil when flatMapping over an empty List") {
+          val lambda = makeIntToObjectLambda(_ => object_(List(7, 11)))
+          val expr = NativeCall(stdLib.collections.list.flatMap, Vector(object_(Nil), lambda))
+
+          runExpression(expr) shouldBe Nil
+        }
+
+        it("should return Nil when function returns Nil for all elements") {
+          val inputList = List(11, 23, 31)
+          val lambda = makeIntToObjectLambda(_ => object_(Nil))
+          val expr = NativeCall(stdLib.collections.list.flatMap, Vector(object_(inputList), lambda))
+
+          runExpression(expr) shouldBe Nil
+        }
+
+        it("should perform homogeneous expansion (Int => List[Int]) preserving element order") {
+          val inputList = List(7, 13, 29)
+          val lambda = makeIntToObjectLambda(param =>
+            Conditional(
+              NativeCall(stdLib.comparison.int.gt.int, Vector(param, int(10))),
+              object_(List(31, 37)),
+              object_(List(3, 5))
+            )
+          )
+          val expr = NativeCall(stdLib.collections.list.flatMap, Vector(object_(inputList), lambda))
+
+          runExpression(expr) shouldBe List(3, 5, 31, 37, 31, 37)
+        }
+
+        it("should perform type transformation (Int => List[String])") {
+          val inputList = List(11, 23)
+          val lambda = makeIntToObjectLambda(param =>
+            Conditional(
+              NativeCall(stdLib.comparison.int.gt.int, Vector(param, int(20))),
+              object_(List("prime-gt-20-a", "prime-gt-20-b")),
+              object_(List("prime-lte-20"))
+            )
+          )
+          val expr = NativeCall(stdLib.collections.list.flatMap, Vector(object_(inputList), lambda))
+
+          runExpression(expr) shouldBe List("prime-lte-20", "prime-gt-20-a", "prime-gt-20-b")
+        }
+
+        it("should support flatMapping with closures capturing lexical variables") {
+          val inputList = List(7, 17, 31)
+          val lambdaSignature = UserFunctionSignature(
+            VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+              CoreTypes.IntT, // parameter
+              CoreTypes.IntT // capture: threshold
+            ))),
+            BasicTypes.Object,
+            1
+          )
+          val lambdaBody = Conditional(
+            NativeCall(stdLib.comparison.int.gt.int, Vector(Reference(0, 0), Reference(0, 1))),
+            object_(List(61, 67)),
+            object_(Nil)
+          )
+          val lambda = Lambda(lambdaSignature, Vector(Reference(0, 0)), lambdaBody)
+
+          val expr = WithBindings(
+            Vector(Binding.Val(int(10))),
+            NativeCall(stdLib.collections.list.flatMap, Vector(object_(inputList), lambda))
+          )
+
+          val program = compiler.compile(
+            UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
+            expr
+          )
+          val interpreter = Interpreter.create(program, nativeFunctions)
+          interpreter.run(emptyContextReader).value[Any]() shouldBe List(61, 67, 61, 67)
         }
       }
 
@@ -250,6 +337,81 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
           )
           val interpreter = Interpreter.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe Vector(21, 33, 39)
+        }
+      }
+
+      describe("flatMap") {
+        it("should return empty Vector when flatMapping over an empty Vector") {
+          val lambda = makeIntToObjectLambda(_ => object_(Vector(7, 11)))
+          val expr = NativeCall(stdLib.collections.vector.flatMap, Vector(object_(Vector.empty), lambda))
+
+          runExpression(expr) shouldBe Vector.empty
+        }
+
+        it("should return empty Vector when function returns empty Vector for all elements") {
+          val inputVector = Vector(11, 23, 31)
+          val lambda = makeIntToObjectLambda(_ => object_(Vector.empty))
+          val expr = NativeCall(stdLib.collections.vector.flatMap, Vector(object_(inputVector), lambda))
+
+          runExpression(expr) shouldBe Vector.empty
+        }
+
+        it("should perform homogeneous expansion (Int => Vector[Int]) preserving element order") {
+          val inputVector = Vector(7, 13, 29)
+          val lambda = makeIntToObjectLambda(param =>
+            Conditional(
+              NativeCall(stdLib.comparison.int.gt.int, Vector(param, int(10))),
+              object_(Vector(31, 37)),
+              object_(Vector(3, 5))
+            )
+          )
+          val expr = NativeCall(stdLib.collections.vector.flatMap, Vector(object_(inputVector), lambda))
+
+          runExpression(expr) shouldBe Vector(3, 5, 31, 37, 31, 37)
+        }
+
+        it("should perform type transformation (Int => Vector[String])") {
+          val inputVector = Vector(11, 23)
+          val lambda = makeIntToObjectLambda(param =>
+            Conditional(
+              NativeCall(stdLib.comparison.int.gt.int, Vector(param, int(20))),
+              object_(Vector("prime-gt-20-a", "prime-gt-20-b")),
+              object_(Vector("prime-lte-20"))
+            )
+          )
+          val expr = NativeCall(stdLib.collections.vector.flatMap, Vector(object_(inputVector), lambda))
+
+          runExpression(expr) shouldBe Vector("prime-lte-20", "prime-gt-20-a", "prime-gt-20-b")
+        }
+
+        it("should support flatMapping with closures capturing lexical variables") {
+          val inputVector = Vector(7, 17, 31)
+          val lambdaSignature = UserFunctionSignature(
+            VarSpaceSignature.of(FrameSignature.fromSeq(Seq(
+              CoreTypes.IntT, // parameter
+              CoreTypes.IntT // capture: threshold
+            ))),
+            BasicTypes.Object,
+            1
+          )
+          val lambdaBody = Conditional(
+            NativeCall(stdLib.comparison.int.gt.int, Vector(Reference(0, 0), Reference(0, 1))),
+            object_(Vector(61, 67)),
+            object_(Vector.empty)
+          )
+          val lambda = Lambda(lambdaSignature, Vector(Reference(0, 0)), lambdaBody)
+
+          val expr = WithBindings(
+            Vector(Binding.Val(int(10))),
+            NativeCall(stdLib.collections.vector.flatMap, Vector(object_(inputVector), lambda))
+          )
+
+          val program = compiler.compile(
+            UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
+            expr
+          )
+          val interpreter = Interpreter.create(program, nativeFunctions)
+          interpreter.run(emptyContextReader).value[Any]() shouldBe Vector(61, 67, 61, 67)
         }
       }
 
