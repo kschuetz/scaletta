@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.ast
 
-import software.kes.scaletta.internal.ast.ParsingPhase.Declaration.Def
-import software.kes.scaletta.internal.ast.ParsingPhase._
+import software.kes.scaletta.internal.ast.ParsedPhase.Declaration.Def
+import software.kes.scaletta.internal.ast.ParsedPhase._
 import software.kes.scaletta.util.functional.Id._
 
 import scala.language.implicitConversions

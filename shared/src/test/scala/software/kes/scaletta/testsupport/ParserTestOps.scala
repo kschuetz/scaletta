@@ -3,7 +3,7 @@ package software.kes.scaletta.testsupport
 import org.scalactic.source.Position
 import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.internal.ast.ParsingPhase.Expression
+import software.kes.scaletta.internal.ast.ParsedPhase.Expression
 import software.kes.scaletta.internal.ast.TypeIdentifier
 import software.kes.scaletta.internal.parser.{ParseError, ParseHint, ParseOptions, ParseWarning}
 import software.kes.scaletta.internal.reporting.{LineMap, Pos}

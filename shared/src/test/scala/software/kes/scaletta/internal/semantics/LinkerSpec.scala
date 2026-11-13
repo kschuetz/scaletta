@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.ast._
+import software.kes.scaletta.internal.desugar.Desugarer
 import software.kes.scaletta.internal.parser.Parser
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, LineMapBuilder, Pos}
@@ -17,7 +18,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
   private val scaletta: ScalettaFacade =
     Scaletta.create().asInstanceOf[ScalettaFacade]
 
-  private def parseExpr(source: String): Pos[ParsingPhase.Expression[Pos]] = {
+  private def parseExpr(source: String): Pos[ParsedPhase.Expression[Pos]] = {
     val reader = SourceReader.create(source.iterator, LineMapBuilder.create(LineMap.create()))
     val scanner = Scanner.create(reader, IdentifierPolicy.Default)
     val parser = Parser.create()
@@ -27,12 +28,13 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
 
   private def link(source: String, importScope: ImportScope = ImportScope.default): LinkedPhase.Expression[Pos] = {
     val parsed = parseExpr(source)
-    linkAst(parsed.value, importScope)
+    val desugared = Desugarer.create().desugar(parsed.value)
+    linkAst(desugared, importScope)
   }
 
-  private def linkAst(parsed: ParsingPhase.Expression[Pos], importScope: ImportScope = ImportScope.default): LinkedPhase.Expression[Pos] = {
+  private def linkAst(desugared: DesugaredPhase.Expression[Pos], importScope: ImportScope = ImportScope.default): LinkedPhase.Expression[Pos] = {
     val linker = Linker.create(scaletta.universe, importScope)
-    linker.link(parsed)
+    linker.link(desugared)
   }
 
   private def typeOf(ta: LinkedPhase.TypeIdent[Pos]): Either[TypeResolutionError, ProperType[TypeId]] = ta
@@ -176,29 +178,29 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
 
       it("should flag a forward reference in a lambda body as an error") {
         val pName = Pos(Identifier("x"), CharIndex(1), CharIndex(2))
-        val param = Pos(ParsingPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(8))
-        val refX = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(12), CharIndex(13))), CharIndex(12), CharIndex(13))
+        val param = Pos(DesugaredPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(8))
+        val refX = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(12), CharIndex(13))), CharIndex(12), CharIndex(13))
         val opIdent = Pos(Identifier("+"), CharIndex(14), CharIndex(15))
-        val refFuture = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(16), CharIndex(25))), CharIndex(16), CharIndex(25))
-        val bodyInfix = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Call.Infix[Pos](refX, opIdent, Vector.empty, refFuture), CharIndex(12), CharIndex(25))
-        val rawLambda = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Lambda[Pos](Vector(param), bodyInfix), CharIndex(0), CharIndex(25))
+        val refFuture = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(16), CharIndex(25))), CharIndex(16), CharIndex(25))
+        val bodyInfix = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Call.Infix[Pos](refX, opIdent, Vector.empty, refFuture), CharIndex(12), CharIndex(25))
+        val rawLambda = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Lambda[Pos](Vector(param), bodyInfix), CharIndex(0), CharIndex(25))
 
-        val valF = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("f"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1)),
+        val valF = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("f"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1)),
             rawLambda
           ),
           CharIndex(0), CharIndex(25)
         )
-        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(27), CharIndex(36))), CharIndex(27), CharIndex(36)),
-            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(39), CharIndex(41))
+        val valFuture = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(27), CharIndex(36))), CharIndex(27), CharIndex(36)),
+            Pos(DesugaredPhase.Literal.int[Pos](41), CharIndex(39), CharIndex(41))
           ),
           CharIndex(27), CharIndex(41)
         )
-        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("f"), CharIndex(43), CharIndex(44))), CharIndex(43), CharIndex(44))
-        val rawBlock = ParsingPhase.Block[Pos](Vector(valF, valFuture), resRef)
+        val resRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("f"), CharIndex(43), CharIndex(44))), CharIndex(43), CharIndex(44))
+        val rawBlock = DesugaredPhase.Block[Pos](Vector(valF, valFuture), resRef)
 
         val ast = linkAst(rawBlock)
         ast match {
@@ -225,29 +227,29 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
       }
 
       it("should flag a forward reference in a pattern match guard as an error") {
-        val pIdent: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
-        val guardRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(2), CharIndex(11))), CharIndex(2), CharIndex(11))
-        val bodyRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(13), CharIndex(14))), CharIndex(13), CharIndex(14))
-        val c = Pos(ParsingPhase.Case[Pos](pIdent, Some(guardRef), bodyRef), CharIndex(0), CharIndex(14))
-        val scrutinee = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
-        val rawMatch = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Match[Pos](scrutinee, Vector(c)), CharIndex(0), CharIndex(14))
+        val pIdent: Pos[DesugaredPhase.Pattern[Pos]] = Pos(DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
+        val guardRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(2), CharIndex(11))), CharIndex(2), CharIndex(11))
+        val bodyRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(13), CharIndex(14))), CharIndex(13), CharIndex(14))
+        val c = Pos(DesugaredPhase.Case[Pos](pIdent, Some(guardRef), bodyRef), CharIndex(0), CharIndex(14))
+        val scrutinee = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+        val rawMatch = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Match[Pos](scrutinee, Vector(c)), CharIndex(0), CharIndex(14))
 
-        val valRes = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("res"), CharIndex(0), CharIndex(3))), CharIndex(0), CharIndex(3)),
+        val valRes = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("res"), CharIndex(0), CharIndex(3))), CharIndex(0), CharIndex(3)),
             rawMatch
           ),
           CharIndex(0), CharIndex(14)
         )
-        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(16), CharIndex(25))), CharIndex(16), CharIndex(25)),
-            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(28), CharIndex(30))
+        val valFuture = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(16), CharIndex(25))), CharIndex(16), CharIndex(25)),
+            Pos(DesugaredPhase.Literal.int[Pos](41), CharIndex(28), CharIndex(30))
           ),
           CharIndex(16), CharIndex(30)
         )
-        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("res"), CharIndex(32), CharIndex(35))), CharIndex(32), CharIndex(35))
-        val rawBlock = ParsingPhase.Block[Pos](Vector(valRes, valFuture), resRef)
+        val resRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("res"), CharIndex(32), CharIndex(35))), CharIndex(32), CharIndex(35))
+        val rawBlock = DesugaredPhase.Block[Pos](Vector(valRes, valFuture), resRef)
 
         val ast = linkAst(rawBlock)
         ast match {
@@ -274,28 +276,28 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
       }
 
       it("should flag a forward reference in a pattern match body as an error") {
-        val pIdent: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
-        val bodyRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(3), CharIndex(12))), CharIndex(3), CharIndex(12))
-        val c = Pos(ParsingPhase.Case[Pos](pIdent, None, bodyRef), CharIndex(0), CharIndex(12))
-        val scrutinee = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
-        val rawMatch = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Match[Pos](scrutinee, Vector(c)), CharIndex(0), CharIndex(12))
+        val pIdent: Pos[DesugaredPhase.Pattern[Pos]] = Pos(DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
+        val bodyRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(3), CharIndex(12))), CharIndex(3), CharIndex(12))
+        val c = Pos(DesugaredPhase.Case[Pos](pIdent, None, bodyRef), CharIndex(0), CharIndex(12))
+        val scrutinee = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+        val rawMatch = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Match[Pos](scrutinee, Vector(c)), CharIndex(0), CharIndex(12))
 
-        val valRes = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("res"), CharIndex(0), CharIndex(3))), CharIndex(0), CharIndex(3)),
+        val valRes = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("res"), CharIndex(0), CharIndex(3))), CharIndex(0), CharIndex(3)),
             rawMatch
           ),
           CharIndex(0), CharIndex(12)
         )
-        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(14), CharIndex(23))), CharIndex(14), CharIndex(23)),
-            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(26), CharIndex(28))
+        val valFuture = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(14), CharIndex(23))), CharIndex(14), CharIndex(23)),
+            Pos(DesugaredPhase.Literal.int[Pos](41), CharIndex(26), CharIndex(28))
           ),
           CharIndex(14), CharIndex(28)
         )
-        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("res"), CharIndex(30), CharIndex(33))), CharIndex(30), CharIndex(33))
-        val rawBlock = ParsingPhase.Block[Pos](Vector(valRes, valFuture), resRef)
+        val resRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("res"), CharIndex(30), CharIndex(33))), CharIndex(30), CharIndex(33))
+        val rawBlock = DesugaredPhase.Block[Pos](Vector(valRes, valFuture), resRef)
 
         val ast = linkAst(rawBlock)
         ast match {
@@ -339,26 +341,26 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
 
       it("should not flag a forward reference when an inner parameter shadows an outer pending binding") {
         val pName = Pos(Identifier("futureVal"), CharIndex(1), CharIndex(10))
-        val param = Pos(ParsingPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(15))
-        val bodyRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(17), CharIndex(26))), CharIndex(17), CharIndex(26))
-        val rawLambda = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Lambda[Pos](Vector(param), bodyRef), CharIndex(0), CharIndex(26))
+        val param = Pos(DesugaredPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(15))
+        val bodyRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("futureVal"), CharIndex(17), CharIndex(26))), CharIndex(17), CharIndex(26))
+        val rawLambda = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Lambda[Pos](Vector(param), bodyRef), CharIndex(0), CharIndex(26))
 
-        val valF = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("f"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1)),
+        val valF = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("f"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1)),
             rawLambda
           ),
           CharIndex(0), CharIndex(26)
         )
-        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(28), CharIndex(37))), CharIndex(28), CharIndex(37)),
-            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(40), CharIndex(42))
+        val valFuture = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(28), CharIndex(37))), CharIndex(28), CharIndex(37)),
+            Pos(DesugaredPhase.Literal.int[Pos](41), CharIndex(40), CharIndex(42))
           ),
           CharIndex(28), CharIndex(42)
         )
-        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("f"), CharIndex(44), CharIndex(45))), CharIndex(44), CharIndex(45))
-        val rawBlock = ParsingPhase.Block[Pos](Vector(valF, valFuture), resRef)
+        val resRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("f"), CharIndex(44), CharIndex(45))), CharIndex(44), CharIndex(45))
+        val rawBlock = DesugaredPhase.Block[Pos](Vector(valF, valFuture), resRef)
 
         val ast = linkAst(rawBlock)
         ast match {
@@ -382,36 +384,36 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
 
       it("should preserve outer scope resolution when outer binding is already declared") {
         val pName = Pos(Identifier("x"), CharIndex(1), CharIndex(2))
-        val param = Pos(ParsingPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(8))
-        val refOuter = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("outerVal"), CharIndex(10), CharIndex(18))), CharIndex(10), CharIndex(18))
+        val param = Pos(DesugaredPhase.LambdaParameter[Pos](pName, Some(typeName("Int"))), CharIndex(1), CharIndex(8))
+        val refOuter = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("outerVal"), CharIndex(10), CharIndex(18))), CharIndex(10), CharIndex(18))
         val opIdent = Pos(Identifier("+"), CharIndex(19), CharIndex(20))
-        val refX = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(21), CharIndex(22))), CharIndex(21), CharIndex(22))
-        val bodyInfix = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Call.Infix[Pos](refOuter, opIdent, Vector.empty, refX), CharIndex(10), CharIndex(22))
-        val rawLambda = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Lambda[Pos](Vector(param), bodyInfix), CharIndex(0), CharIndex(22))
+        val refX = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(21), CharIndex(22))), CharIndex(21), CharIndex(22))
+        val bodyInfix = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Call.Infix[Pos](refOuter, opIdent, Vector.empty, refX), CharIndex(10), CharIndex(22))
+        val rawLambda = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Lambda[Pos](Vector(param), bodyInfix), CharIndex(0), CharIndex(22))
 
-        val valOuter = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("outerVal"), CharIndex(0), CharIndex(8))), CharIndex(0), CharIndex(8)),
-            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(11), CharIndex(13))
+        val valOuter = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("outerVal"), CharIndex(0), CharIndex(8))), CharIndex(0), CharIndex(8)),
+            Pos(DesugaredPhase.Literal.int[Pos](41), CharIndex(11), CharIndex(13))
           ),
           CharIndex(0), CharIndex(13)
         )
-        val valF = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("f"), CharIndex(15), CharIndex(16))), CharIndex(15), CharIndex(16)),
+        val valF = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("f"), CharIndex(15), CharIndex(16))), CharIndex(15), CharIndex(16)),
             rawLambda
           ),
           CharIndex(15), CharIndex(35)
         )
-        val valFuture = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(37), CharIndex(46))), CharIndex(37), CharIndex(46)),
-            Pos(ParsingPhase.Literal.int[Pos](43), CharIndex(49), CharIndex(51))
+        val valFuture = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("futureVal"), CharIndex(37), CharIndex(46))), CharIndex(37), CharIndex(46)),
+            Pos(DesugaredPhase.Literal.int[Pos](43), CharIndex(49), CharIndex(51))
           ),
           CharIndex(37), CharIndex(51)
         )
-        val resRef = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("f"), CharIndex(53), CharIndex(54))), CharIndex(53), CharIndex(54))
-        val rawBlock = ParsingPhase.Block[Pos](Vector(valOuter, valF, valFuture), resRef)
+        val resRef = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("f"), CharIndex(53), CharIndex(54))), CharIndex(53), CharIndex(54))
+        val rawBlock = DesugaredPhase.Block[Pos](Vector(valOuter, valF, valFuture), resRef)
 
         val ast = linkAst(rawBlock)
         ast match {
@@ -458,12 +460,12 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
 
       it("should flag duplicate parameters in a lambda AST") {
         val p1Name = Pos(Identifier("x"), CharIndex(1), CharIndex(2))
-        val p1 = Pos(ParsingPhase.LambdaParameter[Pos](p1Name, None), CharIndex(1), CharIndex(2))
+        val p1 = Pos(DesugaredPhase.LambdaParameter[Pos](p1Name, None), CharIndex(1), CharIndex(2))
         val p2Name = Pos(Identifier("x"), CharIndex(3), CharIndex(4))
-        val p2 = Pos(ParsingPhase.LambdaParameter[Pos](p2Name, None), CharIndex(3), CharIndex(4))
+        val p2 = Pos(DesugaredPhase.LambdaParameter[Pos](p2Name, None), CharIndex(3), CharIndex(4))
         val bodyIdent = Pos(Identifier("x"), CharIndex(6), CharIndex(7))
-        val body = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](bodyIdent), CharIndex(6), CharIndex(7))
-        val rawLambda = ParsingPhase.Lambda[Pos](Vector(p1, p2), body)
+        val body = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](bodyIdent), CharIndex(6), CharIndex(7))
+        val rawLambda = DesugaredPhase.Lambda[Pos](Vector(p1, p2), body)
 
         val ast = linkAst(rawLambda)
         ast match {
@@ -477,20 +479,20 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
     describe("lambdas and closures") {
       it("should resolve lambda parameters and outer captured variables in AST") {
         val pName = Pos(Identifier("x"), CharIndex(1), CharIndex(2))
-        val param = Pos(ParsingPhase.LambdaParameter[Pos](pName, None), CharIndex(1), CharIndex(2))
-        val refOuter = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("outer"), CharIndex(5), CharIndex(10))), CharIndex(5), CharIndex(10))
-        val refX = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(12), CharIndex(13))), CharIndex(12), CharIndex(13))
-        val tupleBody = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Tuple[Pos](Vector(refOuter, refX)), CharIndex(5), CharIndex(14))
-        val rawLambda = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Lambda[Pos](Vector(param), tupleBody), CharIndex(0), CharIndex(15))
+        val param = Pos(DesugaredPhase.LambdaParameter[Pos](pName, None), CharIndex(1), CharIndex(2))
+        val refOuter = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("outer"), CharIndex(5), CharIndex(10))), CharIndex(5), CharIndex(10))
+        val refX = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(12), CharIndex(13))), CharIndex(12), CharIndex(13))
+        val tupleBody = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Tuple[Pos](Vector(refOuter, refX)), CharIndex(5), CharIndex(14))
+        val rawLambda = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Lambda[Pos](Vector(param), tupleBody), CharIndex(0), CharIndex(15))
 
-        val valDecl = Pos[ParsingPhase.Declaration[Pos]](
-          ParsingPhase.Declaration.Val[Pos](
-            Pos[ParsingPhase.Pattern[Pos]](ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("outer"), CharIndex(0), CharIndex(5))), CharIndex(0), CharIndex(5)),
-            Pos(ParsingPhase.Literal.int[Pos](41), CharIndex(6), CharIndex(8))
+        val valDecl = Pos[DesugaredPhase.Declaration[Pos]](
+          DesugaredPhase.Declaration.Val[Pos](
+            Pos[DesugaredPhase.Pattern[Pos]](DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("outer"), CharIndex(0), CharIndex(5))), CharIndex(0), CharIndex(5)),
+            Pos(DesugaredPhase.Literal.int[Pos](41), CharIndex(6), CharIndex(8))
           ),
           CharIndex(0), CharIndex(8)
         )
-        val rawBlock = ParsingPhase.Block[Pos](Vector(valDecl), rawLambda)
+        val rawBlock = DesugaredPhase.Block[Pos](Vector(valDecl), rawLambda)
 
         val ast = linkAst(rawBlock)
         ast match {
@@ -583,11 +585,11 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
 
     describe("pattern matching") {
       it("should bind pattern variables in match cases AST") {
-        val pIdent: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
-        val bodyIdent = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(3), CharIndex(4))), CharIndex(3), CharIndex(4))
-        val c = Pos(ParsingPhase.Case[Pos](pIdent, None, bodyIdent), CharIndex(0), CharIndex(4))
-        val scrutinee = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
-        val rawMatch = ParsingPhase.Match[Pos](scrutinee, Vector(c))
+        val pIdent: Pos[DesugaredPhase.Pattern[Pos]] = Pos(DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("x"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
+        val bodyIdent = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("x"), CharIndex(3), CharIndex(4))), CharIndex(3), CharIndex(4))
+        val c = Pos(DesugaredPhase.Case[Pos](pIdent, None, bodyIdent), CharIndex(0), CharIndex(4))
+        val scrutinee = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+        val rawMatch = DesugaredPhase.Match[Pos](scrutinee, Vector(c))
 
         val ast = linkAst(rawMatch)
         ast match {
@@ -610,15 +612,15 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
       }
 
       it("should assign slots for destructuring tuple patterns in AST") {
-        val pA: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("a"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
-        val pB: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Identifier[Pos](Pos(Identifier("b"), CharIndex(2), CharIndex(3))), CharIndex(2), CharIndex(3))
-        val pTuple: Pos[ParsingPhase.Pattern[Pos]] = Pos(ParsingPhase.Pattern.Tuple[Pos](Vector(pA, pB)), CharIndex(0), CharIndex(4))
-        val refA = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("a"), CharIndex(5), CharIndex(6))), CharIndex(5), CharIndex(6))
-        val refB = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Reference[Pos](Pos(Identifier("b"), CharIndex(7), CharIndex(8))), CharIndex(7), CharIndex(8))
-        val bodyTuple = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Tuple[Pos](Vector(refA, refB)), CharIndex(5), CharIndex(9))
-        val c = Pos(ParsingPhase.Case[Pos](pTuple, None, bodyTuple), CharIndex(0), CharIndex(9))
-        val scrutinee = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
-        val rawMatch = ParsingPhase.Match[Pos](scrutinee, Vector(c))
+        val pA: Pos[DesugaredPhase.Pattern[Pos]] = Pos(DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("a"), CharIndex(0), CharIndex(1))), CharIndex(0), CharIndex(1))
+        val pB: Pos[DesugaredPhase.Pattern[Pos]] = Pos(DesugaredPhase.Pattern.Identifier[Pos](Pos(Identifier("b"), CharIndex(2), CharIndex(3))), CharIndex(2), CharIndex(3))
+        val pTuple: Pos[DesugaredPhase.Pattern[Pos]] = Pos(DesugaredPhase.Pattern.Tuple[Pos](Vector(pA, pB)), CharIndex(0), CharIndex(4))
+        val refA = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("a"), CharIndex(5), CharIndex(6))), CharIndex(5), CharIndex(6))
+        val refB = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Reference[Pos](Pos(Identifier("b"), CharIndex(7), CharIndex(8))), CharIndex(7), CharIndex(8))
+        val bodyTuple = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Tuple[Pos](Vector(refA, refB)), CharIndex(5), CharIndex(9))
+        val c = Pos(DesugaredPhase.Case[Pos](pTuple, None, bodyTuple), CharIndex(0), CharIndex(9))
+        val scrutinee = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+        val rawMatch = DesugaredPhase.Match[Pos](scrutinee, Vector(c))
 
         val ast = linkAst(rawMatch)
         ast match {
@@ -828,8 +830,8 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           val linker = Linker.create(scaletta.universe, ImportScope.default)
           val tupleTypeIdent: TypeIdentifier[Pos] =
             TypeIdentifier.tuple[Pos](Vector(typeName("Int"), typeName("String")))
-          val target = Pos[ParsingPhase.Expression[Pos]](ParsingPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
-          val typedExpr = ParsingPhase.Typed[Pos](target, Pos(tupleTypeIdent, CharIndex(4), CharIndex(20)))
+          val target = Pos[DesugaredPhase.Expression[Pos]](DesugaredPhase.Literal.int[Pos](41), CharIndex(0), CharIndex(2))
+          val typedExpr = DesugaredPhase.Typed[Pos](target, Pos(tupleTypeIdent, CharIndex(4), CharIndex(20)))
           val ast = linker.link(typedExpr)
           ast match {
             case LinkedPhase.Typed(_, ascription) =>

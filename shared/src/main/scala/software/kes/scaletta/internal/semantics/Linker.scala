@@ -10,7 +10,7 @@ import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryPar
 import software.kes.scaletta.internal.types.{ConjunctionType, TypeNameIndex, TypeResolutionError}
 
 object Linker {
-  type Input = ParsingPhase.Expression[Pos]
+  type Input = DesugaredPhase.Expression[Pos]
   type Output = LinkedPhase.Expression[Pos]
 
   def create(methodResolver: MethodResolver,
@@ -38,47 +38,47 @@ final class Linker private(methodResolver: MethodResolver,
 
   def link(input: Input): Output = linkExpression(input, LexicalScope.empty, Set.empty, Set.empty)
 
-  private def linkPosExpression(posExpr: Pos[ParsingPhase.Expression[Pos]],
+  private def linkPosExpression(posExpr: Pos[DesugaredPhase.Expression[Pos]],
                                 env: LexicalScope,
                                 futureInBlock: Set[String],
                                 disallowedSelfRefs: Set[String]): Pos[LinkedPhase.Expression[Pos]] =
     Pos(linkExpression(posExpr.value, env, futureInBlock, disallowedSelfRefs), posExpr.begin, posExpr.end)
 
-  private def linkExpression(expr: ParsingPhase.Expression[Pos],
+  private def linkExpression(expr: DesugaredPhase.Expression[Pos],
                              env: LexicalScope,
                              futureInBlock: Set[String],
                              disallowedSelfRefs: Set[String]): LinkedPhase.Expression[Pos] = {
     expr match {
-      case ParsingPhase.Expression.Error(err) =>
+      case DesugaredPhase.Expression.Error(err) =>
         LinkedPhase.Expression.Error(err)
 
-      case lit: ParsingPhase.Literal[Pos] @unchecked =>
+      case lit: DesugaredPhase.Literal[Pos] @unchecked =>
         linkLiteral(lit)
 
-      case ParsingPhase.Reference(id) =>
+      case DesugaredPhase.Reference(id) =>
         LinkedPhase.Reference(linkIdentifier(id, env, futureInBlock, disallowedSelfRefs))
 
-      case ParsingPhase.Select(qualifier, name) =>
+      case DesugaredPhase.Select(qualifier, name) =>
         LinkedPhase.Select(linkPosExpression(qualifier, env, futureInBlock, disallowedSelfRefs), linkFieldSite(name))
 
-      case ParsingPhase.Typed(expression, ascription) =>
+      case DesugaredPhase.Typed(expression, ascription) =>
         LinkedPhase.Typed(linkPosExpression(expression, env, futureInBlock, disallowedSelfRefs), ascribeTypeIdent(ascription))
 
-      case ParsingPhase.Tuple(elements) =>
+      case DesugaredPhase.Tuple(elements) =>
         LinkedPhase.Tuple(
           elements.foldLeft(Vector.empty[Pos[LinkedPhase.Expression[Pos]]]) { (acc, el) =>
             acc :+ linkPosExpression(el, env, futureInBlock, disallowedSelfRefs)
           }
         )
 
-      case ParsingPhase.Conditional(condition, thenBranch, elseBranch) =>
+      case DesugaredPhase.Conditional(condition, thenBranch, elseBranch) =>
         LinkedPhase.Conditional(
           linkPosExpression(condition, env, futureInBlock, disallowedSelfRefs),
           linkPosExpression(thenBranch, env, futureInBlock, disallowedSelfRefs),
           linkPosExpression(elseBranch, env, futureInBlock, disallowedSelfRefs)
         )
 
-      case ParsingPhase.Call.Infix(left, operation, typeArgs, right) =>
+      case DesugaredPhase.Call.Infix(left, operation, typeArgs, right) =>
         val receiverTypeOpt = extractAscribedType(left.value)
         val rightParam = extractAscribedType(right.value) match {
           case Some(t) => SignatureQueryParameter.OfType(t)
@@ -114,7 +114,7 @@ final class Linker private(methodResolver: MethodResolver,
           linkPosExpression(right, env, futureInBlock, disallowedSelfRefs)
         )
 
-      case ParsingPhase.Call.Standard(target, typeArgs, args) =>
+      case DesugaredPhase.Call.Standard(target, typeArgs, args) =>
         val (argArities, query, ascribedArgs) = buildSignatureQueryForArgs(args)
         val linkedTypeArgs = linkTypeArgs(typeArgs)
         val linkedArgs = linkArgumentGroups(args, env, futureInBlock, disallowedSelfRefs)
@@ -125,25 +125,25 @@ final class Linker private(methodResolver: MethodResolver,
           linkedArgs
         )
 
-      case ParsingPhase.Lambda(params, body) =>
+      case DesugaredPhase.Lambda(params, body) =>
         linkLambda(params, body, env, futureInBlock, disallowedSelfRefs)
 
-      case ParsingPhase.InterpolatedString(interpolator, initial, segments) =>
+      case DesugaredPhase.InterpolatedString(interpolator, initial, segments) =>
         val newSegments = segments.foldLeft(Vector.empty[(Pos[LinkedPhase.Expression[Pos]], String)]) {
           case (acc, (exprPart, textPart)) =>
             acc :+ (linkPosExpression(exprPart, env, futureInBlock, disallowedSelfRefs), textPart)
         }
         LinkedPhase.InterpolatedString(interpolator, initial, newSegments)
 
-      case ParsingPhase.Match(expression, cases) =>
+      case DesugaredPhase.Match(expression, cases) =>
         LinkedPhase.Match(linkPosExpression(expression, env, futureInBlock, disallowedSelfRefs), linkCases(cases, env, futureInBlock, disallowedSelfRefs))
 
-      case ParsingPhase.Block(declarations, result) =>
+      case DesugaredPhase.Block(declarations, result) =>
         linkBlock(declarations, result, env, futureInBlock, disallowedSelfRefs)
     }
   }
 
-  private def linkCallTarget(target: Pos[ParsingPhase.Expression[Pos]],
+  private def linkCallTarget(target: Pos[DesugaredPhase.Expression[Pos]],
                              argArities: Vector[Int],
                              query: SignatureQuery,
                              ascribedArgs: Vector[ProperType[TypeId]],
@@ -151,7 +151,7 @@ final class Linker private(methodResolver: MethodResolver,
                              futureInBlock: Set[String],
                              disallowedSelfRefs: Set[String]): Pos[LinkedPhase.Expression[Pos]] = {
     target.value match {
-      case ParsingPhase.Reference(id) =>
+      case DesugaredPhase.Reference(id) =>
         val name = id.value.name
         val linkedInfo = if (disallowedSelfRefs.contains(name)) {
           LinkedInfo.Error(SemanticError.RecursiveReference(name))
@@ -173,7 +173,7 @@ final class Linker private(methodResolver: MethodResolver,
         }
         Pos(LinkedPhase.Reference(posIdent(linkedInfo, id.begin, id.end)), target.begin, target.end)
 
-      case ParsingPhase.Select(qualifier, nameIdent) =>
+      case DesugaredPhase.Select(qualifier, nameIdent) =>
         val nameStr = nameIdent.value.name
         val qualifiedPathOpt = extractQualifiedName(qualifier.value, env)
         val linkedInfo = qualifiedPathOpt match {
@@ -211,7 +211,7 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def resolveMethodOnSelect(qualifier: ParsingPhase.Expression[Pos],
+  private def resolveMethodOnSelect(qualifier: DesugaredPhase.Expression[Pos],
                                     nameStr: String,
                                     argArities: Vector[Int],
                                     query: SignatureQuery,
@@ -234,12 +234,12 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def extractQualifiedName(expr: ParsingPhase.Expression[Pos],
+  private def extractQualifiedName(expr: DesugaredPhase.Expression[Pos],
                                    env: LexicalScope): Option[Vector[String]] = {
     expr match {
-      case ParsingPhase.Reference(id) if env.lookup(id.value.name).isEmpty =>
+      case DesugaredPhase.Reference(id) if env.lookup(id.value.name).isEmpty =>
         Some(Vector(id.value.name))
-      case ParsingPhase.Select(q, n) =>
+      case DesugaredPhase.Select(q, n) =>
         extractQualifiedName(q.value, env) match {
           case Some(segments) => Some(segments :+ n.value.name)
           case None => None
@@ -249,7 +249,7 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def buildSignatureQueryForArgs(groups: Vector[Pos[ParsingPhase.ArgumentGroup[Pos]]]): (Vector[Int], SignatureQuery, Vector[ProperType[TypeId]]) = {
+  private def buildSignatureQueryForArgs(groups: Vector[Pos[DesugaredPhase.ArgumentGroup[Pos]]]): (Vector[Int], SignatureQuery, Vector[ProperType[TypeId]]) = {
     case class Acc(arities: Vector[Int],
                    queryGroups: Vector[SignatureQuery.Group],
                    ascribedTypes: Vector[ProperType[TypeId]])
@@ -276,9 +276,9 @@ final class Linker private(methodResolver: MethodResolver,
     (res.arities, SignatureQuery.ofGroups(res.queryGroups: _*), res.ascribedTypes)
   }
 
-  private def extractAscribedType(expr: ParsingPhase.Expression[Pos]): Option[ProperType[TypeId]] =
+  private def extractAscribedType(expr: DesugaredPhase.Expression[Pos]): Option[ProperType[TypeId]] =
     expr match {
-      case ParsingPhase.Typed(_, ascription) =>
+      case DesugaredPhase.Typed(_, ascription) =>
         resolveTypeIdentifier(ascription.value) match {
           case Right(t) => Some(t)
           case Left(_) => None
@@ -317,27 +317,27 @@ final class Linker private(methodResolver: MethodResolver,
     posIdent(info, name.begin, name.end)
   }
 
-  private def linkLiteral(lit: ParsingPhase.Literal[Pos]): LinkedPhase.Literal[Pos] = {
+  private def linkLiteral(lit: DesugaredPhase.Literal[Pos]): LinkedPhase.Literal[Pos] = {
     lit match {
-      case ParsingPhase.Literal.IntLiteral(v) => LinkedPhase.Literal.IntLiteral(v)
-      case ParsingPhase.Literal.LongLiteral(v) => LinkedPhase.Literal.LongLiteral(v)
-      case ParsingPhase.Literal.FloatLiteral(v) => LinkedPhase.Literal.FloatLiteral(v)
-      case ParsingPhase.Literal.DoubleLiteral(v) => LinkedPhase.Literal.DoubleLiteral(v)
-      case ParsingPhase.Literal.True() => LinkedPhase.Literal.True()
-      case ParsingPhase.Literal.False() => LinkedPhase.Literal.False()
-      case ParsingPhase.Literal.Null() => LinkedPhase.Literal.Null()
-      case ParsingPhase.Literal.CharLiteral(v) => LinkedPhase.Literal.CharLiteral(v)
-      case ParsingPhase.Literal.StringLiteral(v) => LinkedPhase.Literal.StringLiteral(v)
-      case ParsingPhase.Literal.UnitLiteral() => LinkedPhase.Literal.UnitLiteral()
+      case DesugaredPhase.Literal.IntLiteral(v) => LinkedPhase.Literal.IntLiteral(v)
+      case DesugaredPhase.Literal.LongLiteral(v) => LinkedPhase.Literal.LongLiteral(v)
+      case DesugaredPhase.Literal.FloatLiteral(v) => LinkedPhase.Literal.FloatLiteral(v)
+      case DesugaredPhase.Literal.DoubleLiteral(v) => LinkedPhase.Literal.DoubleLiteral(v)
+      case DesugaredPhase.Literal.True() => LinkedPhase.Literal.True()
+      case DesugaredPhase.Literal.False() => LinkedPhase.Literal.False()
+      case DesugaredPhase.Literal.Null() => LinkedPhase.Literal.Null()
+      case DesugaredPhase.Literal.CharLiteral(v) => LinkedPhase.Literal.CharLiteral(v)
+      case DesugaredPhase.Literal.StringLiteral(v) => LinkedPhase.Literal.StringLiteral(v)
+      case DesugaredPhase.Literal.UnitLiteral() => LinkedPhase.Literal.UnitLiteral()
     }
   }
 
-  private def linkTypeArgs(typeArgs: Vector[Pos[ParsingPhase.TypeArgument[Pos]]]): Vector[Pos[LinkedPhase.TypeArgument[Pos]]] =
+  private def linkTypeArgs(typeArgs: Vector[Pos[DesugaredPhase.TypeArgument[Pos]]]): Vector[Pos[LinkedPhase.TypeArgument[Pos]]] =
     typeArgs.foldLeft(Vector.empty[Pos[LinkedPhase.TypeArgument[Pos]]]) { (acc, ta) =>
       acc :+ Pos(LinkedPhase.TypeArgument[Pos](ascribeTypeIdent(ta.value.typ)), ta.begin, ta.end)
     }
 
-  private def linkArgumentGroups(groups: Vector[Pos[ParsingPhase.ArgumentGroup[Pos]]],
+  private def linkArgumentGroups(groups: Vector[Pos[DesugaredPhase.ArgumentGroup[Pos]]],
                                  env: LexicalScope,
                                  futureInBlock: Set[String],
                                  disallowedSelfRefs: Set[String]): Vector[Pos[LinkedPhase.ArgumentGroup[Pos]]] = {
@@ -360,8 +360,8 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def linkLambda(params: Vector[Pos[ParsingPhase.LambdaParameter[Pos]]],
-                         body: Pos[ParsingPhase.Expression[Pos]],
+  private def linkLambda(params: Vector[Pos[DesugaredPhase.LambdaParameter[Pos]]],
+                         body: Pos[DesugaredPhase.Expression[Pos]],
                          env: LexicalScope,
                          futureInBlock: Set[String],
                          disallowedSelfRefs: Set[String]): LinkedPhase.Lambda[Pos] = {
@@ -395,7 +395,7 @@ final class Linker private(methodResolver: MethodResolver,
     LinkedPhase.Lambda(result.linkedParams, linkedBody)
   }
 
-  private def linkCases(cases: Vector[Pos[ParsingPhase.Case[Pos]]],
+  private def linkCases(cases: Vector[Pos[DesugaredPhase.Case[Pos]]],
                         env: LexicalScope,
                         futureInBlock: Set[String],
                         disallowedSelfRefs: Set[String]): Vector[Pos[LinkedPhase.Case[Pos]]] = {
@@ -404,7 +404,7 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def linkCase(c: Pos[ParsingPhase.Case[Pos]],
+  private def linkCase(c: Pos[DesugaredPhase.Case[Pos]],
                        env: LexicalScope,
                        futureInBlock: Set[String],
                        disallowedSelfRefs: Set[String]): Pos[LinkedPhase.Case[Pos]] = {
@@ -433,8 +433,8 @@ final class Linker private(methodResolver: MethodResolver,
     Pos(LinkedPhase.Case(linkedPattern, linkedGuard, linkedBody), c.begin, c.end)
   }
 
-  private def linkBlock(declarations: Vector[Pos[ParsingPhase.Declaration[Pos]]],
-                        result: Pos[ParsingPhase.Expression[Pos]],
+  private def linkBlock(declarations: Vector[Pos[DesugaredPhase.Declaration[Pos]]],
+                        result: Pos[DesugaredPhase.Expression[Pos]],
                         env: LexicalScope,
                         futureInBlock: Set[String],
                         disallowedSelfRefs: Set[String]): LinkedPhase.Block[Pos] = {
@@ -454,7 +454,7 @@ final class Linker private(methodResolver: MethodResolver,
       val currentEnv = env.pushLayer(acc.currentBindings)
 
       decl.value match {
-        case ParsingPhase.Declaration.Val(pattern, rhs) =>
+        case DesugaredPhase.Declaration.Val(pattern, rhs) =>
           val linkedRhs = linkPosExpression(rhs, currentEnv, acc.futureNames, acc.disallowed)
           val varNames = extractPatternVarNames(pattern)
 
@@ -476,7 +476,7 @@ final class Linker private(methodResolver: MethodResolver,
           val nextDisallowed = acc.disallowed -- newBindings.map(_.name).toSet
           BlockAcc(acc.currentBindings ++ newBindings, remainingFuture, nextDisallowed, acc.linkedDecls :+ linkedDecl)
 
-        case ParsingPhase.Declaration.LazyVal(pattern, rhs) =>
+        case DesugaredPhase.Declaration.LazyVal(pattern, rhs) =>
           val linkedRhs = linkPosExpression(rhs, currentEnv, acc.futureNames, acc.disallowed)
           val varNames = extractPatternVarNames(pattern)
 
@@ -498,7 +498,7 @@ final class Linker private(methodResolver: MethodResolver,
           val nextDisallowed = acc.disallowed -- newBindings.map(_.name).toSet
           BlockAcc(acc.currentBindings ++ newBindings, remainingFuture, nextDisallowed, acc.linkedDecls :+ linkedDecl)
 
-        case ParsingPhase.Declaration.Def(name, paramGroups, returnType, body) =>
+        case DesugaredPhase.Declaration.Def(name, paramGroups, returnType, body) =>
           val defName = name.value.name
           val isDuplicate = acc.currentBindings.exists(_.name == defName)
           val defSlot = acc.currentBindings.length
@@ -523,7 +523,7 @@ final class Linker private(methodResolver: MethodResolver,
           val nextDisallowed = if (isDuplicate) acc.disallowed else acc.disallowed - defName
           BlockAcc(nextBindings, remainingFuture, nextDisallowed, acc.linkedDecls :+ linkedDecl)
 
-        case ParsingPhase.Declaration.Error(err) =>
+        case DesugaredPhase.Declaration.Error(err) =>
           val newDecl: LinkedPhase.Declaration[Pos] = LinkedPhase.Declaration.Error(err)
           val linkedDecl = Pos(newDecl, decl.begin, decl.end)
           BlockAcc(acc.currentBindings, remainingFuture, acc.disallowed, acc.linkedDecls :+ linkedDecl)
@@ -535,11 +535,11 @@ final class Linker private(methodResolver: MethodResolver,
     LinkedPhase.Block(blockResult.linkedDecls, linkedResult)
   }
 
-  private def linkPattern(pattern: Pos[ParsingPhase.Pattern[Pos]],
+  private def linkPattern(pattern: Pos[DesugaredPhase.Pattern[Pos]],
                           depth: Int,
                           scopeBindings: Map[String, ScopeBinding]): Pos[LinkedPhase.Pattern[Pos]] = {
     val linkedVal: LinkedPhase.Pattern[Pos] = pattern.value match {
-      case ParsingPhase.Pattern.Identifier(name) =>
+      case DesugaredPhase.Pattern.Identifier(name) =>
         val n = name.value.name
         val info = scopeBindings.get(n) match {
           case Some(sb) => LinkedInfo.Local(depth, sb.slot, n, sb.kind)
@@ -547,13 +547,13 @@ final class Linker private(methodResolver: MethodResolver,
         }
         LinkedPhase.Pattern.Identifier(posIdent(info, name.begin, name.end))
 
-      case ParsingPhase.Pattern.Wildcard() =>
+      case DesugaredPhase.Pattern.Wildcard() =>
         LinkedPhase.Pattern.Wildcard()
 
-      case ParsingPhase.Pattern.Literal(value) =>
+      case DesugaredPhase.Pattern.Literal(value) =>
         LinkedPhase.Pattern.Literal(Pos(linkLiteral(value.value), value.begin, value.end))
 
-      case ParsingPhase.Pattern.As(name, inner) =>
+      case DesugaredPhase.Pattern.As(name, inner) =>
         val n = name.value.name
         val info = scopeBindings.get(n) match {
           case Some(sb) => LinkedInfo.Local(depth, sb.slot, n, sb.kind)
@@ -563,17 +563,17 @@ final class Linker private(methodResolver: MethodResolver,
         val linkedInner = linkPattern(inner, depth, scopeBindings)
         LinkedPhase.Pattern.As(linkedIdent, linkedInner)
 
-      case ParsingPhase.Pattern.Typed(inner, ascription) =>
+      case DesugaredPhase.Pattern.Typed(inner, ascription) =>
         LinkedPhase.Pattern.Typed(linkPattern(inner, depth, scopeBindings), ascribeTypeIdent(ascription))
 
-      case ParsingPhase.Pattern.Tuple(elements) =>
+      case DesugaredPhase.Pattern.Tuple(elements) =>
         LinkedPhase.Pattern.Tuple(
           elements.foldLeft(Vector.empty[Pos[LinkedPhase.Pattern[Pos]]]) { (acc, el) =>
             acc :+ linkPattern(el, depth, scopeBindings)
           }
         )
 
-      case ParsingPhase.Pattern.Product(typeId, args) =>
+      case DesugaredPhase.Pattern.Product(typeId, args) =>
         LinkedPhase.Pattern.Product(
           ascribeTypeIdent(typeId),
           args.foldLeft(Vector.empty[Pos[LinkedPhase.Pattern[Pos]]]) { (acc, el) =>
@@ -581,51 +581,51 @@ final class Linker private(methodResolver: MethodResolver,
           }
         )
 
-      case ParsingPhase.Pattern.Error(err) =>
+      case DesugaredPhase.Pattern.Error(err) =>
         LinkedPhase.Pattern.Error(err)
     }
     Pos(linkedVal, pattern.begin, pattern.end)
   }
 
-  private def extractPatternVarNames(pattern: Pos[ParsingPhase.Pattern[Pos]]): Vector[String] = {
+  private def extractPatternVarNames(pattern: Pos[DesugaredPhase.Pattern[Pos]]): Vector[String] = {
     pattern.value match {
-      case ParsingPhase.Pattern.Identifier(name) =>
+      case DesugaredPhase.Pattern.Identifier(name) =>
         Vector(name.value.name)
-      case ParsingPhase.Pattern.Wildcard() =>
+      case DesugaredPhase.Pattern.Wildcard() =>
         Vector.empty
-      case ParsingPhase.Pattern.Literal(_) =>
+      case DesugaredPhase.Pattern.Literal(_) =>
         Vector.empty
-      case ParsingPhase.Pattern.As(name, inner) =>
+      case DesugaredPhase.Pattern.As(name, inner) =>
         name.value.name +: extractPatternVarNames(inner)
-      case ParsingPhase.Pattern.Typed(inner, _) =>
+      case DesugaredPhase.Pattern.Typed(inner, _) =>
         extractPatternVarNames(inner)
-      case ParsingPhase.Pattern.Tuple(elements) =>
+      case DesugaredPhase.Pattern.Tuple(elements) =>
         elements.foldLeft(Vector.empty[String]) { (acc, el) =>
           acc ++ extractPatternVarNames(el)
         }
-      case ParsingPhase.Pattern.Product(_, args) =>
+      case DesugaredPhase.Pattern.Product(_, args) =>
         args.foldLeft(Vector.empty[String]) { (acc, arg) =>
           acc ++ extractPatternVarNames(arg)
         }
-      case ParsingPhase.Pattern.Error(_) =>
+      case DesugaredPhase.Pattern.Error(_) =>
         Vector.empty
     }
   }
 
-  private def declaredNamesIn(decl: Pos[ParsingPhase.Declaration[Pos]]): Set[String] = {
+  private def declaredNamesIn(decl: Pos[DesugaredPhase.Declaration[Pos]]): Set[String] = {
     decl.value match {
-      case ParsingPhase.Declaration.Val(pattern, _) =>
+      case DesugaredPhase.Declaration.Val(pattern, _) =>
         extractPatternVarNames(pattern).toSet
-      case ParsingPhase.Declaration.LazyVal(pattern, _) =>
+      case DesugaredPhase.Declaration.LazyVal(pattern, _) =>
         extractPatternVarNames(pattern).toSet
-      case ParsingPhase.Declaration.Def(name, _, _, _) =>
+      case DesugaredPhase.Declaration.Def(name, _, _, _) =>
         Set(name.value.name)
-      case ParsingPhase.Declaration.Error(_) =>
+      case DesugaredPhase.Declaration.Error(_) =>
         Set.empty
     }
   }
 
-  private def linkFormalParamGroups(paramGroups: Vector[Pos[ParsingPhase.FormalParameterGroup[Pos]]]): (Vector[ScopeBinding], Vector[Pos[LinkedPhase.FormalParameterGroup[Pos]]]) = {
+  private def linkFormalParamGroups(paramGroups: Vector[Pos[DesugaredPhase.FormalParameterGroup[Pos]]]): (Vector[ScopeBinding], Vector[Pos[LinkedPhase.FormalParameterGroup[Pos]]]) = {
     case class ParamAcc(bindings: Vector[ScopeBinding],
                         seen: Set[String],
                         linkedGroups: Vector[Pos[LinkedPhase.FormalParameterGroup[Pos]]])

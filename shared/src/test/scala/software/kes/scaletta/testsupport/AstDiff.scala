@@ -1,6 +1,6 @@
 package software.kes.scaletta.testsupport
 
-import software.kes.scaletta.internal.ast.ParsingPhase._
+import software.kes.scaletta.internal.ast.ParsedPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.util.functional.Id._
 

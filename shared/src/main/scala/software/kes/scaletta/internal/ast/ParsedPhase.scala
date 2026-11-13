@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.ast
 
 import software.kes.scaletta.util.functional.FunctorK
 
-object ParsingPhase extends CorePhase {
+object ParsedPhase extends CorePhase {
   type Ident = Identifier
   type TypeIdent[F[_]] = TypeIdentifier[F]
 

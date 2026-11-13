@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal
 
-import software.kes.scaletta.internal.ast.ParsingPhase.{Declaration, Expression, Pattern}
+import software.kes.scaletta.internal.ast.ParsedPhase.{Declaration, Expression, Pattern}
 import software.kes.scaletta.internal.ast.TypeIdentifier
 
 package object parser {

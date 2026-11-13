@@ -1,7 +1,7 @@
 package software.kes.scaletta.testsupport
 
 import software.kes.scaletta.common.Interpolator
-import software.kes.scaletta.internal.ast.ParsingPhase._
+import software.kes.scaletta.internal.ast.ParsedPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.parser.{BindingPower, Operators}
 import software.kes.scaletta.internal.scanner.Token
@@ -66,7 +66,7 @@ private class AstRenderer(settings: Settings,
   private def renderWithPrecedence(expression: Expression[Id],
                                    parentPrecedence: BindingPower): Unit = {
     expression match {
-      case b: Block[Id] =>
+      case b: Block[Id] @unchecked =>
         renderBlock(b)
       case Reference(id) =>
         write(id.name)
@@ -80,7 +80,7 @@ private class AstRenderer(settings: Settings,
         write(": ")
         renderType(ascription)
         write(")")
-      case lit: Literal[Id] =>
+      case lit: Literal[Id] @unchecked =>
         renderLiteral(lit)
       case Tuple(elements) =>
         write("(")

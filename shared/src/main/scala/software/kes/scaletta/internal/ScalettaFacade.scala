@@ -2,6 +2,7 @@ package software.kes.scaletta.internal
 
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins.MethodUniverseBuilder
+import software.kes.scaletta.internal.desugar.Desugarer
 import software.kes.scaletta.internal.library.standard.{StandardLibrary, StandardTypesImpl}
 import software.kes.scaletta.internal.parser.{ParseOptions, Parser}
 import software.kes.scaletta.internal.reader.SourceReader
@@ -86,8 +87,10 @@ final class ScalettaFacade(settings: Settings,
 
     val value: Either[CompileErrors, CompiledExpression] = parseResult.value match {
       case Some(parsedExpr) if !parseResult.hasErrors =>
+        val desugarer = Desugarer.create()
+        val desugared = desugarer.desugar(parsedExpr.value)
         val linker = Linker.create(universe, importScope)
-        val linked = linker.link(parsedExpr.value)
+        val linked = linker.link(desugared)
 
         val semanticErrors = SemanticDiagnostics.collect(linked, lineMap)
         val allErrors = parseErrors ++ semanticErrors
