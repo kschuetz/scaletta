@@ -1,8 +1,8 @@
 package software.kes.scaletta.internal.library.standard
 
-import software.kes.scaletta.api.ScalettaModule
-import software.kes.scaletta.internal.library.standard.buildingblocks.{FlatMapFunction, MapFunction}
-import software.kes.scaletta.internal.library.standard.higherorder.Step
+import software.kes.scaletta.api.{ArgumentReader, NativeStep, ScalettaModule}
+import software.kes.scaletta.internal.library.standard.buildingblocks.{FilterFunction, FlatMapFunction, MapFunction}
+import software.kes.scaletta.internal.library.standard.higherorder.{CommonHigherOrderMethods, Step}
 
 object DataTypes {
   lazy val module: ScalettaModule[Unit] =
@@ -10,51 +10,68 @@ object DataTypes {
       val st = setup.standardTypes
       val registry = setup.methodRegistry
 
-      Iterables.registerMethods(registry, st)(st.OptionT, option)
+      CommonHigherOrderMethods.registerMethods(registry, st)(st.OptionT, option.higherOrderImpls)
     }
 
-  object option extends IterableBase {
-    type C = Option[Any]
-    type Builder = OptionBuilder[Any]
+  object option {
+    val filterImpl: ArgumentReader => NativeStep =
+      FilterFunction.create(FilterStrategy)
 
-    protected def makeEmpty(): C = None
+    val flatMapImpl: ArgumentReader => NativeStep =
+      FlatMapFunction.create(FlatMapStrategy)
 
-    protected def makeBuilder(): Builder = new OptionBuilder[Any](None)
+    val mapImpl: ArgumentReader => NativeStep =
+      MapFunction.create(MapStrategy)
 
-    protected def addElement(builder: Builder, elem: Any): Unit = builder.addElement(elem)
+    lazy val higherOrderImpls: CommonHigherOrderMethods.Implementations =
+      CommonHigherOrderMethods.Implementations(
+        filterImpl = Some(filterImpl),
+        flatMapImpl = Some(flatMapImpl),
+        mapImpl = Some(mapImpl)
+      )
 
-    protected def makeResult(builder: Builder): C = builder.result
-  }
+    private object FilterStrategy extends FilterFunction.Strategy[Option[Any]] {
+      type State = Unit
 
-  final class OptionBuilder[A](var result: Option[A]) {
-    def addElement(elem: A): Unit = result = Some(elem)
-  }
+      def initialState(input: Option[Any]): Step[Option[Any], Unit] =
+        input match {
+          case Some(value) => Step.applyFunction((), value)
+          case None => Step.done(None)
+        }
 
-  private object OptionMapStrategy extends MapFunction.Strategy[Option[Any]] {
-    type State = Unit
-
-    def initialState(input: Option[Any]): Step[Option[Any], Unit] =
-      input match {
-        case Some(value) => Step.applyFunction((), value)
-        case None => Step.done(None)
+      def nextState(state: Unit, functionCallResult: (Any, Boolean)): Step[Option[Any], Unit] = {
+        val (value, keep) = functionCallResult
+        if (keep) Step.done(Some(value)) else Step.done(None)
       }
+    }
 
-    def nextState(state: Unit, functionCallResult: Any): Step[Option[Any], Unit] =
-      Step.done(Some(functionCallResult))
+    private object FlatMapStrategy extends FlatMapFunction.Strategy[Option[Any]] {
+      type State = Unit
+
+      def initialState(input: Option[Any]): Step[Option[Any], Unit] =
+        input match {
+          case Some(value) => Step.applyFunction((), value)
+          case None => Step.done(None)
+        }
+
+      def nextState(state: Unit, functionCallResult: Option[Any]): Step[Option[Any], Unit] =
+        Step.done(functionCallResult)
+    }
+
+    private object MapStrategy extends MapFunction.Strategy[Option[Any]] {
+      type State = Unit
+
+      def initialState(input: Option[Any]): Step[Option[Any], Unit] =
+        input match {
+          case Some(value) => Step.applyFunction((), value)
+          case None => Step.done(None)
+        }
+
+      def nextState(state: Unit, functionCallResult: Any): Step[Option[Any], Unit] =
+        Step.done(Some(functionCallResult))
+    }
   }
 
-  private object OptionFlatMapStrategy extends FlatMapFunction.Strategy[Option[Any]] {
-    type State = Unit
-
-    def initialState(input: Option[Any]): Step[Option[Any], Unit] =
-      input match {
-        case Some(value) => Step.applyFunction((), value)
-        case None => Step.done(None)
-      }
-
-    def nextState(state: Unit, functionCallResult: Option[Any]): Step[Option[Any], Unit] =
-      Step.done(functionCallResult)
-  }
 
   private object EitherMapStrategy extends MapFunction.Strategy[Either[Any, Any]] {
     type State = Unit
