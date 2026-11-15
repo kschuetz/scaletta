@@ -7,6 +7,7 @@ object StandardLibraryLookup {
     new StandardLibraryLookup(new ArithmeticOpsLookup(methodResolver),
       new CollectionsLookup(methodResolver),
       new ComparisonOpsLookup(methodResolver),
+      new DataTypesLookup(methodResolver),
       new EqualityOpsLookup(methodResolver),
       new MathLookup(methodResolver))
 }
@@ -14,5 +15,6 @@ object StandardLibraryLookup {
 final class StandardLibraryLookup private(val arithmetic: ArithmeticOpsLookup,
                                           val collections: CollectionsLookup,
                                           val comparison: ComparisonOpsLookup,
+                                          val dataTypes: DataTypesLookup,
                                           val equality: EqualityOpsLookup,
                                           val math: MathLookup)
