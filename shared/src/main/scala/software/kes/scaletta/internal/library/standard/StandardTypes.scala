@@ -28,6 +28,7 @@ object StandardTypes {
     val StringT = Name("String")
     val UnitT = Name("Unit")
     val VectorT = Name("Vector")
+    val VectorWithFilterT = Name("VectorWithFilter")
   }
 }
 
@@ -79,4 +80,6 @@ trait StandardTypes {
   def UnitT: ProperType[TypeId]
 
   def VectorT: Type.Constructor[TypeId]
+
+  def VectorWithFilterT: Type.Constructor[TypeId]
 }

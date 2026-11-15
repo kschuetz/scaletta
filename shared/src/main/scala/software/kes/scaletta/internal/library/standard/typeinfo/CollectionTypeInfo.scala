@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.library.standard.typeinfo
 
 import software.kes.scaletta.api.UnapplyStrategy.{unapplySeq, unapplyTwo, unapplyZero}
 import software.kes.scaletta.api.{RuntimeTypeInfo, UnapplyResult}
+import software.kes.scaletta.internal.library.standard.collection.VectorWithFilter
 
 object CollectionTypeInfo {
   final val ListT = RuntimeTypeInfo(_.isInstanceOf[List[_]],
@@ -21,6 +22,9 @@ object CollectionTypeInfo {
 
   final val VectorT = RuntimeTypeInfo(_.isInstanceOf[Vector[_]],
     unapplySeq(_.isInstanceOf[Vector[_]]))
+
+  final val VectorWithFilterT = RuntimeTypeInfo(_.isInstanceOf[VectorWithFilter],
+    unapplySeq(_.isInstanceOf[VectorWithFilter]))
 
   final val SetT = RuntimeTypeInfo(_.isInstanceOf[Set[_]])
 

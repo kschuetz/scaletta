@@ -90,6 +90,10 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(collection(names.VectorT),
       singleCovariant, CollectionTypeInfo.VectorT)
 
+  val VectorWithFilterT: Type.Constructor[TypeId] =
+    registry.addTypeConstructor(collection(names.VectorWithFilterT),
+      singleCovariant, CollectionTypeInfo.VectorWithFilterT)
+
   val SetT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.SetT),
       singleCovariant, CollectionTypeInfo.SetT)

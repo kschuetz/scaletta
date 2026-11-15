@@ -40,7 +40,7 @@ object CommonHigherOrderMethods {
     }
 
     implementations.mapImpl.foreach { impl =>
-      // map[B](f: A => B): LiCst[B]
+      // map[B](f: A => B): C[B]
       registry.addMethod(
         MethodName(receiverType, Name("map")),
         Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(typeB))),
