@@ -39,8 +39,8 @@ object DataTypes {
         case None => Step.done(None)
       }
 
-    def nextState(state: Unit, mappedElement: Any): Step[Option[Any], Unit] =
-      Step.done(Some(mappedElement))
+    def nextState(state: Unit, functionCallResult: Any): Step[Option[Any], Unit] =
+      Step.done(Some(functionCallResult))
   }
 
   private object OptionFlatMapStrategy extends FlatMapFunction.Strategy[Option[Any]] {
@@ -52,8 +52,8 @@ object DataTypes {
         case None => Step.done(None)
       }
 
-    def nextState(state: Unit, mappedElement: Option[Any]): Step[Option[Any], Unit] =
-      Step.done(mappedElement)
+    def nextState(state: Unit, functionCallResult: Option[Any]): Step[Option[Any], Unit] =
+      Step.done(functionCallResult)
   }
 
   private object EitherMapStrategy extends MapFunction.Strategy[Either[Any, Any]] {
@@ -65,8 +65,8 @@ object DataTypes {
         case left => Step.done(left)
       }
 
-    def nextState(state: Unit, mappedElement: Any): Step[Either[Any, Any], Unit] =
-      Step.done(Right(mappedElement))
+    def nextState(state: Unit, functionCallResult: Any): Step[Either[Any, Any], Unit] =
+      Step.done(Right(functionCallResult))
   }
 
   private object EitherFlatMapStrategy extends FlatMapFunction.Strategy[Either[Any, Any]] {
@@ -78,7 +78,7 @@ object DataTypes {
         case left => Step.done(left)
       }
 
-    def nextState(state: Unit, mappedElement: Either[Any, Any]): Step[Either[Any, Any], Unit] =
-      Step.done(mappedElement)
+    def nextState(state: Unit, functionCallResult: Either[Any, Any]): Step[Either[Any, Any], Unit] =
+      Step.done(functionCallResult)
   }
 }

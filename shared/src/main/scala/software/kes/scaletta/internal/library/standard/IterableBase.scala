@@ -38,8 +38,9 @@ trait IterableBase {
       }
     }
 
-    def nextState(state: MyState, element: Any, keep: Boolean): Step[C, MyState] = {
-      if (keep) addElement(state.builder, element)
+    def nextState(state: MyState, functionCallResult: (Any, Boolean)): Step[C, MyState] = {
+      val (value, keep) = functionCallResult
+      if (keep) addElement(state.builder, value)
       if (state.iterator.hasNext)
         Step.applyFunction(state, state.iterator.next())
       else
@@ -62,8 +63,8 @@ trait IterableBase {
       }
     }
 
-    def nextState(state: MyState, mappedElement: C): Step[C, MyState] = {
-      mappedElement.iterator.foreach { elem =>
+    def nextState(state: MyState, functionCallResult: C): Step[C, MyState] = {
+      functionCallResult.iterator.foreach { elem =>
         addElement(state.builder, elem)
       }
       if (state.iterator.hasNext)
@@ -88,8 +89,8 @@ trait IterableBase {
       }
     }
 
-    def nextState(state: MyState, mappedElement: Any): Step[C, MyState] = {
-      addElement(state.builder, mappedElement)
+    def nextState(state: MyState, functionCallResult: Any): Step[C, MyState] = {
+      addElement(state.builder, functionCallResult)
       if (state.iterator.hasNext)
         Step.applyFunction(state, state.iterator.next())
       else

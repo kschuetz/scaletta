@@ -3,17 +3,22 @@ package software.kes.scaletta.internal.library.standard.buildingblocks
 import software.kes.scaletta.api.{ArgumentReader, NativeStep}
 import software.kes.scaletta.internal.library.standard.higherorder.Step
 
-object MapCommon {
+object HigherOrderCommon {
 
-  trait Strategy[C, Mapped] {
+  trait Strategy[C, R] {
     type State
 
     def initialState(input: C): Step[C, State]
 
-    def nextState(state: State, mappedElement: Mapped): Step[C, State]
+    def nextState(state: State, functionCallResult: R): Step[C, State]
   }
 
-  def create[C, Mapped](strategy: Strategy[C, Mapped]): ArgumentReader => NativeStep =
+  /**
+   * @param convertFunctionOutput first parameter is the input that was passed into the function,
+   *                              second parameter is output from the function
+   */
+  def create[C, R](convertFunctionOutput: (Any, Any) => R)
+                  (strategy: Strategy[C, R]): ArgumentReader => NativeStep =
     (argumentReader: ArgumentReader) => {
       val input = argumentReader.readObject(0).asInstanceOf[C]
       strategy.initialState(input) match {
@@ -24,7 +29,7 @@ object MapCommon {
           def go(state: strategy.State, elem: Any): NativeStep = {
             fn.setArgument(0, elem)
             NativeStep.call(fn, mapped => {
-              strategy.nextState(state, mapped.asInstanceOf[Mapped]) match {
+              strategy.nextState(state, convertFunctionOutput(elem, mapped)) match {
                 case Step.Done(result) => NativeStep.done(result)
                 case Step.ApplyFunction(state, elem) =>
                   go(state, elem)
