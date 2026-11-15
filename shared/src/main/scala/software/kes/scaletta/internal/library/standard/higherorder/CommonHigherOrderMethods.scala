@@ -4,8 +4,12 @@ import software.kes.scaletta.api._
 import software.kes.scaletta.internal.library.standard.StandardTypes
 
 object CommonHigherOrderMethods {
+
+  case class FlatMap(impl: ArgumentReader => NativeStep,
+                     customLambdaReturnType: Option[Type.Constructor[TypeId]] = None)
+
   case class Implementations(filterImpl: Option[ArgumentReader => NativeStep] = None,
-                             flatMapImpl: Option[ArgumentReader => NativeStep] = None,
+                             flatMapImpl: Option[FlatMap] = None,
                              mapImpl: Option[ArgumentReader => NativeStep] = None,
                             )
 
@@ -29,13 +33,18 @@ object CommonHigherOrderMethods {
       )
     }
 
-    implementations.flatMapImpl.foreach { impl =>
+    implementations.flatMapImpl.foreach { fm =>
+      val lambdaReturnType = fm.customLambdaReturnType match {
+        case Some(customReturnType) => TypeApplier.fromNode(customReturnType).applyAll(typeB)
+        case None => tc.applyAll(typeB)
+      }
+
       // flatMap[B](f: A => C[B]): C[B]
       registry.addMethod(
         MethodName(receiverType, Name("flatMap")),
-        Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(tc.applyAll(typeB)))),
+        Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(lambdaReturnType))),
         tc.applyAll(typeB),
-        FunctionImpl.higherOrder(impl)
+        FunctionImpl.higherOrder(fm.impl)
       )
     }
 

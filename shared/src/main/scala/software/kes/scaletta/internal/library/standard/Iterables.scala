@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.library.standard.higherorder.CommonHigherOrderMethods
+import software.kes.scaletta.internal.library.standard.higherorder.CommonHigherOrderMethods.FlatMap
 
 object Iterables {
 
@@ -13,7 +14,7 @@ object Iterables {
     val higherOrderImpls = CommonHigherOrderMethods.Implementations(
       filterImpl = Some(base.filterImpl),
       mapImpl = Some(base.mapImpl),
-      flatMapImpl = Some(base.flatMapImpl)
+      flatMapImpl = Some(FlatMap(base.flatMapImpl, Some(standardTypes.IterableOnceT)))
     )
 
     CommonHigherOrderMethods.registerMethods(registry, standardTypes)(constructor, higherOrderImpls)

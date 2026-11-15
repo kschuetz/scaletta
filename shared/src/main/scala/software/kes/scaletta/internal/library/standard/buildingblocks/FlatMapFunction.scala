@@ -4,9 +4,9 @@ import software.kes.scaletta.api.{ArgumentReader, NativeStep}
 
 object FlatMapFunction {
 
-  trait Strategy[C] extends HigherOrderCommon.Strategy[C, C]
+  trait Strategy[C, R] extends HigherOrderCommon.Strategy[C, R]
 
-  def create[C](strategy: Strategy[C]): ArgumentReader => NativeStep =
-    HigherOrderCommon.create((_, out) => out.asInstanceOf[C])(strategy)
+  def create[C, R](strategy: Strategy[C, R]): ArgumentReader => NativeStep =
+    HigherOrderCommon.create((_, out) => out.asInstanceOf[R])(strategy)
 
 }

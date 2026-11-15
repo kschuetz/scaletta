@@ -5,6 +5,9 @@ import software.kes.scaletta.api.{RuntimeTypeInfo, UnapplyResult}
 import software.kes.scaletta.internal.library.standard.collection.VectorWithFilter
 
 object CollectionTypeInfo {
+  final val IterableOnceT = RuntimeTypeInfo(_.isInstanceOf[IterableOnce[_]],
+    unapplySeq(_.isInstanceOf[IterableOnce[_]]))
+
   final val ListT = RuntimeTypeInfo(_.isInstanceOf[List[_]],
     unapplySeq(_.isInstanceOf[List[_]]))
 

@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.{ArgumentReader, NativeStep, ScalettaModule}
 import software.kes.scaletta.internal.library.standard.buildingblocks.{FilterFunction, FlatMapFunction, MapFunction}
+import software.kes.scaletta.internal.library.standard.higherorder.CommonHigherOrderMethods.FlatMap
 import software.kes.scaletta.internal.library.standard.higherorder.{CommonHigherOrderMethods, Step}
 
 object DataTypes {
@@ -26,7 +27,7 @@ object DataTypes {
     lazy val higherOrderImpls: CommonHigherOrderMethods.Implementations =
       CommonHigherOrderMethods.Implementations(
         filterImpl = Some(filterImpl),
-        flatMapImpl = Some(flatMapImpl),
+        flatMapImpl = Some(FlatMap(flatMapImpl)),
         mapImpl = Some(mapImpl)
       )
 
@@ -45,7 +46,7 @@ object DataTypes {
       }
     }
 
-    private object FlatMapStrategy extends FlatMapFunction.Strategy[Option[Any]] {
+    private object FlatMapStrategy extends FlatMapFunction.Strategy[Option[Any], Option[Any]] {
       type State = Unit
 
       def initialState(input: Option[Any]): Step[Option[Any], Unit] =
@@ -86,7 +87,7 @@ object DataTypes {
       Step.done(Right(functionCallResult))
   }
 
-  private object EitherFlatMapStrategy extends FlatMapFunction.Strategy[Either[Any, Any]] {
+  private object EitherFlatMapStrategy extends FlatMapFunction.Strategy[Either[Any, Any], Either[Any, Any]] {
     type State = Unit
 
     def initialState(input: Either[Any, Any]): Step[Either[Any, Any], Unit] =

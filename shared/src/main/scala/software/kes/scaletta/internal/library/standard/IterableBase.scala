@@ -53,10 +53,10 @@ trait IterableBase {
     }
   }
 
-  private object FlatMapStrategy extends HigherOrderStrategyBase with FlatMapFunction.Strategy[C] {
+  private object FlatMapStrategy extends HigherOrderStrategyBase with FlatMapFunction.Strategy[C, IterableOnce[Any]] {
     type State = HigherOrderState
 
-    def nextState(state: HigherOrderState, functionCallResult: C): Step[C, HigherOrderState] = {
+    def nextState(state: HigherOrderState, functionCallResult: IterableOnce[Any]): Step[C, HigherOrderState] = {
       functionCallResult.iterator.foreach { elem =>
         addElement(state.builder, elem)
       }

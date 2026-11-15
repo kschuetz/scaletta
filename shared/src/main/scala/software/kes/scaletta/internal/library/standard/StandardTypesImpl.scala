@@ -75,6 +75,10 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val StringT: Type.Nominal[TypeId] =
     registry.registerCoreRefType(base(names.StringT), CoreTypes.StringT, CoreTypeInfo.StringT)
 
+  val IterableOnceT: Type.Constructor[TypeId] =
+    registry.addTypeConstructor(base(names.IterableOnceT),
+      singleCovariant, CollectionTypeInfo.IterableOnceT)
+
   val OptionT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(base(names.OptionT),
       singleCovariant, OptionTypeInfo.OptionT)
@@ -118,9 +122,32 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     supertype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)),
     subtype = TypeApplier.fromNode(SomeT).applyAll(Type.variable(0))
   )
+
   registry.addRelationship(
     supertype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0)),
     subtype = TypeApplier.fromNode(ConsT).applyAll(Type.variable(0))
+  )
+
+  private val iterableOnceApplied: ProperType[TypeId] = TypeApplier.fromNode(IterableOnceT).applyAll(Type.variable(0))
+
+  registry.addRelationship(
+    supertype = iterableOnceApplied,
+    subtype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0))
+  )
+
+  registry.addRelationship(
+    supertype = iterableOnceApplied,
+    subtype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0))
+  )
+
+  registry.addRelationship(
+    supertype = iterableOnceApplied,
+    subtype = TypeApplier.fromNode(SetT).applyAll(Type.variable(0))
+  )
+
+  registry.addRelationship(
+    supertype = iterableOnceApplied,
+    subtype = TypeApplier.fromNode(VectorT).applyAll(Type.variable(0))
   )
 
   private def base(name: Name): QualifiedName.Full =
