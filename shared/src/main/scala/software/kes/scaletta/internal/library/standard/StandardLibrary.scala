@@ -10,5 +10,6 @@ object StandardLibrary {
       EqualityOps.module,
       Math.module,
       Collections.module,
+      DataTypes.module,
     )
 }

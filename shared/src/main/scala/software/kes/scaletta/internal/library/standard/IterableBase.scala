@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.library.standard
 import software.kes.scaletta.api.{ArgumentReader, NativeStep}
 
 trait IterableBase {
-  type C <: Iterable[_]
+  type C <: IterableOnce[_]
 
   type Builder
 
@@ -17,11 +17,11 @@ trait IterableBase {
 
   def filterImpl(argumentReader: ArgumentReader): NativeStep = {
     val input = argumentReader.readObject(0).asInstanceOf[C]
-    if (input.isEmpty) NativeStep.done(makeEmpty())
+    val iter = input.iterator
+    if (iter.isEmpty) NativeStep.done(input)
     else {
       val fn = argumentReader.unsafeReadFunction(1)
       val builder = makeBuilder()
-      val iter = input.iterator
 
       def go(): NativeStep = {
         if (iter.hasNext) {
@@ -42,11 +42,11 @@ trait IterableBase {
 
   def flatMapImpl(argumentReader: ArgumentReader): NativeStep = {
     val input = argumentReader.readObject(0).asInstanceOf[C]
-    if (input.isEmpty) NativeStep.done(makeEmpty())
+    val iter = input.iterator
+    if (iter.isEmpty) NativeStep.done(input)
     else {
       val fn = argumentReader.unsafeReadFunction(1)
       val builder = makeBuilder()
-      val iter = input.iterator
 
       def go(): NativeStep = {
         if (iter.hasNext) {
@@ -69,11 +69,11 @@ trait IterableBase {
 
   def mapImpl(argumentReader: ArgumentReader): NativeStep = {
     val input = argumentReader.readObject(0).asInstanceOf[C]
-    if (input.isEmpty) NativeStep.done(makeEmpty())
+    val iter = input.iterator
+    if (iter.isEmpty) NativeStep.done(input)
     else {
       val fn = argumentReader.unsafeReadFunction(1)
       val builder = makeBuilder()
-      val iter = input.iterator
 
       def go(): NativeStep = {
         if (iter.hasNext) {
