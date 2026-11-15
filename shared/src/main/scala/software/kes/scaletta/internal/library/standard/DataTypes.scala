@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.ScalettaModule
 import software.kes.scaletta.internal.library.standard.buildingblocks.{FlatMapFunction, MapFunction}
+import software.kes.scaletta.internal.library.standard.higherorder.Step
 
 object DataTypes {
   lazy val module: ScalettaModule[Unit] =
@@ -30,9 +31,6 @@ object DataTypes {
   }
 
   private object OptionMapStrategy extends MapFunction.Strategy[Option[Any]] {
-
-    import MapFunction.Step
-
     type State = Unit
 
     def initialState(input: Option[Any]): Step[Option[Any], Unit] =
@@ -46,9 +44,6 @@ object DataTypes {
   }
 
   private object OptionFlatMapStrategy extends FlatMapFunction.Strategy[Option[Any]] {
-
-    import FlatMapFunction.Step
-
     type State = Unit
 
     def initialState(input: Option[Any]): Step[Option[Any], Unit] =
@@ -62,9 +57,6 @@ object DataTypes {
   }
 
   private object EitherMapStrategy extends MapFunction.Strategy[Either[Any, Any]] {
-
-    import MapFunction.Step
-
     type State = Unit
 
     def initialState(input: Either[Any, Any]): Step[Either[Any, Any], Unit] =
@@ -78,9 +70,6 @@ object DataTypes {
   }
 
   private object EitherFlatMapStrategy extends FlatMapFunction.Strategy[Either[Any, Any]] {
-
-    import FlatMapFunction.Step
-
     type State = Unit
 
     def initialState(input: Either[Any, Any]): Step[Either[Any, Any], Unit] =

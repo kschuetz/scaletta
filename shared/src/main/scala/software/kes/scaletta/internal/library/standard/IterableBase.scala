@@ -2,6 +2,7 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.{ArgumentReader, NativeStep}
 import software.kes.scaletta.internal.library.standard.buildingblocks.{FilterFunction, FlatMapFunction, MapFunction}
+import software.kes.scaletta.internal.library.standard.higherorder.Step
 
 trait IterableBase {
   type C <: IterableOnce[_]
@@ -26,9 +27,6 @@ trait IterableBase {
     MapFunction.create(MapStrategy)
 
   private object FilterStrategy extends FilterFunction.Strategy[C] {
-
-    import FilterFunction.Step
-
     type State = MyState
 
     def initialState(input: C): Step[C, MyState] = {
@@ -36,14 +34,14 @@ trait IterableBase {
       if (iter.isEmpty) Step.done(input)
       else {
         val elem = iter.next()
-        Step.applyPredicate(new MyState(iter, makeBuilder()), elem)
+        Step.applyFunction(new MyState(iter, makeBuilder()), elem)
       }
     }
 
     def nextState(state: MyState, element: Any, keep: Boolean): Step[C, MyState] = {
       if (keep) addElement(state.builder, element)
       if (state.iterator.hasNext)
-        Step.applyPredicate(state, state.iterator.next())
+        Step.applyFunction(state, state.iterator.next())
       else
         Step.done(makeResult(state.builder))
     }
@@ -53,9 +51,6 @@ trait IterableBase {
   }
 
   private object FlatMapStrategy extends FlatMapFunction.Strategy[C] {
-
-    import FlatMapFunction.Step
-
     type State = MyState
 
     def initialState(input: C): Step[C, MyState] = {
@@ -82,9 +77,6 @@ trait IterableBase {
   }
 
   private object MapStrategy extends MapFunction.Strategy[C] {
-
-    import MapFunction.Step
-
     type State = MyState
 
     def initialState(input: C): Step[C, MyState] = {
