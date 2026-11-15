@@ -26,78 +26,53 @@ trait IterableBase {
   val mapImpl: ArgumentReader => NativeStep =
     MapFunction.create(MapStrategy)
 
-  private object FilterStrategy extends FilterFunction.Strategy[C] {
-    type State = MyState
-
-    def initialState(input: C): Step[C, MyState] = {
+  private abstract class HigherOrderStrategyBase {
+    def initialState(input: C): Step[C, HigherOrderState] = {
       val iter = input.iterator
       if (iter.isEmpty) Step.done(input)
       else {
         val elem = iter.next()
-        Step.applyFunction(new MyState(iter, makeBuilder()), elem)
+        Step.applyFunction(new HigherOrderState(iter, makeBuilder()), elem)
       }
     }
 
-    def nextState(state: MyState, functionCallResult: (Any, Boolean)): Step[C, MyState] = {
-      val (value, keep) = functionCallResult
-      if (keep) addElement(state.builder, value)
+    final protected def handleNext(state: HigherOrderState): Step[C, HigherOrderState] =
       if (state.iterator.hasNext)
         Step.applyFunction(state, state.iterator.next())
       else
         Step.done(makeResult(state.builder))
-    }
-
-    class MyState(val iterator: Iterator[Any],
-                  val builder: Builder)
   }
 
-  private object FlatMapStrategy extends FlatMapFunction.Strategy[C] {
-    type State = MyState
+  private object FilterStrategy extends HigherOrderStrategyBase with FilterFunction.Strategy[C] {
+    type State = HigherOrderState
 
-    def initialState(input: C): Step[C, MyState] = {
-      val iter = input.iterator
-      if (iter.isEmpty) Step.done(input)
-      else {
-        val elem = iter.next()
-        Step.applyFunction(new MyState(iter, makeBuilder()), elem)
-      }
+    def nextState(state: HigherOrderState, functionCallResult: (Any, Boolean)): Step[C, HigherOrderState] = {
+      val (value, keep) = functionCallResult
+      if (keep) addElement(state.builder, value)
+      handleNext(state)
     }
+  }
 
-    def nextState(state: MyState, functionCallResult: C): Step[C, MyState] = {
+  private object FlatMapStrategy extends HigherOrderStrategyBase with FlatMapFunction.Strategy[C] {
+    type State = HigherOrderState
+
+    def nextState(state: HigherOrderState, functionCallResult: C): Step[C, HigherOrderState] = {
       functionCallResult.iterator.foreach { elem =>
         addElement(state.builder, elem)
       }
-      if (state.iterator.hasNext)
-        Step.applyFunction(state, state.iterator.next())
-      else
-        Step.done(makeResult(state.builder))
+      handleNext(state)
     }
-
-    class MyState(val iterator: Iterator[Any],
-                  val builder: Builder)
   }
 
-  private object MapStrategy extends MapFunction.Strategy[C] {
-    type State = MyState
+  private object MapStrategy extends HigherOrderStrategyBase with MapFunction.Strategy[C] {
+    type State = HigherOrderState
 
-    def initialState(input: C): Step[C, MyState] = {
-      val iter = input.iterator
-      if (iter.isEmpty) Step.done(input)
-      else {
-        val elem = iter.next()
-        Step.applyFunction(new MyState(iter, makeBuilder()), elem)
-      }
-    }
-
-    def nextState(state: MyState, functionCallResult: Any): Step[C, MyState] = {
+    def nextState(state: HigherOrderState, functionCallResult: Any): Step[C, HigherOrderState] = {
       addElement(state.builder, functionCallResult)
-      if (state.iterator.hasNext)
-        Step.applyFunction(state, state.iterator.next())
-      else
-        Step.done(makeResult(state.builder))
+      handleNext(state)
     }
-
-    class MyState(val iterator: Iterator[Any],
-                  val builder: Builder)
   }
+
+  final class HigherOrderState(val iterator: Iterator[Any],
+                               val builder: Builder)
 }
