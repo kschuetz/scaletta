@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.ScalettaModule
-import software.kes.scaletta.internal.library.standard.buildingblocks.MapFunction
+import software.kes.scaletta.internal.library.standard.buildingblocks.{FlatMapFunction, MapFunction}
 
 object DataTypes {
   lazy val module: ScalettaModule[Unit] =
@@ -45,6 +45,22 @@ object DataTypes {
       Step.done(Some(mappedElement))
   }
 
+  private object OptionFlatMapStrategy extends FlatMapFunction.Strategy[Option[Any]] {
+
+    import FlatMapFunction.Step
+
+    type State = Unit
+
+    def initialState(input: Option[Any]): Step[Option[Any], Unit] =
+      input match {
+        case Some(value) => Step.applyFunction((), value)
+        case None => Step.done(None)
+      }
+
+    def nextState(state: Unit, mappedElement: Option[Any]): Step[Option[Any], Unit] =
+      Step.done(mappedElement)
+  }
+
   private object EitherMapStrategy extends MapFunction.Strategy[Either[Any, Any]] {
 
     import MapFunction.Step
@@ -59,5 +75,21 @@ object DataTypes {
 
     def nextState(state: Unit, mappedElement: Any): Step[Either[Any, Any], Unit] =
       Step.done(Right(mappedElement))
+  }
+
+  private object EitherFlatMapStrategy extends FlatMapFunction.Strategy[Either[Any, Any]] {
+
+    import FlatMapFunction.Step
+
+    type State = Unit
+
+    def initialState(input: Either[Any, Any]): Step[Either[Any, Any], Unit] =
+      input match {
+        case Right(value) => Step.applyFunction((), value)
+        case left => Step.done(left)
+      }
+
+    def nextState(state: Unit, mappedElement: Either[Any, Any]): Step[Either[Any, Any], Unit] =
+      Step.done(mappedElement)
   }
 }
