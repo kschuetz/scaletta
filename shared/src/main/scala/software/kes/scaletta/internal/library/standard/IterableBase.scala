@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.{ArgumentReader, NativeStep}
-import software.kes.scaletta.internal.library.standard.buildingblocks.MapFunction
+import software.kes.scaletta.internal.library.standard.buildingblocks.{FilterFunction, MapFunction}
 
 trait IterableBase {
   type C <: IterableOnce[_]
@@ -16,30 +16,8 @@ trait IterableBase {
 
   protected def makeResult(builder: Builder): C
 
-  def filterImpl(argumentReader: ArgumentReader): NativeStep = {
-    val input = argumentReader.readObject(0).asInstanceOf[C]
-    val iter = input.iterator
-    if (iter.isEmpty) NativeStep.done(input)
-    else {
-      val fn = argumentReader.unsafeReadFunction(1)
-      val builder = makeBuilder()
-
-      def go(): NativeStep = {
-        if (iter.hasNext) {
-          val elem = iter.next()
-          fn.setArgument(0, elem)
-          NativeStep.call(fn, keep => {
-            if (keep.asInstanceOf[Boolean]) {
-              addElement(builder, elem)
-            }
-            go()
-          })
-        } else NativeStep.done(makeResult(builder))
-      }
-
-      go()
-    }
-  }
+  val filterImpl: ArgumentReader => NativeStep =
+    FilterFunction.create(FilterStrategy)
 
   def flatMapImpl(argumentReader: ArgumentReader): NativeStep = {
     val input = argumentReader.readObject(0).asInstanceOf[C]
@@ -70,6 +48,33 @@ trait IterableBase {
 
   val mapImpl: ArgumentReader => NativeStep =
     MapFunction.create(MapStrategy)
+
+  private object FilterStrategy extends FilterFunction.Strategy[C] {
+
+    import FilterFunction.Step
+
+    type State = MyState
+
+    def initialState(input: C): Step[C, MyState] = {
+      val iter = input.iterator
+      if (iter.isEmpty) Step.done(input)
+      else {
+        val elem = iter.next()
+        Step.applyPredicate(new MyState(iter, makeBuilder()), elem)
+      }
+    }
+
+    def nextState(state: MyState, element: Any, keep: Boolean): Step[C, MyState] = {
+      if (keep) addElement(state.builder, element)
+      if (state.iterator.hasNext)
+        Step.applyPredicate(state, state.iterator.next())
+      else
+        Step.done(makeResult(state.builder))
+    }
+
+    class MyState(val iterator: Iterator[Any],
+                  val builder: Builder)
+  }
 
   private object MapStrategy extends MapFunction.Strategy[C] {
 
