@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.ScalettaModule
+import software.kes.scaletta.internal.library.standard.buildingblocks.MapFunction
 
 object DataTypes {
   lazy val module: ScalettaModule[Unit] =
@@ -26,5 +27,37 @@ object DataTypes {
 
   final class OptionBuilder[A](var result: Option[A]) {
     def addElement(elem: A): Unit = result = Some(elem)
+  }
+
+  private object OptionMapStrategy extends MapFunction.Strategy[Option[Any]] {
+
+    import MapFunction.Step
+
+    type State = Unit
+
+    def initialState(input: Option[Any]): Step[Option[Any], Unit] =
+      input match {
+        case Some(value) => Step.applyFunction((), value)
+        case None => Step.done(None)
+      }
+
+    def nextState(state: Unit, mappedElement: Any): Step[Option[Any], Unit] =
+      Step.done(Some(mappedElement))
+  }
+
+  private object EitherMapStrategy extends MapFunction.Strategy[Either[Any, Any]] {
+
+    import MapFunction.Step
+
+    type State = Unit
+
+    def initialState(input: Either[Any, Any]): Step[Either[Any, Any], Unit] =
+      input match {
+        case Right(value) => Step.applyFunction((), value)
+        case left => Step.done(left)
+      }
+
+    def nextState(state: Unit, mappedElement: Any): Step[Either[Any, Any], Unit] =
+      Step.done(Right(mappedElement))
   }
 }

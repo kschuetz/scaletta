@@ -2,7 +2,6 @@ package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api.{ArgumentReader, NativeStep}
 import software.kes.scaletta.internal.library.standard.buildingblocks.MapFunction
-import software.kes.scaletta.internal.library.standard.buildingblocks.MapFunction.Step
 
 trait IterableBase {
   type C <: IterableOnce[_]
@@ -73,23 +72,26 @@ trait IterableBase {
     MapFunction.create(MapStrategy)
 
   private object MapStrategy extends MapFunction.Strategy[C] {
+
+    import MapFunction.Step
+
     type State = MyState
 
     def initialState(input: C): MapFunction.Step[C, MyState] = {
       val iter = input.iterator
-      if (iter.isEmpty) Step.Done(input)
+      if (iter.isEmpty) Step.done(input)
       else {
         val elem = iter.next()
-        Step.ApplyFunction(new MyState(iter, makeBuilder()), elem)
+        Step.applyFunction(new MyState(iter, makeBuilder()), elem)
       }
     }
 
-    def nextState(state: MyState, element: Any): MapFunction.Step[C, MyState] = {
-      addElement(state.builder, element)
+    def nextState(state: MyState, mappedElement: Any): MapFunction.Step[C, MyState] = {
+      addElement(state.builder, mappedElement)
       if (state.iterator.hasNext)
-        Step.ApplyFunction(state, state.iterator.next())
+        Step.applyFunction(state, state.iterator.next())
       else
-        Step.Done(makeResult(state.builder))
+        Step.done(makeResult(state.builder))
     }
 
     class MyState(val iterator: Iterator[Any],
