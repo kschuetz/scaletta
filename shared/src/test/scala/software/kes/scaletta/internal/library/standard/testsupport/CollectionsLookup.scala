@@ -10,8 +10,8 @@ import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryPar
 final class CollectionsLookup(methodResolver: MethodResolver) {
   private val universe = methodResolver.asInstanceOf[Universe]
 
-  abstract class CollectionBase(typeName: Name) {
-    private val typ: Type[TypeId] = universe.typeUniverse.nameIndex
+  abstract class MethodLookupBase(typeName: Name) {
+    protected val typ: Type[TypeId] = universe.typeUniverse.nameIndex
       .get(scalettaCollection.qualify(typeName)) match {
       case Some(c: Type.Constructor[TypeId]) => Type.Nominal(c.name)
       case Some(n: Type.Nominal[TypeId]) => n
@@ -21,15 +21,25 @@ final class CollectionsLookup(methodResolver: MethodResolver) {
 
     val map: NativeFunctionId = resolve("map", SignatureQuery.of(SignatureQueryParameter.unknown))
     val flatMap: NativeFunctionId = resolve("flatMap", SignatureQuery.of(SignatureQueryParameter.unknown))
-    val filter: NativeFunctionId = resolve("filter", SignatureQuery.of(SignatureQueryParameter.unknown))
+    val withFilter: NativeFunctionId = resolve("withFilter", SignatureQuery.of(SignatureQueryParameter.unknown))
 
-    private def resolve(name: String, query: SignatureQuery): NativeFunctionId =
+    protected def resolve(name: String, query: SignatureQuery): NativeFunctionId =
       methodResolver.resolveBestMethod(typ, Name(name), query)
         .getOrElse(throw new AssertionError(s"Could not resolve method $name for $typeName"))
         .nativeFunctionId
   }
 
+  abstract class CollectionBase(typeName: Name) extends MethodLookupBase(typeName) {
+    val filter: NativeFunctionId = resolve("filter", SignatureQuery.of(SignatureQueryParameter.unknown))
+  }
+
+  abstract class CollectionWithFilterBase(typeName: Name) extends MethodLookupBase(typeName)
+
   object list extends CollectionBase(StandardTypes.names.ListT)
 
   object vector extends CollectionBase(StandardTypes.names.VectorT)
+
+  object listWithFilter extends CollectionWithFilterBase(StandardTypes.names.ListWithFilterT)
+
+  object vectorWithFilter extends CollectionWithFilterBase(StandardTypes.names.VectorWithFilterT)
 }
