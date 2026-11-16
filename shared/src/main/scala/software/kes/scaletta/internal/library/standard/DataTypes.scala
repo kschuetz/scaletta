@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.library.standard
 
-import software.kes.scaletta.api.{ArgumentReader, NativeStep, ScalettaModule}
+import software.kes.scaletta.api._
 import software.kes.scaletta.internal.library.standard.buildingblocks.{FilterFunction, FlatMapFunction, MapFunction}
 import software.kes.scaletta.internal.library.standard.higherorder.CommonHigherOrderMethods.FlatMap
 import software.kes.scaletta.internal.library.standard.higherorder.{CommonHigherOrderMethods, Step}
@@ -11,10 +11,29 @@ object DataTypes {
       val st = setup.standardTypes
       val registry = setup.methodRegistry
 
-      CommonHigherOrderMethods.registerMethods(registry, st)(st.OptionT, option.higherOrderImpls)
+      option.registerMethods(registry, st)
     }
 
   object option {
+
+    def registerMethods(registry: MethodRegistry,
+                        standardTypes: StandardTypes): Unit = {
+      val optionT = standardTypes.OptionT
+      CommonHigherOrderMethods.registerMethods(registry, standardTypes)(optionT, higherOrderImpls)
+
+      val typeA = Type.variable(0)
+
+      val receiverType = ReceiverType.instance(Type.Nominal(optionT.name))
+      val tc = TypeApplier.fromNode(optionT)
+
+      registry.addMethod(
+        MethodName(receiverType, CommonMethodNames.withFilter),
+        Vector(FormalParameter(CommonParameterNames.p, Type.function[TypeId](typeA)(standardTypes.BooleanT))),
+        tc.applyAll(typeA),
+        FunctionImpl.higherOrder(filterImpl)
+      )
+    }
+
     val filterImpl: ArgumentReader => NativeStep =
       FilterFunction.create(FilterStrategy)
 
