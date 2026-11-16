@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.library.standard.higherorder
 
 import software.kes.scaletta.api._
-import software.kes.scaletta.internal.library.standard.StandardTypes
+import software.kes.scaletta.internal.library.standard.{CommonMethodNames, CommonParameterNames, StandardTypes}
 
 object CommonHigherOrderMethods {
 
@@ -26,8 +26,8 @@ object CommonHigherOrderMethods {
     implementations.filterImpl.foreach { impl =>
       // filter(f: A => Boolean): C[A]
       registry.addMethod(
-        MethodName(receiverType, Name("filter")),
-        Vector(FormalParameter(Name("p"), Type.function[TypeId](typeA)(standardTypes.BooleanT))),
+        MethodName(receiverType, CommonMethodNames.filter),
+        Vector(FormalParameter(CommonParameterNames.p, Type.function[TypeId](typeA)(standardTypes.BooleanT))),
         tc.applyAll(typeA),
         FunctionImpl.higherOrder(impl)
       )
@@ -41,8 +41,8 @@ object CommonHigherOrderMethods {
 
       // flatMap[B](f: A => C[B]): C[B]
       registry.addMethod(
-        MethodName(receiverType, Name("flatMap")),
-        Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(lambdaReturnType))),
+        MethodName(receiverType, CommonMethodNames.flatMap),
+        Vector(FormalParameter(CommonParameterNames.f, Type.function[TypeId](typeA)(lambdaReturnType))),
         tc.applyAll(typeB),
         FunctionImpl.higherOrder(fm.impl)
       )
@@ -51,8 +51,8 @@ object CommonHigherOrderMethods {
     implementations.mapImpl.foreach { impl =>
       // map[B](f: A => B): C[B]
       registry.addMethod(
-        MethodName(receiverType, Name("map")),
-        Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(typeB))),
+        MethodName(receiverType, CommonMethodNames.map),
+        Vector(FormalParameter(CommonParameterNames.f, Type.function[TypeId](typeA)(typeB))),
         tc.applyAll(typeB),
         FunctionImpl.higherOrder(impl)
       )

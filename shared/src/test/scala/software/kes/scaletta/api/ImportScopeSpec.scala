@@ -2,6 +2,7 @@ package software.kes.scaletta.api
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.internal.library.standard.CommonParameterNames
 
 class ImportScopeSpec extends AnyFunSpec with Matchers {
 
@@ -86,10 +87,10 @@ class ImportScopeSpec extends AnyFunSpec with Matchers {
       val path1 = PackagePath.parseAbsolute("pkg1")
       val path2 = PackagePath.parseAbsolute("pkg2")
       val scope = ImportScope.empty
-        .importSymbols(path1, Set(Name("X")))
-        .importSymbols(path2, Set(Name("X")))
+        .importSymbols(path1, Set(CommonParameterNames.x))
+        .importSymbols(path2, Set(CommonParameterNames.x))
 
-      scope.symbols should contain(Name("X") -> path2)
+      scope.symbols should contain(CommonParameterNames.x -> path2)
     }
 
     it("should handle shadowing: more recently added package paths win") {

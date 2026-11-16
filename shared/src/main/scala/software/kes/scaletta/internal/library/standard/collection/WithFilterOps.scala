@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.library.standard.collection
 
 import software.kes.scaletta.api._
-import software.kes.scaletta.internal.library.standard.StandardTypes
+import software.kes.scaletta.internal.library.standard.{CommonMethodNames, CommonParameterNames, StandardTypes}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -18,8 +18,8 @@ object WithFilterOps {
     val tc = TypeApplier.fromNode(collectionConstructor)
 
     registry.addMethod(
-      MethodName(receiverType, Name("withFilter")),
-      Vector(FormalParameter(Name("p"), Type.function[TypeId](typeA)(standardTypes.BooleanT))),
+      MethodName(receiverType, CommonMethodNames.withFilter),
+      Vector(FormalParameter(CommonParameterNames.p, Type.function[TypeId](typeA)(standardTypes.BooleanT))),
       tc.applyAll(typeA),
       FunctionImpl.objectResult(strategy.withFilterImpl)
     )
@@ -38,24 +38,24 @@ object WithFilterOps {
     val flatMapLambdaReturnType = TypeApplier.fromNode(standardTypes.IterableOnceT).applyAll(typeB)
     // flatMap[B](f: A => IterableOnce[B]): C[B]
     registry.addMethod(
-      MethodName(receiverType, Name("flatMap")),
-      Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(flatMapLambdaReturnType))),
+      MethodName(receiverType, CommonMethodNames.flatMap),
+      Vector(FormalParameter(CommonParameterNames.f, Type.function[TypeId](typeA)(flatMapLambdaReturnType))),
       tc.applyAll(typeB),
       FunctionImpl.higherOrder(strategy.flatMapImpl)
     )
 
     // map[B](f: A => B): C[B]
     registry.addMethod(
-      MethodName(receiverType, Name("map")),
-      Vector(FormalParameter(Name("f"), Type.function[TypeId](typeA)(typeB))),
+      MethodName(receiverType, CommonMethodNames.map),
+      Vector(FormalParameter(CommonParameterNames.f, Type.function[TypeId](typeA)(typeB))),
       tc.applyAll(typeB),
       FunctionImpl.higherOrder(strategy.mapImpl)
     )
 
     // withFilter(p: A => Boolean): WithFilter[A]
     registry.addMethod(
-      MethodName(receiverType, Name("withFilter")),
-      Vector(FormalParameter(Name("p"), Type.function[TypeId](typeA)(standardTypes.BooleanT))),
+      MethodName(receiverType, CommonMethodNames.withFilter),
+      Vector(FormalParameter(CommonParameterNames.p, Type.function[TypeId](typeA)(standardTypes.BooleanT))),
       tc.applyAll(typeA),
       FunctionImpl.objectResult(strategy.withFilterWithFilterImpl)
     )

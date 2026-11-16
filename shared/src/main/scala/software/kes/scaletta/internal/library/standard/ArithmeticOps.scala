@@ -434,7 +434,7 @@ object ArithmeticOps {
     def shortShort(args: ArgumentReader): Int = args.readShort(0) % args.readShort(1)
   }
 
-  private val rhsName = Name("x")
+  private val rhsName = CommonParameterNames.x
   private val rhsInt = Vector(FormalParameter.int(rhsName))
   private val rhsLong = Vector(FormalParameter.long(rhsName))
   private val rhsShort = Vector(FormalParameter.short(rhsName))

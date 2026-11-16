@@ -21,7 +21,7 @@ object EqualityOps {
 
     def register(registry: MethodRegistry): Unit = {
       registry.addMethod(MethodName(ReceiverType.instance(CoreTypes.AnyRefT), name),
-        Vector(FormalParameter(Name("x"), CoreTypes.AnyRefT)), CoreTypes.BooleanT,
+        Vector(FormalParameter(CommonParameterNames.x, CoreTypes.AnyRefT)), CoreTypes.BooleanT,
         booleanResult(impl))
     }
 
@@ -664,7 +664,7 @@ object EqualityOps {
       args.readFloat(0) != args.readFloat(1)
   }
 
-  private val rhsName = Name("x")
+  private val rhsName = CommonParameterNames.x
   private val rhsAny = Vector(FormalParameter.any(rhsName))
   private val rhsBoolean =
     Vector(FormalParameter.boolean(rhsName))

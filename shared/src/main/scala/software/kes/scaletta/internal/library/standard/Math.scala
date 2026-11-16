@@ -12,7 +12,7 @@ object Math {
       def addUnaryDouble(name: String, fn: Double => Double): Unit = {
         registry.addMethod(
           MethodName(staticMath, Name(name)),
-          Vector(FormalParameter.double(Name("x"))),
+          Vector(FormalParameter.double(CommonParameterNames.x)),
           DoubleT,
           doubleResult(args => fn(args.readDouble(0)))
         )
@@ -32,7 +32,7 @@ object Math {
 
       registry.addMethod(
         MethodName(staticMath, Name("atan2")),
-        Vector(FormalParameter.double(Name("y")), FormalParameter.double(Name("x"))),
+        Vector(FormalParameter.double(CommonParameterNames.y), FormalParameter.double(CommonParameterNames.x)),
         DoubleT,
         doubleResult(args => scala.math.atan2(args.readDouble(0), args.readDouble(1)))
       )
@@ -40,7 +40,7 @@ object Math {
       // Power / Log
       registry.addMethod(
         MethodName(staticMath, Name("pow")),
-        Vector(FormalParameter.double(Name("x")), FormalParameter.double(Name("y"))),
+        Vector(FormalParameter.double(CommonParameterNames.x), FormalParameter.double(CommonParameterNames.y)),
         DoubleT,
         doubleResult(args => scala.math.pow(args.readDouble(0), args.readDouble(1)))
       )
@@ -55,24 +55,24 @@ object Math {
 
       registry.addMethod(
         MethodName(staticMath, Name("round")),
-        Vector(FormalParameter.double(Name("x"))),
+        Vector(FormalParameter.double(CommonParameterNames.x)),
         LongT,
         longResult(args => scala.math.round(args.readDouble(0)))
       )
 
       registry.addMethod(
         MethodName(staticMath, Name("round")),
-        Vector(FormalParameter.float(Name("x"))),
+        Vector(FormalParameter.float(CommonParameterNames.x)),
         IntT,
         intResult(args => scala.math.round(args.readFloat(0)))
       )
 
       // Overloaded methods: abs
       val absReg = registry.overloadRegistryFor(MethodName(staticMath, Name("abs")))
-      absReg.addOverload(Vector(FormalParameter.int(Name("x"))), IntT, intResult(args => scala.math.abs(args.readInt(0))))
-      absReg.addOverload(Vector(FormalParameter.long(Name("x"))), LongT, longResult(args => scala.math.abs(args.readLong(0))))
-      absReg.addOverload(Vector(FormalParameter.float(Name("x"))), FloatT, floatResult(args => scala.math.abs(args.readFloat(0))))
-      absReg.addOverload(Vector(FormalParameter.double(Name("x"))), DoubleT, doubleResult(args => scala.math.abs(args.readDouble(0))))
+      absReg.addOverload(Vector(FormalParameter.int(CommonParameterNames.x)), IntT, intResult(args => scala.math.abs(args.readInt(0))))
+      absReg.addOverload(Vector(FormalParameter.long(CommonParameterNames.x)), LongT, longResult(args => scala.math.abs(args.readLong(0))))
+      absReg.addOverload(Vector(FormalParameter.float(CommonParameterNames.x)), FloatT, floatResult(args => scala.math.abs(args.readFloat(0))))
+      absReg.addOverload(Vector(FormalParameter.double(CommonParameterNames.x)), DoubleT, doubleResult(args => scala.math.abs(args.readDouble(0))))
 
       // Overloaded methods: min/max
       List("min", "max").foreach { mName =>

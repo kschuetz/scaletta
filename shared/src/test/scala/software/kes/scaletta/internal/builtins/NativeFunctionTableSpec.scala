@@ -4,6 +4,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
+import software.kes.scaletta.internal.library.standard.CommonParameterNames
 import software.kes.scaletta.internal.runtime.{CoreTypes, ParamsSignature}
 
 final class NativeFunctionTableSpec extends AnyFunSpec with Matchers {
@@ -12,7 +13,7 @@ final class NativeFunctionTableSpec extends AnyFunSpec with Matchers {
     it("should store and retrieve NativeFunctionDefinition using createDefinition") {
       val builder = NativeFunctionTable.builder()
       val fn = NativeFunction(ParamsSignature.empty, BasicTypes.Int, FunctionImpl.intResult(_ => 41))
-      val paramGroups = ParameterGroup.single(FormalParameter(Name("x"), CoreTypes.IntT))
+      val paramGroups = ParameterGroup.single(FormalParameter(CommonParameterNames.x, CoreTypes.IntT))
 
       val definition = builder.add(
         fn,

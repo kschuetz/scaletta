@@ -3,6 +3,7 @@ package software.kes.scaletta.internal.symbols
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.{Name, PackagePath}
+import software.kes.scaletta.internal.library.standard.CommonParameterNames
 
 class PackageNodeSpec extends AnyFunSpec with Matchers {
 
@@ -14,19 +15,19 @@ class PackageNodeSpec extends AnyFunSpec with Matchers {
     }
 
     it("should add a symbol at the root package") {
-      val node = PackageNode.empty[Int].add(PackagePath.root, Name("x"), 41)
-      node.get(Name("x")) shouldBe Some(41)
+      val node = PackageNode.empty[Int].add(PackagePath.root, CommonParameterNames.x, 41)
+      node.get(CommonParameterNames.x) shouldBe Some(41)
       node.subpackages shouldBe empty
     }
 
     it("should add a symbol at a nested package") {
       val path = PackagePath.parseAbsolute("org.example")
-      val node = PackageNode.empty[Int].add(path, Name("y"), 43)
+      val node = PackageNode.empty[Int].add(path, CommonParameterNames.y, 43)
 
-      node.get(Name("y")) shouldBe None
+      node.get(CommonParameterNames.y) shouldBe None
       val sub = node.findNode(path)
       sub shouldBe defined
-      sub.get.get(Name("y")) shouldBe Some(43)
+      sub.get.get(CommonParameterNames.y) shouldBe Some(43)
     }
 
     it("should create multiple levels of nested packages") {
@@ -42,8 +43,8 @@ class PackageNodeSpec extends AnyFunSpec with Matchers {
       val path1 = PackagePath.parseAbsolute("org.example.p1")
       val path2 = PackagePath.parseAbsolute("org.example.p2")
 
-      val node1 = PackageNode.empty[Int].add(path1, Name("x"), 41)
-      val node2 = node1.add(path2, Name("y"), 43)
+      val node1 = PackageNode.empty[Int].add(path1, CommonParameterNames.x, 41)
+      val node2 = node1.add(path2, CommonParameterNames.y, 43)
 
       val org1 = node1.findNode(PackagePath.parseAbsolute("org")).get
       val org2 = node2.findNode(PackagePath.parseAbsolute("org")).get
@@ -59,65 +60,65 @@ class PackageNodeSpec extends AnyFunSpec with Matchers {
     }
 
     it("should return None when findNode cannot find the path") {
-      val node = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b"), Name("x"), 41)
+      val node = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b"), CommonParameterNames.x, 41)
       node.findNode(PackagePath.parseAbsolute("a.c")) shouldBe None
       node.findNode(PackagePath.parseAbsolute("a.b.c")) shouldBe None
     }
 
     it("should return the root node for an empty absolute path") {
-      val node = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a"), Name("x"), 41)
+      val node = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a"), CommonParameterNames.x, 41)
       node.findNode(PackagePath.root).get should be theSameInstanceAs node
     }
 
     it("should find nodes using relative paths") {
       val node = PackageNode.empty[Int]
-        .add(PackagePath.parseAbsolute("a.b.c"), Name("x"), 41)
+        .add(PackagePath.parseAbsolute("a.b.c"), CommonParameterNames.x, 41)
 
       val aNode = node.findNode(PackagePath.parseAbsolute("a")).get
       val bcNode = aNode.findNode(PackagePath.parseRelative("b.c")).get
 
-      bcNode.get(Name("x")) shouldBe Some(41)
+      bcNode.get(CommonParameterNames.x) shouldBe Some(41)
     }
 
     describe("merge") {
       it("should merge symbols in the same package") {
-        val node1 = PackageNode.empty[Int].add(PackagePath.root, Name("x"), 41)
-        val node2 = PackageNode.empty[Int].add(PackagePath.root, Name("y"), 43)
+        val node1 = PackageNode.empty[Int].add(PackagePath.root, CommonParameterNames.x, 41)
+        val node2 = PackageNode.empty[Int].add(PackagePath.root, CommonParameterNames.y, 43)
 
         val merged = node1.merge(node2)
-        merged.get(Name("x")) shouldBe Some(41)
-        merged.get(Name("y")) shouldBe Some(43)
+        merged.get(CommonParameterNames.x) shouldBe Some(41)
+        merged.get(CommonParameterNames.y) shouldBe Some(43)
       }
 
       it("should overwrite symbols when merging") {
-        val node1 = PackageNode.empty[Int].add(PackagePath.root, Name("x"), 41)
-        val node2 = PackageNode.empty[Int].add(PackagePath.root, Name("x"), 43)
+        val node1 = PackageNode.empty[Int].add(PackagePath.root, CommonParameterNames.x, 41)
+        val node2 = PackageNode.empty[Int].add(PackagePath.root, CommonParameterNames.x, 43)
 
         val merged = node1.merge(node2)
-        merged.get(Name("x")) shouldBe Some(43)
+        merged.get(CommonParameterNames.x) shouldBe Some(43)
       }
 
       it("should merge nested packages") {
-        val node1 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b"), Name("x"), 41)
-        val node2 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.c"), Name("y"), 43)
+        val node1 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b"), CommonParameterNames.x, 41)
+        val node2 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.c"), CommonParameterNames.y, 43)
 
         val merged = node1.merge(node2)
-        merged.findNode(PackagePath.parseAbsolute("a.b")).get.get(Name("x")) shouldBe Some(41)
-        merged.findNode(PackagePath.parseAbsolute("a.c")).get.get(Name("y")) shouldBe Some(43)
+        merged.findNode(PackagePath.parseAbsolute("a.b")).get.get(CommonParameterNames.x) shouldBe Some(41)
+        merged.findNode(PackagePath.parseAbsolute("a.c")).get.get(CommonParameterNames.y) shouldBe Some(43)
       }
 
       it("should merge deeply nested packages with overlapping paths") {
-        val node1 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b.c"), Name("x"), 41)
-        val node2 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b.d"), Name("y"), 43)
+        val node1 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b.c"), CommonParameterNames.x, 41)
+        val node2 = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b.d"), CommonParameterNames.y, 43)
 
         val merged = node1.merge(node2)
         val abNode = merged.findNode(PackagePath.parseAbsolute("a.b")).get
-        abNode.findNode(PackagePath.parseRelative("c")).get.get(Name("x")) shouldBe Some(41)
-        abNode.findNode(PackagePath.parseRelative("d")).get.get(Name("y")) shouldBe Some(43)
+        abNode.findNode(PackagePath.parseRelative("c")).get.get(CommonParameterNames.x) shouldBe Some(41)
+        abNode.findNode(PackagePath.parseRelative("d")).get.get(CommonParameterNames.y) shouldBe Some(43)
       }
 
       it("should be identity when merging with empty") {
-        val node = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b"), Name("x"), 41)
+        val node = PackageNode.empty[Int].add(PackagePath.parseAbsolute("a.b"), CommonParameterNames.x, 41)
 
         node.merge(PackageNode.empty[Int]) shouldBe node
         PackageNode.empty[Int].merge(node) shouldBe node

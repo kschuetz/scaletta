@@ -397,7 +397,7 @@ object ComparisonOps {
     def stringString(args: ArgumentReader): Boolean = args.readObject(0).asInstanceOf[String] >= args.readObject(1).asInstanceOf[String]
   }
 
-  private val rhsName = Name("x")
+  private val rhsName = CommonParameterNames.x
   private val rhsInt = Vector(FormalParameter.int(rhsName))
   private val rhsLong = Vector(FormalParameter.long(rhsName))
   private val rhsShort = Vector(FormalParameter.short(rhsName))

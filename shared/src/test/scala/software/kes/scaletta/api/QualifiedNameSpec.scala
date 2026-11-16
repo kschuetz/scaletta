@@ -2,6 +2,7 @@ package software.kes.scaletta.api
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.internal.library.standard.CommonParameterNames
 
 class QualifiedNameSpec extends AnyFunSpec with Matchers {
   describe("QualifiedName") {
@@ -38,7 +39,7 @@ class QualifiedNameSpec extends AnyFunSpec with Matchers {
     describe("tryParsePartial") {
       it("should parse a local name (no dot)") {
         val result = QualifiedName.tryParsePartial("x")
-        result shouldBe Right(QualifiedName.Partial(None, Name("x")))
+        result shouldBe Right(QualifiedName.Partial(None, CommonParameterNames.x))
       }
 
       it("should parse a relative qualified name") {

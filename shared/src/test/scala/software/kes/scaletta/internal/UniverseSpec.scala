@@ -4,6 +4,7 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins._
+import software.kes.scaletta.internal.library.standard.CommonParameterNames
 import software.kes.scaletta.internal.symbols.SignatureQuery
 import software.kes.scaletta.internal.types.{TypeRegistryImpl, TypeUniverse}
 
@@ -70,8 +71,8 @@ class UniverseSpec extends AnyFunSpec with Matchers {
     val typeA: Type.Nominal[TypeId] = typeRegistry.addRefType(ns1.qualify(Name("A")), RuntimeTypeInfo.any)
     val typeUniverse: TypeUniverse = typeRegistry.build()
 
-    val params1: Vector[FormalParameter] = Vector(FormalParameter(Name("p"), intT))
-    val params2: Vector[FormalParameter] = Vector(FormalParameter(Name("p"), stringT))
+    val params1: Vector[FormalParameter] = Vector(FormalParameter(CommonParameterNames.p, intT))
+    val params2: Vector[FormalParameter] = Vector(FormalParameter(CommonParameterNames.p, stringT))
 
     val fullName1: QualifiedName.Full = ns1.qualify(Name("fn"))
     val fullName2: QualifiedName.Full = ns2.qualify(Name("fn"))
