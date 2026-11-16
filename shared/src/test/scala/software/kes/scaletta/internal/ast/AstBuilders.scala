@@ -140,6 +140,24 @@ object AstBuilders {
   def lambda(body: Expression[Id], params: LambdaParameter[Id]*): Expression[Id] =
     Lambda[Id](params.toVector, body)
 
+  def forYield(enums: Vector[Enumerator[Id]], body: Expression[Id]): Expression[Id] =
+    ForYield[Id](enums, body)
+
+  def forYield(enums: Enumerator[Id]*)(body: Expression[Id]): Expression[Id] =
+    ForYield[Id](enums.toVector, body)
+
+  def generator(pattern: Pattern[Id], expr: Expression[Id]): Enumerator[Id] =
+    Enumerator.Generator[Id](isCase = false, pattern, expr)
+
+  def caseGenerator(pattern: Pattern[Id], expr: Expression[Id]): Enumerator[Id] =
+    Enumerator.Generator[Id](isCase = true, pattern, expr)
+
+  def valueBinding(pattern: Pattern[Id], expr: Expression[Id]): Enumerator[Id] =
+    Enumerator.ValueBinding[Id](pattern, expr)
+
+  def guard(condition: Expression[Id]): Enumerator[Id] =
+    Enumerator.Guard[Id](condition)
+
   def param(name: Identifier, typ: TypeIdentifier[Id]): FormalParameter[Id] =
     FormalParameter[Id](name, typ, None)
 

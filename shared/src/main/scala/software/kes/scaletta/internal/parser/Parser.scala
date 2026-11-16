@@ -116,6 +116,8 @@ final class Parser private() {
           parseBlock(token)
         case Token.If =>
           parseConditional(token)
+        case Token.For =>
+          parseForYield(token)
         case _ =>
           if (isStructuralBoundary(token.value)) {
             val error = ParseError.ExpectedIdentifier(token.value, "expression")
@@ -999,6 +1001,230 @@ final class Parser private() {
       }
 
       ParseResult.create(Pos(Conditional(condition, thenBranch, elseBranch), ifToken.begin, elseBranch.end))
+    }
+
+    private def parseForYield(forToken: Pos[Token]): ExprResult[Pos] = {
+      val next = scanner.peek(1)
+      val (openToken, closeExpected) = next.value match {
+        case Token.LParen =>
+          (scanner.get(), Token.RParen)
+        case Token.LBrace =>
+          (scanner.get(), Token.RBrace)
+        case _ =>
+          val error = ParseError.ExpectedToken(Token.LParen, next.value, "for comprehension")
+          reportError(Pos(error, next.begin, next.end))
+          return ParseResult.create[Pos, Pos[Expression[Pos]]](syntheticExpression(error, forToken.begin, next.end))
+      }
+
+      val enumerators = Vector.newBuilder[Pos[Enumerator[Pos]]]
+
+      skipDelimiters()
+
+      val afterOpen = scanner.peek(1)
+      if (afterOpen.value == closeExpected) {
+        val error = ParseError.ExpectedToken(Token.LArrow, afterOpen.value, "for generator")
+        reportError(Pos(error, afterOpen.begin, afterOpen.end))
+      } else {
+        val firstEnumResult = parseGenerator(isFirst = true)
+        firstEnumResult match {
+          case Some(gen) => enumerators += gen
+          case None => ()
+        }
+
+        var atEnd = scanner.peek(1).value == closeExpected || scanner.peek(1).value == Token.EndOfInput
+        while (!atEnd) {
+          val sep = scanner.peek(1)
+          if (sep.value == Token.Semicolon || sep.value == Token.Newline) {
+            skipDelimiters()
+          } else {
+            reportError(Pos(ParseError.ExpectedToken(Token.Semicolon, sep.value, "for comprehension"), sep.begin, sep.end))
+          }
+
+          if (scanner.peek(1).value == closeExpected || scanner.peek(1).value == Token.EndOfInput) {
+            atEnd = true
+          } else {
+            val enumResult = parseSubsequentEnumerator()
+            enumResult match {
+              case Some(e) => enumerators += e
+              case None => ()
+            }
+            if (scanner.peek(1).value == closeExpected || scanner.peek(1).value == Token.EndOfInput) {
+              atEnd = true
+            }
+          }
+        }
+      }
+
+      expect(closeExpected, "for comprehension", Some(openToken.begin))
+
+      val yieldToken = scanner.peek(1)
+      if (yieldToken.value == Token.Yield) {
+        scanner.get()
+      } else {
+        reportError(Pos(ParseError.ExpectedToken(Token.Yield, yieldToken.value, "for comprehension"), yieldToken.begin, yieldToken.end))
+        if (yieldToken.value == Token.Do) {
+          scanner.get()
+        }
+      }
+
+      val bodyResult = parseExpression(BindingPower.Minimum)
+      val body = bodyResult.value match {
+        case Some(b) => b
+        case None =>
+          val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("for body")
+          val p = scanner.peek(1)
+          val pos = Pos(error, p.begin, p.end)
+          if (!diagnostics.hasErrors) {
+            reportError(pos)
+          }
+          syntheticExpression(error, p.begin, p.end)
+      }
+
+      val enumVector = enumerators.result()
+      ParseResult.create(Pos(ForYield[Pos](enumVector, body), forToken.begin, body.end))
+    }
+
+    private def parseGenerator(isFirst: Boolean): Option[Pos[Enumerator[Pos]]] = {
+      val (isCase, startPos) = if (scanner.peek(1).value == Token.Case) {
+        val caseToken = scanner.get()
+        (true, caseToken.begin)
+      } else {
+        (false, scanner.peek(1).begin)
+      }
+
+      val patternResult = parsePattern()
+      val arrowToken = expect(Token.LArrow, "for generator")
+      val pattern = patternResult.value match {
+        case Some(p) => p
+        case None =>
+          val lastError = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.ExpectedIdentifier(Token.EndOfInput, "pattern")
+          syntheticPattern(lastError, startPos, arrowToken.begin)
+      }
+
+      val exprResult = parseExpression(BindingPower.Minimum)
+
+      val expr = exprResult.value match {
+        case Some(e) => e
+        case None =>
+          val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("for generator expression")
+          if (!diagnostics.hasErrors) {
+            reportError(Pos(error, arrowToken.begin, arrowToken.end))
+          }
+          syntheticExpression(error, arrowToken.begin, arrowToken.end)
+      }
+
+      Some(Pos(Enumerator.Generator[Pos](isCase, pattern, expr), startPos, expr.end))
+    }
+
+    private def parseSubsequentEnumerator(): Option[Pos[Enumerator[Pos]]] = {
+      val next = scanner.peek(1)
+      if (next.value == Token.If) {
+        val ifToken = scanner.get()
+        val condResult = parseExpression(BindingPower.Minimum)
+        val cond = condResult.value match {
+          case Some(c) => c
+          case None =>
+            val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("for guard")
+            val p = scanner.peek(1)
+            val pos = Pos(error, p.begin, p.end)
+            if (!diagnostics.hasErrors) {
+              reportError(pos)
+            }
+            syntheticExpression(error, p.begin, p.end)
+        }
+        Some(Pos(Enumerator.Guard[Pos](cond), ifToken.begin, cond.end))
+      } else if (next.value == Token.Val) {
+        val valToken = scanner.get()
+        val patternResult = parsePattern()
+        val eqToken = expect(Token.Eq, "for value binding")
+        val pattern = patternResult.value match {
+          case Some(p) => p
+          case None =>
+            val lastError = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.ExpectedIdentifier(Token.EndOfInput, "pattern")
+            syntheticPattern(lastError, valToken.end, eqToken.begin)
+        }
+        val rhsResult = if (eqToken.value == Token.Eq) {
+          parseExpression(BindingPower.Minimum)
+        } else {
+          val error = ParseError.ExpectedToken(Token.Eq, eqToken.value, "for value binding")
+          val pos = syntheticExpression(error, eqToken.begin, eqToken.end)
+          ParseResult.create[Pos, Pos[Expression[Pos]]](pos)
+        }
+        val rhs = rhsResult.value match {
+          case Some(r) => r
+          case None =>
+            val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("for value binding rhs")
+            if (!diagnostics.hasErrors) {
+              reportError(Pos(error, eqToken.begin, eqToken.end))
+            }
+            syntheticExpression(error, eqToken.begin, eqToken.end)
+        }
+        Some(Pos(Enumerator.ValueBinding[Pos](pattern, rhs), valToken.begin, rhs.end))
+      } else if (next.value == Token.Case) {
+        parseGenerator(isFirst = false)
+      } else {
+        val startPos = next.begin
+        val patternResult = parsePattern()
+        val afterPattern = scanner.peek(1)
+        if (afterPattern.value == Token.LArrow) {
+          val arrowToken = scanner.get()
+          val pattern = patternResult.value match {
+            case Some(p) => p
+            case None =>
+              val lastError = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.ExpectedIdentifier(Token.EndOfInput, "pattern")
+              syntheticPattern(lastError, startPos, arrowToken.begin)
+          }
+          val exprResult = parseExpression(BindingPower.Minimum)
+          val expr = exprResult.value match {
+            case Some(e) => e
+            case None =>
+              val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("for generator expression")
+              if (!diagnostics.hasErrors) {
+                reportError(Pos(error, arrowToken.begin, arrowToken.end))
+              }
+              syntheticExpression(error, arrowToken.begin, arrowToken.end)
+          }
+          Some(Pos(Enumerator.Generator[Pos](isCase = false, pattern, expr), pattern.begin, expr.end))
+        } else if (afterPattern.value == Token.Eq) {
+          val eqToken = scanner.get()
+          val pattern = patternResult.value match {
+            case Some(p) => p
+            case None =>
+              val lastError = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.ExpectedIdentifier(Token.EndOfInput, "pattern")
+              syntheticPattern(lastError, startPos, eqToken.begin)
+          }
+          val rhsResult = parseExpression(BindingPower.Minimum)
+          val rhs = rhsResult.value match {
+            case Some(r) => r
+            case None =>
+              val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("for value binding rhs")
+              if (!diagnostics.hasErrors) {
+                reportError(Pos(error, eqToken.begin, eqToken.end))
+              }
+              syntheticExpression(error, eqToken.begin, eqToken.end)
+          }
+          Some(Pos(Enumerator.ValueBinding[Pos](pattern, rhs), pattern.begin, rhs.end))
+        } else {
+          val arrowToken = expect(Token.LArrow, "for enumerator")
+          val pattern = patternResult.value match {
+            case Some(p) => p
+            case None =>
+              val lastError = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.ExpectedIdentifier(Token.EndOfInput, "pattern")
+              syntheticPattern(lastError, startPos, arrowToken.begin)
+          }
+          val exprResult = parseExpression(BindingPower.Minimum)
+          val expr = exprResult.value match {
+            case Some(e) => e
+            case None =>
+              val error = if (diagnostics.hasErrors) diagnostics.errors.last.value else ParseError.MissingExpression("for generator expression")
+              if (!diagnostics.hasErrors) {
+                reportError(Pos(error, arrowToken.begin, arrowToken.end))
+              }
+              syntheticExpression(error, arrowToken.begin, arrowToken.end)
+          }
+          Some(Pos(Enumerator.Generator[Pos](isCase = false, pattern, expr), pattern.begin, expr.end))
+        }
+      }
     }
 
     private def parseArgumentGroup(lParenToken: Pos[Token]): (Option[ArgumentGroup[Pos]], CharIndex) = {

@@ -737,4 +737,127 @@ class ParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks
       "{ val (a, b = x; 0 }" shouldFailWith containErrorOfType[ParseError.ExpectedToken]
     }
   }
+
+  describe("For Comprehensions") {
+    describe("Parenthesized Syntax") {
+      it("should parse a simple for-yield (for (x <- xs) yield x)") {
+        "for (x <- xs) yield x" shouldParseTo forYield(
+          generator(pId("x"), ref("xs"))
+        )(ref("x"))
+      }
+
+      it("should parse multiple generators separated by semicolons (for (x <- xs; y <- ys) yield (x, y))") {
+        "for (x <- xs; y <- ys) yield (x, y)" shouldParseTo forYield(
+          generator(pId("x"), ref("xs")),
+          generator(pId("y"), ref("ys"))
+        )(tuple(ref("x"), ref("y")))
+      }
+
+      it("should parse generators with guards (for (x <- xs; if x > 0) yield x)") {
+        "for (x <- xs; if x > 0) yield x" shouldParseTo forYield(
+          generator(pId("x"), ref("xs")),
+          guard(infix(ref("x"), ">", lit(0)))
+        )(ref("x"))
+      }
+
+      it("should parse generators with value bindings (for (x <- xs; y = x * 2) yield y)") {
+        "for (x <- xs; y = x * 2) yield y" shouldParseTo forYield(
+          generator(pId("x"), ref("xs")),
+          valueBinding(pId("y"), infix(ref("x"), "*", lit(2)))
+        )(ref("y"))
+      }
+    }
+
+    describe("Brace-Enclosed Syntax") {
+      it("should parse multi-line enumerators separated by newlines") {
+        """for {
+          |  x <- xs
+          |  y <- ys
+          |} yield (x, y)""".stripMargin shouldParseTo forYield(
+          generator(pId("x"), ref("xs")),
+          generator(pId("y"), ref("ys"))
+        )(tuple(ref("x"), ref("y")))
+      }
+
+      it("should parse multi-line enumerators with guards and val bindings") {
+        """for {
+          |  x <- xs
+          |  if x > 0
+          |  val y = x * 2
+          |  z = y + 1
+          |} yield z""".stripMargin shouldParseTo forYield(
+          generator(pId("x"), ref("xs")),
+          guard(infix(ref("x"), ">", lit(0))),
+          valueBinding(pId("y"), infix(ref("x"), "*", lit(2))),
+          valueBinding(pId("z"), infix(ref("y"), "+", lit(1)))
+        )(ref("z"))
+      }
+    }
+
+    describe("Pattern Variations in Generators") {
+      it("should parse wildcard generator pattern (for (_ <- xs) yield 1)") {
+        "for (_ <- xs) yield 1" shouldParseTo forYield(
+          generator(pWild, ref("xs"))
+        )(lit(1))
+      }
+
+      it("should parse tuple generator pattern (for ((a, b) <- pairs) yield a + b)") {
+        "for ((a, b) <- pairs) yield a + b" shouldParseTo forYield(
+          generator(pTuple(pId("a"), pId("b")), ref("pairs"))
+        )(infix(ref("a"), "+", ref("b")))
+      }
+
+      it("should parse typed generator pattern (for (x: Int <- xs) yield x)") {
+        "for (x: Int <- xs) yield x" shouldParseTo forYield(
+          generator(pTypedId("x", "Int"), ref("xs"))
+        )(ref("x"))
+      }
+
+      it("should parse refutable case generator (for (case Some(x) <- xs) yield x)") {
+        "for (case Some(x) <- xs) yield x" shouldParseTo forYield(
+          caseGenerator(pProduct("Some", pId("x")), ref("xs"))
+        )(ref("x"))
+      }
+    }
+
+    describe("SIP-62 Value Bindings") {
+      it("should parse value bindings without val keyword and with val keyword") {
+        "for (x <- xs; y = 1; val z = 2) yield x" shouldParseTo forYield(
+          generator(pId("x"), ref("xs")),
+          valueBinding(pId("y"), lit(1)),
+          valueBinding(pId("z"), lit(2))
+        )(ref("x"))
+      }
+    }
+
+    describe("Error Diagnostics") {
+      it("should report missing yield keyword when 'do' is provided") {
+        "for (x <- xs) do x" shouldFailWith (
+          ParseError.ExpectedToken(Token.Yield, Token.Do, "for comprehension") spanning(14, 15)
+          )
+      }
+
+      it("should report missing yield keyword when yield is omitted") {
+        "for (x <- xs) x" shouldFailWith (
+          ParseError.ExpectedToken(Token.Yield, Token.Identifier.Lower("x"), "for comprehension") spanning(14, 14)
+          )
+      }
+
+      it("should report missing generator in empty for comprehension (for () yield 1)") {
+        "for () yield 1" shouldFailWith (
+          ParseError.ExpectedToken(Token.LArrow, Token.RParen, "for generator") spanning(5, 5)
+          )
+      }
+
+      it("should report expected arrow when first enumerator is not a generator (for (x = 1) yield x)") {
+        "for (x = 1) yield x" shouldFailWith (
+          ParseError.ExpectedToken(Token.LArrow, Token.Eq, "for generator") spanning(7, 7)
+          )
+      }
+
+      it("should report unclosed delimiter on unclosed parentheses") {
+        "for (x <- xs yield x" shouldFailWith containErrorOfType[ParseError.UnclosedDelimiter]
+      }
+    }
+  }
 }

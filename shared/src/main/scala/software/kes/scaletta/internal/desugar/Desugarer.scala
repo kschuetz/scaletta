@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.desugar
 
 import software.kes.scaletta.internal.ast._
+import software.kes.scaletta.internal.parser.ParseError
 import software.kes.scaletta.internal.reporting.Pos
 
 object Desugarer {
@@ -112,6 +113,9 @@ final class Desugarer private() {
           },
           desugarPosExpression(result)
         )
+
+      case ParsedPhase.ForYield(_, _) =>
+        DesugaredPhase.Expression.Error(ParseError.Message("for-comprehensions not yet supported in desugarer"))
     }
 
   private def desugarLiteral(lit: ParsedPhase.Literal[Pos]): DesugaredPhase.Literal[Pos] =
