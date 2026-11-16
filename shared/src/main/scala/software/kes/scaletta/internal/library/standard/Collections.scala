@@ -17,6 +17,24 @@ object Collections {
       WithFilterOps.registerCollectionMethods(registry, st)(st.VectorT, WithFilterOps.vector)
       WithFilterOps.registerCollectionWithFilterMethods(registry, st)(st.ListWithFilterT, WithFilterOps.list)
       WithFilterOps.registerCollectionWithFilterMethods(registry, st)(st.VectorWithFilterT, WithFilterOps.vector)
+
+      val staticVector = ReceiverType.Static(Packages.scalettaCollectionVector)
+      val vectorApplier = TypeApplier.fromNode(st.VectorT)
+      val typeA = Type.variable(0)
+
+      registry.addMultiParamGroupMethod(
+        MethodName(staticVector, CommonMethodNames.empty),
+        Vector.empty,
+        vectorApplier.applyAll(typeA),
+        FunctionImpl.objectResult(_ => Vector.empty[Any])
+      )
+
+      registry.addMethod(
+        MethodName(staticVector, CommonMethodNames.from),
+        Vector(FormalParameter(CommonParameterNames.it, TypeApplier.fromNode(st.IterableOnceT).applyAll(typeA))),
+        vectorApplier.applyAll(typeA),
+        FunctionImpl.objectResult(args => Vector.from(args.read(0).asInstanceOf[IterableOnce[Any]]))
+      )
     }
 
   object list extends IterableBase {

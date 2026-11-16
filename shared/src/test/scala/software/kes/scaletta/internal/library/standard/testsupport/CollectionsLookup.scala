@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.library.standard.testsupport
 
-import software.kes.scaletta.api.Packages.scalettaCollection
+import software.kes.scaletta.api.Packages.{scalettaCollection, scalettaCollectionVector}
 import software.kes.scaletta.api.{Name, NativeFunctionId, Type, TypeId}
 import software.kes.scaletta.internal.Universe
 import software.kes.scaletta.internal.builtins.MethodResolver
@@ -37,7 +37,15 @@ final class CollectionsLookup(methodResolver: MethodResolver) {
 
   object list extends CollectionBase(StandardTypes.names.ListT)
 
-  object vector extends CollectionBase(StandardTypes.names.VectorT)
+  object vector extends CollectionBase(StandardTypes.names.VectorT) {
+    val empty: NativeFunctionId = resolveStatic("empty", SignatureQuery.empty)
+    val from: NativeFunctionId = resolveStatic("from", SignatureQuery.of(SignatureQueryParameter.unknown))
+
+    private def resolveStatic(name: String, query: SignatureQuery): NativeFunctionId =
+      methodResolver.resolveBestStaticFunction(scalettaCollectionVector.qualify(Name(name)), query)
+        .getOrElse(throw new AssertionError(s"Could not resolve static method $name for Vector"))
+        .nativeFunctionId
+  }
 
   object listWithFilter extends CollectionWithFilterBase(StandardTypes.names.ListWithFilterT)
 
