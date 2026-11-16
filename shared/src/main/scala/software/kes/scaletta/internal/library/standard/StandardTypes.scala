@@ -16,6 +16,7 @@ object StandardTypes {
     val IntT = Name("Int")
     val IterableOnceT = Name("IterableOnce")
     val ListT = Name("List")
+    val ListWithFilterT = Name("ListWithFilter")
     val LongT = Name("Long")
     val MapT = Name("Map")
     val NilT = Name("Nil")
@@ -57,6 +58,8 @@ trait StandardTypes {
   def IterableOnceT: Type.Constructor[TypeId]
 
   def ListT: Type.Constructor[TypeId]
+
+  def ListWithFilterT: Type.Constructor[TypeId]
 
   def LongT: Type.Nominal[TypeId]
 

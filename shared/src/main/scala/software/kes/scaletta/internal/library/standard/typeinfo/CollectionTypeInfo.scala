@@ -2,7 +2,7 @@ package software.kes.scaletta.internal.library.standard.typeinfo
 
 import software.kes.scaletta.api.UnapplyStrategy.{unapplySeq, unapplyTwo, unapplyZero}
 import software.kes.scaletta.api.{RuntimeTypeInfo, UnapplyResult}
-import software.kes.scaletta.internal.library.standard.collection.VectorWithFilter
+import software.kes.scaletta.internal.library.standard.collection.{ListWithFilter, VectorWithFilter}
 
 object CollectionTypeInfo {
   final val IterableOnceT = RuntimeTypeInfo(_.isInstanceOf[IterableOnce[_]],
@@ -10,6 +10,9 @@ object CollectionTypeInfo {
 
   final val ListT = RuntimeTypeInfo(_.isInstanceOf[List[_]],
     unapplySeq(_.isInstanceOf[List[_]]))
+
+  final val ListWithFilterT = RuntimeTypeInfo(_.isInstanceOf[ListWithFilter],
+    unapplySeq(_.isInstanceOf[ListWithFilter]))
 
   final val ConsT = RuntimeTypeInfo(_.isInstanceOf[::[_]],
     unapplyTwo {

@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.library.standard
 
 import software.kes.scaletta.api._
+import software.kes.scaletta.internal.library.standard.collection.WithFilterOps
 
 import scala.collection.mutable
 
@@ -10,9 +11,12 @@ object Collections {
     ScalettaModule { setup =>
       val st = setup.standardTypes
       val registry = setup.methodRegistry
-
       Iterables.registerMethods(registry, st)(st.ListT, list)
       Iterables.registerMethods(registry, st)(st.VectorT, vector)
+      WithFilterOps.registerCollectionMethods(registry, st)(st.ListT, WithFilterOps.list)
+      WithFilterOps.registerCollectionMethods(registry, st)(st.VectorT, WithFilterOps.vector)
+      WithFilterOps.registerCollectionWithFilterMethods(registry, st)(st.ListWithFilterT, WithFilterOps.list)
+      WithFilterOps.registerCollectionWithFilterMethods(registry, st)(st.VectorWithFilterT, WithFilterOps.vector)
     }
 
   object list extends IterableBase {
