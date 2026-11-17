@@ -24,6 +24,28 @@ final class TypeIdentifierSpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("singleton") {
+      it("should create a Singleton node") {
+        val path = TypeIdentifier.name(id(Identifier("None")))
+        val ti = TypeIdentifier.singleton(id(path))
+        ti shouldBe TypeIdentifier.Singleton(id(path))
+      }
+
+      it("should support nested path qualifiers") {
+        val path = TypeIdentifier.select(id(TypeIdentifier.name(id(Identifier("foo")))), id(Identifier("Bar")))
+        val ti = TypeIdentifier.singleton(id(path))
+        ti shouldBe TypeIdentifier.Singleton(id(path))
+      }
+
+      it("should have consistent structural equality") {
+        val path1 = TypeIdentifier.name(id(Identifier("None")))
+        val path2 = TypeIdentifier.name(id(Identifier("None")))
+        val ti1 = TypeIdentifier.singleton(id(path1))
+        val ti2 = TypeIdentifier.singleton(id(path2))
+        ti1 shouldBe ti2
+      }
+    }
+
     describe("applied") {
       it("should create an Applied node with arguments") {
         val ti = TypeIdentifier.applied(id(TypeIdentifier.name(id(Identifier("List")))), id(typeA))
@@ -143,6 +165,13 @@ final class TypeIdentifierSpec extends AnyFunSpec with Matchers {
 
       it("should transform Name") {
         val ti: TypeIdentifier[Id] = TypeIdentifier.name(id(Identifier("Int")))
+        val mapped = ti.mapK(toId)
+        mapped shouldBe ti
+      }
+
+      it("should transform Singleton") {
+        val path = TypeIdentifier.name(id(Identifier("None")))
+        val ti: TypeIdentifier[Id] = TypeIdentifier.singleton(id(path))
         val mapped = ti.mapK(toId)
         mapped shouldBe ti
       }

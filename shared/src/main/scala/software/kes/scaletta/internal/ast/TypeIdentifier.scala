@@ -13,6 +13,8 @@ object TypeIdentifier {
   def select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier]): TypeIdentifier[F] =
     Select(qualifier, name)
 
+  def singleton[F[_]](path: F[TypeIdentifier[F]]): TypeIdentifier[F] = Singleton(path)
+
   def applied[F[_]](qualifier: F[TypeIdentifier[F]],
                     args: F[TypeIdentifier[F]]*)(implicit F: Functor[F]): TypeIdentifier[F] =
     args.toList match {
@@ -55,6 +57,14 @@ object TypeIdentifier {
   case class Select[F[_]](qualifier: F[TypeIdentifier[F]], name: F[Identifier]) extends TypeIdentifier[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Select[G] =
       Select(phi(F.map(qualifier)(_.mapK(phi))), phi(name))
+  }
+
+  /**
+   * A singleton type referencing a stable term path (e.g., `None.type`, `Vector.type`).
+   */
+  case class Singleton[F[_]](path: F[TypeIdentifier[F]]) extends TypeIdentifier[F] {
+    def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): Singleton[G] =
+      Singleton(phi(F.map(path)(_.mapK(phi))))
   }
 
   /**

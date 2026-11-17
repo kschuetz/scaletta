@@ -212,6 +212,9 @@ private class AstRenderer(settings: Settings,
       write("(")
       renderCommaSeparated(elements, renderType)
       write(")")
+    case TypeIdentifier.Singleton(path) =>
+      renderType(path)
+      write(".type")
     case TypeIdentifier.Function(params, result) =>
       if (params.size == 1) {
         renderType(params.head)

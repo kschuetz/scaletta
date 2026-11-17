@@ -709,6 +709,9 @@ final class Linker private(methodResolver: MethodResolver,
 
       case TypeIdentifier.Tuple(elements) =>
         resolveTupleType(elements)
+
+      case TypeIdentifier.Singleton(_) =>
+        Left(TypeResolutionError.UnknownType("<singleton type resolution deferred to Phase 2>"))
     }
   }
 
