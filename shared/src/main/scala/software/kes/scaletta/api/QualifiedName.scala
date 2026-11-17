@@ -2,6 +2,8 @@ package software.kes.scaletta.api
 
 sealed trait QualifiedName {
   def name: Name
+
+  def fullName: String
 }
 
 object QualifiedName {
@@ -63,12 +65,32 @@ object QualifiedName {
     }
   }
 
-  case class Full(qualifier: PackagePath.Absolute,
-                  name: Name) extends QualifiedName
+  final case class Full(qualifier: PackagePath.Absolute,
+                        name: Name) extends QualifiedName {
+    lazy val fullName: String =
+      if (qualifier.components.isEmpty) {
+        name.value
+      } else {
+        s"${qualifier.fullName}.${name.value}"
+      }
+
+    override def toString: String = fullName
+  }
 
   /**
    * @param qualifier if None, it's a local name. If Some, the package path can be either Absolute or Relative.
    */
-  case class Partial(qualifier: Option[PackagePath],
-                     name: Name) extends QualifiedName
+  final case class Partial(qualifier: Option[PackagePath],
+                           name: Name) extends QualifiedName {
+    lazy val fullName: String =
+      qualifier.fold(name.value) { q =>
+        if (q.components.isEmpty) {
+          name.value
+        } else {
+          s"${q.fullName}.${name.value}"
+        }
+      }
+
+    override def toString: String = fullName
+  }
 }

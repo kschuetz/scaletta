@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, Pos}
+import software.kes.scaletta.internal.types.TypeResolutionError
 
 final class SemanticDiagnosticsSpec extends AnyFunSpec with Matchers {
 
@@ -185,6 +186,68 @@ final class SemanticDiagnosticsSpec extends AnyFunSpec with Matchers {
         val errorSpecial = SemanticError.TypeMismatch(Type.unit, Type.bottom)
         val diagSpecial = SemanticDiagnostics.collect(LinkedPhase.Reference[Pos](createPosIdent(errorSpecial)), lineMap)
         diagSpecial.head.message shouldBe "Type mismatch: expected Unit, found Nothing"
+      }
+
+      it("should format singleton types") {
+        val localSingleton = Type.singleton(TermSymbolId.Local("myVar", 0, 0))
+        val staticSingleton = Type.singleton(TermSymbolId.Static(QualifiedName.parseFull("org.example.MyObj")))
+
+        val errorLocal = SemanticError.TypeMismatch(localSingleton, typeInt)
+        val diagLocal = SemanticDiagnostics.collect(LinkedPhase.Reference[Pos](createPosIdent(errorLocal)), lineMap)
+        diagLocal.head.message shouldBe "Type mismatch: expected myVar.type, found TypeId(1)"
+
+        val errorStatic = SemanticError.TypeMismatch(staticSingleton, typeInt)
+        val diagStatic = SemanticDiagnostics.collect(LinkedPhase.Reference[Pos](createPosIdent(errorStatic)), lineMap)
+        diagStatic.head.message shouldBe "Type mismatch: expected org.example.MyObj.type, found TypeId(1)"
+      }
+    }
+
+    describe("type resolution error message formatting") {
+      def createPosTypeIdent(error: TypeResolutionError, begin: Int = 0, end: Int = 5): Pos[LinkedPhase.TypeIdent[Pos]] =
+        Pos(Left(error), CharIndex(begin), CharIndex(end))
+
+      it("should format UnknownTerm error") {
+        val expr = LinkedPhase.Typed[Pos](
+          Pos(LinkedPhase.Literal.IntLiteral(1), CharIndex(0), CharIndex(1)),
+          createPosTypeIdent(TypeResolutionError.UnknownTerm("NonExistent"))
+        )
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "Unknown term 'NonExistent'"
+      }
+
+      it("should format ForwardReference error in type position") {
+        val expr = LinkedPhase.Typed[Pos](
+          Pos(LinkedPhase.Literal.IntLiteral(1), CharIndex(0), CharIndex(1)),
+          createPosTypeIdent(TypeResolutionError.ForwardReference("y"))
+        )
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "Forward reference to 'y' is not allowed"
+      }
+
+      it("should format RecursiveReference error in type position") {
+        val expr = LinkedPhase.Typed[Pos](
+          Pos(LinkedPhase.Literal.IntLiteral(1), CharIndex(0), CharIndex(1)),
+          createPosTypeIdent(TypeResolutionError.RecursiveReference("x"))
+        )
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "Recursive reference to 'x' is not allowed"
+      }
+
+      it("should format InvalidSingletonPath error") {
+        val expr = LinkedPhase.Typed[Pos](
+          Pos(LinkedPhase.Literal.IntLiteral(1), CharIndex(0), CharIndex(1)),
+          createPosTypeIdent(TypeResolutionError.InvalidSingletonPath("a.b()"))
+        )
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "Invalid singleton path 'a.b()'"
       }
     }
   }

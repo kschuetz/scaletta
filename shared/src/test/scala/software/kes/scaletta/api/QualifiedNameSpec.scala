@@ -58,5 +58,37 @@ class QualifiedNameSpec extends AnyFunSpec with Matchers {
         QualifiedName.tryParsePartial("") shouldBe a[Left[_, _]]
       }
     }
+
+    describe("fullName and toString") {
+      it("should format Full in root package") {
+        val qn = QualifiedName.Full(PackagePath.root, Name("MyObj"))
+        qn.fullName shouldBe "MyObj"
+        qn.toString shouldBe "MyObj"
+      }
+
+      it("should format Full with package path") {
+        val qn = QualifiedName.Full(PackagePath.parseAbsolute("org.example"), Name("MyObj"))
+        qn.fullName shouldBe "org.example.MyObj"
+        qn.toString shouldBe "org.example.MyObj"
+      }
+
+      it("should format Partial without qualifier") {
+        val qn = QualifiedName.Partial(None, Name("x"))
+        qn.fullName shouldBe "x"
+        qn.toString shouldBe "x"
+      }
+
+      it("should format Partial with relative qualifier") {
+        val qn = QualifiedName.Partial(Some(PackagePath.parseRelative("models")), Name("User"))
+        qn.fullName shouldBe "models.User"
+        qn.toString shouldBe "models.User"
+      }
+
+      it("should format Partial with absolute qualifier") {
+        val qn = QualifiedName.Partial(Some(PackagePath.parseAbsolute("pkg")), Name("User"))
+        qn.fullName shouldBe "pkg.User"
+        qn.toString shouldBe "pkg.User"
+      }
+    }
   }
 }

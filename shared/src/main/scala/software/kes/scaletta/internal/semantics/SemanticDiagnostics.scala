@@ -267,6 +267,11 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
 
   private def formatType(t: Type[_]): String = t match {
     case Type.Nominal(name) => name.toString
+    case Type.Singleton(symbol) => symbol match {
+      case TermSymbolId.Static(name) => s"${name.toString}.type"
+      case TermSymbolId.Local(name, _, _) => s"$name.type"
+      case other => s"$other.type"
+    }
     case Type.Constructor(name, _) => name.toString
     case Type.Applied(constructor, arguments) =>
       val argsFormatted = arguments.toVector.foldLeft(Vector.empty[String])((acc, a) => acc :+ formatType(a.value)).mkString(", ")
@@ -301,5 +306,13 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
       s"Type '$name' is not applicable"
     case TypeResolutionError.WrongArity(name, expected, actual) =>
       s"Type '$name' expects $expected type arguments, but got $actual"
+    case TypeResolutionError.UnknownTerm(name) =>
+      s"Unknown term '$name'"
+    case TypeResolutionError.ForwardReference(name) =>
+      s"Forward reference to '$name' is not allowed"
+    case TypeResolutionError.RecursiveReference(name) =>
+      s"Recursive reference to '$name' is not allowed"
+    case TypeResolutionError.InvalidSingletonPath(name) =>
+      s"Invalid singleton path '$name'"
   }
 }
