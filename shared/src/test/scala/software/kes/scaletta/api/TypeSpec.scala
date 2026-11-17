@@ -2,6 +2,7 @@ package software.kes.scaletta.api
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
+import software.kes.scaletta.internal.ast.TermSymbolId
 import software.kes.scaletta.util.NonEmptyVector
 
 class TypeSpec extends AnyFunSpec with Matchers {
@@ -15,6 +16,29 @@ class TypeSpec extends AnyFunSpec with Matchers {
         val t = Type.nominal("Int")
         t shouldBe Type.Nominal("Int")
         t.isGround shouldBe true
+      }
+    }
+
+    describe("singleton") {
+      val sym1 = TermSymbolId.Local("x", 0, 0)
+      val sym2 = TermSymbolId.Local("y", 0, 1)
+
+      it("should create a Singleton type") {
+        val t = Type.singleton(sym1)
+        t shouldBe Type.Singleton(sym1)
+        t.isGround shouldBe true
+        t shouldBe a[ProperType[_]]
+        t shouldBe a[ConcreteType[_]]
+      }
+
+      it("should support equality and inequality") {
+        Type.singleton(sym1) shouldBe Type.singleton(sym1)
+        Type.singleton(sym1) should not be Type.singleton(sym2)
+      }
+
+      it("should be invariant under substitution") {
+        val t = Type.singleton(sym1)
+        t.substitute(Vector(typeInt)) shouldBe t
       }
     }
 

@@ -1,5 +1,6 @@
 package software.kes.scaletta.api
 
+import software.kes.scaletta.internal.ast.SymbolId
 import software.kes.scaletta.util.{NonEmptyVector, SetTwoPlus, VectorTwoPlus}
 
 sealed trait Type[+T] {
@@ -16,6 +17,8 @@ sealed trait TypeConstructor[T] extends ConcreteType[T]
 
 object Type {
   def nominal[T](name: T): ProperType[T] = Nominal(name)
+
+  def singleton[T](symbol: SymbolId): ProperType[T] = Singleton(symbol)
 
   def constructor[T](name: T, parameters: NonEmptyVector[TypeParameter[T]]): TypeConstructor[T] =
     Constructor(name, parameters)
@@ -53,6 +56,10 @@ object Type {
   def variable(paramIndex: Int): Variable = Variable(0, paramIndex)
 
   case class Nominal[T](name: T) extends ProperType[T] with ConcreteType[T] {
+    def isGround: Boolean = true
+  }
+
+  final case class Singleton[+T](symbol: SymbolId) extends ProperType[T] with ConcreteType[T] {
     def isGround: Boolean = true
   }
 
@@ -118,6 +125,7 @@ object Type {
           if (v.paramIndex >= 0 && v.paramIndex < arguments.length) arguments(v.paramIndex)
           else v
         case Nominal(name) => Nominal(name)
+        case Singleton(sym) => Singleton(sym)
         case Constructor(name, params) => Constructor(name, params)
         case a: Applied[T] =>
           Applied[T](go(a.constructor), a.arguments.map(arg => arg.copy(value = go(arg.value))))
