@@ -104,11 +104,70 @@ final class TypeIdentifierParserSpec extends AnyFunSpec with Matchers {
     it("should fail on unclosed brackets") {
       "List[Int".shouldFailToParseTypeWith(ParseError.UnclosedDelimiter(Token.LBracket, Token.RBracket).at(4))
     }
+
+    describe("singleton types") {
+      it("should parse simple singleton types") {
+        "None.type".shouldParseTypeTo(tSingleton(tName("None")))
+        "Vector.type".shouldParseTypeTo(tSingleton(tName("Vector")))
+      }
+
+      it("should parse qualified path singleton types") {
+        "foo.bar.Baz.type".shouldParseTypeTo(
+          tSingleton(tSelect(tSelect(tName("foo"), "bar"), "Baz"))
+        )
+        "scaletta.collection.Vector.type".shouldParseTypeTo(
+          tSingleton(tSelect(tSelect(tName("scaletta"), "collection"), "Vector"))
+        )
+      }
+
+      it("should parse singleton types in unions and intersections") {
+        "Some[Int] | None.type".shouldParseTypeTo(
+          tUnion(tApplied(tName("Some"), tName("Int")), tSingleton(tName("None")))
+        )
+        "A.type & B.type".shouldParseTypeTo(
+          tIntersection(tSingleton(tName("A")), tSingleton(tName("B")))
+        )
+        "A.type | B.type & C.type".shouldParseTypeTo(
+          tUnion(tSingleton(tName("A")), tIntersection(tSingleton(tName("B")), tSingleton(tName("C"))))
+        )
+      }
+
+      it("should parse singleton types in function signatures") {
+        "None.type => Unit".shouldParseTypeTo(
+          tFunction(Vector(tSingleton(tName("None"))), tName("Unit"))
+        )
+        "(None.type, Vector.type) => Boolean".shouldParseTypeTo(
+          tFunction(Vector(tSingleton(tName("None")), tSingleton(tName("Vector"))), tName("Boolean"))
+        )
+      }
+
+      it("should parse singleton types in tuples and type applications") {
+        "(None.type, Vector.type)".shouldParseTypeTo(
+          tTuple(tSingleton(tName("None")), tSingleton(tName("Vector")))
+        )
+        "List[None.type]".shouldParseTypeTo(
+          tApplied(tName("List"), tSingleton(tName("None")))
+        )
+        "Map[String, Vector.type]".shouldParseTypeTo(
+          tApplied(tName("Map"), tName("String"), tSingleton(tName("Vector")))
+        )
+      }
+
+      it("should respect member access precedence for .type") {
+        // .type binds tighter than binary conjunction operators and function arrows
+        "foo.Bar.type | Baz.type".shouldParseTypeTo(
+          tUnion(tSingleton(tSelect(tName("foo"), "Bar")), tSingleton(tName("Baz")))
+        )
+      }
+    }
   }
 
   private def id(name: String): Id[Identifier] = Identifier(name)
 
   private def tName(name: String): TypeIdentifier[Id] = TypeIdentifier.Name[Id](id(name))
+
+  private def tSingleton(path: TypeIdentifier[Id]): TypeIdentifier[Id] =
+    TypeIdentifier.Singleton[Id](path)
 
   private def tSelect(qualifier: TypeIdentifier[Id], name: String): TypeIdentifier[Id] =
     TypeIdentifier.Select[Id](qualifier, id(name))
