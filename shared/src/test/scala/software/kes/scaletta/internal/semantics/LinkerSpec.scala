@@ -919,6 +919,119 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           }
         }
       }
+
+      describe("singleton types") {
+        it("should resolve a local val singleton type in the same block") {
+          val ast = link("{ val x: Int = 41; val y: x.type = x; y }")
+          ast match {
+            case LinkedPhase.Block(decls, _) =>
+              decls(1).value match {
+                case LinkedPhase.Declaration.Val(pattern, _) =>
+                  pattern.value match {
+                    case LinkedPhase.Pattern.Typed(_, ascription) =>
+                      typeOf(ascription.value) shouldBe Right(Type.Singleton(TermSymbolId.Local("x", 0, 0)))
+                    case other => fail(s"Expected Pattern.Typed, got $other")
+                  }
+                case other => fail(s"Expected Val, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
+        }
+
+        it("should resolve an outer lexical val singleton type with correct depth") {
+          val ast = link("{ val x: Int = 41; { val y: x.type = x; y } }")
+          ast match {
+            case LinkedPhase.Block(decls, result) =>
+              result.value match {
+                case LinkedPhase.Block(innerDecls, _) =>
+                  innerDecls.head.value match {
+                    case LinkedPhase.Declaration.Val(pattern, _) =>
+                      pattern.value match {
+                        case LinkedPhase.Pattern.Typed(_, ascription) =>
+                          typeOf(ascription.value) shouldBe Right(Type.Singleton(TermSymbolId.Local("x", 1, 0)))
+                        case other => fail(s"Expected Pattern.Typed, got $other")
+                      }
+                    case other => fail(s"Expected Val, got $other")
+                  }
+                case other => fail(s"Expected inner Block, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
+        }
+
+        it("should resolve static root symbol singletons like None.type") {
+          val ast = link("{ val x: None.type = None; x }")
+          ast match {
+            case LinkedPhase.Block(decls, _) =>
+              decls.head.value match {
+                case LinkedPhase.Declaration.Val(pattern, _) =>
+                  pattern.value match {
+                    case LinkedPhase.Pattern.Typed(_, ascription) =>
+                      typeOf(ascription.value) shouldBe Right(
+                        Type.Singleton(TermSymbolId.Static(QualifiedName.Full(PackagePath.root, Name("None"))))
+                      )
+                    case other => fail(s"Expected Pattern.Typed, got $other")
+                  }
+                case other => fail(s"Expected Val, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
+        }
+
+        it("should resolve qualified package static singletons") {
+          val ast = link("{ val x: scaletta.collection.Vector.type = scaletta.collection.Vector; x }")
+          ast match {
+            case LinkedPhase.Block(decls, _) =>
+              decls.head.value match {
+                case LinkedPhase.Declaration.Val(pattern, _) =>
+                  pattern.value match {
+                    case LinkedPhase.Pattern.Typed(_, ascription) =>
+                      val expectedPath = PackagePath.absolute(PackageSegment("scaletta"), PackageSegment("collection"))
+                      typeOf(ascription.value) shouldBe Right(
+                        Type.Singleton(TermSymbolId.Static(QualifiedName.Full(expectedPath, Name("Vector"))))
+                      )
+                    case other => fail(s"Expected Pattern.Typed, got $other")
+                  }
+                case other => fail(s"Expected Val, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
+        }
+
+        it("should report ForwardReference when referencing a term declared later in the block") {
+          val ast = link("{ val x: y.type = 41; val y: Int = 43; x }")
+          ast match {
+            case LinkedPhase.Block(decls, _) =>
+              decls.head.value match {
+                case LinkedPhase.Declaration.Val(pattern, _) =>
+                  pattern.value match {
+                    case LinkedPhase.Pattern.Typed(_, ascription) =>
+                      typeOf(ascription.value) shouldBe Left(TypeResolutionError.ForwardReference("y"))
+                    case other => fail(s"Expected Pattern.Typed, got $other")
+                  }
+                case other => fail(s"Expected Val, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
+        }
+
+        it("should report RecursiveReference when referencing the term being defined") {
+          val ast = link("{ val x: x.type = 41; x }")
+          ast match {
+            case LinkedPhase.Block(decls, _) =>
+              decls.head.value match {
+                case LinkedPhase.Declaration.Val(pattern, _) =>
+                  pattern.value match {
+                    case LinkedPhase.Pattern.Typed(_, ascription) =>
+                      typeOf(ascription.value) shouldBe Left(TypeResolutionError.RecursiveReference("x"))
+                    case other => fail(s"Expected Pattern.Typed, got $other")
+                  }
+                case other => fail(s"Expected Val, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
+        }
+      }
     }
 
     describe("recursion and self-reference constraints") {

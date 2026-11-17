@@ -62,7 +62,7 @@ final class Linker private(methodResolver: MethodResolver,
         LinkedPhase.Select(linkPosExpression(qualifier, env, futureInBlock, disallowedSelfRefs), linkFieldSite(name))
 
       case DesugaredPhase.Typed(expression, ascription) =>
-        LinkedPhase.Typed(linkPosExpression(expression, env, futureInBlock, disallowedSelfRefs), ascribeTypeIdent(ascription))
+        LinkedPhase.Typed(linkPosExpression(expression, env, futureInBlock, disallowedSelfRefs), ascribeTypeIdent(ascription, env, futureInBlock, disallowedSelfRefs))
 
       case DesugaredPhase.Tuple(elements) =>
         LinkedPhase.Tuple(
@@ -110,13 +110,13 @@ final class Linker private(methodResolver: MethodResolver,
         LinkedPhase.Call.Infix(
           linkPosExpression(left, env, futureInBlock, disallowedSelfRefs),
           linkedOp,
-          linkTypeArgs(typeArgs),
+          linkTypeArgs(typeArgs, env, futureInBlock, disallowedSelfRefs),
           linkPosExpression(right, env, futureInBlock, disallowedSelfRefs)
         )
 
       case DesugaredPhase.Call.Standard(target, typeArgs, args) =>
         val (argArities, query, ascribedArgs) = buildSignatureQueryForArgs(args)
-        val linkedTypeArgs = linkTypeArgs(typeArgs)
+        val linkedTypeArgs = linkTypeArgs(typeArgs, env, futureInBlock, disallowedSelfRefs)
         val linkedArgs = linkArgumentGroups(args, env, futureInBlock, disallowedSelfRefs)
         val linkedTarget = linkCallTarget(target, argArities, query, ascribedArgs, env, futureInBlock, disallowedSelfRefs)
         LinkedPhase.Call.Standard(
@@ -279,7 +279,7 @@ final class Linker private(methodResolver: MethodResolver,
   private def extractAscribedType(expr: DesugaredPhase.Expression[Pos]): Option[ProperType[TypeId]] =
     expr match {
       case DesugaredPhase.Typed(_, ascription) =>
-        resolveTypeIdentifier(ascription.value) match {
+        resolveTypeIdentifier(ascription.value, LexicalScope.empty, Set.empty, Set.empty) match {
           case Right(t) => Some(t)
           case Left(_) => None
         }
@@ -332,9 +332,12 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def linkTypeArgs(typeArgs: Vector[Pos[DesugaredPhase.TypeArgument[Pos]]]): Vector[Pos[LinkedPhase.TypeArgument[Pos]]] =
+  private def linkTypeArgs(typeArgs: Vector[Pos[DesugaredPhase.TypeArgument[Pos]]],
+                           env: LexicalScope,
+                           futureInBlock: Set[String],
+                           disallowedSelfRefs: Set[String]): Vector[Pos[LinkedPhase.TypeArgument[Pos]]] =
     typeArgs.foldLeft(Vector.empty[Pos[LinkedPhase.TypeArgument[Pos]]]) { (acc, ta) =>
-      acc :+ Pos(LinkedPhase.TypeArgument[Pos](ascribeTypeIdent(ta.value.typ)), ta.begin, ta.end)
+      acc :+ Pos(LinkedPhase.TypeArgument[Pos](ascribeTypeIdent(ta.value.typ, env, futureInBlock, disallowedSelfRefs)), ta.begin, ta.end)
     }
 
   private def linkArgumentGroups(groups: Vector[Pos[DesugaredPhase.ArgumentGroup[Pos]]],
@@ -373,7 +376,7 @@ final class Linker private(methodResolver: MethodResolver,
     val result = params.zipWithIndex.foldLeft(initial) { case (acc, (p, idx)) =>
       val paramName = p.value.name.value.name
       val linkedTyp = p.value.typ.fold[Option[Pos[LinkedPhase.TypeIdent[Pos]]]](None) { t =>
-        Some(ascribeTypeIdent(t))
+        Some(ascribeTypeIdent(t, env, futureInBlock, disallowedSelfRefs))
       }
       if (acc.seen.contains(paramName)) {
         val linkedIdent = posIdent(LinkedInfo.Error(SemanticError.DuplicateDefinition(paramName)), p.value.name.begin, p.value.name.end)
@@ -425,7 +428,7 @@ final class Linker private(methodResolver: MethodResolver,
     val caseNames = bindings.map(_.name).toSet
     val caseFuture = futureInBlock -- caseNames
     val caseDisallowed = disallowedSelfRefs -- caseNames
-    val linkedPattern = linkPattern(c.value.pattern, 0, bindingMap)
+    val linkedPattern = linkPattern(c.value.pattern, 0, bindingMap, env, futureInBlock, disallowedSelfRefs)
     val linkedGuard = c.value.guard.fold[Option[Pos[LinkedPhase.Expression[Pos]]]](None) { g =>
       Some(linkPosExpression(g, caseEnv, caseFuture, caseDisallowed))
     }
@@ -470,7 +473,7 @@ final class Linker private(methodResolver: MethodResolver,
               }
           }
 
-          val linkedPattern = linkPattern(pattern, 0, bindingMap)
+          val linkedPattern = linkPattern(pattern, 0, bindingMap, currentEnv, acc.futureNames, acc.disallowed ++ varNames)
           val newDecl: LinkedPhase.Declaration[Pos] = LinkedPhase.Declaration.Val(linkedPattern, linkedRhs)
           val linkedDecl = Pos(newDecl, decl.begin, decl.end)
           val nextDisallowed = acc.disallowed -- newBindings.map(_.name).toSet
@@ -492,7 +495,7 @@ final class Linker private(methodResolver: MethodResolver,
               }
           }
 
-          val linkedPattern = linkPattern(pattern, 0, bindingMap)
+          val linkedPattern = linkPattern(pattern, 0, bindingMap, currentEnv, acc.futureNames, acc.disallowed ++ varNames)
           val newDecl: LinkedPhase.Declaration[Pos] = LinkedPhase.Declaration.LazyVal(linkedPattern, linkedRhs)
           val linkedDecl = Pos(newDecl, decl.begin, decl.end)
           val nextDisallowed = acc.disallowed -- newBindings.map(_.name).toSet
@@ -509,12 +512,12 @@ final class Linker private(methodResolver: MethodResolver,
             posIdent(LinkedInfo.Local(0, defSlot, defName, LocalBindingKind.Def), name.begin, name.end)
           }
 
-          val (paramBindings, linkedParamGroups) = linkFormalParamGroups(paramGroups)
+          val (paramBindings, linkedParamGroups) = linkFormalParamGroups(paramGroups, currentEnv, remainingFuture, acc.disallowed + defName)
           val defEnv = currentEnv.pushLayer(paramBindings)
           val defDisallowed = (acc.disallowed + defName) -- paramBindings.map(_.name).toSet
           val linkedBody = linkPosExpression(body, defEnv, remainingFuture, defDisallowed)
           val linkedReturnType = returnType.fold[Option[Pos[LinkedPhase.TypeIdent[Pos]]]](None) { rt =>
-            Some(ascribeTypeIdent(rt))
+            Some(ascribeTypeIdent(rt, currentEnv, remainingFuture, acc.disallowed + defName))
           }
 
           val newDecl: LinkedPhase.Declaration[Pos] = LinkedPhase.Declaration.Def(linkedName, linkedParamGroups, linkedReturnType, linkedBody)
@@ -537,7 +540,10 @@ final class Linker private(methodResolver: MethodResolver,
 
   private def linkPattern(pattern: Pos[DesugaredPhase.Pattern[Pos]],
                           depth: Int,
-                          scopeBindings: Map[String, ScopeBinding]): Pos[LinkedPhase.Pattern[Pos]] = {
+                          scopeBindings: Map[String, ScopeBinding],
+                          env: LexicalScope,
+                          futureInBlock: Set[String],
+                          disallowedSelfRefs: Set[String]): Pos[LinkedPhase.Pattern[Pos]] = {
     val linkedVal: LinkedPhase.Pattern[Pos] = pattern.value match {
       case DesugaredPhase.Pattern.Identifier(name) =>
         val n = name.value.name
@@ -560,24 +566,24 @@ final class Linker private(methodResolver: MethodResolver,
           case None => LinkedInfo.Error(SemanticError.DuplicateDefinition(n))
         }
         val linkedIdent = posIdent(info, name.begin, name.end)
-        val linkedInner = linkPattern(inner, depth, scopeBindings)
+        val linkedInner = linkPattern(inner, depth, scopeBindings, env, futureInBlock, disallowedSelfRefs)
         LinkedPhase.Pattern.As(linkedIdent, linkedInner)
 
       case DesugaredPhase.Pattern.Typed(inner, ascription) =>
-        LinkedPhase.Pattern.Typed(linkPattern(inner, depth, scopeBindings), ascribeTypeIdent(ascription))
+        LinkedPhase.Pattern.Typed(linkPattern(inner, depth, scopeBindings, env, futureInBlock, disallowedSelfRefs), ascribeTypeIdent(ascription, env, futureInBlock, disallowedSelfRefs))
 
       case DesugaredPhase.Pattern.Tuple(elements) =>
         LinkedPhase.Pattern.Tuple(
           elements.foldLeft(Vector.empty[Pos[LinkedPhase.Pattern[Pos]]]) { (acc, el) =>
-            acc :+ linkPattern(el, depth, scopeBindings)
+            acc :+ linkPattern(el, depth, scopeBindings, env, futureInBlock, disallowedSelfRefs)
           }
         )
 
       case DesugaredPhase.Pattern.Product(typeId, args) =>
         LinkedPhase.Pattern.Product(
-          ascribeTypeIdent(typeId),
+          ascribeTypeIdent(typeId, env, futureInBlock, disallowedSelfRefs),
           args.foldLeft(Vector.empty[Pos[LinkedPhase.Pattern[Pos]]]) { (acc, el) =>
-            acc :+ linkPattern(el, depth, scopeBindings)
+            acc :+ linkPattern(el, depth, scopeBindings, env, futureInBlock, disallowedSelfRefs)
           }
         )
 
@@ -625,7 +631,10 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def linkFormalParamGroups(paramGroups: Vector[Pos[DesugaredPhase.FormalParameterGroup[Pos]]]): (Vector[ScopeBinding], Vector[Pos[LinkedPhase.FormalParameterGroup[Pos]]]) = {
+  private def linkFormalParamGroups(paramGroups: Vector[Pos[DesugaredPhase.FormalParameterGroup[Pos]]],
+                                    env: LexicalScope,
+                                    futureInBlock: Set[String],
+                                    disallowedSelfRefs: Set[String]): (Vector[ScopeBinding], Vector[Pos[LinkedPhase.FormalParameterGroup[Pos]]]) = {
     case class ParamAcc(bindings: Vector[ScopeBinding],
                         seen: Set[String],
                         linkedGroups: Vector[Pos[LinkedPhase.FormalParameterGroup[Pos]]])
@@ -640,7 +649,7 @@ final class Linker private(methodResolver: MethodResolver,
       val gRes = group.value.parameters.foldLeft(gInitial) { (pAcc, p) =>
         val paramName = p.value.name.value.name
         val slot = pAcc.bindings.length
-        val linkedTyp = ascribeTypeIdent(p.value.typ)
+        val linkedTyp = ascribeTypeIdent(p.value.typ, env, futureInBlock, disallowedSelfRefs)
         if (pAcc.seen.contains(paramName)) {
           val linkedIdent = posIdent(LinkedInfo.Error(SemanticError.DuplicateDefinition(paramName)), p.value.name.begin, p.value.name.end)
           val linkedDefault = p.value.default.fold[Option[Pos[LinkedPhase.Expression[Pos]]]](None) { d =>
@@ -663,7 +672,7 @@ final class Linker private(methodResolver: MethodResolver,
         val vName = v.value.name.value.name
         val vSlot = gRes.bindings.length
         val vIdent = posIdent(LinkedInfo.Local(0, vSlot, vName, LocalBindingKind.Parameter), v.value.name.begin, v.value.name.end)
-        val linkedVTyp = ascribeTypeIdent(v.value.typ)
+        val linkedVTyp = ascribeTypeIdent(v.value.typ, env, futureInBlock, disallowedSelfRefs)
         val vDefault = v.value.default.fold[Option[Pos[LinkedPhase.Expression[Pos]]]](None) { d =>
           Some(linkPosExpression(d, LexicalScope.empty, Set.empty, Set.empty))
         }
@@ -682,12 +691,18 @@ final class Linker private(methodResolver: MethodResolver,
     (res.bindings, res.linkedGroups)
   }
 
-  private def ascribeTypeIdent(ti: Pos[TypeIdentifier[Pos]]): Pos[LinkedPhase.TypeIdent[Pos]] = {
-    val resolved = resolveTypeIdentifier(ti.value)
+  private def ascribeTypeIdent(ti: Pos[TypeIdentifier[Pos]],
+                               env: LexicalScope,
+                               futureInBlock: Set[String],
+                               disallowedSelfRefs: Set[String]): Pos[LinkedPhase.TypeIdent[Pos]] = {
+    val resolved = resolveTypeIdentifier(ti.value, env, futureInBlock, disallowedSelfRefs)
     Pos(resolved, ti.begin, ti.end)
   }
 
-  private def resolveTypeIdentifier(ti: TypeIdentifier[Pos]): Either[TypeResolutionError, ProperType[TypeId]] = {
+  private def resolveTypeIdentifier(ti: TypeIdentifier[Pos],
+                                    env: LexicalScope,
+                                    futureInBlock: Set[String],
+                                    disallowedSelfRefs: Set[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
     ti match {
       case TypeIdentifier.Name(name) =>
         resolveNamedType(Vector(name.value.name))
@@ -699,19 +714,57 @@ final class Linker private(methodResolver: MethodResolver,
         }
 
       case TypeIdentifier.Applied(qualifier, args) =>
-        resolveAppliedType(qualifier.value, args)
+        resolveAppliedType(qualifier.value, args, env, futureInBlock, disallowedSelfRefs)
 
       case TypeIdentifier.Function(params, result) =>
-        resolveFunctionType(params, result)
+        resolveFunctionType(params, result, env, futureInBlock, disallowedSelfRefs)
 
       case TypeIdentifier.Conjunction(conjunctionType, components) =>
-        resolveConjunctionType(conjunctionType, components)
+        resolveConjunctionType(conjunctionType, components, env, futureInBlock, disallowedSelfRefs)
 
       case TypeIdentifier.Tuple(elements) =>
-        resolveTupleType(elements)
+        resolveTupleType(elements, env, futureInBlock, disallowedSelfRefs)
 
-      case TypeIdentifier.Singleton(_) =>
-        Left(TypeResolutionError.UnknownType("<singleton type resolution deferred to Phase 2>"))
+      case TypeIdentifier.Singleton(path) =>
+        resolveSingletonType(path.value, env, futureInBlock, disallowedSelfRefs)
+    }
+  }
+
+  private def resolveSingletonType(path: TypeIdentifier[Pos],
+                                   env: LexicalScope,
+                                   futureInBlock: Set[String],
+                                   disallowedSelfRefs: Set[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
+    extractTypeNameSegments(path) match {
+      case None =>
+        Left(TypeResolutionError.InvalidSingletonPath("<complex path>"))
+
+      case Some(segments) if segments.size == 1 =>
+        val name = segments.head
+        if (disallowedSelfRefs.contains(name)) {
+          Left(TypeResolutionError.RecursiveReference(name))
+        } else if (futureInBlock.contains(name)) {
+          Left(TypeResolutionError.ForwardReference(name))
+        } else {
+          env.lookup(name) match {
+            case Some((depth, binding)) =>
+              Right(Type.Singleton(TermSymbolId.Local(name, depth, binding.slot)))
+            case None =>
+              resolveStaticTermSingleton(segments)
+          }
+        }
+
+      case Some(segments) =>
+        resolveStaticTermSingleton(segments)
+    }
+  }
+
+  private def resolveStaticTermSingleton(segments: Vector[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
+    val fullName = segments.mkString(".")
+    QualifiedName.tryParseFull(fullName) match {
+      case Right(full) =>
+        Right(Type.Singleton(TermSymbolId.Static(full)))
+      case Left(_) =>
+        Left(TypeResolutionError.UnknownTerm(fullName))
     }
   }
 
@@ -760,7 +813,10 @@ final class Linker private(methodResolver: MethodResolver,
   }
 
   private def resolveAppliedType(qualifier: TypeIdentifier[Pos],
-                                 args: ::[Pos[TypeIdentifier[Pos]]]): Either[TypeResolutionError, ProperType[TypeId]] = {
+                                 args: ::[Pos[TypeIdentifier[Pos]]],
+                                 env: LexicalScope,
+                                 futureInBlock: Set[String],
+                                 disallowedSelfRefs: Set[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
     extractTypeNameSegments(qualifier) match {
       case None =>
         Left(TypeResolutionError.UnknownType("<applied type>"))
@@ -770,7 +826,7 @@ final class Linker private(methodResolver: MethodResolver,
         lookupType(segments) match {
           case Left(err) => Left(err)
           case Right(ctor: Type.Constructor[TypeId]) =>
-            sequenceTypeIdents(args.toVector) match {
+            sequenceTypeIdents(args.toVector, env, futureInBlock, disallowedSelfRefs) match {
               case Left(err) => Left(err)
               case Right(argTypes) =>
                 if (argTypes.length == ctor.parameters.length) {
@@ -786,11 +842,14 @@ final class Linker private(methodResolver: MethodResolver,
   }
 
   private def resolveFunctionType(params: Vector[Pos[TypeIdentifier[Pos]]],
-                                  result: Pos[TypeIdentifier[Pos]]): Either[TypeResolutionError, ProperType[TypeId]] = {
-    sequenceTypeIdents(params) match {
+                                  result: Pos[TypeIdentifier[Pos]],
+                                  env: LexicalScope,
+                                  futureInBlock: Set[String],
+                                  disallowedSelfRefs: Set[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
+    sequenceTypeIdents(params, env, futureInBlock, disallowedSelfRefs) match {
       case Left(err) => Left(err)
       case Right(paramTypes) =>
-        resolveTypeIdentifier(result.value) match {
+        resolveTypeIdentifier(result.value, env, futureInBlock, disallowedSelfRefs) match {
           case Left(err) => Left(err)
           case Right(resultType) => Right(Type.function(paramTypes: _*)(resultType))
         }
@@ -798,8 +857,11 @@ final class Linker private(methodResolver: MethodResolver,
   }
 
   private def resolveConjunctionType(conjunctionType: ConjunctionType,
-                                     components: Vector[Pos[TypeIdentifier[Pos]]]): Either[TypeResolutionError, ProperType[TypeId]] = {
-    sequenceTypeIdents(components) match {
+                                     components: Vector[Pos[TypeIdentifier[Pos]]],
+                                     env: LexicalScope,
+                                     futureInBlock: Set[String],
+                                     disallowedSelfRefs: Set[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
+    sequenceTypeIdents(components, env, futureInBlock, disallowedSelfRefs) match {
       case Left(err) => Left(err)
       case Right(types) =>
         types match {
@@ -815,8 +877,11 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def resolveTupleType(elements: Vector[Pos[TypeIdentifier[Pos]]]): Either[TypeResolutionError, ProperType[TypeId]] = {
-    sequenceTypeIdents(elements) match {
+  private def resolveTupleType(elements: Vector[Pos[TypeIdentifier[Pos]]],
+                               env: LexicalScope,
+                               futureInBlock: Set[String],
+                               disallowedSelfRefs: Set[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
+    sequenceTypeIdents(elements, env, futureInBlock, disallowedSelfRefs) match {
       case Left(err) => Left(err)
       case Right(types) =>
         types match {
@@ -828,12 +893,15 @@ final class Linker private(methodResolver: MethodResolver,
     }
   }
 
-  private def sequenceTypeIdents(items: Vector[Pos[TypeIdentifier[Pos]]]): Either[TypeResolutionError, Vector[ProperType[TypeId]]] =
+  private def sequenceTypeIdents(items: Vector[Pos[TypeIdentifier[Pos]]],
+                                 env: LexicalScope,
+                                 futureInBlock: Set[String],
+                                 disallowedSelfRefs: Set[String]): Either[TypeResolutionError, Vector[ProperType[TypeId]]] =
     items.foldLeft(Right(Vector.empty[ProperType[TypeId]]): Either[TypeResolutionError, Vector[ProperType[TypeId]]]) { (acc, item) =>
       acc match {
         case Left(err) => Left(err)
         case Right(types) =>
-          resolveTypeIdentifier(item.value) match {
+          resolveTypeIdentifier(item.value, env, futureInBlock, disallowedSelfRefs) match {
             case Left(err) => Left(err)
             case Right(t) => Right(types :+ t)
           }
