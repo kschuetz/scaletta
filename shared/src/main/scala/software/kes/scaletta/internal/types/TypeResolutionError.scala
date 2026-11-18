@@ -15,6 +15,8 @@ object TypeResolutionError {
 
   final case class UnknownTerm(name: String) extends TypeResolutionError
 
+  final case class AmbiguousTerm(name: String, candidateCount: Int) extends TypeResolutionError
+
   final case class ForwardReference(name: String) extends TypeResolutionError
 
   final case class RecursiveReference(name: String) extends TypeResolutionError

@@ -217,6 +217,17 @@ final class SemanticDiagnosticsSpec extends AnyFunSpec with Matchers {
         diagnostics.head.message shouldBe "Unknown term 'NonExistent'"
       }
 
+      it("should format AmbiguousTerm error") {
+        val expr = LinkedPhase.Typed[Pos](
+          Pos(LinkedPhase.Literal.IntLiteral(1), CharIndex(0), CharIndex(1)),
+          createPosTypeIdent(TypeResolutionError.AmbiguousTerm("None", 2))
+        )
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "Ambiguous term 'None' (2 candidates)"
+      }
+
       it("should format ForwardReference error in type position") {
         val expr = LinkedPhase.Typed[Pos](
           Pos(LinkedPhase.Literal.IntLiteral(1), CharIndex(0), CharIndex(1)),

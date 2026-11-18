@@ -308,6 +308,8 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
       s"Type '$name' expects $expected type arguments, but got $actual"
     case TypeResolutionError.UnknownTerm(name) =>
       s"Unknown term '$name'"
+    case TypeResolutionError.AmbiguousTerm(name, candidateCount) =>
+      s"Ambiguous term '$name' ($candidateCount candidates)"
     case TypeResolutionError.ForwardReference(name) =>
       s"Forward reference to '$name' is not allowed"
     case TypeResolutionError.RecursiveReference(name) =>
