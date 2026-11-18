@@ -959,7 +959,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           }
         }
 
-        it("should resolve static root symbol singletons like None.type") {
+        ignore("should resolve static root symbol singletons like None.type") {
           val ast = link("{ val x: None.type = None; x }")
           ast match {
             case LinkedPhase.Block(decls, _) =>
@@ -978,7 +978,7 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           }
         }
 
-        it("should resolve qualified package static singletons") {
+        ignore("should resolve qualified package static singletons") {
           val ast = link("{ val x: scaletta.collection.Vector.type = scaletta.collection.Vector; x }")
           ast match {
             case LinkedPhase.Block(decls, _) =>

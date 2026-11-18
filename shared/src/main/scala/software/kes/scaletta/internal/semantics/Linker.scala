@@ -760,11 +760,32 @@ final class Linker private(methodResolver: MethodResolver,
 
   private def resolveStaticTermSingleton(segments: Vector[String]): Either[TypeResolutionError, ProperType[TypeId]] = {
     val fullName = segments.mkString(".")
-    QualifiedName.tryParseFull(fullName) match {
-      case Right(full) =>
-        Right(Type.Singleton(TermSymbolId.Static(full)))
-      case Left(_) =>
+    val parsedName: Option[QualifiedName] =
+      if (segments.size == 1) {
+        Some(QualifiedName.tryParsePartial(segments.head).fold(_ => QualifiedName.local(Name(segments.head)), identity))
+      } else {
+        QualifiedName.tryParsePartial(fullName).fold(_ => QualifiedName.tryParseFull(fullName).toOption, p => Some(p))
+      }
+
+    parsedName match {
+      case None =>
         Left(TypeResolutionError.UnknownTerm(fullName))
+      case Some(qName) =>
+        val candidates = methodResolver.getStaticFunctionCandidates(qName, importScope, SignatureQuery.empty)
+        val resolvedNames = candidates.flatMap(c => methodResolver.getStaticFunctionName(c.nativeFunctionId)).distinct
+        resolvedNames match {
+          case Nil =>
+            qName match {
+              case full: QualifiedName.Full if candidates.nonEmpty =>
+                Right(Type.Singleton(TermSymbolId.Static(full)))
+              case _ =>
+                Left(TypeResolutionError.UnknownTerm(fullName))
+            }
+          case resolvedName :: Nil =>
+            Right(Type.Singleton(TermSymbolId.Static(resolvedName)))
+          case multiple =>
+            Left(TypeResolutionError.AmbiguousTerm(fullName, multiple.size))
+        }
     }
   }
 
