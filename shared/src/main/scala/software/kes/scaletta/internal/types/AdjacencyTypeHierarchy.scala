@@ -61,6 +61,9 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
           case other => other.substitute(a.arguments.map(_.value))
         }
         fromApplied ++ Iterable(a.constructor, Type.TopRef) ++ supertypes.getOrElse(a, Set.empty)
+      case s: Type.Singleton[T] =>
+        val fromMap = supertypes.getOrElse(s, Set.empty)
+        fromMap ++ Iterable(Type.TopRef)
       case _: Type.Function[T] => Iterable(Type.TopRef)
       case _: Type.Tuple[T] => Iterable(Type.TopRef)
       case n: Type.Nominal[T] =>
@@ -102,7 +105,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     } else if (rhs == Type.TopRef) {
       lhs match {
         case Type.Bottom | Type.BottomRef | Type.TopRef => true
-        case _: Type.Function[T] | _: Type.Tuple[T] | _: Type.Constructor[T] | _: Type.Applied[T] => true
+        case _: Type.Function[T] | _: Type.Tuple[T] | _: Type.Constructor[T] | _: Type.Applied[T] | _: Type.Singleton[T] => true
         case u: Type.Union[T] => u.types.forall(t => isSubtype(t, rhs))
         case i: Type.Intersection[T] => i.types.exists(t => isSubtype(t, rhs))
         case t: Type.Nominal[T] => !valueTypes.contains(t)
@@ -136,6 +139,8 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     if (lhs == rhs) true
     else {
       (lhs, rhs) match {
+        case (Type.Singleton(s1), Type.Singleton(s2)) =>
+          s1 == s2
         case (Type.Function(p1, r1), Type.Function(p2, r2)) =>
           p1.size == p2.size &&
             p1.zip(p2).forall { case (a, b) => isSubtype(b, a) } &&
@@ -170,6 +175,9 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case (Type.Top, _) | (_, Type.Top) => Type.Top
         case (Type.Bottom, other) => other
         case (other, Type.Bottom) => other
+
+        case (s1: Type.Singleton[T], s2: Type.Singleton[T]) if s1.symbol == s2.symbol =>
+          s1
 
         case (f1: Type.Function[T], f2: Type.Function[T]) if f1.parameters.size == f2.parameters.size =>
           val p = f1.parameters.zip(f2.parameters).map { case (p1, p2) => greatestLowerBound(p1, p2).asInstanceOf[ProperType[T]] }
@@ -218,6 +226,17 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
         case (Type.Bottom, _) | (_, Type.Bottom) => Type.Bottom
         case (Type.Top, other) => other
         case (other, Type.Top) => other
+
+        case (s1: Type.Singleton[T], s2: Type.Singleton[T]) =>
+          if (s1.symbol == s2.symbol) s1 else Type.Bottom
+
+        case (s: Type.Singleton[T], other) =>
+          if (isSubtype(s, other)) s
+          else if (isSubtype(other, s)) other
+          else Type.Bottom
+
+        case (other, s: Type.Singleton[T]) =>
+          greatestLowerBound(s, other)
 
         case (f1: Type.Function[T], f2: Type.Function[T]) if f1.parameters.size == f2.parameters.size =>
           val p = f1.parameters.zip(f2.parameters).map { case (p1, p2) => leastUpperBound(p1, p2).asInstanceOf[ProperType[T]] }

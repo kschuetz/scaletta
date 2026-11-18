@@ -2,7 +2,8 @@ package software.kes.scaletta.internal.types
 
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
-import software.kes.scaletta.api.{Type, TypeArgument, TypeParameter}
+import software.kes.scaletta.api._
+import software.kes.scaletta.internal.ast.TermSymbolId
 import software.kes.scaletta.util.NonEmptyVector
 
 class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
@@ -2565,6 +2566,92 @@ class AdjacencyTypeHierarchySpec extends AnyFunSpec with Matchers {
         val relValRef = h.relationshipFor(valueA, refB)
         relValRef shouldBe a[TypeRelationship.HaveCommonSupertype[_]]
         relValRef.commonSupertype shouldBe Some(Type.Top)
+      }
+    }
+
+    describe("Singleton types") {
+      val covariantParam = TypeParameter.covariant[TestType]
+
+      val symNone = TermSymbolId.Static(QualifiedName.Full(PackagePath.root, Name("None")))
+      val symVector = TermSymbolId.Static(QualifiedName.Full(PackagePath.root, Name("Vector")))
+      val symOther = TermSymbolId.Static(QualifiedName.Full(PackagePath.root, Name("Other")))
+
+      val typeNone = Type.singleton[TestType](symNone)
+      val typeVector = Type.singleton[TestType](symVector)
+      val typeOther = Type.singleton[TestType](symOther)
+
+      it("should identify identical singleton types as Same") {
+        hierarchy.relationshipFor(typeNone, typeNone) shouldBe TypeRelationship.Same
+        hierarchy.isSubtype(typeNone, typeNone) shouldBe true
+      }
+
+      it("should treat distinct singleton types as disjoint") {
+        hierarchy.isSubtype(typeNone, typeVector) shouldBe false
+        hierarchy.isSubtype(typeVector, typeNone) shouldBe false
+      }
+
+      it("should conform to TopRef and Top") {
+        hierarchy.isSubtype(typeNone, Type.TopRef) shouldBe true
+        hierarchy.isSubtype(typeNone, Type.Top) shouldBe true
+        hierarchy.isSubtype(typeNone, Type.TopValue) shouldBe false
+      }
+
+      it("should traverse declared supertype mappings transitively") {
+        val optionConstructor = Type.constructor(toTestName("Option"), NonEmptyVector(covariantParam))
+        val optionNothing = Type.applied(optionConstructor, TypeArgument(covariantParam, Type.Bottom))
+
+        val hierarchyWithNone = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap + (typeNone -> Set(optionNothing)),
+          Set.empty
+        )
+
+        hierarchyWithNone.isSubtype(typeNone, optionNothing) shouldBe true
+        hierarchyWithNone.isSubtype(typeNone, Type.applied(optionConstructor, TypeArgument(covariantParam, toNominal(ParentA)))) shouldBe true
+      }
+
+      it("should compute GLB as Bottom for distinct singletons") {
+        hierarchy.relationshipFor(typeNone, typeVector) should matchPattern {
+          case TypeRelationship.HaveCommonSupertype(_) =>
+        }
+      }
+
+      it("should compute LUB between a singleton and an algebraic variant") {
+        val optionConstructor = Type.constructor(toTestName("Option"), NonEmptyVector(covariantParam))
+        val someConstructor = Type.constructor(toTestName("Some"), NonEmptyVector(covariantParam))
+
+        val optionInt = Type.applied(optionConstructor, TypeArgument(covariantParam, toNominal(ChildA1)))
+        val someInt = Type.applied(someConstructor, TypeArgument(covariantParam, toNominal(ChildA1)))
+        val optionNothing = Type.applied(optionConstructor, TypeArgument(covariantParam, Type.Bottom))
+
+        val h = AdjacencyTypeHierarchy.fromMap[TestType](
+          hierarchyMap +
+            (typeNone -> Set[Type[TestType]](optionNothing)) +
+            (someConstructor -> Set[Type[TestType]](optionConstructor)),
+          Set.empty
+        )
+
+        h.relationshipFor(typeNone, someInt) should matchPattern {
+          case TypeRelationship.HaveCommonSupertype(lub) if lub == optionInt =>
+        }
+      }
+
+      it("should handle local singleton symbols") {
+        val symLocal1 = TermSymbolId.Local("x", 1, 0)
+        val symLocal2 = TermSymbolId.Local("x", 1, 0)
+        val symLocal3 = TermSymbolId.Local("y", 1, 1)
+
+        val typeLocal1 = Type.singleton[TestType](symLocal1)
+        val typeLocal2 = Type.singleton[TestType](symLocal2)
+        val typeLocal3 = Type.singleton[TestType](symLocal3)
+
+        hierarchy.relationshipFor(typeLocal1, typeLocal2) shouldBe TypeRelationship.Same
+        hierarchy.isSubtype(typeLocal1, typeLocal2) shouldBe true
+
+        hierarchy.relationshipFor(typeLocal1, typeLocal3) should matchPattern {
+          case TypeRelationship.HaveCommonSupertype(_) =>
+        }
+        hierarchy.isSubtype(typeLocal1, typeLocal3) shouldBe false
+        hierarchy.isSubtype(typeLocal1, typeNone) shouldBe false
       }
     }
   }
