@@ -9,6 +9,8 @@ object MethodResolver {
 
     def getStaticFunctionName(id: NativeFunctionId): Option[QualifiedName.Full] = None
 
+    def resolveStaticTermSymbols(name: QualifiedName, imports: ImportScope): List[QualifiedName.Full] = Nil
+
     def getMethodCandidates(typ: Type[TypeId],
                             name: Name,
                             signatureQuery: SignatureQuery): List[NativeFunctionDefinition] = Nil
@@ -43,6 +45,8 @@ trait MethodResolver {
   def getNativeFunctionDefinition(id: NativeFunctionId): Option[NativeFunctionDefinition]
 
   def getStaticFunctionName(id: NativeFunctionId): Option[QualifiedName.Full]
+
+  def resolveStaticTermSymbols(name: QualifiedName, imports: ImportScope): List[QualifiedName.Full]
 
   def getMethodCandidates(typ: Type[TypeId],
                           name: Name,

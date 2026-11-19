@@ -29,6 +29,11 @@ final class Universe private(val typeUniverse: TypeUniverse,
   def getStaticFunctionName(id: NativeFunctionId): Option[QualifiedName.Full] =
     methodUniverse.symbolTable.getStaticFunctionName(id)
 
+  def resolveStaticTermSymbols(name: QualifiedName, imports: ImportScope): List[QualifiedName.Full] =
+    methodUniverse.symbolTable.resolveStaticFunction(name, imports).flatMap { entry =>
+      entry.container.toList.map(qualifier => QualifiedName.Full(qualifier, entry.name))
+    }
+
   def getMethodCandidates(typ: Type[TypeId],
                           name: Name,
                           signatureQuery: SignatureQuery): List[NativeFunctionDefinition] = {

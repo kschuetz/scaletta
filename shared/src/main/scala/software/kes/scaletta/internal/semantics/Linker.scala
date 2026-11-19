@@ -771,16 +771,10 @@ final class Linker private(methodResolver: MethodResolver,
       case None =>
         Left(TypeResolutionError.UnknownTerm(fullName))
       case Some(qName) =>
-        val candidates = methodResolver.getStaticFunctionCandidates(qName, importScope, SignatureQuery.empty)
-        val resolvedNames = candidates.flatMap(c => methodResolver.getStaticFunctionName(c.nativeFunctionId)).distinct
+        val resolvedNames = methodResolver.resolveStaticTermSymbols(qName, importScope)
         resolvedNames match {
           case Nil =>
-            qName match {
-              case full: QualifiedName.Full if candidates.nonEmpty =>
-                Right(Type.Singleton(TermSymbolId.Static(full)))
-              case _ =>
-                Left(TypeResolutionError.UnknownTerm(fullName))
-            }
+            Left(TypeResolutionError.UnknownTerm(fullName))
           case resolvedName :: Nil =>
             Right(Type.Singleton(TermSymbolId.Static(resolvedName)))
           case multiple =>

@@ -901,6 +901,65 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
       }
 
       describe("singleton types") {
+        def ascribedType(ast: LinkedPhase.Expression[Pos], index: Int = 0): Either[TypeResolutionError, ProperType[TypeId]] = {
+          ast match {
+            case LinkedPhase.Block(decls, _) =>
+              decls(index).value match {
+                case LinkedPhase.Declaration.Val(pattern, _) =>
+                  pattern.value match {
+                    case LinkedPhase.Pattern.Typed(_, ascription) => typeOf(ascription.value)
+                    case other => fail(s"Expected Pattern.Typed, got $other")
+                  }
+                case other => fail(s"Expected Val, got $other")
+              }
+            case other => fail(s"Expected Block, got $other")
+          }
+        }
+
+        def linkCustom(source: String, imports: ImportScope, paths: Vector[PackagePath.Absolute]): LinkedPhase.Expression[Pos] = {
+          val customModule = ScalettaModule.methodsOnly { registry =>
+            paths.foreach { path =>
+              registry.addMethod(MethodName(ReceiverType.Static(path), Name("Item")), Vector.empty, IntT, FunctionImpl.intResult(_ => 41))
+            }
+          }
+          val customScaletta = Scaletta.builder.addModule(customModule).build.asInstanceOf[ScalettaFacade]
+          Linker.create(customScaletta.universe, imports).link(Desugarer.create().desugar(parseExpr(source).value))
+        }
+
+        it("should resolve a static root symbol singleton") {
+          val ast = linkCustom("{ val x: Item.type = 41; x }", ImportScope.default, Vector(PackagePath.root))
+          ascribedType(ast) shouldBe Right(Type.Singleton(TermSymbolId.Static(QualifiedName.Full(PackagePath.root, Name("Item")))))
+        }
+
+        it("should resolve default imported and qualified overloaded static symbols") {
+          val expected = Right(Type.Singleton(TermSymbolId.Static(QualifiedName.Full(Packages.scalettaMath, Name("abs")))))
+          ascribedType(link("{ val x: abs.type = 41; x }")) shouldBe expected
+          ascribedType(link("{ val x: scaletta.math.abs.type = 41; x }")) shouldBe expected
+        }
+
+        it("should resolve a static singleton through an explicit import") {
+          val name = QualifiedName.Full(Packages.scalettaCollectionVector, Name("Item"))
+          val ast = linkCustom("{ val x: Item.type = 41; x }", ImportScope.importSymbol(name), Vector(Packages.scalettaCollectionVector))
+          ascribedType(ast) shouldBe Right(Type.Singleton(TermSymbolId.Static(name)))
+        }
+
+        it("should report unknown unqualified and qualified static terms") {
+          ascribedType(link("{ val x: NonExistent.type = 41; x }")) shouldBe Left(TypeResolutionError.UnknownTerm("NonExistent"))
+          ascribedType(link("{ val x: some.pkg.MissingObj.type = 41; x }")) shouldBe Left(TypeResolutionError.UnknownTerm("some.pkg.MissingObj"))
+        }
+
+        it("should report ambiguous imported static symbols") {
+          val pkg1 = PackagePath.parseAbsolute("org.example1")
+          val pkg2 = PackagePath.parseAbsolute("org.example2")
+          val ast = linkCustom("{ val x: Item.type = 41; x }", ImportScope.importWildcard(pkg1, pkg2), Vector(pkg1, pkg2))
+          ascribedType(ast) shouldBe Left(TypeResolutionError.AmbiguousTerm("Item", 2))
+        }
+
+        it("should prioritize local bindings over static symbols") {
+          ascribedType(link("{ val abs = 41; val y: abs.type = 43; y }"), 1) shouldBe
+            Right(Type.Singleton(TermSymbolId.Local("abs", 0, 0)))
+        }
+
         it("should resolve a local val singleton type in the same block") {
           val ast = link("{ val x: Int = 41; val y: x.type = x; y }")
           ast match {
@@ -939,8 +998,14 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           }
         }
 
-        ignore("should resolve static root symbol singletons like None.type") {
-          val ast = link("{ val x: None.type = None; x }")
+        it("should resolve static root symbol singletons like None.type") {
+          val customModule = ScalettaModule.methodsOnly { registry =>
+            registry.addMethod(MethodName(ReceiverType.Static(PackagePath.root), Name("None")), Vector.empty, IntT, FunctionImpl.intResult(_ => 41))
+          }
+          val customScaletta = Scaletta.builder.addModule(customModule).build.asInstanceOf[ScalettaFacade]
+          val ast = Linker.create(customScaletta.universe, ImportScope.default).link(
+            Desugarer.create().desugar(parseExpr("{ val x: None.type = None; x }").value)
+          )
           ast match {
             case LinkedPhase.Block(decls, _) =>
               decls.head.value match {
@@ -958,17 +1023,16 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           }
         }
 
-        ignore("should resolve qualified package static singletons") {
-          val ast = link("{ val x: scaletta.collection.Vector.type = scaletta.collection.Vector; x }")
+        it("should resolve qualified package static singletons") {
+          val ast = link("{ val x: scaletta.math.abs.type = scaletta.math.abs; x }")
           ast match {
             case LinkedPhase.Block(decls, _) =>
               decls.head.value match {
                 case LinkedPhase.Declaration.Val(pattern, _) =>
                   pattern.value match {
                     case LinkedPhase.Pattern.Typed(_, ascription) =>
-                      val expectedPath = PackagePath.absolute(PackageSegment("scaletta"), PackageSegment("collection"))
                       typeOf(ascription.value) shouldBe Right(
-                        Type.Singleton(TermSymbolId.Static(QualifiedName.Full(expectedPath, Name("Vector"))))
+                        Type.Singleton(TermSymbolId.Static(QualifiedName.Full(Packages.scalettaMath, Name("abs"))))
                       )
                     case other => fail(s"Expected Pattern.Typed, got $other")
                   }
