@@ -87,9 +87,6 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(base(names.SomeT),
       singleCovariant, OptionTypeInfo.SomeT)
 
-  val NoneT: Type.Applied[TypeId] =
-    TypeApplier.fromNode(OptionT).applyAll(NothingT).asInstanceOf[Type.Applied[TypeId]]
-
   val VectorT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.VectorT),
       singleCovariant, CollectionTypeInfo.VectorT)
@@ -113,9 +110,6 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val ConsT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.ConsT),
       singleCovariant, CollectionTypeInfo.ConsT)
-
-  val NilT: Type.Applied[TypeId] =
-    TypeApplier.fromNode(ListT).applyAll(NothingT).asInstanceOf[Type.Applied[TypeId]]
 
   val MapT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.MapT),
