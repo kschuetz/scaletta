@@ -31,5 +31,33 @@ final class StandardTypesSubtypingSpec extends AnyFunSpec with Matchers {
       universe.hierarchy.isSubtype(consA, listA) shouldBe true
       universe.hierarchy.isSubtype(listA, consA) shouldBe false // This will fail if it's an alias
     }
+
+    it("None should be a subtype of Option[Int] and share it with Some[Int]") {
+      val optionInt = TypeApplier.fromNode(standardTypes.OptionT).applyAll(standardTypes.IntT)
+      val optionString = TypeApplier.fromNode(standardTypes.OptionT).applyAll(standardTypes.StringT)
+      val someInt = TypeApplier.fromNode(standardTypes.SomeT).applyAll(standardTypes.IntT)
+      val hierarchy = registry.build().hierarchy
+
+      hierarchy.isSubtype(standardTypes.NoneT, optionInt) shouldBe true
+      hierarchy.isSubtype(standardTypes.NoneT, optionString) shouldBe true
+      hierarchy.isSubtype(someInt, optionInt) shouldBe true
+      hierarchy.isSubtype(optionInt, standardTypes.NoneT) shouldBe false
+      hierarchy.relationshipFor(standardTypes.NoneT, someInt).commonSupertype shouldBe Some(optionInt)
+      hierarchy.relationshipFor(someInt, standardTypes.NoneT).commonSupertype shouldBe Some(optionInt)
+    }
+
+    it("Nil should be a subtype of List[Int] and share it with ::[Int]") {
+      val listInt = TypeApplier.fromNode(standardTypes.ListT).applyAll(standardTypes.IntT)
+      val listString = TypeApplier.fromNode(standardTypes.ListT).applyAll(standardTypes.StringT)
+      val consInt = TypeApplier.fromNode(standardTypes.ConsT).applyAll(standardTypes.IntT)
+      val hierarchy = registry.build().hierarchy
+
+      hierarchy.isSubtype(standardTypes.NilT, listInt) shouldBe true
+      hierarchy.isSubtype(standardTypes.NilT, listString) shouldBe true
+      hierarchy.isSubtype(consInt, listInt) shouldBe true
+      hierarchy.isSubtype(listInt, standardTypes.NilT) shouldBe false
+      hierarchy.relationshipFor(standardTypes.NilT, consInt).commonSupertype shouldBe Some(listInt)
+      hierarchy.relationshipFor(consInt, standardTypes.NilT).commonSupertype shouldBe Some(listInt)
+    }
   }
 }

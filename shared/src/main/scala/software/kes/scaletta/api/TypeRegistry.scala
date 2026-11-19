@@ -9,6 +9,9 @@ trait TypeRegistry {
   def addRefType(name: QualifiedName.Full,
                  info: RuntimeTypeInfo): Type.Nominal[TypeId]
 
+  def addStaticSingleton(name: QualifiedName.Full,
+                         info: RuntimeTypeInfo): Type.Singleton[TypeId]
+
   def addTypeConstructor(name: QualifiedName.Full,
                          parameters: NonEmptyVector[TypeParameter[TypeId]],
                          info: RuntimeTypeInfo): Type.Constructor[TypeId]

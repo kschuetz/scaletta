@@ -87,6 +87,9 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(base(names.SomeT),
       singleCovariant, OptionTypeInfo.SomeT)
 
+  val NoneT: Type.Singleton[TypeId] =
+    registry.addStaticSingleton(base(names.NoneT), OptionTypeInfo.NoneT)
+
   val VectorT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.VectorT),
       singleCovariant, CollectionTypeInfo.VectorT)
@@ -103,6 +106,9 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
     registry.addTypeConstructor(collection(names.ListT),
       singleCovariant, CollectionTypeInfo.ListT)
 
+  val NilT: Type.Singleton[TypeId] =
+    registry.addStaticSingleton(collection(names.NilT), CollectionTypeInfo.NilT)
+
   val ListWithFilterT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.ListWithFilterT),
       singleCovariant, CollectionTypeInfo.ListWithFilterT)
@@ -118,34 +124,44 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
 
   registry.addRelationship(
     supertype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0)),
-    subtype = TypeApplier.fromNode(SomeT).applyAll(Type.variable(0))
+    subtype = SomeT
+  )
+
+  registry.addRelationship(
+    supertype = TypeApplier.fromNode(OptionT).applyAll(NothingT),
+    subtype = NoneT
   )
 
   registry.addRelationship(
     supertype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0)),
-    subtype = TypeApplier.fromNode(ConsT).applyAll(Type.variable(0))
+    subtype = ConsT
+  )
+
+  registry.addRelationship(
+    supertype = TypeApplier.fromNode(ListT).applyAll(NothingT),
+    subtype = NilT
   )
 
   private val iterableOnceApplied: ProperType[TypeId] = TypeApplier.fromNode(IterableOnceT).applyAll(Type.variable(0))
 
   registry.addRelationship(
     supertype = iterableOnceApplied,
-    subtype = TypeApplier.fromNode(ListT).applyAll(Type.variable(0))
+    subtype = ListT
   )
 
   registry.addRelationship(
     supertype = iterableOnceApplied,
-    subtype = TypeApplier.fromNode(OptionT).applyAll(Type.variable(0))
+    subtype = OptionT
   )
 
   registry.addRelationship(
     supertype = iterableOnceApplied,
-    subtype = TypeApplier.fromNode(SetT).applyAll(Type.variable(0))
+    subtype = SetT
   )
 
   registry.addRelationship(
     supertype = iterableOnceApplied,
-    subtype = TypeApplier.fromNode(VectorT).applyAll(Type.variable(0))
+    subtype = VectorT
   )
 
   private def base(name: Name): QualifiedName.Full =

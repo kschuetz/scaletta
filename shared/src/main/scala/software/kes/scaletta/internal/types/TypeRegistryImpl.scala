@@ -1,6 +1,7 @@
 package software.kes.scaletta.internal.types
 
 import software.kes.scaletta.api._
+import software.kes.scaletta.internal.ast.TermSymbolId
 import software.kes.scaletta.util.NonEmptyVector
 
 import scala.collection.mutable
@@ -10,6 +11,7 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
   private val supertypeMap = mutable.Map[Type[TypeId], mutable.Set[Type[TypeId]]]()
   private val valueTypes = mutable.Set[Type.Nominal[TypeId]]()
   private val typeInfoMap = mutable.Map[TypeId, RuntimeTypeInfo]()
+  private val staticSingletonInfoMap = mutable.Map[TermSymbolId.Static, RuntimeTypeInfo]()
 
   def addValueType(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Nominal[TypeId] = {
     val (newIndex, id) = nameIndex.intern(name)
@@ -25,6 +27,14 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
     nameIndex = newIndex
     val typ = Type.Nominal(id)
     typeInfoMap += (id -> info)
+    typ
+  }
+
+  def addStaticSingleton(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Singleton[TypeId] = {
+    val symbol = TermSymbolId.Static(name)
+    val typ = Type.Singleton[TypeId](symbol)
+    nameIndex = nameIndex.registerCore(name, typ)
+    staticSingletonInfoMap += (symbol -> info)
     typ
   }
 
@@ -71,6 +81,6 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
       supertypeMap.view.mapValues(_.toSet).toMap,
       valueTypes.toSet
     )
-    new TypeUniverse(nameIndex, hierarchy, typeInfoMap.toMap)
+    new TypeUniverse(nameIndex, hierarchy, typeInfoMap.toMap, staticSingletonInfoMap.toMap)
   }
 }

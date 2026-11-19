@@ -19,6 +19,8 @@ object StandardTypes {
     val ListWithFilterT = Name("ListWithFilter")
     val LongT = Name("Long")
     val MapT = Name("Map")
+    val NilT = Name("Nil")
+    val NoneT = Name("None")
     val NothingT = Name("Nothing")
     val NullT = Name("Null")
     val OptionT = Name("Option")
@@ -62,6 +64,10 @@ trait StandardTypes {
   def LongT: Type.Nominal[TypeId]
 
   def MapT: Type.Constructor[TypeId]
+
+  def NilT: Type.Singleton[TypeId]
+
+  def NoneT: Type.Singleton[TypeId]
 
   def NothingT: ProperType[TypeId]
 

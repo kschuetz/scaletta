@@ -1,6 +1,7 @@
 package software.kes.scaletta.testsupport
 
 import software.kes.scaletta.api._
+import software.kes.scaletta.internal.ast.TermSymbolId
 import software.kes.scaletta.internal.library.standard.{StandardTypes, StandardTypesImpl}
 import software.kes.scaletta.internal.types.TypeRegistryBootstrap
 import software.kes.scaletta.util.{NonEmptyVector, SettingsStack}
@@ -73,6 +74,9 @@ object MockSetup {
 
       def addRefType(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Nominal[TypeId] =
         Type.Nominal(getNextTypeId())
+
+      def addStaticSingleton(name: QualifiedName.Full, info: RuntimeTypeInfo): Type.Singleton[TypeId] =
+        Type.Singleton(TermSymbolId.Static(name))
 
       def addTypeConstructor(name: QualifiedName.Full,
                              parameters: NonEmptyVector[TypeParameter[TypeId]],

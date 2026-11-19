@@ -53,7 +53,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
       case Type.Top => Iterable.empty
       case Type.TopValue => Iterable(Type.Top)
       case Type.TopRef => Iterable(Type.Top)
-      case c: Type.Constructor[T] => supertypes.getOrElse(c, Set.empty) ++ Iterable(Type.TopRef)
+      case c: Type.Constructor[T] => supertypes.getOrElse(c, Set.empty).filter(_.isGround) ++ Iterable(Type.TopRef)
       case a: Type.Applied[T] =>
         val constructorSupertypes = supertypes.getOrElse(a.constructor, Set.empty)
         val fromApplied = constructorSupertypes.collect {
