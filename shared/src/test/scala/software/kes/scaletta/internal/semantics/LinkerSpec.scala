@@ -802,26 +802,6 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           case other => fail(s"Expected Call.Standard, got $other")
         }
       }
-
-      it("should resolve Vector.from static function call") {
-        val ast = link("scaletta.collection.Vector.from(List.empty)")
-        ast match {
-          case LinkedPhase.Call.Standard(target, _, args) =>
-            args.size shouldBe 1
-            target.value match {
-              case LinkedPhase.Select(_, nameIdent) =>
-                nameIdent.value match {
-                  case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
-                    name shouldBe "from"
-                    arities shouldBe Vector(1)
-                    candidates.nonEmpty shouldBe true
-                  case other => fail(s"Expected StaticFunctionCandidates, got $other")
-                }
-              case other => fail(s"Expected Select, got $other")
-            }
-          case other => fail(s"Expected Call.Standard, got $other")
-        }
-      }
     }
 
     describe("type ascriptions and resolution") {

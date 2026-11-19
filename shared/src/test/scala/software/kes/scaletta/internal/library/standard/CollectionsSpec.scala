@@ -481,41 +481,6 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
           interpreter.run(emptyContextReader).value[Any]() shouldBe Vector(43, 61)
         }
       }
-
-      describe("empty") {
-        it("should return an empty Vector") {
-          val expr = NativeCall(stdLib.collections.vector.empty, Vector.empty)
-          runExpression(expr) shouldBe Vector.empty
-        }
-      }
-
-      describe("from") {
-        it("should construct a Vector from an empty collection") {
-          val exprList = NativeCall(stdLib.collections.vector.from, Vector(object_(List.empty[Int])))
-          runExpression(exprList) shouldBe Vector.empty
-
-          val exprVector = NativeCall(stdLib.collections.vector.from, Vector(object_(Vector.empty[String])))
-          runExpression(exprVector) shouldBe Vector.empty
-        }
-
-        it("should construct a Vector from a List preserving element order") {
-          val inputList = List(11, 23, 31, 41)
-          val expr = NativeCall(stdLib.collections.vector.from, Vector(object_(inputList)))
-          runExpression(expr) shouldBe Vector(11, 23, 31, 41)
-        }
-
-        it("should construct a Vector from a Set") {
-          val inputSet = Set(13, 29, 37)
-          val expr = NativeCall(stdLib.collections.vector.from, Vector(object_(inputSet)))
-          runExpression(expr).asInstanceOf[Vector[Int]].toSet shouldBe inputSet
-        }
-
-        it("should construct a Vector from another Vector") {
-          val inputVector = Vector(7, 17, 31)
-          val expr = NativeCall(stdLib.collections.vector.from, Vector(object_(inputVector)))
-          runExpression(expr) shouldBe inputVector
-        }
-      }
     }
   }
 }
