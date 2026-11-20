@@ -14,4 +14,6 @@ trait TypeRegistryBootstrap extends TypeRegistry {
   def registerCoreRefType(name: QualifiedName.Full,
                           typ: Type.Nominal[TypeId],
                           info: RuntimeTypeInfo): Type.Nominal[TypeId]
+
+  def registerPatternTypeInfo(typeId: TypeId, info: PatternTypeInfo): Unit
 }

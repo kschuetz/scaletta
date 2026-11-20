@@ -166,7 +166,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     }
   }
 
-  private def leastUpperBound(a: Type[T], b: Type[T]): Type[T] = {
+  def leastUpperBound(a: Type[T], b: Type[T]): Type[T] = {
     if (a == b) a
     else if (isSubtype(a, b)) b
     else if (isSubtype(b, a)) a
@@ -217,7 +217,7 @@ final class AdjacencyTypeHierarchy[T] private(private val supertypes: Map[Type[T
     }
   }
 
-  private def greatestLowerBound(a: Type[T], b: Type[T]): Type[T] = {
+  def greatestLowerBound(a: Type[T], b: Type[T]): Type[T] = {
     if (a == b) a
     else if (isSubtype(a, b)) a
     else if (isSubtype(b, a)) b

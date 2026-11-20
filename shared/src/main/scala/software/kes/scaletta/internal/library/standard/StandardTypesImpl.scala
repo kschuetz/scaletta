@@ -90,6 +90,14 @@ private[scaletta] final class StandardTypesImpl(registry: TypeRegistryBootstrap)
   val NoneT: Type.Singleton[TypeId] =
     registry.addStaticSingleton(base(names.NoneT), OptionTypeInfo.NoneT)
 
+  registry.registerPatternTypeInfo(OptionT.name, PatternTypeInfo.Sum(
+    Vector(
+      TypeApplier.fromNode(SomeT).applyAll(Type.variable(0)),
+      NoneT
+    ),
+    Vector("Some(_)", "None")
+  ))
+
   val VectorT: Type.Constructor[TypeId] =
     registry.addTypeConstructor(collection(names.VectorT),
       singleCovariant, CollectionTypeInfo.VectorT)

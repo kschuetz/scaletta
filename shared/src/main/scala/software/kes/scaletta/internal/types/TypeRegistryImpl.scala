@@ -56,6 +56,13 @@ private[scaletta] final class TypeRegistryImpl extends TypeRegistryBootstrap {
     nameIndex = nameIndex.addAlias(name, target)
   }
 
+  def registerPatternTypeInfo(typeId: TypeId, info: PatternTypeInfo): Unit = {
+    typeInfoMap.get(typeId) match {
+      case Some(typeInfo) => typeInfoMap += (typeId -> typeInfo.withPatternTypeInfo(info))
+      case None => throw new IllegalArgumentException(s"Unknown type id: $typeId")
+    }
+  }
+
   def registerCoreValueType(name: QualifiedName.Full,
                             typ: Type.Nominal[TypeId],
                             info: RuntimeTypeInfo): Type.Nominal[TypeId] = {

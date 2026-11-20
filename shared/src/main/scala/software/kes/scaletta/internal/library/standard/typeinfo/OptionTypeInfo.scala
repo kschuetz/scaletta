@@ -1,7 +1,7 @@
 package software.kes.scaletta.internal.library.standard.typeinfo
 
 import software.kes.scaletta.api.UnapplyStrategy.{unapplyOne, unapplyZero}
-import software.kes.scaletta.api.{RuntimeTypeInfo, UnapplyResult}
+import software.kes.scaletta.api.{PatternTypeInfo, RuntimeTypeInfo, Type, UnapplyResult}
 
 object OptionTypeInfo {
   final val OptionT = RuntimeTypeInfo(_.isInstanceOf[Option[_]])
@@ -10,12 +10,14 @@ object OptionTypeInfo {
     unapplyOne {
       case Some(x) => UnapplyResult.success1(x)
       case _ => UnapplyResult.failure
-    })
+    },
+    Some(PatternTypeInfo.Product(Vector(Type.variable(0)))))
 
   final val NoneT = RuntimeTypeInfo(_ == None,
     unapplyZero {
       case None => true
       case _ => false
-    })
+    },
+    Some(PatternTypeInfo.Product(Vector.empty)))
 
 }

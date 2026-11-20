@@ -103,6 +103,8 @@ object MockSetup {
       def registerCoreValueType(name: QualifiedName.Full, typ: Type.Nominal[TypeId], info: RuntimeTypeInfo): Type.Nominal[TypeId] = typ
 
       def registerCoreRefType(name: QualifiedName.Full, typ: Type.Nominal[TypeId], info: RuntimeTypeInfo): Type.Nominal[TypeId] = typ
+
+      def registerPatternTypeInfo(typeId: TypeId, info: PatternTypeInfo): Unit = ()
     }
 
     val runtimeContextRegistry: RuntimeContextRegistry = () => getNextRuntimeContextId()
