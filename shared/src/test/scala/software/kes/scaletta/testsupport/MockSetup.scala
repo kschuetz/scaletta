@@ -46,6 +46,13 @@ object MockSetup {
                                    impl: FunctionImpl): NativeFunctionId =
         getNextNativeFunctionId()
 
+      def addVariadicMethod(methodName: MethodName,
+                            parameters: Vector[FormalParameter],
+                            variadic: VariadicParameter,
+                            returnType: ProperType[TypeId],
+                            impl: FunctionImpl): NativeFunctionId =
+        getNextNativeFunctionId()
+
       def overloadRegistryFor(methodName: MethodName): OverloadRegistry = new OverloadRegistry {
         def addOverload(parameters: Vector[FormalParameter], returnType: ProperType[TypeId], impl: FunctionImpl): NativeFunctionId =
           getNextNativeFunctionId()
@@ -53,6 +60,12 @@ object MockSetup {
         def addMultiParamGroupOverload(paramGroups: Vector[ParameterGroup],
                                        returnType: ProperType[TypeId],
                                        impl: FunctionImpl): NativeFunctionId =
+          getNextNativeFunctionId()
+
+        def addVariadicOverload(parameters: Vector[FormalParameter],
+                                variadic: VariadicParameter,
+                                returnType: ProperType[TypeId],
+                                impl: FunctionImpl): NativeFunctionId =
           getNextNativeFunctionId()
       }
 

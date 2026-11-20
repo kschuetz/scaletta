@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.builtins
 import software.kes.scaletta.api.ReceiverType.{Instance, Static}
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
-import software.kes.scaletta.internal.runtime.ParamsSignature
+import software.kes.scaletta.internal.runtime.{CoreTypes, ParamsSignature}
 import software.kes.scaletta.util.SettingsStack
 
 object MethodUniverseBuilder {
@@ -23,6 +23,14 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
     addMultiParamGroupMethod(methodName, ParameterGroup.single(parameters: _*), returnType, impl)
   }
 
+  def addVariadicMethod(methodName: MethodName,
+                        parameters: Vector[FormalParameter],
+                        variadic: VariadicParameter,
+                        returnType: ProperType[TypeId],
+                        impl: FunctionImpl): NativeFunctionId = {
+    addMultiParamGroupMethod(methodName, Vector(ParameterGroup.variadic(parameters, variadic)), returnType, impl)
+  }
+
   def addMultiParamGroupMethod(methodName: MethodName,
                                paramGroups: Vector[ParameterGroup],
                                returnType: ProperType[TypeId],
@@ -35,11 +43,15 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
     val updatedParamGroups = receiverParam match {
       case Some(p) =>
         if (paramGroups.isEmpty) Vector(ParameterGroup(Vector(p)))
-        else paramGroups.updated(0, ParameterGroup(p +: paramGroups(0).params))
+        else paramGroups.updated(0, paramGroups(0).copy(params = p +: paramGroups(0).params))
       case None => paramGroups
     }
 
-    val flattenedParams = updatedParamGroups.flatMap(_.params).map(_.typ)
+    val flattenedParams = updatedParamGroups.flatMap { pg =>
+      pg.variadic.fold(pg.params.map(_.typ)) { _ =>
+        pg.params.map(_.typ) :+ CoreTypes.AnyRefT
+      }
+    }
     val nativeFunction = NativeFunction(ParamsSignature.fromSeq(flattenedParams), BasicTypes.fromType(returnType).toInt, impl)
 
     val definition = nativeFunctionTableBuilder.add(
@@ -73,6 +85,12 @@ final class MethodUniverseBuilder private(private val functionSymbolTableBuilder
                                    returnType: ProperType[TypeId],
                                    impl: FunctionImpl): NativeFunctionId =
       addMultiParamGroupMethod(methodName, paramGroups, returnType, impl)
+
+    def addVariadicOverload(parameters: Vector[FormalParameter],
+                            variadic: VariadicParameter,
+                            returnType: ProperType[TypeId],
+                            impl: FunctionImpl): NativeFunctionId =
+      addVariadicMethod(methodName, parameters, variadic, returnType, impl)
   }
 
   def settings: MethodRegistry.Settings = settingsStack.current

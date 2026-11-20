@@ -29,6 +29,22 @@ trait MethodRegistry {
                                impl: FunctionImpl): NativeFunctionId
 
   /**
+   * Adds a method with a single parameter group that includes a trailing variadic parameter.
+   *
+   * @param methodName Name and receiver type of the method.
+   * @param parameters Fixed formal parameters preceding the variadic parameter.
+   * @param variadic   Trailing variadic parameter definition.
+   * @param returnType Return type of the method.
+   * @param impl       Native function implementation callback.
+   * @return The allocated native function identifier.
+   */
+  def addVariadicMethod(methodName: MethodName,
+                        parameters: Vector[FormalParameter],
+                        variadic: VariadicParameter,
+                        returnType: ProperType[TypeId],
+                        impl: FunctionImpl): NativeFunctionId
+
+  /**
    * Use this as a shortcut to register multiple overloads for a method.
    * This is equivalent to calling addMethod() multiple times.
    */
@@ -67,4 +83,18 @@ trait OverloadRegistry {
   def addMultiParamGroupOverload(paramGroups: Vector[ParameterGroup],
                                  returnType: ProperType[TypeId],
                                  impl: FunctionImpl): NativeFunctionId
+
+  /**
+   * Adds an overload with a single parameter group that includes a trailing variadic parameter.
+   *
+   * @param parameters Fixed formal parameters preceding the variadic parameter.
+   * @param variadic   Trailing variadic parameter definition.
+   * @param returnType Return type of the method.
+   * @param impl       Native function implementation callback.
+   * @return The allocated native function identifier.
+   */
+  def addVariadicOverload(parameters: Vector[FormalParameter],
+                          variadic: VariadicParameter,
+                          returnType: ProperType[TypeId],
+                          impl: FunctionImpl): NativeFunctionId
 }
