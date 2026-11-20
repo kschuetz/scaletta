@@ -66,6 +66,36 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
       )
       table.findCandidates(universe, query) should contain(fn3)
     }
+
+    it("should match variadic method with zero varargs") {
+      val tableWithVar = OverloadTable(List(fnVar1))
+      val query = SignatureQuery.of(intT)
+      tableWithVar.findCandidates(universe, query) should contain(fnVar1)
+    }
+
+    it("should match variadic method with single vararg") {
+      val tableWithVar = OverloadTable(List(fnVar1))
+      val query = SignatureQuery.of(intT, stringT)
+      tableWithVar.findCandidates(universe, query) should contain(fnVar1)
+    }
+
+    it("should match variadic method with multiple varargs") {
+      val tableWithVar = OverloadTable(List(fnVar1))
+      val query = SignatureQuery.of(intT, stringT, stringT)
+      tableWithVar.findCandidates(universe, query) should contain(fnVar1)
+    }
+
+    it("should reject variadic method when fewer arguments than fixed parameters are provided") {
+      val tableWithVar = OverloadTable(List(fnVarReject))
+      val query = SignatureQuery.of(intT)
+      tableWithVar.findCandidates(universe, query) shouldBe empty
+    }
+
+    it("should reject variadic method when varargs do not match element type") {
+      val tableWithVar = OverloadTable(List(fnVar1))
+      val query = SignatureQuery.of(intT, intT)
+      tableWithVar.findCandidates(universe, query) shouldBe empty
+    }
   }
 
   describe("OverloadTable.resolveBestMatch") {
@@ -104,6 +134,105 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
       val tableAmb = OverloadTable(List(fnAmb1, fnAmb2))
       val query = SignatureQuery.of(intT)
       tableAmb.resolveBestMatch(universe, query) shouldBe Left(ResolutionError.Ambiguous)
+    }
+
+    it("should resolve variadic method with zero varargs") {
+      val tableWithVar = OverloadTable(List(fnVar1))
+      val query = SignatureQuery.of(intT)
+      tableWithVar.resolveBestMatch(universe, query) shouldBe Right(fnVar1)
+    }
+
+    it("should prefer exact fixed-arity overload over variadic overload") {
+      val fnFixed = NativeFunctionDefinition(
+        paramGroups = ParameterGroup.single(FormalParameter(Name("a"), intT)),
+        returnType = intT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(61)
+      )
+      val fnVariadic = NativeFunctionDefinition(
+        paramGroups = Vector(
+          ParameterGroup.variadic(
+            Vector(FormalParameter(Name("a"), intT)),
+            VariadicParameter(Name("rest"), intT)
+          )
+        ),
+        returnType = intT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(67)
+      )
+      val tableWithBoth = OverloadTable(List(fnFixed, fnVariadic))
+
+      // 1 argument: both match, but fixed arity is strictly more specific
+      val query1 = SignatureQuery.of(intT)
+      tableWithBoth.resolveBestMatch(universe, query1) shouldBe Right(fnFixed)
+
+      // 2 arguments: only variadic matches
+      val query2 = SignatureQuery.of(intT, intT)
+      tableWithBoth.resolveBestMatch(universe, query2) shouldBe Right(fnVariadic)
+    }
+
+    it("should disambiguate variadic overloads by element subtyping") {
+      val fnVarInt = NativeFunctionDefinition(
+        paramGroups = Vector(
+          ParameterGroup.variadic(
+            Vector.empty,
+            VariadicParameter(Name("rest"), intT)
+          )
+        ),
+        returnType = intT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(71)
+      )
+      val fnVarNumber = NativeFunctionDefinition(
+        paramGroups = Vector(
+          ParameterGroup.variadic(
+            Vector.empty,
+            VariadicParameter(Name("rest"), numberT)
+          )
+        ),
+        returnType = numberT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(73)
+      )
+      val tableVar = OverloadTable(List(fnVarInt, fnVarNumber))
+
+      // Int <: Number, so Int* is more specific than Number*
+      val queryInt = SignatureQuery.of(intT, intT)
+      tableVar.resolveBestMatch(universe, queryInt) shouldBe Right(fnVarInt)
+
+      val queryNumber = SignatureQuery.of(numberT, intT)
+      tableVar.resolveBestMatch(universe, queryNumber) shouldBe Right(fnVarNumber)
+    }
+
+    it("should score conversion costs across multiple trailing variadic arguments") {
+      import software.kes.scaletta.internal.runtime.CoreTypes
+      val fnVarLong = NativeFunctionDefinition(
+        paramGroups = Vector(
+          ParameterGroup.variadic(
+            Vector.empty,
+            VariadicParameter(Name("rest"), CoreTypes.LongT)
+          )
+        ),
+        returnType = CoreTypes.StringT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(79)
+      )
+      val fnVarDouble = NativeFunctionDefinition(
+        paramGroups = Vector(
+          ParameterGroup.variadic(
+            Vector.empty,
+            VariadicParameter(Name("rest"), CoreTypes.DoubleT)
+          )
+        ),
+        returnType = CoreTypes.StringT,
+        pure = true,
+        nativeFunctionId = NativeFunctionId(83)
+      )
+      // Int -> Long cost 1 each (total cost 2 for 2 args)
+      // Int -> Double cost 3 each (total cost 6 for 2 args)
+      val tableVarConversions = OverloadTable(List(fnVarLong, fnVarDouble))
+      val query = SignatureQuery.of(CoreTypes.IntT, CoreTypes.IntT)
+      tableVarConversions.resolveBestMatch(universe, query) shouldBe Right(fnVarLong)
     }
 
     it("should find a match via widening when no exact match is available") {
@@ -192,6 +321,33 @@ class OverloadTableSpec extends AnyFunSpec with Matchers {
       returnType = anyT,
       pure = true,
       nativeFunctionId = NativeFunctionId(47)
+    )
+
+    val fnVar1 = NativeFunctionDefinition(
+      paramGroups = Vector(
+        ParameterGroup.variadic(
+          Vector(FormalParameter(Name("a"), intT)),
+          VariadicParameter(Name("rest"), stringT)
+        )
+      ),
+      returnType = anyT,
+      pure = true,
+      nativeFunctionId = NativeFunctionId(53)
+    )
+
+    val fnVarReject = NativeFunctionDefinition(
+      paramGroups = Vector(
+        ParameterGroup.variadic(
+          Vector(
+            FormalParameter(Name("a"), intT),
+            FormalParameter(Name("b"), stringT)
+          ),
+          VariadicParameter(Name("rest"), numberT)
+        )
+      ),
+      returnType = anyT,
+      pure = true,
+      nativeFunctionId = NativeFunctionId(89)
     )
 
     val table = OverloadTable(List(fn1, fn2, fn3))
