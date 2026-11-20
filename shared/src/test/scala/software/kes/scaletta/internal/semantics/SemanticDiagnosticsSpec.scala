@@ -202,6 +202,57 @@ final class SemanticDiagnosticsSpec extends AnyFunSpec with Matchers {
       }
     }
 
+    describe("variadic parameter and parameter group formatting") {
+      it("should format formal parameters and variadic parameters with T* notation") {
+        val param = FormalParameter(Name("level"), typeString)
+        val variadic = VariadicParameter(Name("messages"), typeString)
+
+        SemanticDiagnostics.formatParameter(param) shouldBe "level: TypeId(3)"
+        SemanticDiagnostics.formatVariadicParameter(variadic) shouldBe "messages: TypeId(3)*"
+      }
+
+      it("should format parameter groups with fixed and variadic parameters") {
+        val param1 = FormalParameter(Name("pattern"), typeString)
+        val variadic = VariadicParameter(Name("args"), typeInt)
+        val group = ParameterGroup.variadic(Vector(param1), variadic)
+
+        SemanticDiagnostics.formatParameterGroup(group) shouldBe "(pattern: TypeId(3), args: TypeId(1)*)"
+      }
+
+      it("should format parameter groups with only fixed parameters") {
+        val param1 = FormalParameter(Name("a"), typeInt)
+        val param2 = FormalParameter(Name("b"), typeString)
+        val group = ParameterGroup(Vector(param1, param2))
+
+        SemanticDiagnostics.formatParameterGroup(group) shouldBe "(a: TypeId(1), b: TypeId(3))"
+      }
+
+      it("should format NoSuchFunction error for failed variadic call with multiple argument types") {
+        val error = SemanticError.NoSuchFunction(
+          name = "log",
+          argTypes = Vector(typeString, typeInt, typeBoolean)
+        )
+        val expr = LinkedPhase.Reference[Pos](createPosIdent(error))
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "No matching function 'log' with arguments (TypeId(3), TypeId(1), TypeId(5))"
+      }
+
+      it("should format NoSuchMethod error for failed variadic method call") {
+        val error = SemanticError.NoSuchMethod(
+          receiverType = typeString,
+          name = "format",
+          argTypes = Vector(typeString, typeInt)
+        )
+        val expr = LinkedPhase.Reference[Pos](createPosIdent(error))
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "No matching method 'format' on type TypeId(3) with arguments (TypeId(3), TypeId(1))"
+      }
+    }
+
     describe("type resolution error message formatting") {
       def createPosTypeIdent(error: TypeResolutionError, begin: Int = 0, end: Int = 5): Pos[LinkedPhase.TypeIdent[Pos]] =
         Pos(Left(error), CharIndex(begin), CharIndex(end))

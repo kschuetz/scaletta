@@ -1,6 +1,6 @@
 package software.kes.scaletta.internal.semantics
 
-import software.kes.scaletta.api.{DiagnosticMessage, ProperType, Type, TypeId}
+import software.kes.scaletta.api.{DiagnosticMessage, ParameterGroup, ProperType, Type, TypeId, VariadicParameter, FormalParameter => ApiFormalParameter}
 import software.kes.scaletta.internal.ast.LinkedPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.reporting.{LineMap, Pos}
@@ -24,6 +24,51 @@ object SemanticDiagnostics {
   def collect(posExpression: Pos[Expression[Pos]], lineMap: LineMap): Vector[DiagnosticMessage] = {
     val collector = new SemanticDiagnostics(lineMap)
     collector.collectFromPosExpression(posExpression)
+  }
+
+  def formatParameter(param: ApiFormalParameter): String =
+    s"${param.name.toString}: ${formatType(param.typ)}"
+
+  def formatVariadicParameter(variadic: VariadicParameter): String =
+    s"${variadic.name.toString}: ${formatType(variadic.typ)}*"
+
+  def formatParameterGroup(group: ParameterGroup): String = {
+    val fixed = group.params.foldLeft(Vector.empty[String])((acc, p) => acc :+ formatParameter(p))
+    val all = group.variadic.fold(fixed)(v => fixed :+ formatVariadicParameter(v))
+    s"(${all.mkString(", ")})"
+  }
+
+  def formatTypeList(types: Vector[ProperType[TypeId]]): String =
+    types.foldLeft(Vector.empty[String])((acc, t) => acc :+ formatType(t)).mkString(", ")
+
+  def formatType(t: Type[_]): String = t match {
+    case Type.Nominal(name) => name.toString
+    case Type.Singleton(symbol) => symbol match {
+      case TermSymbolId.Static(name) => s"${name.toString}.type"
+      case TermSymbolId.Local(name, _, _) => s"$name.type"
+      case other => s"$other.type"
+    }
+    case Type.Constructor(name, _) => name.toString
+    case Type.Applied(constructor, arguments) =>
+      val argsFormatted = arguments.toVector.foldLeft(Vector.empty[String])((acc, a) => acc :+ formatType(a.value)).mkString(", ")
+      s"${formatType(constructor)}[$argsFormatted]"
+    case Type.Function(parameters, result) =>
+      val paramsFormatted = parameters.foldLeft(Vector.empty[String])((acc, p) => acc :+ formatType(p)).mkString(", ")
+      s"($paramsFormatted) => ${formatType(result)}"
+    case Type.Tuple(elements) =>
+      val elemsFormatted = elements.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(", ")
+      s"($elemsFormatted)"
+    case Type.Union(types) =>
+      types.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(" | ")
+    case Type.Intersection(types) =>
+      types.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(" & ")
+    case Type.Unit => "Unit"
+    case Type.Top => "Any"
+    case Type.TopValue => "AnyVal"
+    case Type.TopRef => "AnyRef"
+    case Type.BottomRef => "Null"
+    case Type.Bottom => "Nothing"
+    case Type.Variable(_, paramIndex) => s"?$paramIndex"
   }
 }
 
@@ -263,37 +308,10 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
   }
 
   private def formatTypeList(types: Vector[ProperType[TypeId]]): String =
-    types.foldLeft(Vector.empty[String])((acc, t) => acc :+ formatType(t)).mkString(", ")
+    SemanticDiagnostics.formatTypeList(types)
 
-  private def formatType(t: Type[_]): String = t match {
-    case Type.Nominal(name) => name.toString
-    case Type.Singleton(symbol) => symbol match {
-      case TermSymbolId.Static(name) => s"${name.toString}.type"
-      case TermSymbolId.Local(name, _, _) => s"$name.type"
-      case other => s"$other.type"
-    }
-    case Type.Constructor(name, _) => name.toString
-    case Type.Applied(constructor, arguments) =>
-      val argsFormatted = arguments.toVector.foldLeft(Vector.empty[String])((acc, a) => acc :+ formatType(a.value)).mkString(", ")
-      s"${formatType(constructor)}[$argsFormatted]"
-    case Type.Function(parameters, result) =>
-      val paramsFormatted = parameters.foldLeft(Vector.empty[String])((acc, p) => acc :+ formatType(p)).mkString(", ")
-      s"($paramsFormatted) => ${formatType(result)}"
-    case Type.Tuple(elements) =>
-      val elemsFormatted = elements.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(", ")
-      s"($elemsFormatted)"
-    case Type.Union(types) =>
-      types.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(" | ")
-    case Type.Intersection(types) =>
-      types.toVector.foldLeft(Vector.empty[String])((acc, e) => acc :+ formatType(e)).mkString(" & ")
-    case Type.Unit => "Unit"
-    case Type.Top => "Any"
-    case Type.TopValue => "AnyVal"
-    case Type.TopRef => "AnyRef"
-    case Type.BottomRef => "Null"
-    case Type.Bottom => "Nothing"
-    case Type.Variable(_, paramIndex) => s"?$paramIndex"
-  }
+  private def formatType(t: Type[_]): String =
+    SemanticDiagnostics.formatType(t)
 
   private def formatTypeResolutionError(error: TypeResolutionError): String = error match {
     case TypeResolutionError.UnknownType(name) =>

@@ -802,6 +802,175 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
           case other => fail(s"Expected Call.Standard, got $other")
         }
       }
+
+      describe("variadic native method and function linking") {
+        val variadicModule = ScalettaModule { setup =>
+          setup.methodRegistry.addVariadicMethod(
+            MethodName(ReceiverType.Static(Packages.scaletta), Name("logMessage")),
+            Vector(FormalParameter(Name("level"), StringT)),
+            VariadicParameter(Name("messages"), StringT),
+            UnitT,
+            null
+          )
+
+          val formatterType = setup.typeRegistry.addRefType(Packages.scaletta.qualify(Name("Formatter")), RuntimeTypeInfo.any)
+          setup.methodRegistry.addVariadicMethod(
+            MethodName(ReceiverType.Instance(formatterType), Name("format")),
+            Vector(FormalParameter(Name("pattern"), StringT)),
+            VariadicParameter(Name("args"), AnyT),
+            StringT,
+            null
+          )
+
+          setup.methodRegistry.addVariadicMethod(
+            MethodName(ReceiverType.Instance(StringT), Name("+++")),
+            Vector.empty,
+            VariadicParameter(Name("others"), StringT),
+            StringT,
+            null
+          )
+        }
+
+        val vScaletta = Scaletta.create(Scaletta.addModule(variadicModule)).asInstanceOf[ScalettaFacade]
+
+        def linkVariadic(source: String): LinkedPhase.Expression[Pos] = {
+          val parsed = parseExpr(source)
+          val desugared = Desugarer.create().desugar(parsed.value)
+          val linker = Linker.create(vScaletta.universe, ImportScope.default)
+          linker.link(desugared)
+        }
+
+        it("should resolve static variadic function calls with 1 argument (0 varargs)") {
+          val ast = linkVariadic("logMessage(\"INFO\")")
+          ast match {
+            case LinkedPhase.Call.Standard(target, _, args) =>
+              args.size shouldBe 1
+              target.value match {
+                case LinkedPhase.Reference(id) =>
+                  id.value match {
+                    case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
+                      name shouldBe "logMessage"
+                      arities shouldBe Vector(1)
+                      candidates.size shouldBe 1
+                      candidates.head.returnType shouldBe UnitT
+                    case other => fail(s"Expected StaticFunctionCandidates, got $other")
+                  }
+                case other => fail(s"Expected Reference, got $other")
+              }
+            case other => fail(s"Expected Call.Standard, got $other")
+          }
+        }
+
+        it("should resolve static variadic function calls with 2 arguments (1 vararg)") {
+          val ast = linkVariadic("logMessage(\"INFO\", \"started\")")
+          ast match {
+            case LinkedPhase.Call.Standard(target, _, args) =>
+              args.size shouldBe 1
+              target.value match {
+                case LinkedPhase.Reference(id) =>
+                  id.value match {
+                    case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
+                      name shouldBe "logMessage"
+                      arities shouldBe Vector(2)
+                      candidates.size shouldBe 1
+                    case other => fail(s"Expected StaticFunctionCandidates, got $other")
+                  }
+                case other => fail(s"Expected Reference, got $other")
+              }
+            case other => fail(s"Expected Call.Standard, got $other")
+          }
+        }
+
+        it("should resolve static variadic function calls with 3 arguments (2 varargs)") {
+          val ast = linkVariadic("logMessage(\"INFO\", \"a\", \"b\")")
+          ast match {
+            case LinkedPhase.Call.Standard(target, _, args) =>
+              args.size shouldBe 1
+              target.value match {
+                case LinkedPhase.Reference(id) =>
+                  id.value match {
+                    case LinkedInfo.StaticFunctionCandidates(name, arities, candidates) =>
+                      name shouldBe "logMessage"
+                      arities shouldBe Vector(3)
+                      candidates.size shouldBe 1
+                    case other => fail(s"Expected StaticFunctionCandidates, got $other")
+                  }
+                case other => fail(s"Expected Reference, got $other")
+              }
+            case other => fail(s"Expected Call.Standard, got $other")
+          }
+        }
+
+        it("should resolve instance variadic method calls on receiver") {
+          val ast = linkVariadic("(formatter: Formatter).format(\"%d %s\", 41, \"test\")")
+          ast match {
+            case LinkedPhase.Call.Standard(target, _, args) =>
+              args.size shouldBe 1
+              target.value match {
+                case LinkedPhase.Select(_, nameIdent) =>
+                  nameIdent.value match {
+                    case LinkedInfo.MethodCandidates(name, arities, candidates) =>
+                      name shouldBe "format"
+                      arities shouldBe Vector(3)
+                      candidates.size shouldBe 1
+                      candidates.head.returnType shouldBe StringT
+                    case other => fail(s"Expected MethodCandidates, got $other")
+                  }
+                case other => fail(s"Expected Select, got $other")
+              }
+            case other => fail(s"Expected Call.Standard, got $other")
+          }
+        }
+
+        it("should resolve infix calls for variadic methods") {
+          val ast = linkVariadic("(\"hello\": String) +++ (\"world\": String)")
+          ast match {
+            case LinkedPhase.Call.Infix(_, op, _, _) =>
+              op.value match {
+                case LinkedInfo.MethodCandidates(name, arities, candidates) =>
+                  name shouldBe "+++"
+                  arities shouldBe Vector(1)
+                  candidates.size shouldBe 1
+                case other => fail(s"Expected MethodCandidates, got $other")
+              }
+            case other => fail(s"Expected Call.Infix, got $other")
+          }
+        }
+
+        it("should report NoSuchFunction when calling a variadic function with fewer arguments than fixed parameters") {
+          val ast = linkVariadic("logMessage()")
+          ast match {
+            case LinkedPhase.Call.Standard(target, _, _) =>
+              target.value match {
+                case LinkedPhase.Reference(id) =>
+                  id.value match {
+                    case LinkedInfo.Error(SemanticError.NoSuchFunction(name, _)) =>
+                      name shouldBe "logMessage"
+                    case other => fail(s"Expected NoSuchFunction error, got $other")
+                  }
+                case other => fail(s"Expected Reference, got $other")
+              }
+            case other => fail(s"Expected Call.Standard, got $other")
+          }
+        }
+
+        it("should report NoSuchMethod when calling an instance variadic method with fewer arguments than fixed parameters") {
+          val ast = linkVariadic("(formatter: Formatter).format()")
+          ast match {
+            case LinkedPhase.Call.Standard(target, _, _) =>
+              target.value match {
+                case LinkedPhase.Select(_, nameIdent) =>
+                  nameIdent.value match {
+                    case LinkedInfo.Error(SemanticError.NoSuchMethod(_, name, _)) =>
+                      name shouldBe "format"
+                    case other => fail(s"Expected NoSuchMethod error, got $other")
+                  }
+                case other => fail(s"Expected Select, got $other")
+              }
+            case other => fail(s"Expected Call.Standard, got $other")
+          }
+        }
+      }
     }
 
     describe("type ascriptions and resolution") {
