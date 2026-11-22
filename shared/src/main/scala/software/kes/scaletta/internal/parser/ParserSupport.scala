@@ -26,19 +26,19 @@ private[parser] object ParserSupport {
              expected: Token,
              context: String,
              reportError: Pos[ParseError] => Unit,
-             openPos: Option[CharIndex] = None): Pos[Token] = {
+             openPos: Option[CharIndex] = None,
+             openToken: Option[Token] = None): Pos[Token] = {
     val token = scanner.get()
     if (token.value != expected) {
+      val open = openToken.getOrElse(getOpenForClose(expected))
       val error: ParseError = token.value match {
         case Token.EndOfInput =>
-          val open = getOpenForClose(expected)
           if (open != expected) ParseError.UnclosedDelimiter(open, expected)
           else ParseError.ExpectedToken(expected, token.value, context)
         case _ => ParseError.ExpectedToken(expected, token.value, context)
       }
       val pos = token.value match {
         case Token.EndOfInput =>
-          val open = getOpenForClose(expected)
           if (open != expected) {
             Pos(error, openPos.getOrElse(token.begin), token.end)
           } else {
@@ -81,6 +81,8 @@ private[parser] object ParserSupport {
       case Token.RParen => Token.LParen
       case Token.RBrace => Token.LBrace
       case Token.RBracket => Token.LBracket
+      case Token.EndInterpolatedEscape => Token.BeginInterpolatedEscape
+      case Token.EndInterpolatedString => Token.BeginInterpolatedString(software.kes.scaletta.common.Interpolator.fromName("s"))
       case _ => close
     }
   }

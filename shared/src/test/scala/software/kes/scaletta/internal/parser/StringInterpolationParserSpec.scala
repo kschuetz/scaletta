@@ -5,6 +5,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.prop.TableDrivenPropertyChecks
 import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.ast.AstBuilders._
+import software.kes.scaletta.internal.scanner.Token
+import software.kes.scaletta.testsupport.ParseErrorMatchers._
 import software.kes.scaletta.testsupport.{ParserTestOps, ParserTestSupport}
 
 final class StringInterpolationParserSpec extends AnyFunSpec with Matchers with TableDrivenPropertyChecks {
@@ -102,6 +104,56 @@ final class StringInterpolationParserSpec extends AnyFunSpec with Matchers with 
           "value: ",
           (cond(ref("flag"), lit(41), lit(43)), "")
         )
+      }
+    }
+
+    describe("Error Recovery and Diagnostic Handling") {
+
+      it("should handle empty escape block (${})") {
+        "s\"hello ${} world\"" shouldRecoverWith (
+          ParseError.MissingExpression("interpolated string escape").spanning(8, 10)
+          ) producing sLit("hello ", (errMissing("interpolated string escape"), " world"))
+      }
+
+      it("should handle unclosed escape block (${x without closing brace)") {
+        "s\"hello ${name world\"" shouldRecoverWith (
+          ParseError.UnclosedDelimiter(Token.BeginInterpolatedEscape, Token.EndInterpolatedEscape).spanning(8, 21)
+          ) producing sLit("hello ", (ref("name"), ""))
+      }
+
+      it("should handle malformed inner expression inside escape block (${a +})") {
+        "s\"value: ${a +} suffix\"" shouldRecoverWith (
+          ParseError.UnexpectedToken(Token.EndInterpolatedEscape).spanning(14, 14)
+          ) producing sLit("value: ", (infix(ref("a"), "+", errUnexpected(Token.EndInterpolatedEscape)), " suffix"))
+      }
+
+      it("should handle multiple errors across different escape segments") {
+        "s\"first ${} second ${} third\"" shouldRecoverWith(
+          ParseError.MissingExpression("interpolated string escape").spanning(8, 10),
+          ParseError.MissingExpression("interpolated string escape").spanning(19, 21)
+        ) producing sLit(
+          "first ",
+          (errMissing("interpolated string escape"), " second "),
+          (errMissing("interpolated string escape"), " third")
+        )
+      }
+
+      it("should handle unclosed interpolated string literal") {
+        "s\"unclosed string ${x}" shouldRecoverWith (
+          ParseError.UnclosedDelimiter(Token.BeginInterpolatedString(Interpolator.fromName("s")), Token.EndInterpolatedString).spanning(0, 22)
+          ) producing sLit("unclosed string ", (ref("x"), ""))
+      }
+
+      it("should handle unclosed multi-line interpolated string literal") {
+        "s\"\"\"unclosed multiline ${y}" shouldRecoverWith (
+          ParseError.UnclosedDelimiter(Token.BeginMultiLineInterpolatedString(Interpolator.fromName("s")), Token.EndInterpolatedString).spanning(0, 27)
+          ) producing sLit("unclosed multiline ", (ref("y"), ""))
+      }
+
+      it("should handle custom interpolator unclosed string literal") {
+        "custom\"unclosed ${x}" shouldRecoverWith (
+          ParseError.UnclosedDelimiter(Token.BeginInterpolatedString(Interpolator.Custom("custom")), Token.EndInterpolatedString).spanning(0, 20)
+          ) producing interpolatedString(Interpolator.Custom("custom"), "unclosed ", (ref("x"), ""))
       }
     }
   }

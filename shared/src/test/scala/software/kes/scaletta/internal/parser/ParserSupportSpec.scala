@@ -135,6 +135,8 @@ class ParserSupportSpec extends AnyFunSpec with Matchers {
         ParserSupport.getOpenForClose(Token.RParen) shouldBe Token.LParen
         ParserSupport.getOpenForClose(Token.RBrace) shouldBe Token.LBrace
         ParserSupport.getOpenForClose(Token.RBracket) shouldBe Token.LBracket
+        ParserSupport.getOpenForClose(Token.EndInterpolatedEscape) shouldBe Token.BeginInterpolatedEscape
+        ParserSupport.getOpenForClose(Token.EndInterpolatedString) shouldBe Token.BeginInterpolatedString(software.kes.scaletta.common.Interpolator.fromName("s"))
       }
 
       it("should return the same token if it's not a closing delimiter") {

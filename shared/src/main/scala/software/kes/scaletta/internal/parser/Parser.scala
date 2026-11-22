@@ -4,7 +4,7 @@ import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.ast.ParsedPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
-import software.kes.scaletta.internal.scanner.{Scanner, Token}
+import software.kes.scaletta.internal.scanner.{ScanError, Scanner, Token}
 
 import scala.annotation.tailrec
 
@@ -201,22 +201,62 @@ final class Parser private() {
         case _ => ""
       }
 
+      var unclosedEscape = false
+
       @tailrec
       def go(acc: Vector[(Pos[Expression[Pos]], String)]): Vector[(Pos[Expression[Pos]], String)] = {
         scanner.peek(1).value match {
           case Token.EndInterpolatedString | Token.EndOfInput => acc
+          case Token.Error(ScanError.UnclosedStringLiteral) | Token.Error(ScanError.UnclosedMultiLineString) =>
+            scanner.get()
+            acc
           case Token.BeginInterpolatedEscape =>
             val beginEscape = scanner.get()
-            val exprResult = parseExpression(BindingPower.Minimum)
-            val endEscape = expect(Token.EndInterpolatedEscape, "interpolated string escape", Some(beginEscape.begin))
-            val expr = exprResult.value match {
-              case Some(e) => e
-              case None =>
-                val error = diagnostics.errors.lastOption match {
-                  case Some(err) => err.value
-                  case None => ParseError.MissingExpression("interpolated string escape")
-                }
-                syntheticExpression(error, beginEscape.begin, endEscape.end)
+            val expr: Pos[Expression[Pos]] = if (scanner.peek(1).value == Token.EndInterpolatedEscape) {
+              val endEscape = scanner.get()
+              val error = ParseError.MissingExpression("interpolated string escape")
+              reportError(Pos(error, beginEscape.begin, endEscape.end))
+              syntheticExpression(error, beginEscape.begin, endEscape.end)
+            } else {
+              val exprResult = parseExpression(BindingPower.Minimum)
+              var unexpectedTokens = Vector.empty[Pos[Token]]
+              while (scanner.peek(1).value match {
+                case Token.EndInterpolatedEscape | Token.InterpolatedPart(_) | Token.EndInterpolatedString | Token.BeginInterpolatedEscape | Token.EndOfInput => false
+                case _ => true
+              }) {
+                unexpectedTokens = unexpectedTokens :+ scanner.get()
+              }
+
+              val endEscapePos = scanner.peek(1).value match {
+                case Token.EndInterpolatedEscape =>
+                  val endEscape = scanner.get()
+                  if (exprResult.value.isDefined && !diagnostics.hasErrors && unexpectedTokens.nonEmpty) {
+                    val unexpected = unexpectedTokens.head
+                    reportError(Pos(ParseError.UnexpectedToken(unexpected.value), unexpected.begin, unexpected.end))
+                  }
+                  endEscape.end
+                case Token.InterpolatedPart(_) =>
+                  exprResult.value.fold(beginEscape.end)(_.end)
+                case Token.EndInterpolatedString | Token.EndOfInput =>
+                  unclosedEscape = true
+                  val nextToken = scanner.peek(1)
+                  val error = ParseError.UnclosedDelimiter(Token.BeginInterpolatedEscape, Token.EndInterpolatedEscape)
+                  reportError(Pos(error, beginEscape.begin, nextToken.end))
+                  nextToken.begin
+                case _ =>
+                  val endEscape = expect(Token.EndInterpolatedEscape, "interpolated string escape", Some(beginEscape.begin))
+                  endEscape.end
+              }
+
+              exprResult.value match {
+                case Some(e) => e
+                case None =>
+                  val error = diagnostics.errors.lastOption match {
+                    case Some(err) => err.value
+                    case None => ParseError.MissingExpression("interpolated string escape")
+                  }
+                  syntheticExpression(error, beginEscape.begin, endEscapePos)
+              }
             }
             val trailing = scanner.peek(1).value match {
               case Token.InterpolatedPart(text) =>
@@ -252,7 +292,11 @@ final class Parser private() {
       }
 
       val segments = go(Vector.empty)
-      val endToken = expect(Token.EndInterpolatedString, "interpolated string", Some(token.begin))
+      val endToken = if (unclosedEscape && scanner.peek(1).value == Token.EndOfInput) {
+        scanner.peek(1)
+      } else {
+        expect(Token.EndInterpolatedString, "interpolated string", Some(token.begin), Some(token.value))
+      }
       ParseResult.create(Pos(InterpolatedString(interpolator, initial, segments), token.begin, endToken.end))
     }
 
@@ -1430,8 +1474,11 @@ final class Parser private() {
      *                 locations for unclosed delimiters
      * @return the token consumed from the scanner
      */
-    private def expect(expected: Token, context: String, openPos: Option[CharIndex] = None): Pos[Token] = {
-      ParserSupport.expect(scanner, expected, context, reportError, openPos)
+    private def expect(expected: Token,
+                       context: String,
+                       openPos: Option[CharIndex] = None,
+                       openToken: Option[Token] = None): Pos[Token] = {
+      ParserSupport.expect(scanner, expected, context, reportError, openPos, openToken)
     }
 
     private def expectIdentifier(context: String): Pos[Token.Identifier] = {
