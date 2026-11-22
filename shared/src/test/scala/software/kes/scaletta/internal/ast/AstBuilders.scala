@@ -1,5 +1,6 @@
 package software.kes.scaletta.internal.ast
 
+import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.ast.ParsedPhase.Declaration.Def
 import software.kes.scaletta.internal.ast.ParsedPhase._
 import software.kes.scaletta.util.functional.Id._
@@ -20,6 +21,12 @@ object AstBuilders {
   def litNull: Expression[Id] = Literal.null_()
 
   def litUnit: Expression[Id] = Literal.unit()
+
+  def interpolatedString(interpolator: Interpolator, initial: String, segments: (Expression[Id], String)*): Expression[Id] =
+    InterpolatedString[Id](interpolator, initial, segments.toVector)
+
+  def sLit(initial: String, segments: (Expression[Id], String)*): Expression[Id] =
+    interpolatedString(Interpolator.fromName("s"), initial, segments: _*)
 
   def errExpr(error: ParseError): Expression[Id] = Expression.Error[Id](error)
 

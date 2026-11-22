@@ -286,6 +286,25 @@ class ParserComplexExampleSpec extends AnyFunSuite with Matchers {
       )
   }
 
+  // Interpolated String with Block Expression and Function Call
+  test(example) {
+    """{
+      |  val msg = s"User: ${user.name}, score: ${calculate(user.id) + 41}"
+      |  msg
+      |}""".stripMargin shouldParseTo
+      block(
+        ref("msg"),
+        valId(
+          "msg",
+          sLit(
+            "User: ",
+            (select(ref("user"), "name"), ", score: "),
+            (infix(callSimple(ref("calculate"), select(ref("user"), "id")), "+", lit(41)), "")
+          )
+        )
+      )
+  }
+
   private def example(implicit pos: Position): String =
     s"Example on line ${pos.lineNumber}"
 

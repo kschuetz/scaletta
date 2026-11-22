@@ -1,9 +1,12 @@
 package software.kes.scaletta.internal.parser
 
+import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.ast.ParsedPhase._
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.internal.scanner.{Scanner, Token}
+
+import scala.annotation.tailrec
 
 object Parser {
   def create(): Parser = new Parser()
@@ -107,6 +110,10 @@ final class Parser private() {
         case Token.True => ParseResult.create(token.as(Literal.true_()))
         case Token.False => ParseResult.create(token.as(Literal.false_()))
         case Token.Null => ParseResult.create(token.as(Literal.null_()))
+        case Token.BeginInterpolatedString(interpolator) =>
+          parseInterpolatedString(token, interpolator)
+        case Token.BeginMultiLineInterpolatedString(interpolator) =>
+          parseInterpolatedString(token, interpolator)
         case idToken: Token.Identifier =>
           val id = token.as(Identifier(idToken.name))
           ParseResult.create(token.as(Reference(id)))
@@ -184,6 +191,69 @@ final class Parser private() {
           ParseResult.create(Pos(inner.value, token.begin, next.end))
         case None => result
       }
+    }
+
+    private def parseInterpolatedString(token: Pos[Token], interpolator: Interpolator): ExprResult[Pos] = {
+      val initial = scanner.peek(1).value match {
+        case Token.InterpolatedPart(text) =>
+          scanner.get()
+          text
+        case _ => ""
+      }
+
+      @tailrec
+      def go(acc: Vector[(Pos[Expression[Pos]], String)]): Vector[(Pos[Expression[Pos]], String)] = {
+        scanner.peek(1).value match {
+          case Token.EndInterpolatedString | Token.EndOfInput => acc
+          case Token.BeginInterpolatedEscape =>
+            val beginEscape = scanner.get()
+            val exprResult = parseExpression(BindingPower.Minimum)
+            val endEscape = expect(Token.EndInterpolatedEscape, "interpolated string escape", Some(beginEscape.begin))
+            val expr = exprResult.value match {
+              case Some(e) => e
+              case None =>
+                val error = diagnostics.errors.lastOption match {
+                  case Some(err) => err.value
+                  case None => ParseError.MissingExpression("interpolated string escape")
+                }
+                syntheticExpression(error, beginEscape.begin, endEscape.end)
+            }
+            val trailing = scanner.peek(1).value match {
+              case Token.InterpolatedPart(text) =>
+                scanner.get()
+                text
+              case _ => ""
+            }
+            go(acc :+ ((expr, trailing)))
+          case idToken: Token.Identifier =>
+            val idPos = scanner.get()
+            val identPos = idPos.as(Identifier(idToken.name))
+            val exprPos: Pos[Expression[Pos]] = idPos.as[Expression[Pos]](Reference(identPos))
+            val trailing = scanner.peek(1).value match {
+              case Token.InterpolatedPart(text) =>
+                scanner.get()
+                text
+              case _ => ""
+            }
+            go(acc :+ ((exprPos, trailing)))
+          case _ =>
+            val unexpected = scanner.get()
+            val error = ParseError.UnexpectedToken(unexpected.value)
+            reportError(Pos(error, unexpected.begin, unexpected.end))
+            val expr = syntheticExpression(error, unexpected.begin, unexpected.end)
+            val trailing = scanner.peek(1).value match {
+              case Token.InterpolatedPart(text) =>
+                scanner.get()
+                text
+              case _ => ""
+            }
+            go(acc :+ ((expr, trailing)))
+        }
+      }
+
+      val segments = go(Vector.empty)
+      val endToken = expect(Token.EndInterpolatedString, "interpolated string", Some(token.begin))
+      ParseResult.create(Pos(InterpolatedString(interpolator, initial, segments), token.begin, endToken.end))
     }
 
     private def parseBlock(token: Pos[Token]): ExprResult[Pos] = {
