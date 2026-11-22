@@ -17,6 +17,18 @@ final case class TypeEnvironment(layers: List[Vector[TypedScopeBinding]]) {
       case current :: rest => TypeEnvironment((current :+ binding) :: rest)
     }
 
+  def extendCurrentLayer(newBindings: Vector[TypedScopeBinding]): TypeEnvironment =
+    layers match {
+      case Nil => TypeEnvironment(newBindings :: Nil)
+      case current :: rest => TypeEnvironment((current ++ newBindings) :: rest)
+    }
+
+  def currentLayerSize: Int =
+    layers match {
+      case Nil => 0
+      case current :: _ => current.size
+    }
+
   def lookup(name: String): Option[(Int, TypedScopeBinding)] = {
     @tailrec
     def go(remaining: List[Vector[TypedScopeBinding]], depth: Int): Option[(Int, TypedScopeBinding)] = {
