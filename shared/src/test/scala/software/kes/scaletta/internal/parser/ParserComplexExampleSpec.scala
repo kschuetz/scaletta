@@ -305,6 +305,166 @@ class ParserComplexExampleSpec extends AnyFunSuite with Matchers {
       )
   }
 
+  // Nested Blocks and Local Value Declarations inside Interpolation Escape
+  test(example) {
+    """{
+      |  val msg = s"result is ${ { val a = 41; val b = 43; a + b } }"
+      |  msg
+      |}""".stripMargin shouldParseTo
+      block(
+        ref("msg"),
+        valId(
+          "msg",
+          sLit(
+            "result is ",
+            (
+              block(
+                infix(ref("a"), "+", ref("b")),
+                valId("a", lit(41)),
+                valId("b", lit(43))
+              ),
+              ""
+            )
+          )
+        )
+      )
+  }
+
+  // Conditional Expression inside Interpolation Escape
+  test(example) {
+    """s"status: ${if (flag) "active" else "inactive"}"""" shouldParseTo
+      sLit(
+        "status: ",
+        (cond(ref("flag"), lit("active"), lit("inactive")), "")
+      )
+  }
+
+  // Pattern Matching Expression inside Interpolation Escape
+  test(example) {
+    """s"item: ${x match { case 1 => "one"; case _ => "other" }}"""" shouldParseTo
+      sLit(
+        "item: ",
+        (
+          matchExpr(
+            ref("x"),
+            caseExpr(pLit(Literal.int(1)), lit("one")),
+            caseExpr(pWild, lit("other"))
+          ),
+          ""
+        )
+      )
+  }
+
+  // Function Calls with Positional and Named Arguments inside Interpolation Escape
+  test(example) {
+    """s"output: ${service.compute(41, factor = 2, debug = true)}"""" shouldParseTo
+      sLit(
+        "output: ",
+        (
+          callSimple(
+            select(ref("service"), "compute"),
+            arg(lit(41)),
+            namedArg("factor", lit(2)),
+            namedArg("debug", lit(true))
+          ),
+          ""
+        )
+      )
+  }
+
+  // Curried Function Invocations inside Interpolation Escape
+  test(example) {
+    """s"val: ${multiply(41)(43)}"""" shouldParseTo
+      sLit(
+        "val: ",
+        (
+          call(ref("multiply")).group(lit(41)).group(lit(43)).build(),
+          ""
+        )
+      )
+  }
+
+  // Chained Member Method Invocations on Interpolated String Literal
+  test(example) {
+    """s"hello $name".trim().toUpperCase()""" shouldParseTo
+      callSimple(
+        select(
+          callSimple(
+            select(sLit("hello ", (ref("name"), "")), "trim")
+          ),
+          "toUpperCase"
+        )
+      )
+  }
+
+  // Infix Concatenation Combining Multiple Interpolated Strings
+  test(example) {
+    """s"prefix $a" + s" middle $b " + s"suffix $c"""" shouldParseTo
+      infix(
+        infix(
+          sLit("prefix ", (ref("a"), "")),
+          "+",
+          sLit(" middle ", (ref("b"), " "))
+        ),
+        "+",
+        sLit("suffix ", (ref("c"), ""))
+      )
+  }
+
+  // Infix Equality Comparison Between Interpolated Strings
+  test(example) {
+    """s"user: $name" == s"admin: $adminName"""" shouldParseTo
+      infix(
+        sLit("user: ", (ref("name"), "")),
+        "==",
+        sLit("admin: ", (ref("adminName"), ""))
+      )
+  }
+
+  // Multi-Line Triple-Quoted Interpolated String with Identifier and Block Expressions
+  test(example) {
+    "s\"\"\"start $x\nmiddle ${ { val a = 41; a + 43 } }\nend\"\"\"" shouldParseTo
+      sLit(
+        "start ",
+        (ref("x"), "\nmiddle "),
+        (block(infix(ref("a"), "+", lit(43)), valId("a", lit(41))), "\nend")
+      )
+  }
+
+  // Escaped Dollar Signs ($$) and Inner String Literals inside Interpolation Escape
+  test(example) {
+    """s"Price: $$${price}.00 (currency: ${"USD"})"""" shouldParseTo
+      sLit(
+        "Price: $",
+        (ref("price"), ".00 (currency: "),
+        (lit("USD"), ")")
+      )
+  }
+
+  // Nested Interpolated String inside Interpolation Escape
+  test(example) {
+    """s"outer ${s"inner $x"} end"""" shouldParseTo
+      sLit(
+        "outer ",
+        (sLit("inner ", (ref("x"), "")), " end")
+      )
+  }
+
+  // Higher-Order Method Invocation with Lambda inside Interpolation Escape
+  test(example) {
+    """s"mapped: ${items.map((x: Int) => x + 1)}"""" shouldParseTo
+      sLit(
+        "mapped: ",
+        (
+          callSimple(
+            select(ref("items"), "map"),
+            lambda(infix(ref("x"), "+", lit(1)), lambdaParam("x", tName("Int")))
+          ),
+          ""
+        )
+      )
+  }
+
   private def example(implicit pos: Position): String =
     s"Example on line ${pos.lineNumber}"
 
