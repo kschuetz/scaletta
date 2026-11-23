@@ -1,17 +1,21 @@
 package software.kes.scaletta.internal.interpolators
 
-import software.kes.scaletta.api.{CustomInterpolator, ProperType, TypeId}
+import software.kes.scaletta.api.{CustomInterpolator, FunctionImpl}
 import software.kes.scaletta.internal.runtime.CoreTypes
 
-object SInterpolator extends CustomInterpolator {
-  def resultType: ProperType[TypeId] = CoreTypes.StringT
-
-  def execute(prefix: String, segments: Vector[CustomInterpolator.Segment]): Any = {
-    val output = new StringBuilder(prefix)
-    segments.foreach { segment =>
-      output.append(segment.value)
-      output.append(segment.suffix)
+object SInterpolator {
+  lazy val definition: CustomInterpolator = {
+    val impl: FunctionImpl = FunctionImpl.objectResult { argReader =>
+      val output = new StringBuilder
+      val count = argReader.argCount
+      var i = 0
+      while (i < count) {
+        output.append(argReader.read(i))
+        i += 1
+      }
+      output.result()
     }
-    output.result()
+
+    CustomInterpolator(CoreTypes.StringT, impl)
   }
 }
