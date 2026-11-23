@@ -297,6 +297,8 @@ final class SemanticDiagnostics private(lineMap: LineMap) {
       s"No field '$name' found on type ${formatType(receiverType)}"
     case SemanticError.NotCallable(targetType) =>
       s"Expression of type ${formatType(targetType)} cannot be called as a function"
+    case SemanticError.NoSuchInterpolator(name) =>
+      s"Unknown interpolator '$name'"
     case SemanticError.RefutableValPattern(description) =>
       s"Pattern in val definition must be irrefutable: $description"
     case SemanticError.InexhaustiveMatch(description) =>

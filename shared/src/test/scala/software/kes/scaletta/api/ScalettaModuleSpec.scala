@@ -133,4 +133,17 @@ class ScalettaModuleSpec extends AnyFunSpec with Matchers {
     }
   }
 
+  describe("Module.interpolatorsOnly") {
+    it("should access the interpolator registry and execute registration") {
+      var registered = false
+      val module = ScalettaModule.interpolatorsOnly { registry =>
+        registered = true
+        41
+      }
+      val result = module.configure(mockSetup)
+      result shouldBe 41
+      registered shouldBe true
+    }
+  }
+
 }

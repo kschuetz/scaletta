@@ -50,6 +50,8 @@ object SemanticError {
                                 targetType: ProperType[TypeId]
                               ) extends SemanticError
 
+  final case class NoSuchInterpolator(name: String) extends SemanticError
+
   // Pattern and declaration constraints
   final case class RefutableValPattern(
                                         description: String

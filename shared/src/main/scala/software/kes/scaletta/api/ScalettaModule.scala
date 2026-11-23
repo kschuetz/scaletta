@@ -71,6 +71,12 @@ object ScalettaModule {
     ScalettaModule { registry => fn(registry.runtimeContextRegistry) }
 
   /**
+   * Create a module where only interpolators need to be registered
+   */
+  def interpolatorsOnly[A](fn: InterpolatorRegistry => A): ScalettaModule[A] =
+    ScalettaModule { registry => fn(registry.interpolatorRegistry) }
+
+  /**
    * Create a module consisting of a single ref type
    */
   def refType(name: QualifiedName.Full, info: RuntimeTypeInfo): ScalettaModule[Type.Nominal[TypeId]] =

@@ -11,5 +11,6 @@ object StandardLibrary {
       Math.module,
       Collections.module,
       DataTypes.module,
+      Interpolators.module,
     )
 }

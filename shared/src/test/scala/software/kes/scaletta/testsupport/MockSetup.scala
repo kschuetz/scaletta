@@ -109,6 +109,8 @@ object MockSetup {
 
     val runtimeContextRegistry: RuntimeContextRegistry = () => getNextRuntimeContextId()
 
+    val interpolatorRegistry: InterpolatorRegistry = (_, _) => ()
+
     val standardTypes: StandardTypes = new StandardTypesImpl(typeRegistry)
   }
 }

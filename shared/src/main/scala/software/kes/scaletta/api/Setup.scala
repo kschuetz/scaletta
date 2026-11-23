@@ -9,5 +9,7 @@ trait Setup {
 
   def runtimeContextRegistry: RuntimeContextRegistry
 
+  def interpolatorRegistry: InterpolatorRegistry
+
   def standardTypes: StandardTypes
 }

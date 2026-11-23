@@ -1,7 +1,7 @@
 package software.kes.scaletta.api
 
 object InterpolatorId {
-  def apply(value: Int): TypeId = new TypeId(value)
+  def apply(value: Int): InterpolatorId = new InterpolatorId(value)
 }
 
 final class InterpolatorId(val value: Int) extends AnyVal {

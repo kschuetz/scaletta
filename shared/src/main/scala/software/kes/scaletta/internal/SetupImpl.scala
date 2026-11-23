@@ -6,5 +6,6 @@ import software.kes.scaletta.internal.library.standard.StandardTypes
 private[scaletta] final class SetupImpl(val methodRegistry: MethodRegistry,
                                         val typeRegistry: TypeRegistry,
                                         val runtimeContextRegistry: RuntimeContextRegistry,
+                                        val interpolatorRegistry: InterpolatorRegistry,
                                         val standardTypes: StandardTypes,
                                        ) extends Setup

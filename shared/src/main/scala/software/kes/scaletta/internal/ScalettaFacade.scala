@@ -3,6 +3,7 @@ package software.kes.scaletta.internal
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins.MethodUniverseBuilder
 import software.kes.scaletta.internal.desugar.Desugarer
+import software.kes.scaletta.internal.interpolators.InterpolatorRegistryImpl
 import software.kes.scaletta.internal.library.standard.{StandardLibrary, StandardTypesImpl}
 import software.kes.scaletta.internal.parser.{ParseOptions, Parser}
 import software.kes.scaletta.internal.reader.SourceReader
@@ -45,10 +46,11 @@ object ScalettaFacade {
       val methodRegistry = MethodUniverseBuilder.create()
       val typeRegistry = new TypeRegistryImpl()
       val runtimeContextRegistry = new RuntimeContextRegistryImpl()
+      val interpolatorRegistry = new InterpolatorRegistryImpl()
 
       val standardTypes = new StandardTypesImpl(typeRegistry)
 
-      val setup = new SetupImpl(methodRegistry, typeRegistry, runtimeContextRegistry, standardTypes)
+      val setup = new SetupImpl(methodRegistry, typeRegistry, runtimeContextRegistry, interpolatorRegistry, standardTypes)
 
       StandardLibrary.module.configure(setup)
 

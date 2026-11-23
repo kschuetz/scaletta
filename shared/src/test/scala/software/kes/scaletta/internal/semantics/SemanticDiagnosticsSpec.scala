@@ -129,6 +129,15 @@ final class SemanticDiagnosticsSpec extends AnyFunSpec with Matchers {
         diagnostics.head.message shouldBe "Expression of type TypeId(1) cannot be called as a function"
       }
 
+      it("should format NoSuchInterpolator error") {
+        val error = SemanticError.NoSuchInterpolator("json")
+        val expr = LinkedPhase.Reference[Pos](createPosIdent(error))
+        val diagnostics = SemanticDiagnostics.collect(expr, lineMap)
+
+        diagnostics should have size 1
+        diagnostics.head.message shouldBe "Unknown interpolator 'json'"
+      }
+
       it("should format RefutableValPattern error") {
         val error = SemanticError.RefutableValPattern("Some(x) may fail for None")
         val expr = LinkedPhase.Reference[Pos](createPosIdent(error))
