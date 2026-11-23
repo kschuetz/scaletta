@@ -1,6 +1,5 @@
 package software.kes.scaletta.internal.ast
 
-import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.parser.ParseError
 import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
@@ -16,6 +15,8 @@ trait CorePhase {
   type Ident
 
   type TypeIdent[_[_]]
+
+  type InterpolatorRef
 
   protected implicit def typeIdentFunctorK: FunctorK[TypeIdent]
 
@@ -199,7 +200,7 @@ trait CorePhase {
       )
   }
 
-  case class InterpolatedString[F[_]](interpolator: Interpolator,
+  case class InterpolatedString[F[_]](interpolator: InterpolatorRef,
                                       initial: String,
                                       segments: Vector[(F[Expression[F]], String)]) extends Expression[F] {
     def mapK[G[_]](phi: F ~> G)(implicit F: Functor[F]): InterpolatedString[G] =
