@@ -1,6 +1,8 @@
 package software.kes.scaletta.internal.format
 
-sealed trait FormatSpecifier
+sealed trait FormatSpecifier {
+  def toPattern: String = FormatSpecifier.toPattern(this)
+}
 
 object FormatSpecifier {
   // --- Alignment & Justification ---
@@ -455,6 +457,103 @@ object FormatSpecifier {
     def unapply(arg: DateTime): Option[(DateTimeSuffix, Boolean, Option[Int], Justification)] =
       Some((arg.suffix, arg.isUpperCase, arg.width, arg.justification))
   }
+
+  /**
+   * Serializes the format specifier into a canonical Java `printf` format pattern string
+   * to enable interoperability with standard string formatting routines.
+   */
+  def toPattern(formatSpecifier: FormatSpecifier): String =
+    formatSpecifier match {
+      case g: General =>
+        val (justFlag, widthStr) = g.width match {
+          case Some(w) if w > 0 =>
+            (if (g.justification == Justification.Left) "-" else "", w.toString)
+          case _ =>
+            ("", "")
+        }
+        val precStr = g.precision.fold("")(p => s".$p")
+        val convChar = g.conversion match {
+          case GeneralConversion.StringConversion(true) => "S"
+          case GeneralConversion.StringConversion(false) => "s"
+          case GeneralConversion.BooleanConversion(true) => "B"
+          case GeneralConversion.BooleanConversion(false) => "b"
+          case GeneralConversion.HashCodeConversion(true) => "H"
+          case GeneralConversion.HashCodeConversion(false) => "h"
+        }
+        s"%$justFlag$widthStr$precStr$convChar"
+
+      case c: Character =>
+        val (justFlag, widthStr) = c.width match {
+          case Some(w) if w > 0 =>
+            (if (c.justification == Justification.Left) "-" else "", w.toString)
+          case _ =>
+            ("", "")
+        }
+        val convChar = if (c.isUpperCase) "C" else "c"
+        s"%$justFlag$widthStr$convChar"
+
+      case d: DecimalIntegral =>
+        val signFlag = d.sign match {
+          case SignFormat.AlwaysSign => "+"
+          case SignFormat.SpaceForPositive => " "
+          case SignFormat.EncloseNegative => "("
+          case SignFormat.Default => ""
+        }
+        val groupFlag = if (d.groupingSeparator) "," else ""
+        val (alignFlag, widthStr) = formatAlignment(d.alignment)
+        s"%$signFlag$groupFlag$alignFlag$widthStr" + "d"
+
+      case o: OctalIntegral =>
+        val altFlag = if (o.alternateForm) "#" else ""
+        val (alignFlag, widthStr) = formatAlignment(o.alignment)
+        s"%$altFlag$alignFlag$widthStr" + "o"
+
+      case h: HexIntegral =>
+        val altFlag = if (h.alternateForm) "#" else ""
+        val (alignFlag, widthStr) = formatAlignment(h.alignment)
+        val convChar = if (h.isUpperCase) "X" else "x"
+        s"%$altFlag$alignFlag$widthStr$convChar"
+
+      case f: FloatingPoint =>
+        val signFlag = f.sign match {
+          case SignFormat.AlwaysSign => "+"
+          case SignFormat.SpaceForPositive => " "
+          case SignFormat.EncloseNegative => "("
+          case SignFormat.Default => ""
+        }
+        val altFlag = if (f.alternateForm) "#" else ""
+        val groupFlag = if (f.groupingSeparator) "," else ""
+        val (alignFlag, widthStr) = formatAlignment(f.alignment)
+        val precStr = f.precision.fold("")(p => s".$p")
+        val convChar = f.conversion match {
+          case FloatConversion.DecimalFloat => "f"
+          case FloatConversion.Scientific(true) => "E"
+          case FloatConversion.Scientific(false) => "e"
+          case FloatConversion.GeneralScientific(true) => "G"
+          case FloatConversion.GeneralScientific(false) => "g"
+          case FloatConversion.HexadecimalFloat(true) => "A"
+          case FloatConversion.HexadecimalFloat(false) => "a"
+        }
+        s"%$signFlag$altFlag$groupFlag$alignFlag$widthStr$precStr$convChar"
+
+      case dt: DateTime =>
+        val (justFlag, widthStr) = dt.width match {
+          case Some(w) if w > 0 =>
+            (if (dt.justification == Justification.Left) "-" else "", w.toString)
+          case _ =>
+            ("", "")
+        }
+        val dtChar = if (dt.isUpperCase) "T" else "t"
+        s"%$justFlag$widthStr$dtChar${dt.suffix.character}"
+    }
+
+  private def formatAlignment(alignment: Alignment): (String, String) =
+    alignment match {
+      case l: Alignment.Left if l.width > 0 => ("-", l.width.toString)
+      case z: Alignment.ZeroPad if z.width > 0 => ("0", z.width.toString)
+      case r: Alignment.Right if r.width > 0 => ("", r.width.toString)
+      case _ => ("", "")
+    }
 
   private def clamp(value: Int): Int = Math.max(0, value)
 

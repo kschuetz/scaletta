@@ -166,5 +166,68 @@ final class FormatSpecifierSpec extends AnyFunSpec with Matchers {
         Alignment.zeroPad(-23) shouldBe Alignment.ZeroPad(0)
       }
     }
+
+    describe("toPattern") {
+      it("should reconstruct General string patterns") {
+        General(GeneralConversion.StringConversion(isUpperCase = false)).toPattern shouldBe "%s"
+        General(GeneralConversion.StringConversion(isUpperCase = true)).toPattern shouldBe "%S"
+        General(GeneralConversion.StringConversion(isUpperCase = false), width = Some(11), precision = Some(5), justification = Justification.Left).toPattern shouldBe "%-11.5s"
+        General(GeneralConversion.StringConversion(isUpperCase = false), width = Some(13), precision = Some(7), justification = Justification.Right).toPattern shouldBe "%13.7s"
+
+        FormatSpecifier.toPattern(General(GeneralConversion.StringConversion(isUpperCase = false))) shouldBe "%s"
+      }
+
+      it("should reconstruct General boolean and hashcode patterns") {
+        General(GeneralConversion.BooleanConversion(isUpperCase = false)).toPattern shouldBe "%b"
+        General(GeneralConversion.BooleanConversion(isUpperCase = true)).toPattern shouldBe "%B"
+        General(GeneralConversion.HashCodeConversion(isUpperCase = false)).toPattern shouldBe "%h"
+        General(GeneralConversion.HashCodeConversion(isUpperCase = true)).toPattern shouldBe "%H"
+      }
+
+      it("should reconstruct Character patterns") {
+        Character(isUpperCase = false).toPattern shouldBe "%c"
+        Character(isUpperCase = true).toPattern shouldBe "%C"
+        Character(isUpperCase = false, width = Some(7), justification = Justification.Left).toPattern shouldBe "%-7c"
+        Character(isUpperCase = true, width = Some(11), justification = Justification.Right).toPattern shouldBe "%11C"
+      }
+
+      it("should reconstruct DecimalIntegral patterns") {
+        DecimalIntegral().toPattern shouldBe "%d"
+        DecimalIntegral(alignment = Alignment.ZeroPad(11), sign = SignFormat.AlwaysSign, groupingSeparator = true).toPattern shouldBe "%+,011d"
+        DecimalIntegral(alignment = Alignment.Left(13), sign = SignFormat.SpaceForPositive).toPattern shouldBe "% -13d"
+        DecimalIntegral(alignment = Alignment.Right(17), sign = SignFormat.EncloseNegative).toPattern shouldBe "%(17d"
+      }
+
+      it("should reconstruct OctalIntegral patterns") {
+        OctalIntegral().toPattern shouldBe "%o"
+        OctalIntegral(alignment = Alignment.ZeroPad(7), alternateForm = true).toPattern shouldBe "%#07o"
+        OctalIntegral(alignment = Alignment.Left(11)).toPattern shouldBe "%-11o"
+      }
+
+      it("should reconstruct HexIntegral patterns") {
+        HexIntegral(isUpperCase = false).toPattern shouldBe "%x"
+        HexIntegral(isUpperCase = true, alignment = Alignment.ZeroPad(13), alternateForm = true).toPattern shouldBe "%#013X"
+        HexIntegral(isUpperCase = false, alignment = Alignment.Left(17)).toPattern shouldBe "%-17x"
+      }
+
+      it("should reconstruct FloatingPoint patterns") {
+        FloatingPoint(FloatConversion.DecimalFloat).toPattern shouldBe "%f"
+        FloatingPoint(
+          conversion = FloatConversion.Scientific(isUpperCase = false),
+          alignment = Alignment.ZeroPad(19),
+          sign = SignFormat.AlwaysSign,
+          alternateForm = true,
+          groupingSeparator = true,
+          precision = Some(5)
+        ).toPattern shouldBe "%+#,019.5e"
+        FloatingPoint(FloatConversion.GeneralScientific(isUpperCase = true), alignment = Alignment.Left(23), precision = Some(3)).toPattern shouldBe "%-23.3G"
+        FloatingPoint(FloatConversion.HexadecimalFloat(isUpperCase = true), precision = Some(2)).toPattern shouldBe "%.2A"
+      }
+
+      it("should reconstruct DateTime patterns") {
+        DateTime(DateTimeSuffix.Hour24, isUpperCase = false).toPattern shouldBe "%tH"
+        DateTime(DateTimeSuffix.MonthNameFull, isUpperCase = true, width = Some(29), justification = Justification.Left).toPattern shouldBe "%-29TB"
+      }
+    }
   }
 }
