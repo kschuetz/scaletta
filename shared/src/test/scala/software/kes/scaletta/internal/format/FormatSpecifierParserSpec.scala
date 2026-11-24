@@ -3,6 +3,7 @@ package software.kes.scaletta.internal.format
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.format.FormatSpecifier._
+import software.kes.scaletta.internal.format.FormatSpecifierError._
 import software.kes.scaletta.internal.format.FormatSpecifierParser.Result
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 
@@ -34,16 +35,28 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
         )
       }
 
-      it("should return Error for lone % or invalid escapes") {
-        FormatSpecifierParser.parse("%", followsVariable = false) shouldBe Result.Error()
-        FormatSpecifierParser.parse("foo%", followsVariable = false) shouldBe Result.Error()
-        FormatSpecifierParser.parse("%foo", followsVariable = false) shouldBe Result.Error()
-        FormatSpecifierParser.parse("foo % bar", followsVariable = false) shouldBe Result.Error()
+      it("should return Failure for lone % or invalid escapes") {
+        FormatSpecifierParser.parse("%", followsVariable = false) shouldBe Result.Failure(
+          Pos(LonePercent, CharIndex(0), CharIndex(0))
+        )
+        FormatSpecifierParser.parse("foo%", followsVariable = false) shouldBe Result.Failure(
+          Pos(LonePercent, CharIndex(3), CharIndex(3))
+        )
+        FormatSpecifierParser.parse("%foo", followsVariable = false) shouldBe Result.Failure(
+          Pos(InvalidEscape('f'), CharIndex(0), CharIndex(1))
+        )
+        FormatSpecifierParser.parse("foo % bar", followsVariable = false) shouldBe Result.Failure(
+          Pos(InvalidEscape(' '), CharIndex(4), CharIndex(5))
+        )
       }
 
-      it("should return Error if it starts with what would be a format specifier") {
-        FormatSpecifierParser.parse("%d", followsVariable = false) shouldBe Result.Error()
-        FormatSpecifierParser.parse("%10s", followsVariable = false) shouldBe Result.Error()
+      it("should return Failure if it starts with what would be a format specifier") {
+        FormatSpecifierParser.parse("%d", followsVariable = false) shouldBe Result.Failure(
+          Pos(InvalidEscape('d'), CharIndex(0), CharIndex(1))
+        )
+        FormatSpecifierParser.parse("%10s", followsVariable = false) shouldBe Result.Failure(
+          Pos(InvalidEscape('1'), CharIndex(0), CharIndex(1))
+        )
       }
     }
 
@@ -98,10 +111,18 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
         }
 
         it("should reject invalid flags for general conversions") {
-          FormatSpecifierParser.parse("%013s", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%+s", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%#s", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%,s", followsVariable = true) shouldBe Result.Error()
+          FormatSpecifierParser.parse("%013s", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag('0', 's'), CharIndex(0), CharIndex(4))
+          )
+          FormatSpecifierParser.parse("%+s", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag('+', 's'), CharIndex(0), CharIndex(2))
+          )
+          FormatSpecifierParser.parse("%#s", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag('#', 's'), CharIndex(0), CharIndex(2))
+          )
+          FormatSpecifierParser.parse("%,s", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag(',', 's'), CharIndex(0), CharIndex(2))
+          )
         }
       }
 
@@ -118,7 +139,9 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
         }
 
         it("should reject precision for character conversions") {
-          FormatSpecifierParser.parse("%.3c", followsVariable = true) shouldBe Result.Error()
+          FormatSpecifierParser.parse("%.3c", followsVariable = true) shouldBe Result.Failure(
+            Pos(PrecisionNotPermitted('c'), CharIndex(0), CharIndex(3))
+          )
         }
       }
 
@@ -150,8 +173,12 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
         }
 
         it("should reject alternate form (#) or precision for %d") {
-          FormatSpecifierParser.parse("%#d", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%.5d", followsVariable = true) shouldBe Result.Error()
+          FormatSpecifierParser.parse("%#d", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag('#', 'd'), CharIndex(0), CharIndex(2))
+          )
+          FormatSpecifierParser.parse("%.5d", followsVariable = true) shouldBe Result.Failure(
+            Pos(PrecisionNotPermitted('d'), CharIndex(0), CharIndex(3))
+          )
         }
       }
 
@@ -175,9 +202,15 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
         }
 
         it("should reject sign flags, grouping separator, or precision for %o, %x, %X") {
-          FormatSpecifierParser.parse("%+o", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%,x", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%.3X", followsVariable = true) shouldBe Result.Error()
+          FormatSpecifierParser.parse("%+o", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag('+', 'o'), CharIndex(0), CharIndex(2))
+          )
+          FormatSpecifierParser.parse("%,x", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag(',', 'x'), CharIndex(0), CharIndex(2))
+          )
+          FormatSpecifierParser.parse("%.3X", followsVariable = true) shouldBe Result.Failure(
+            Pos(PrecisionNotPermitted('X'), CharIndex(0), CharIndex(3))
+          )
         }
       }
 
@@ -229,7 +262,9 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
         }
 
         it("should reject grouping separator for %a and %A") {
-          FormatSpecifierParser.parse("%,a", followsVariable = true) shouldBe Result.Error()
+          FormatSpecifierParser.parse("%,a", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag(',', 'a'), CharIndex(0), CharIndex(2))
+          )
         }
       }
 
@@ -250,14 +285,24 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
         }
 
         it("should reject invalid date/time suffixes or incomplete specifiers") {
-          FormatSpecifierParser.parse("%t", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%tX", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%t@", followsVariable = true) shouldBe Result.Error()
+          FormatSpecifierParser.parse("%t", followsVariable = true) shouldBe Result.Failure(
+            Pos(MissingDateTimeSuffix, CharIndex(0), CharIndex(1))
+          )
+          FormatSpecifierParser.parse("%tX", followsVariable = true) shouldBe Result.Failure(
+            Pos(UnknownDateTimeSuffix('X'), CharIndex(0), CharIndex(2))
+          )
+          FormatSpecifierParser.parse("%t@", followsVariable = true) shouldBe Result.Failure(
+            Pos(UnknownDateTimeSuffix('@'), CharIndex(0), CharIndex(2))
+          )
         }
 
         it("should reject precision or unsupported flags for date/time") {
-          FormatSpecifierParser.parse("%.2tH", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%+tH", followsVariable = true) shouldBe Result.Error()
+          FormatSpecifierParser.parse("%.2tH", followsVariable = true) shouldBe Result.Failure(
+            Pos(PrecisionNotPermitted('t'), CharIndex(0), CharIndex(4))
+          )
+          FormatSpecifierParser.parse("%+tH", followsVariable = true) shouldBe Result.Failure(
+            Pos(IncompatibleFlag('+', 't'), CharIndex(0), CharIndex(3))
+          )
         }
       }
 
@@ -270,23 +315,58 @@ final class FormatSpecifierParserSpec extends AnyFunSpec with Matchers {
           )
         }
 
-        it("should return Error if suffix contains invalid lone %") {
-          FormatSpecifierParser.parse("%d remaining % error", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%s %", followsVariable = true) shouldBe Result.Error()
+        it("should return Failure if suffix contains invalid lone %") {
+          FormatSpecifierParser.parse("%d remaining % error", followsVariable = true) shouldBe Result.Failure(
+            Pos(InvalidEscape(' '), CharIndex(13), CharIndex(14))
+          )
+          FormatSpecifierParser.parse("%s %", followsVariable = true) shouldBe Result.Failure(
+            Pos(LonePercent, CharIndex(3), CharIndex(3))
+          )
         }
 
-        it("should return Error for conflicting flags") {
-          FormatSpecifierParser.parse("%-011d", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%+ 13f", followsVariable = true) shouldBe Result.Error()
+        it("should return Failure for conflicting flags") {
+          FormatSpecifierParser.parse("%-011d", followsVariable = true) shouldBe Result.Failure(
+            Pos(ConflictingFlags('-', '0'), CharIndex(0), CharIndex(5))
+          )
+          FormatSpecifierParser.parse("%+ 13f", followsVariable = true) shouldBe Result.Failure(
+            Pos(ConflictingSignFlags(Vector('+', ' ')), CharIndex(0), CharIndex(5))
+          )
+          FormatSpecifierParser.parse("%+ (17d", followsVariable = true) shouldBe Result.Failure(
+            Pos(ConflictingSignFlags(Vector('+', ' ', '(')), CharIndex(0), CharIndex(6))
+          )
         }
 
-        it("should return Error for incomplete precision specification") {
-          FormatSpecifierParser.parse("%.s", followsVariable = true) shouldBe Result.Error()
-          FormatSpecifierParser.parse("%11.", followsVariable = true) shouldBe Result.Error()
+        it("should return Failure for incomplete precision specification") {
+          FormatSpecifierParser.parse("%.s", followsVariable = true) shouldBe Result.Failure(
+            Pos(MissingPrecision, CharIndex(0), CharIndex(1))
+          )
+          FormatSpecifierParser.parse("%11.", followsVariable = true) shouldBe Result.Failure(
+            Pos(MissingPrecision, CharIndex(0), CharIndex(3))
+          )
         }
 
-        it("should return Error for unknown conversion character") {
-          FormatSpecifierParser.parse("%w", followsVariable = true) shouldBe Result.Error()
+        it("should return Failure for unknown conversion character") {
+          FormatSpecifierParser.parse("%w", followsVariable = true) shouldBe Result.Failure(
+            Pos(UnknownConversion('w'), CharIndex(0), CharIndex(1))
+          )
+        }
+
+        it("should return Failure for missing conversion") {
+          FormatSpecifierParser.parse("%", followsVariable = true) shouldBe Result.Failure(
+            Pos(MissingConversion, CharIndex(0), CharIndex(0))
+          )
+          FormatSpecifierParser.parse("%+19", followsVariable = true) shouldBe Result.Failure(
+            Pos(MissingConversion, CharIndex(0), CharIndex(3))
+          )
+        }
+
+        it("should return Failure for width and precision overflow") {
+          FormatSpecifierParser.parse("%99999999999999999999d", followsVariable = true) shouldBe Result.Failure(
+            Pos(WidthOverflow, CharIndex(0), CharIndex(20))
+          )
+          FormatSpecifierParser.parse("%.99999999999999999999f", followsVariable = true) shouldBe Result.Failure(
+            Pos(PrecisionOverflow, CharIndex(0), CharIndex(21))
+          )
         }
       }
     }
