@@ -5,7 +5,6 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.internal.format.FormatSpecifier._
 
 import java.time.{LocalDate, ZoneId, ZonedDateTime}
-import java.util.Locale
 
 final class ValueFormatterSpec extends AnyFunSpec with Matchers {
 
@@ -30,9 +29,9 @@ final class ValueFormatterSpec extends AnyFunSpec with Matchers {
 
       it("should format hash codes") {
         val obj = "test"
-        val expected = java.lang.String.format(Locale.ROOT, "%h", obj)
+        val expected = java.lang.String.format("%h", obj)
         ValueFormatter.applyFormat(General(GeneralConversion.HashCodeConversion(isUpperCase = false)), obj) shouldBe Right(expected)
-        ValueFormatter.applyFormat(General(GeneralConversion.HashCodeConversion(isUpperCase = true)), obj) shouldBe Right(expected.toUpperCase(Locale.ROOT))
+        ValueFormatter.applyFormat(General(GeneralConversion.HashCodeConversion(isUpperCase = true)), obj) shouldBe Right(expected.toUpperCase)
         ValueFormatter.applyFormat(General(GeneralConversion.HashCodeConversion(isUpperCase = false)), null) shouldBe Right("null")
       }
     }
@@ -152,12 +151,6 @@ final class ValueFormatterSpec extends AnyFunSpec with Matchers {
         resSciUpper.isRight shouldBe true
         val resGen = ValueFormatter.applyFormat(FloatingPoint(FloatConversion.GeneralScientific(isUpperCase = false), precision = Some(4)), d)
         resGen.isRight shouldBe true
-      }
-
-      it("should respect explicit locale") {
-        val spec = FloatingPoint(FloatConversion.DecimalFloat, precision = Some(2))
-        ValueFormatter.applyFormat(spec, 3.14, Locale.GERMANY) shouldBe Right("3,14")
-        ValueFormatter.applyFormat(spec, 3.14, Locale.US) shouldBe Right("3.14")
       }
     }
 

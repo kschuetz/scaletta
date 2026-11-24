@@ -1,31 +1,22 @@
 package software.kes.scaletta.internal.format
 
-import java.util.{IllegalFormatCodePointException, IllegalFormatConversionException, Locale}
+import java.util.{IllegalFormatCodePointException, IllegalFormatConversionException}
 import scala.util.control.NonFatal
 
 object ValueFormatter {
 
   /**
-   * Applies format specifier to the given runtime value using [[Locale.ROOT]].
+   * Applies format specifier to the given runtime value.
    * Exception containment guarantees deterministic total execution without throwing.
    */
   def applyFormat(formatSpecifier: FormatSpecifier,
                   value: Any): Either[RuntimeFormattingError, String] =
-    applyFormat(formatSpecifier, value, Locale.ROOT)
-
-  /**
-   * Applies format specifier to the given runtime value using the specified locale.
-   * Exception containment guarantees deterministic total execution without throwing.
-   */
-  def applyFormat(formatSpecifier: FormatSpecifier,
-                  value: Any,
-                  locale: Locale): Either[RuntimeFormattingError, String] =
     if (value == null) {
       formatSpecifier match {
         case g: FormatSpecifier.General =>
           val pattern = g.toPattern
           try {
-            val result = java.lang.String.format(locale, pattern, null)
+            val result = java.lang.String.format(pattern, null)
             Right(result)
           } catch {
             case NonFatal(e) =>
@@ -42,7 +33,7 @@ object ValueFormatter {
       val pattern = formatSpecifier.toPattern
       val boxed = boxValue(value)
       try {
-        val result = java.lang.String.format(locale, pattern, boxed)
+        val result = java.lang.String.format(pattern, boxed)
         Right(result)
       } catch {
         case e: IllegalFormatConversionException =>
