@@ -38,16 +38,6 @@ private[scaletta] final class InterpolatorRegistryImpl extends InterpolatorRegis
       case None => throw new NoSuchElementException(s"Unknown interpolator id: $id")
     }
 
-  def getCustomInterpolator(name: String): Option[LinkedInterpolator.Custom] =
-    nameToId.get(Name(name)) match {
-      case Some(id) =>
-        idToInterpolator.get(id) match {
-          case Some(interpolator) => Some(LinkedInterpolator.Custom(id, interpolator.returnType))
-          case None => None
-        }
-      case None => None
-    }
-
   def build(): InterpolatorLookup =
     new InterpolatorLookup(nameToId.toMap, idToInterpolator.toMap)
 }
@@ -64,15 +54,5 @@ private[scaletta] final class InterpolatorLookup(val nameToId: Map[Name, Interpo
     idToInterpolator.get(id) match {
       case Some(interpolator) => interpolator
       case None => throw new NoSuchElementException(s"Unknown interpolator id: $id")
-    }
-
-  def getCustomInterpolator(name: String): Option[LinkedInterpolator.Custom] =
-    nameToId.get(Name(name)) match {
-      case Some(id) =>
-        idToInterpolator.get(id) match {
-          case Some(interpolator) => Some(LinkedInterpolator.Custom(id, interpolator.returnType))
-          case None => None
-        }
-      case None => None
     }
 }

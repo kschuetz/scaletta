@@ -3,32 +3,30 @@ package software.kes.scaletta.internal
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins._
 import software.kes.scaletta.internal.intermediate.IntermediateExpressionCompiler
-import software.kes.scaletta.internal.interpolators.{CustomInterpolatorLookup, LinkedInterpolator}
+import software.kes.scaletta.internal.interpolators.{CustomInterpolatorLookup, InterpolatorNameLookup}
 import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryParameter}
 import software.kes.scaletta.internal.types.TypeUniverse
 
 object Universe {
   def create(typeUniverse: TypeUniverse,
              methodUniverse: MethodUniverse,
-             interpolatorLookup: CustomInterpolatorLookup): Universe =
-    new Universe(typeUniverse, methodUniverse, interpolatorLookup)
-
-  def create(typeUniverse: TypeUniverse,
-             methodUniverse: MethodUniverse): Universe =
-    new Universe(typeUniverse, methodUniverse, CustomInterpolatorLookup.empty)
+             interpolatorLookup: CustomInterpolatorLookup with InterpolatorNameLookup): Universe =
+    new Universe(typeUniverse, methodUniverse, interpolatorLookup, interpolatorLookup)
 }
 
 final class Universe private(val typeUniverse: TypeUniverse,
                              val methodUniverse: MethodUniverse,
-                             val interpolatorLookup: CustomInterpolatorLookup)
+                             val customInterpolatorLookup: CustomInterpolatorLookup,
+                             val interpolatorNameLookup: InterpolatorNameLookup)
   extends MethodResolver
-    with CustomInterpolatorLookup {
+    with CustomInterpolatorLookup
+    with InterpolatorNameLookup {
 
   def getCustomInterpolator(id: InterpolatorId): CustomInterpolator =
-    interpolatorLookup.getCustomInterpolator(id)
+    customInterpolatorLookup.getCustomInterpolator(id)
 
-  def getCustomInterpolator(name: String): Option[LinkedInterpolator.Custom] =
-    interpolatorLookup.getCustomInterpolator(name)
+  def getInterpolatorByName(name: Name): Option[InterpolatorId] =
+    interpolatorNameLookup.getInterpolatorByName(name)
 
   lazy val compiler: IntermediateExpressionCompiler =
     new IntermediateExpressionCompiler(methodUniverse.dispatchTable)

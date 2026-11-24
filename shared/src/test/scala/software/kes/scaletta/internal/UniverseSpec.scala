@@ -83,7 +83,7 @@ class UniverseSpec extends AnyFunSpec with Matchers {
     mb.addMethod(MethodName(ReceiverType.Instance(typeA), Name("method")), params1, intT, null)
 
     val mu: MethodUniverse = mb.build()
-    val universe: Universe = Universe.create(typeUniverse, mu)
+    val universe: Universe = TestUniverse.create(typeUniverse, mu)
 
     val importScope: ImportScope = ImportScope.empty
       .importWildcard(ns1)

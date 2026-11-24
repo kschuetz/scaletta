@@ -4,9 +4,9 @@ import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins._
+import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.symbols.SignatureQuery
 import software.kes.scaletta.internal.types.TypeRegistryImpl
-import software.kes.scaletta.internal.runtime.CoreTypes
 
 class MethodOnNonNominalTypeSpec extends AnyFunSpec with Matchers {
 
@@ -21,7 +21,7 @@ class MethodOnNonNominalTypeSpec extends AnyFunSpec with Matchers {
       mb.addMethod(methodName, Vector.empty, CoreTypes.StringT, null)
 
       val mu = mb.build()
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
 
       val query = SignatureQuery.empty
       val result = universe.resolveBestMethod(Type.unit, Name("toString"), query)
@@ -42,7 +42,7 @@ class MethodOnNonNominalTypeSpec extends AnyFunSpec with Matchers {
       mb.addMethod(methodName, Vector.empty, swappedTupleType, null)
 
       val mu = mb.build()
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
 
       val query = SignatureQuery.empty
       val result = universe.resolveBestMethod(tupleType, Name("swap"), query)

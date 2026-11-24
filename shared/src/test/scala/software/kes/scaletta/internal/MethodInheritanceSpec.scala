@@ -25,7 +25,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
       mb.addMethod(MethodName(ReceiverType.Instance(baseType), Name("foo")), params, intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
       val query = SignatureQuery.of(intT)
 
       val candidates = universe.getMethodCandidates(derivedType, Name("foo"), query)
@@ -48,7 +48,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
       val idDerived = mb.addMethod(MethodName(ReceiverType.Instance(derivedType), Name("foo")), params, intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
       val query = SignatureQuery.of(intT)
 
       val result = universe.resolveBestMethod(derivedType, Name("foo"), query)
@@ -73,7 +73,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
       val idGrandparent = mb.addMethod(MethodName(ReceiverType.Instance(grandparentType), Name("foo")), params, intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
       val query = SignatureQuery.of(intT)
 
       val result = universe.resolveBestMethod(childType, Name("foo"), query)
@@ -99,7 +99,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
       val idParent = mb.addMethod(MethodName(ReceiverType.Instance(parentType), Name("foo")), params, intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
       val query = SignatureQuery.of(intT)
 
       val result = universe.resolveBestMethod(childType, Name("foo"), query)
@@ -123,7 +123,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
       val idDerivedString = mb.addMethod(MethodName(ReceiverType.Instance(derivedType), Name("foo")), Vector(FormalParameter(Name("s"), stringT)), intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
 
       val resultInt = universe.resolveBestMethod(derivedType, Name("foo"), SignatureQuery.of(intT))
       resultInt.isRight shouldBe true
@@ -151,7 +151,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
       val idB = mb.addMethod(MethodName(ReceiverType.Instance(traitB), Name("bar")), Vector.empty, intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
 
       val resA = universe.resolveBestMethod(impl, Name("foo"), SignatureQuery.empty)
       resA.isRight shouldBe true
@@ -179,7 +179,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
       mb.addMethod(MethodName(ReceiverType.Instance(traitB), Name("foo")), Vector.empty, intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
 
       val result = universe.resolveBestMethod(impl, Name("foo"), SignatureQuery.empty)
       result shouldBe Left(ResolutionError.Ambiguous)
@@ -201,7 +201,7 @@ class MethodInheritanceSpec extends AnyFunSpec with Matchers {
         intT, null)
       val mu = mb.build()
 
-      val universe = Universe.create(typeUniverse, mu)
+      val universe = TestUniverse.create(typeUniverse, mu)
       val query = SignatureQuery.ofGroups(SignatureQuery.Group(Vector(intT)), SignatureQuery.Group(Vector(intT)))
 
       val result = universe.resolveBestMethod(derivedType, Name("foo"), query)

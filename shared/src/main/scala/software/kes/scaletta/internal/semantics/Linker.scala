@@ -5,7 +5,7 @@ import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.Universe
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.builtins.MethodResolver
-import software.kes.scaletta.internal.interpolators.{CustomInterpolatorLookup, LinkedInterpolator}
+import software.kes.scaletta.internal.interpolators.{CustomInterpolatorLookup, InterpolatorNameLookup, LinkedInterpolator}
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.internal.semantics.Linker.{Input, Output}
 import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryParameter}
@@ -15,23 +15,12 @@ object Linker {
   type Input = DesugaredPhase.Expression[Pos]
   type Output = LinkedPhase.Expression[Pos]
 
-  def create(methodResolver: MethodResolver,
-             typeNameIndex: TypeNameIndex,
-             interpolatorLookup: CustomInterpolatorLookup,
-             importScope: ImportScope): Linker =
-    new Linker(methodResolver, typeNameIndex, interpolatorLookup, importScope)
-
-  def create(methodResolver: MethodResolver,
-             typeNameIndex: TypeNameIndex,
-             importScope: ImportScope = ImportScope.default): Linker =
-    new Linker(methodResolver, typeNameIndex, CustomInterpolatorLookup.empty, importScope)
-
   def create(universe: Universe,
              importScope: ImportScope): Linker =
-    new Linker(universe, universe.typeUniverse.nameIndex, universe.interpolatorLookup, importScope)
+    new Linker(universe, universe.typeUniverse.nameIndex, universe, universe, importScope)
 
   def create(universe: Universe): Linker =
-    new Linker(universe, universe.typeUniverse.nameIndex, universe.interpolatorLookup, ImportScope.default)
+    new Linker(universe, universe.typeUniverse.nameIndex, universe, universe, ImportScope.default)
 }
 
 /**
@@ -42,7 +31,8 @@ object Linker {
  */
 final class Linker private(methodResolver: MethodResolver,
                            typeNameIndex: TypeNameIndex,
-                           interpolatorLookup: CustomInterpolatorLookup,
+                           customInterpolatorLookup: CustomInterpolatorLookup,
+                           interpolatorNameLookup: InterpolatorNameLookup,
                            importScope: ImportScope) {
 
   def link(input: Input): Output = linkExpression(input, LexicalScope.empty, Set.empty, Set.empty)
@@ -142,9 +132,12 @@ final class Linker private(methodResolver: MethodResolver,
           case Interpolator.Raw => LinkedInterpolator.Raw
           case Interpolator.F => LinkedInterpolator.F
           case Interpolator.Custom(name) =>
-            interpolatorLookup.getCustomInterpolator(name) match {
-              case Some(custom) => LinkedInterpolator.Custom(custom.id, custom.resultType)
-              case None => LinkedInterpolator.Error(SemanticError.NoSuchInterpolator(name))
+            interpolatorNameLookup.getInterpolatorByName(Name(name)) match {
+              case Some(id) =>
+                val custom = customInterpolatorLookup.getCustomInterpolator(id)
+                LinkedInterpolator.Custom(id, custom.returnType)
+              case None =>
+                LinkedInterpolator.Error(SemanticError.NoSuchInterpolator(name))
             }
         }
         val newSegments = segments.foldLeft(Vector.empty[(Pos[LinkedPhase.Expression[Pos]], String)]) {
