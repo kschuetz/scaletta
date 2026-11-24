@@ -3,6 +3,7 @@ package software.kes.scaletta.internal.semantics
 import software.kes.scaletta.api.{DiagnosticMessage, ParameterGroup, ProperType, Type, TypeId, VariadicParameter, FormalParameter => ApiFormalParameter}
 import software.kes.scaletta.internal.ast.LinkedPhase._
 import software.kes.scaletta.internal.ast._
+import software.kes.scaletta.internal.interpolators.LinkedInterpolator
 import software.kes.scaletta.internal.reporting.{LineMap, Pos}
 import software.kes.scaletta.internal.types.TypeResolutionError
 
@@ -78,8 +79,15 @@ object SemanticDiagnostics {
  */
 final class SemanticDiagnostics private(lineMap: LineMap) {
 
-  def collectFromPosExpression(posExpr: Pos[LinkedPhase.Expression[Pos]]): Vector[DiagnosticMessage] =
-    collectFromExpression(posExpr.value)
+  def collectFromPosExpression(posExpr: Pos[LinkedPhase.Expression[Pos]]): Vector[DiagnosticMessage] = {
+    val interpDiag = posExpr.value match {
+      case InterpolatedString(LinkedInterpolator.Error(err), _, _) =>
+        Vector(toDiagnostic(posExpr, formatSemanticError(err)))
+      case _ =>
+        Vector.empty
+    }
+    interpDiag ++ collectFromExpression(posExpr.value)
+  }
 
   def collectFromExpression(expr: LinkedPhase.Expression[Pos]): Vector[DiagnosticMessage] = {
     expr match {

@@ -6,6 +6,7 @@ import software.kes.scaletta.api._
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.desugar.Desugarer
+import software.kes.scaletta.internal.interpolators.{LinkedInterpolator, SInterpolator}
 import software.kes.scaletta.internal.parser.Parser
 import software.kes.scaletta.internal.reader.SourceReader
 import software.kes.scaletta.internal.reporting.{CharIndex, LineMap, LineMapBuilder, Pos}
@@ -1553,6 +1554,161 @@ final class LinkerSpec extends AnyFunSpec with Matchers {
               case other => fail(s"Expected Val, got $other")
             }
           case other => fail(s"Expected Block, got $other")
+        }
+      }
+    }
+
+    describe("interpolated strings") {
+      it("should resolve standard s interpolator to LinkedInterpolator.Custom with StringT and link references") {
+        val ast = link("{ val x = 41; s\"hello $x\" }")
+        ast match {
+          case LinkedPhase.Block(decls, result) =>
+            decls.size shouldBe 1
+            result.value match {
+              case LinkedPhase.InterpolatedString(interpolator, initial, segments) =>
+                interpolator match {
+                  case LinkedInterpolator.Custom(_, resultType) =>
+                    resultType shouldBe StringT
+                  case other => fail(s"Expected LinkedInterpolator.Custom, got $other")
+                }
+                initial shouldBe "hello "
+                segments.size shouldBe 1
+                segments.head._1.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value shouldBe LinkedInfo.Local(0, 0, "x", LocalBindingKind.Val)
+                  case other => fail(s"Expected Reference, got $other")
+                }
+                segments.head._2 shouldBe ""
+              case other => fail(s"Expected InterpolatedString, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should resolve built-in raw interpolator to LinkedInterpolator.Raw") {
+        val ast = link("{ val y = 43; raw\"foo $y\" }")
+        ast match {
+          case LinkedPhase.Block(_, result) =>
+            result.value match {
+              case LinkedPhase.InterpolatedString(interpolator, initial, segments) =>
+                interpolator shouldBe LinkedInterpolator.Raw
+                initial shouldBe "foo "
+                segments.size shouldBe 1
+                segments.head._1.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value shouldBe LinkedInfo.Local(0, 0, "y", LocalBindingKind.Val)
+                  case other => fail(s"Expected Reference, got $other")
+                }
+              case other => fail(s"Expected InterpolatedString, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should resolve built-in f interpolator to LinkedInterpolator.F") {
+        val ast = link("{ val z = 47; f\"bar $z\" }")
+        ast match {
+          case LinkedPhase.Block(_, result) =>
+            result.value match {
+              case LinkedPhase.InterpolatedString(interpolator, initial, segments) =>
+                interpolator shouldBe LinkedInterpolator.F
+                initial shouldBe "bar "
+                segments.size shouldBe 1
+                segments.head._1.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value shouldBe LinkedInfo.Local(0, 0, "z", LocalBindingKind.Val)
+                  case other => fail(s"Expected Reference, got $other")
+                }
+              case other => fail(s"Expected InterpolatedString, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should resolve custom registered interpolator to LinkedInterpolator.Custom") {
+        val customModule: ScalettaModule[Unit] =
+          ScalettaModule.interpolatorsOnly { registry =>
+            registry.registerInterpolator(Name("custom"), SInterpolator.definition)
+          }
+        val customFacade = Scaletta.builder
+          .addModule(customModule)
+          .build
+          .asInstanceOf[ScalettaFacade]
+
+        val parsed = parseExpr("{ val a = 53; custom\"prefix $a\" }")
+        val desugared = Desugarer.create().desugar(parsed.value)
+        val linker = Linker.create(customFacade.universe, ImportScope.default)
+        val ast = linker.link(desugared)
+
+        ast match {
+          case LinkedPhase.Block(_, result) =>
+            result.value match {
+              case LinkedPhase.InterpolatedString(interpolator, initial, segments) =>
+                interpolator match {
+                  case LinkedInterpolator.Custom(_, resultType) =>
+                    resultType shouldBe StringT
+                  case other => fail(s"Expected LinkedInterpolator.Custom, got $other")
+                }
+                initial shouldBe "prefix "
+                segments.size shouldBe 1
+                segments.head._1.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value shouldBe LinkedInfo.Local(0, 0, "a", LocalBindingKind.Val)
+                  case other => fail(s"Expected Reference, got $other")
+                }
+              case other => fail(s"Expected InterpolatedString, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should resolve unregistered interpolator to LinkedInterpolator.Error") {
+        val ast = link("{ val a = 59; unknown\"text $a\" }")
+        ast match {
+          case LinkedPhase.Block(_, result) =>
+            result.value match {
+              case LinkedPhase.InterpolatedString(interpolator, initial, segments) =>
+                interpolator shouldBe LinkedInterpolator.Error(SemanticError.NoSuchInterpolator("unknown"))
+                initial shouldBe "text "
+                segments.size shouldBe 1
+                segments.head._1.value match {
+                  case LinkedPhase.Reference(id) =>
+                    id.value shouldBe LinkedInfo.Local(0, 0, "a", LocalBindingKind.Val)
+                  case other => fail(s"Expected Reference, got $other")
+                }
+              case other => fail(s"Expected InterpolatedString, got $other")
+            }
+          case other => fail(s"Expected Block, got $other")
+        }
+      }
+
+      it("should resolve outer lexical variables with correct depth and slot within embedded segments") {
+        val ast = link("{ val outer = 41; { val inner = 43; s\"outer=$outer, inner=$inner\" } }")
+        ast match {
+          case LinkedPhase.Block(_, result) =>
+            result.value match {
+              case LinkedPhase.Block(_, innerResult) =>
+                innerResult.value match {
+                  case LinkedPhase.InterpolatedString(interpolator, initial, segments) =>
+                    initial shouldBe "outer="
+                    segments.size shouldBe 2
+                    segments(0)._1.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Local(1, 0, "outer", LocalBindingKind.Val)
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                    segments(0)._2 shouldBe ", inner="
+                    segments(1)._1.value match {
+                      case LinkedPhase.Reference(id) =>
+                        id.value shouldBe LinkedInfo.Local(0, 0, "inner", LocalBindingKind.Val)
+                      case other => fail(s"Expected Reference, got $other")
+                    }
+                    segments(1)._2 shouldBe ""
+                  case other => fail(s"Expected InterpolatedString, got $other")
+                }
+              case other => fail(s"Expected inner Block, got $other")
+            }
+          case other => fail(s"Expected outer Block, got $other")
         }
       }
     }

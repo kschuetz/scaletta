@@ -56,7 +56,7 @@ object ScalettaFacade {
 
       modules.reverse.foreach(_.configure(setup))
 
-      val universe = Universe.create(typeRegistry.build(), methodRegistry.build())
+      val universe = Universe.create(typeRegistry.build(), methodRegistry.build(), interpolatorRegistry.build())
       new ScalettaFacade(settings, universe, importScope, runtimeContextRegistry)
     }
   }

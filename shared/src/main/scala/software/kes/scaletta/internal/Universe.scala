@@ -3,17 +3,32 @@ package software.kes.scaletta.internal
 import software.kes.scaletta.api._
 import software.kes.scaletta.internal.builtins._
 import software.kes.scaletta.internal.intermediate.IntermediateExpressionCompiler
+import software.kes.scaletta.internal.interpolators.{CustomInterpolatorLookup, LinkedInterpolator}
 import software.kes.scaletta.internal.symbols.{SignatureQuery, SignatureQueryParameter}
 import software.kes.scaletta.internal.types.TypeUniverse
 
 object Universe {
   def create(typeUniverse: TypeUniverse,
+             methodUniverse: MethodUniverse,
+             interpolatorLookup: CustomInterpolatorLookup): Universe =
+    new Universe(typeUniverse, methodUniverse, interpolatorLookup)
+
+  def create(typeUniverse: TypeUniverse,
              methodUniverse: MethodUniverse): Universe =
-    new Universe(typeUniverse, methodUniverse)
+    new Universe(typeUniverse, methodUniverse, CustomInterpolatorLookup.empty)
 }
 
 final class Universe private(val typeUniverse: TypeUniverse,
-                             val methodUniverse: MethodUniverse) extends MethodResolver {
+                             val methodUniverse: MethodUniverse,
+                             val interpolatorLookup: CustomInterpolatorLookup)
+  extends MethodResolver
+    with CustomInterpolatorLookup {
+
+  def getCustomInterpolator(id: InterpolatorId): CustomInterpolator =
+    interpolatorLookup.getCustomInterpolator(id)
+
+  def getCustomInterpolator(name: String): Option[LinkedInterpolator.Custom] =
+    interpolatorLookup.getCustomInterpolator(name)
 
   lazy val compiler: IntermediateExpressionCompiler =
     new IntermediateExpressionCompiler(methodUniverse.dispatchTable)

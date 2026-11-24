@@ -3,7 +3,7 @@ package software.kes.scaletta.internal.ast
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.{NativeFunctionId, ProperType, Type, TypeId}
-import software.kes.scaletta.common.Interpolator
+import software.kes.scaletta.internal.interpolators.LinkedInterpolator
 import software.kes.scaletta.internal.parser.ParseError
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.internal.semantics.{LocalBindingKind, SemanticError}
@@ -186,12 +186,12 @@ final class TypedPhaseSpec extends AnyFunSpec with Matchers {
       lambda.mapK(posToAttr) shouldBe TypedPhase.Lambda[Attributed](Vector(expectedParam), expectedBody)
 
       val interp = TypedPhase.InterpolatedString[Pos](
-        Interpolator.Custom("s"),
+        LinkedInterpolator.Raw,
         "prefix ",
         Vector((body, " suffix"))
       )
       interp.mapK(posToAttr) shouldBe TypedPhase.InterpolatedString[Attributed](
-        Interpolator.Custom("s"),
+        LinkedInterpolator.Raw,
         "prefix ",
         Vector((expectedBody, " suffix"))
       )

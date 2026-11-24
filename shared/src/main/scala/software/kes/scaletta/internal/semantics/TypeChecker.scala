@@ -1,9 +1,9 @@
 package software.kes.scaletta.internal.semantics
 
 import software.kes.scaletta.api._
-import software.kes.scaletta.common.Interpolator
 import software.kes.scaletta.internal.ast._
 import software.kes.scaletta.internal.builtins.{MethodResolver, OverloadResolver, ResolutionError}
+import software.kes.scaletta.internal.interpolators.LinkedInterpolator
 import software.kes.scaletta.internal.reporting.{CharIndex, Pos}
 import software.kes.scaletta.internal.runtime.CoreTypes
 import software.kes.scaletta.internal.symbols.SignatureQuery
@@ -435,15 +435,19 @@ final class TypeChecker private(typeUniverse: TypeUniverse, methodResolver: Meth
     (attr, s1)
   }
 
-  private def checkInterpolatedString(interpolator: Interpolator,
+  private def checkInterpolatedString(interpolator: LinkedInterpolator,
                                       initial: String,
                                       segments: Vector[(Pos[LinkedPhase.Expression[Pos]], String)],
                                       begin: CharIndex,
                                       end: CharIndex,
                                       env: TypeEnvironment,
                                       state: State): (Attributed[TypedPhase.Expression[Attributed]], State) = {
+    val s1 = interpolator match {
+      case LinkedInterpolator.Error(err) => state.addError(Pos(err, begin, end))
+      case _ => state
+    }
     case class InterpAcc(attrSegments: Vector[(Attributed[TypedPhase.Expression[Attributed]], String)], st: State)
-    val interpInit = InterpAcc(Vector.empty, state)
+    val interpInit = InterpAcc(Vector.empty, s1)
     val interpRes = segments.foldLeft(interpInit) { case (acc, (expr, text)) =>
       val (attrExpr, nextSt) = checkPosExpression(expr, env, acc.st)
       InterpAcc(acc.attrSegments :+ (attrExpr, text), nextSt)

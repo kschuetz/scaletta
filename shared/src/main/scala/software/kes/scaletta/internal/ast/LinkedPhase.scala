@@ -1,14 +1,14 @@
 package software.kes.scaletta.internal.ast
 
 import software.kes.scaletta.api.{ProperType, TypeId}
-import software.kes.scaletta.common.Interpolator
+import software.kes.scaletta.internal.interpolators.LinkedInterpolator
 import software.kes.scaletta.internal.types.TypeResolutionError
 import software.kes.scaletta.util.functional.{Functor, FunctorK, ~>}
 
 object LinkedPhase extends CorePhase {
   type Ident = LinkedInfo
   type TypeIdent[F[_]] = Either[TypeResolutionError, ProperType[TypeId]]
-  type InterpolatorRef = Interpolator
+  type InterpolatorRef = LinkedInterpolator
 
   protected implicit def typeIdentFunctorK: FunctorK[TypeIdent] = TypeIdentFunctorK
 
