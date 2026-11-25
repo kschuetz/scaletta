@@ -5,10 +5,12 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class ApplyPredicateSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
 
@@ -28,7 +30,7 @@ class ApplyPredicateSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.booleanValue() shouldBe true
@@ -49,7 +51,7 @@ class ApplyPredicateSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.booleanValue() shouldBe true
@@ -70,7 +72,7 @@ class ApplyPredicateSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.booleanValue() shouldBe false

@@ -5,10 +5,12 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.{NativeFunction, NativeFunctionTable}
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class HigherOrderNestingSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   describe("Higher-order nesting") {
     it("should handle deeply nested HOF calls (native recursion)") {
       val tableBuilder = NativeFunctionTable.builder()
@@ -59,7 +61,7 @@ class HigherOrderNestingSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, tableWithAdd)
+      val interpreter = interpreterFactory.create(program, tableWithAdd)
 
       interpreter.run(emptyContextReader)
       interpreter.getResult.intValue() shouldBe 113
@@ -121,7 +123,7 @@ class HigherOrderNestingSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
 
       interpreter.run(emptyContextReader)
       interpreter.getResult.intValue() shouldBe (31 * 2 + 1)
@@ -182,7 +184,7 @@ class HigherOrderNestingSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, tableWithAdd)
+      val interpreter = interpreterFactory.create(program, tableWithAdd)
 
       interpreter.run(emptyContextReader)
       // (37 + 7) + (37 + 7) = 44 + 44 = 88

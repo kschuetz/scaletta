@@ -5,9 +5,11 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.{NativeFunction, NativeFunctionTable}
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime._
 
 class HigherOrderWithContextSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   val ctxId1 = RuntimeContextId(1)
   val ctxId2 = RuntimeContextId(2)
 
@@ -31,7 +33,7 @@ class HigherOrderWithContextSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(new MapContextReader(Map(1 -> 41)))
 
       result.intValue() shouldBe 42
@@ -60,7 +62,7 @@ class HigherOrderWithContextSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(new MapContextReader(Map(1 -> 3)))
 
       result.intValue() shouldBe 30
@@ -116,7 +118,7 @@ class HigherOrderWithContextSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder2.build()
-      val interpreter = Interpreter.create(program, table2)
+      val interpreter = interpreterFactory.create(program, table2)
       // Cutoff is 4, so it should keep 1, 2, 3 and double them -> 2, 4, 6
       val result = interpreter.run(new MapContextReader(Map(1 -> 4)))
 
@@ -154,7 +156,7 @@ class HigherOrderWithContextSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table2)
+      val interpreter = interpreterFactory.create(program, table2)
       // ctx1 (factor) = 10, ctx2 (extra) = 5
       // input = 7
       // callback: 7 + 10 = 17

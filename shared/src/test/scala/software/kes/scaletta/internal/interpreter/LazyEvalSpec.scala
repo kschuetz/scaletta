@@ -5,11 +5,13 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class LazyEvalSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
@@ -35,7 +37,7 @@ class LazyEvalSpec extends AnyFunSpec with Matchers {
       eval.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       interpreter.initialize(emptyContextReader)
 
@@ -84,7 +86,7 @@ class LazyEvalSpec extends AnyFunSpec with Matchers {
       evalString.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.value[String]() shouldBe "Hello"
@@ -123,7 +125,7 @@ class LazyEvalSpec extends AnyFunSpec with Matchers {
       evalY.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 42
@@ -155,7 +157,7 @@ class LazyEvalSpec extends AnyFunSpec with Matchers {
       evalX.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val exception = intercept[RuntimeException] {
         interpreter.run(emptyContextReader)

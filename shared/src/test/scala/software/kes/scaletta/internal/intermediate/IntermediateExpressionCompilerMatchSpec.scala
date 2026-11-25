@@ -5,13 +5,14 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.{RuntimeTypeInfo, Scaletta, UnapplyResult, UnapplyStrategy}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
-import software.kes.scaletta.internal.interpreter.Interpreter
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 import software.kes.scaletta.util.{NonEmptyVector, VectorTwoPlus}
 
 class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
@@ -31,7 +32,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Object, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).value[String]() shouldBe "matched"
     }
 
@@ -46,7 +47,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Object, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).value[String]() shouldBe "second"
     }
 
@@ -59,7 +60,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -78,7 +79,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 30
     }
 
@@ -92,7 +93,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Object, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).value[String]() shouldBe "success"
     }
 
@@ -106,7 +107,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -123,7 +124,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Object, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).value[String]() shouldBe "int"
     }
 
@@ -146,7 +147,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT, CoreTypes.IntT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -160,7 +161,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))) // x, temp
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 1), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 1)).intValue() shouldBe 10
       interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 2)).intValue() shouldBe 20
@@ -176,7 +177,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))) // x, temp
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 1), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 15)).intValue() shouldBe 1
       interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 5)).intValue() shouldBe 0
@@ -190,7 +191,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT))) // x, y, temp
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 1), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 40)).intValue() shouldBe 41
     }
@@ -208,7 +209,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT, CoreTypes.AnyRefT))) // x, temp
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 1), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, 42.asInstanceOf[AnyRef])).intValue() shouldBe 1
       interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, "hello")).intValue() shouldBe 2
@@ -227,7 +228,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.AnyRefT))) // x, y, temp
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 2), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       def test(x: Int, y: Int) = interpreter.run(emptyContextReader, vs => {
         vs.unsafeWriteInt(0, x)
@@ -255,7 +256,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT, CoreTypes.IntT, CoreTypes.AnyRefT, CoreTypes.IntT))) // x, y, z, temp, a
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 3), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       interpreter.run(emptyContextReader, vs => {
         vs.unsafeWriteInt(0, 1)
@@ -294,7 +295,7 @@ class IntermediateExpressionCompilerMatchSpec extends AnyFunSpec with Matchers {
       )
 
       val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 43
     }
   }

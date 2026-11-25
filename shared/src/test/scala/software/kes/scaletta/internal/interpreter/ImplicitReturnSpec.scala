@@ -5,11 +5,13 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class ImplicitReturnSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
 
@@ -25,7 +27,7 @@ class ImplicitReturnSpec extends AnyFunSpec with Matchers {
       // No emitReturn() here
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 47
@@ -46,7 +48,7 @@ class ImplicitReturnSpec extends AnyFunSpec with Matchers {
       // No emitReturn() here
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 43 // 31 + 12
@@ -65,7 +67,7 @@ class ImplicitReturnSpec extends AnyFunSpec with Matchers {
       localAssembler.emitReturn() // Explicit return
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 12

@@ -5,12 +5,13 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
-import software.kes.scaletta.internal.interpreter.Interpreter
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class TailCallOptimizationSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
@@ -43,7 +44,7 @@ class TailCallOptimizationSpec extends AnyFunSpec with Matchers {
       )
 
       val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val result = interpreter.run(emptyContextReader)
       result.intValue() shouldBe (1000 * 1001 / 2)
@@ -72,7 +73,7 @@ class TailCallOptimizationSpec extends AnyFunSpec with Matchers {
       )
 
       val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 120
     }
 
@@ -96,7 +97,7 @@ class TailCallOptimizationSpec extends AnyFunSpec with Matchers {
       )
 
       val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -123,7 +124,7 @@ class TailCallOptimizationSpec extends AnyFunSpec with Matchers {
       )
 
       val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 43
     }
   }

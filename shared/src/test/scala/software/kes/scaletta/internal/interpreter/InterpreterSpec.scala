@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
@@ -12,6 +13,7 @@ import software.kes.scaletta.testsupport.emptyContextReader
 import scala.collection.immutable.ArraySeq
 
 class InterpreterSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create()
     .asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
@@ -28,7 +30,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 43
@@ -44,7 +46,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 23
@@ -64,7 +66,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       addTwelveAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 23
@@ -85,7 +87,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val program = builder.build()
       program.mainFunction.frameSignature.intCount shouldBe 1
 
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader)
 
       val vars = interpreter.readAllVariables()
@@ -105,7 +107,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       val program = builder.build()
       program.constantPool.longs should not be empty
 
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.longValue() shouldBe (11L + largeLong)
@@ -120,7 +122,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 43
@@ -135,7 +137,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.value[java.lang.Integer]() shouldBe java.lang.Integer.valueOf(47)
@@ -150,7 +152,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.longValue() shouldBe 53L
@@ -165,7 +167,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 0
@@ -180,7 +182,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
         // Offset 0 in VarSpace corresponds to stack offset 0 in IntStack (which is top).
@@ -204,7 +206,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
         // stack.unsafeWrite(0, v) is TOP.
@@ -229,7 +231,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val testString = "Scaletta"
       val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
@@ -254,7 +256,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val result = interpreter.run(emptyContextReader, (vars: VarSpace) => {
         vars.unsafeWriteInt(0, 13)
@@ -275,7 +277,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       otherFunctionAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val result0 = interpreter.run(emptyContextReader, initialUserFunctionIndex = 0)
       result0.intValue() shouldBe 1
@@ -301,7 +303,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 41
@@ -332,7 +334,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       funcAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 41
@@ -355,7 +357,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.booleanValue() shouldBe true
@@ -377,7 +379,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader)
 
       val vars = interpreter.readAllVariables()
@@ -403,7 +405,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader)
 
       val vars = interpreter.readAllVariables()
@@ -443,7 +445,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader)
 
       val vars = interpreter.readAllVariables()
@@ -599,7 +601,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader)
 
       val vars = interpreter.readAllVariables()
@@ -621,7 +623,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader)
 
       val vars = interpreter.readAllVariables()
@@ -638,7 +640,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.initialize(emptyContextReader)
 
       interpreter.isDone shouldBe false
@@ -671,7 +673,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.initialize(emptyContextReader)
 
       // Step 2 instructions at once

@@ -5,10 +5,12 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.{NativeFunction, NativeFunctionTable}
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   val ctxId1 = RuntimeContextId(1)
 
   final class MapContextReader(contexts: Map[Int, Any]) extends RuntimeContextReader {
@@ -51,7 +53,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
           assembler.emitReturn()
 
           val program = builder.build()
-          val interpreter = Interpreter.create(program, table)
+          val interpreter = interpreterFactory.create(program, table)
           val result = interpreter.run(emptyContextReader)
 
           expectedType match {
@@ -108,7 +110,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
         main.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, tableBuilder.result())
+        val interpreter = interpreterFactory.create(program, tableBuilder.result())
         val result = interpreter.run(emptyContextReader)
 
         result.intValue() shouldBe 44 // 41 + 1 (callback) + 2 (k)
@@ -136,7 +138,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
         main.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, table)
+        val interpreter = interpreterFactory.create(program, table)
         val result = interpreter.run(emptyContextReader)
 
         result.value[String]() shouldBe "hello world"
@@ -183,7 +185,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
           main.emitReturn()
 
           val program = builder.build()
-          val interpreter = Interpreter.create(program, tableBuilder.result())
+          val interpreter = interpreterFactory.create(program, tableBuilder.result())
           val result = interpreter.run(emptyContextReader)
 
           result.intValue() shouldBe expected
@@ -223,7 +225,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
         main.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, table)
+        val interpreter = interpreterFactory.create(program, table)
         // ctx1 = 5
         // input = 10
         // k: 10 * 5 + 5 = 55
@@ -256,7 +258,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
         main.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, table)
+        val interpreter = interpreterFactory.create(program, table)
 
         intercept[IndexOutOfBoundsException] {
           interpreter.run(emptyContextReader)
@@ -288,7 +290,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
         main.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, table)
+        val interpreter = interpreterFactory.create(program, table)
 
         val ex = intercept[IllegalArgumentException] {
           interpreter.run(emptyContextReader)
@@ -347,7 +349,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
         mainAssembler.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, tableBuilder.result())
+        val interpreter = interpreterFactory.create(program, tableBuilder.result())
         val result = interpreter.run(emptyContextReader)
 
         result.value[List[List[Int]]]() shouldBe List(List(2, 4), List(6, 8))
@@ -371,7 +373,7 @@ class HigherOrderHardenSpec extends AnyFunSpec with Matchers {
         assembler.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, table)
+        val interpreter = interpreterFactory.create(program, table)
         interpreter.run(emptyContextReader)
 
         // EvalResultContainer.loadFromOperandStack pops the result, so it should be 0 now

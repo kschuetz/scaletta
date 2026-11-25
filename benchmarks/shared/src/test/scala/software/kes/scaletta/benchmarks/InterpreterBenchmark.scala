@@ -5,11 +5,13 @@ import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.interpreter._
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class InterpreterBenchmark extends ScalettaBenchmark {
+  private val interpreterFactory = TestInterpreterFactory.create()
 
   private var program: Program = _
   private var nativeFunctions: NativeFunctionTable = _
@@ -42,7 +44,7 @@ class InterpreterBenchmark extends ScalettaBenchmark {
 
   test("simple addition") {
     runBenchmark("simple addition") {
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
       result.intValue()
     }

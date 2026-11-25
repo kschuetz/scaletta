@@ -5,11 +5,13 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create()
     .asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
@@ -69,7 +71,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test cases
     val testCases = Seq(
@@ -146,7 +148,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test Case: sqrt(25.0)
     val result1 = interpreter.run(emptyContextReader, Initializer { vs =>
@@ -193,7 +195,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test Case: x = 0 should return false and NOT throw ArithmeticException
     val result = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 0)))
@@ -238,7 +240,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Case 1: x = 0 should return true and NOT throw ArithmeticException
     val result1 = interpreter.run(emptyContextReader, Initializer(_.unsafeWriteInt(xVar, 0)))
@@ -317,7 +319,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test cases (n -> fib(n))
     val testCases = Seq(
@@ -423,7 +425,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     powerAssembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test cases: (base, exp) -> result
     val testCases = Seq(
@@ -487,7 +489,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     gcdAssembler.tailCallLocal(gcdFuncIdx)
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test Cases: (a, b) -> result
     val testCases = Seq(
@@ -552,7 +554,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test Case: x^2 - 5x + 6 = 0 -> roots are 2 and 3. Positive root from formula is 3.
     // a=1, b=-5, c=6
@@ -626,7 +628,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     ackAssembler.tailCallLocal(ackFuncIdx)
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test Cases: (m, n) -> result
     val testCases = Seq(
@@ -748,7 +750,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
 
     // 3. Execution & Verification
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val inputPrincipal = 1000000L // 1,000,000 cents
     val inputRate = 1.05 // 5% growth
@@ -829,7 +831,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     isOddAssembler.tailCallLocal(1) // Tail call isEven
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val testCases = Seq(
       0 -> true,
@@ -894,7 +896,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // 4. Verification:
     // Store known prime values at the boundaries
@@ -935,7 +937,7 @@ class InterpreterComplexExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val a = 43
     val b = 41

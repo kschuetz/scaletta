@@ -5,11 +5,13 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class InterpreterNodeTraversalExampleSpec extends AnyFunSuite with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private var nodeLib: NodeLib = _
 
   /**
@@ -97,7 +99,7 @@ class InterpreterNodeTraversalExampleSpec extends AnyFunSuite with Matchers {
     assembler.emitReturn()
 
     val program = builder.build()
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Construct a list: Node(41, Node(43, Node(47, null)))
     val listStructure = Node(41, Node(43, Node(47, null.asInstanceOf[Node])))

@@ -5,10 +5,12 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.{NativeFunction, NativeFunctionTable}
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class CallbackMismatchSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   describe("Callback arity and type mismatches") {
     it("should fail when callback is called with too many arguments") {
       val tableBuilder = NativeFunctionTable.builder()
@@ -49,7 +51,7 @@ class CallbackMismatchSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, tableWithAdd)
+      val interpreter = interpreterFactory.create(program, tableWithAdd)
 
       val exception = intercept[IndexOutOfBoundsException] {
         interpreter.run(emptyContextReader)
@@ -94,7 +96,7 @@ class CallbackMismatchSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, tableWithAdd)
+      val interpreter = interpreterFactory.create(program, tableWithAdd)
 
       val exception = intercept[IllegalArgumentException] {
         interpreter.run(emptyContextReader)
@@ -140,7 +142,7 @@ class CallbackMismatchSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
 
       val exception = intercept[IllegalArgumentException] {
         interpreter.run(emptyContextReader)

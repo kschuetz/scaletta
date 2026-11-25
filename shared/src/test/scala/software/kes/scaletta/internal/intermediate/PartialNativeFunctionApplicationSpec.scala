@@ -5,12 +5,13 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
-import software.kes.scaletta.internal.interpreter.Interpreter
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
@@ -34,7 +35,7 @@ class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.AnyRefT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -49,7 +50,7 @@ class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
 
       val signature = VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.AnyRefT)))
       val program = compiler.compile(UserFunctionSignature(signature, BasicTypes.Int, 0), expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -58,7 +59,7 @@ class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
       val expr = PartialNativeFunctionApplication(addId, Vector(None, None))
       val signature = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0)
       val program = compiler.compile(signature, expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val closure = interpreter.run(emptyContextReader).value[AnyRef]()
       closure shouldNot be(null)
     }
@@ -75,7 +76,7 @@ class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
 
       val signature = UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Int, 0)
       val program = compiler.compile(signature, expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -89,7 +90,7 @@ class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
 
       val signature = UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT, CoreTypes.IntT))), BasicTypes.Int, 0)
       val program = compiler.compile(signature, expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
 
@@ -103,7 +104,7 @@ class PartialNativeFunctionApplicationSpec extends AnyFunSpec with Matchers {
 
       val signature = UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Int, 0)
       val program = compiler.compile(signature, expr)
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       interpreter.run(emptyContextReader).intValue() shouldBe 41
     }
   }

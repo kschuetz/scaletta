@@ -5,10 +5,12 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.{CallTarget, FunctionImpl, NativeFunctionId, NativeStep}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.{NativeFunction, NativeFunctionTable}
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   describe("Higher-order natives") {
     it("should handle NativeStep.Done with different types") {
       val tableBuilder = NativeFunctionTable.builder()
@@ -27,7 +29,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
         assembler.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, table)
+        val interpreter = interpreterFactory.create(program, table)
         val result = interpreter.run(emptyContextReader)
 
         expectedType match {
@@ -62,7 +64,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 23
@@ -92,7 +94,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 43
@@ -121,7 +123,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 46 // 41 + 2 + 3
@@ -162,7 +164,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(emptyContextReader)
 
       result.value[List[Int]]() shouldBe List(2, 4, 6, 10, 14)
@@ -209,7 +211,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(emptyContextReader)
 
       result.value[List[Int]]() shouldBe List(2, 4, 6)
@@ -253,7 +255,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       mainAssembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 22
@@ -270,7 +272,7 @@ class HigherOrderNativeSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
 
       val ex = intercept[IllegalArgumentException] {
         interpreter.run(emptyContextReader)

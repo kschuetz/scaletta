@@ -5,13 +5,14 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
-import software.kes.scaletta.internal.interpreter.Interpreter
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 import software.kes.scaletta.util.{NonEmptyVector, VectorTwoPlus}
 
 class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
@@ -56,7 +57,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(factorialSignature, factorialBody)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val testCases = Seq(
       -1 -> 1,
@@ -127,7 +128,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(signature, body)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     // Test case 1: basePrice = 50.0, countryCode = 1, customerStatus = 1
     // taxRate = 0.05
@@ -181,7 +182,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(signature, body)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 10))
     // a = 11, b = 22
@@ -209,7 +210,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(signature, body)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val testCases = Seq(
       // (isVip, totalSpent, hasCoupon) -> expected
@@ -290,7 +291,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(signature, body)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteInt(0, 1))
     result.intValue() shouldBe 53
@@ -326,7 +327,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(signature, body)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val input = List(1, 2, 3)
     val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, input))
@@ -367,7 +368,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(signature, body)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val input = List(5, 11, 15, 2)
     val result = interpreter.run(emptyContextReader, vs => vs.unsafeWriteObject(0, input))
@@ -458,7 +459,7 @@ class IntermediateExpressionCompilerComplexExampleSpec extends AnyFunSuite with 
     )
 
     val program = compiler.compile(signature, body)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
 
     val testCases = Seq(
       (10, 5) -> 1, // (10, 5) if 10 > 5 -> 1

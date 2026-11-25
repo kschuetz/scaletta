@@ -9,12 +9,13 @@ import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.intermediate.IntermediateExpression.Value._
 import software.kes.scaletta.internal.intermediate.IntermediateExpression._
 import software.kes.scaletta.internal.intermediate._
-import software.kes.scaletta.internal.interpreter.Interpreter
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime.{CoreTypes, FrameSignature, UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 final class CollectionsSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   private val scaletta: ScalettaFacade = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val stdLib: StandardLibraryLookup = StandardLibraryLookup.create(scaletta.universe)
   private val nativeFunctions: NativeFunctionTable = scaletta.universe.methodUniverse.dispatchTable
@@ -25,7 +26,7 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
    */
   private def runExpression(expr: IntermediateExpression): Any = {
     val program = compiler.compile(UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Object, 0), expr)
-    val interpreter = Interpreter.create(program, nativeFunctions)
+    val interpreter = interpreterFactory.create(program, nativeFunctions)
     interpreter.run(emptyContextReader).value[Any]()
   }
 
@@ -133,7 +134,7 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
             UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
             expr
           )
-          val interpreter = Interpreter.create(program, nativeFunctions)
+          val interpreter = interpreterFactory.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe List(21, 33, 39)
         }
       }
@@ -208,7 +209,7 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
             UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
             expr
           )
-          val interpreter = Interpreter.create(program, nativeFunctions)
+          val interpreter = interpreterFactory.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe List(61, 67, 61, 67)
         }
       }
@@ -275,7 +276,7 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
             UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
             expr
           )
-          val interpreter = Interpreter.create(program, nativeFunctions)
+          val interpreter = interpreterFactory.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe List(43, 61)
         }
       }
@@ -335,7 +336,7 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
             UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
             expr
           )
-          val interpreter = Interpreter.create(program, nativeFunctions)
+          val interpreter = interpreterFactory.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe Vector(21, 33, 39)
         }
       }
@@ -410,7 +411,7 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
             UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
             expr
           )
-          val interpreter = Interpreter.create(program, nativeFunctions)
+          val interpreter = interpreterFactory.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe Vector(61, 67, 61, 67)
         }
       }
@@ -477,7 +478,7 @@ final class CollectionsSpec extends AnyFunSpec with Matchers {
             UserFunctionSignature(VarSpaceSignature.of(FrameSignature.fromSeq(Seq(CoreTypes.IntT))), BasicTypes.Object, 0),
             expr
           )
-          val interpreter = Interpreter.create(program, nativeFunctions)
+          val interpreter = interpreterFactory.create(program, nativeFunctions)
           interpreter.run(emptyContextReader).value[Any]() shouldBe Vector(43, 61)
         }
       }

@@ -5,10 +5,12 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.{NativeFunction, NativeFunctionTable}
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class HigherOrderUnwindingSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
   describe("Higher-order unwinding") {
     it("should clear stale continuations if dispatch fails") {
       val tableBuilder = NativeFunctionTable.builder()
@@ -33,7 +35,7 @@ class HigherOrderUnwindingSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
 
       val ex = intercept[IllegalArgumentException] {
         interpreter.run(emptyContextReader)
@@ -70,7 +72,7 @@ class HigherOrderUnwindingSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
 
       intercept[Throwable] {
         interpreter.run(emptyContextReader)
@@ -118,7 +120,7 @@ class HigherOrderUnwindingSpec extends AnyFunSpec with Matchers {
       main.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, table)
+      val interpreter = interpreterFactory.create(program, table)
 
       intercept[Throwable] {
         interpreter.run(emptyContextReader)
