@@ -7,7 +7,7 @@ object ValueFormatter {
   def create(locale: Locale): ValueFormatter = new ValueFormatter(locale)
 }
 
-final class ValueFormatter(locale: Locale) {
+final class ValueFormatter private(locale: Locale) {
 
   /**
    * Applies format specifier to the given runtime value.
