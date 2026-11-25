@@ -1,24 +1,24 @@
 package software.kes.scaletta.internal.interpreter
 
-import software.kes.scaletta.api.StringFormatterErrorHandler
+import software.kes.scaletta.api.ValueFormatterErrorHandler
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
 import software.kes.scaletta.internal.format.ValueFormatter
 
 object InterpreterFactory {
   def create(valueFormatter: ValueFormatter,
-             stringFormatterErrorHandler: StringFormatterErrorHandler): InterpreterFactory =
-    new InterpreterFactory(valueFormatter, stringFormatterErrorHandler)
+             valueFormatterErrorHandler: ValueFormatterErrorHandler): InterpreterFactory =
+    new InterpreterFactory(valueFormatter, valueFormatterErrorHandler)
 }
 
 final class InterpreterFactory private(valueFormatter: ValueFormatter,
-                                       stringFormatterErrorHandler: StringFormatterErrorHandler) {
+                                       valueFormatterErrorHandler: ValueFormatterErrorHandler) {
   def create(program: Program,
              functionTable: NativeFunctionTable): Interpreter =
-    Interpreter.create(program, functionTable)
+    Interpreter.create(program, functionTable, valueFormatter, valueFormatterErrorHandler)
 
   def withValueFormatter(newFormatter: ValueFormatter): InterpreterFactory =
-    new InterpreterFactory(newFormatter, stringFormatterErrorHandler)
+    new InterpreterFactory(newFormatter, valueFormatterErrorHandler)
 
-  def withStringFormatterErrorHandler(newErrorHandler: StringFormatterErrorHandler): InterpreterFactory =
+  def withValueFormatterErrorHandler(newErrorHandler: ValueFormatterErrorHandler): InterpreterFactory =
     new InterpreterFactory(valueFormatter, newErrorHandler)
 }

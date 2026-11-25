@@ -3,26 +3,31 @@ package software.kes.scaletta.internal.interpreter
 import software.kes.scaletta.api._
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
+import software.kes.scaletta.internal.format.ValueFormatter
 import software.kes.scaletta.internal.runtime.{FrameSignature, ParamsSignature, VarAddress, VarSpaceSignature}
 import software.kes.scaletta.util.conversions.CollectionToTuple
 import software.kes.scaletta.util.stack.{IntStack, ObjectStack}
 
 object Interpreter {
   def create(program: Program,
-             functionTable: NativeFunctionTable): Interpreter = {
+             functionTable: NativeFunctionTable,
+             valueFormatter: ValueFormatter,
+             valueFormatterErrorHandler: ValueFormatterErrorHandler): Interpreter = {
     val callStack = IntStack.create()
     val operandStack = OperandStack.create()
     val variableStack = VariableStack.create()
     val varSpace = VarSpaceFromVariableStack.create(variableStack, program.mainFunction.varSpaceSignature)
     val pool = new CapturedFramePool(maxRetained = 64)
     val nativeContStack = ObjectStack.create()
-    new Interpreter(program, functionTable, callStack, operandStack, variableStack,
-      varSpace, 0, 0, pool, nativeContStack)
+    new Interpreter(program, functionTable, valueFormatter, valueFormatterErrorHandler, callStack,
+      operandStack, variableStack, varSpace, 0, 0, pool, nativeContStack)
   }
 }
 
 final class Interpreter private(private val program: Program,
                                 private val functionTable: NativeFunctionTable,
+                                private val valueFormatter: ValueFormatter,
+                                private val valueFormatterErrorHandler: ValueFormatterErrorHandler,
                                 private[interpreter] val callStack: IntStack,
                                 private[interpreter] val operandStack: OperandStack,
                                 private[interpreter] val variableStack: VariableStack,
