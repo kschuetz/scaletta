@@ -5,6 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.{Scaletta, UnapplyResult, UnapplyStrategy}
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.library.standard.testsupport.StandardLibraryLookup
 import software.kes.scaletta.internal.runtime._
 import software.kes.scaletta.testsupport.emptyContextReader
@@ -13,6 +14,7 @@ class UnapplySpec extends AnyFunSpec with Matchers {
   private val scaletta = Scaletta.create()
     .asInstanceOf[ScalettaFacade]
   private val stdLib = StandardLibraryLookup.create(scaletta.universe)
+  private val interpreterFactory = TestInterpreterFactory.create()
 
   import stdLib.arithmetic
 
@@ -48,7 +50,7 @@ class UnapplySpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.intValue() shouldBe 32 // 11 + 21
@@ -72,7 +74,7 @@ class UnapplySpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.booleanValue() shouldBe false
@@ -94,7 +96,7 @@ class UnapplySpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.booleanValue() shouldBe true

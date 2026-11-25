@@ -5,17 +5,20 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.NativeStep
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.builtins.NativeFunctionTable
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class NativeContinuationSpec extends AnyFunSpec with Matchers {
+  private val interpreterFactory = TestInterpreterFactory.create()
+
   describe("Native Continuation Frames") {
     val signature = UserFunctionSignature(VarSpaceSignature.empty, BasicTypes.Int, 0)
     val program = ProgramBuilder.create(signature).build()
     val nativeFunctions = NativeFunctionTable.builder().result()
 
     it("should push and pop a HigherOrderCont correctly") {
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       var called = false
       val k: Any => NativeStep = res => {
         called = true
@@ -34,7 +37,7 @@ class NativeContinuationSpec extends AnyFunSpec with Matchers {
     }
 
     it("should unwind multiple nested HigherOrderCont frames in LIFO order") {
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
 
       val k1: Any => NativeStep = res => NativeStep.done(res.asInstanceOf[Int] + 1)
       val k2: Any => NativeStep = res => NativeStep.done(res.asInstanceOf[Int] + 2)
@@ -52,7 +55,7 @@ class NativeContinuationSpec extends AnyFunSpec with Matchers {
     }
 
     it("should clear frames on interpreter reset") {
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val k: Any => NativeStep = res => NativeStep.done(res)
 
       interpreter.pushNativeCont(k, BasicTypes.Int, -100, -200)
@@ -70,7 +73,7 @@ class NativeContinuationSpec extends AnyFunSpec with Matchers {
       assembler2.emitReturn()
       val program2 = builder2.build()
 
-      val interpreter = Interpreter.create(program2, nativeFunctions)
+      val interpreter = interpreterFactory.create(program2, nativeFunctions)
       interpreter.initialize(emptyContextReader)
 
       interpreter.runUntilDone()

@@ -5,12 +5,14 @@ import org.scalatest.matchers.should.Matchers
 import software.kes.scaletta.api.Scaletta
 import software.kes.scaletta.common.BasicTypes
 import software.kes.scaletta.internal.ScalettaFacade
+import software.kes.scaletta.internal.interpreter.testsupport.TestInterpreterFactory
 import software.kes.scaletta.internal.runtime.{UserFunctionSignature, VarSpaceSignature}
 import software.kes.scaletta.testsupport.emptyContextReader
 
 class StringConcatSpec extends AnyFunSpec with Matchers {
   private val scaletta = Scaletta.create().asInstanceOf[ScalettaFacade]
   private val nativeFunctions = scaletta.universe.methodUniverse.dispatchTable
+  private val interpreterFactory = TestInterpreterFactory.create()
 
   describe("StringConcat opcode") {
     it("should concatenate strings in the order they were pushed") {
@@ -23,7 +25,7 @@ class StringConcatSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.value[String]() shouldBe "ABC"
@@ -36,7 +38,7 @@ class StringConcatSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.value[String]() shouldBe ""
@@ -50,7 +52,7 @@ class StringConcatSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.value[String]() shouldBe "Foo"
@@ -65,7 +67,7 @@ class StringConcatSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.value[String]() shouldBe "Value: 41"
@@ -82,7 +84,7 @@ class StringConcatSpec extends AnyFunSpec with Matchers {
       assembler.emitReturn()
 
       val program = builder.build()
-      val interpreter = Interpreter.create(program, nativeFunctions)
+      val interpreter = interpreterFactory.create(program, nativeFunctions)
       val result = interpreter.run(emptyContextReader)
 
       result.value[String]() shouldBe "ABC"

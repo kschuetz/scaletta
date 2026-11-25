@@ -501,7 +501,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         recAssembler.tailCallLocal(1) // self-recursion
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, nativeFunctions)
+        val interpreter = interpreterFactory.create(program, nativeFunctions)
 
         // Sum of numbers from 1 to 5 = 15
         val result = interpreter.run(emptyContextReader)
@@ -528,7 +528,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         otherAssembler.emitReturn()
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, nativeFunctions)
+        val interpreter = interpreterFactory.create(program, nativeFunctions)
         val result = interpreter.run(emptyContextReader)
 
         result.intValue() shouldBe 44
@@ -566,7 +566,7 @@ class InterpreterSpec extends AnyFunSpec with Matchers {
         recAssembler.tailCallLocal(1)
 
         val program = builder.build()
-        val interpreter = Interpreter.create(program, nativeFunctions)
+        val interpreter = interpreterFactory.create(program, nativeFunctions)
 
         // Run with a large number of iterations to ensure no stack overflow
         val result = interpreter.run(emptyContextReader)
